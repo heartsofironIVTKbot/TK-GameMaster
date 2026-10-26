@@ -1,0 +1,29 @@
+name: Apollo package
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python scripts/pack_apollo.py
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apollo
+          name: Apollo upload
+          make_latest: false
+          overwrite_files: true
+          body: |
+            Download gamemaster-apollo.zip and upload it on the staging Apollo server's Files page, then Unarchive it.
+            bot.py.py, start.sh, requirements.txt, schema.sql, and assets should sit at the top of Files.
+            The server's .env is not in this zip and is left in place.
+          files: dist/gamemaster-apollo.zip

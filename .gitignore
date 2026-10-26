@@ -41,3 +41,6 @@ TicketMaster Bot (outdated)/
 __MACOSX/
 *.pem
 *.log
+
+# Zip built for the Apollo file manager. GitHub Releases hosts it.
+dist/

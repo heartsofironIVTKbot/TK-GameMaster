@@ -3,6 +3,12 @@
 
 cd /home/container 2>/dev/null || cd "$(dirname "$0")"
 
+# The GitHub repo keeps the bot in "GameMaster Bot/". Apollo's Files page
+# can hold that folder, or the flat zip (bot.py.py sitting at the top).
+if [ ! -f bot.py.py ] && [ -f "GameMaster Bot/bot.py.py" ]; then
+  cd "GameMaster Bot"
+fi
+
 export PYTHONUSERBASE="${PYTHONUSERBASE:-/home/container/.local}"
 export PATH="${PYTHONUSERBASE}/bin:${PATH}"
 

@@ -70,6 +70,20 @@ AI chat-log grading needs `GENAI_API_KEY`. Without that key the rest of GameMast
 
 Map files the website serves are in `web/public/`.
 
+## Updating the new Apollo server
+
+The new Apollo server runs the bot only. Changes take this path:
+
+1. Edit the code on this PC.
+2. Push `main` to GitHub.
+3. Download the fresh zip from the [Apollo upload release](https://github.com/heartsofironIVTKbot/TK-GameMaster/releases/tag/apollo).
+4. On the **new** Apollo server, open **Files**, upload `gamemaster-apollo.zip`, then right-click it and choose **Unarchive**.
+5. Restart that server.
+
+After unarchive, `bot.py.py`, `start.sh`, `requirements.txt`, `schema.sql`, and `assets` sit at the top of Files. The startup command is `bash start.sh`.
+
+The first time only, copy `.env.example` to `.env` on that server and fill in the staging bot token, `HOME_GUILD_ID`, and the staging database. The zip does not contain `.env`, so later uploads leave it alone. Do this on the new server, not on the live TommyKay one.
+
 ## Where the live service stands
 
 The website was built and tried with sample data. It has not yet been signed off against the real Discord API and the real database. That check is Phase 1 in [docs/infrastructure-plan.md](docs/infrastructure-plan.md). Until that checklist passes on a test server, do not send players to a new address.
