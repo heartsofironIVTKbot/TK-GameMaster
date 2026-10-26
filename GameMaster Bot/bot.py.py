@@ -32433,6 +32433,54 @@ def _home_modes_to_add(stored) -> list[str]:
     return [key for key, _ in BUILTIN_MODES if key not in modes and key in _HOME_MODE_SEED]
 
 
+# The Discord server the ids in this file belong to. Any other home server
+# (a staging bot, or someone running their own copy) must not inherit them.
+_ORIGINAL_HOME_GUILD_ID = 341585283881631744
+
+
+def _walk_discord_ids(value, found: set[str]) -> None:
+    if isinstance(value, dict):
+        for item in value.values():
+            _walk_discord_ids(item, found)
+    elif isinstance(value, list):
+        for item in value:
+            _walk_discord_ids(item, found)
+    elif isinstance(value, str) and value.isdigit() and len(value) >= 15:
+        found.add(value)
+    elif isinstance(value, int) and value >= 10**14:
+        found.add(str(value))
+
+
+def _settings_for_this_home(name: str) -> dict:
+    """TommyKay keeps the roles and channels written in this file. Every other
+    server starts with nothing mapped. Mod links, rule links and the rule
+    numbers carry over."""
+    copied = _settings_from_constants(name)
+    if GUILD_ID == _ORIGINAL_HOME_GUILD_ID:
+        return copied
+    fresh = _default_guild_settings(name)
+    for key, _branch in BUILTIN_MODES:
+        fresh["modes"][key]["mod_links"] = list(copied["modes"][key].get("mod_links") or [])
+        fresh["modes"][key]["rule_links"] = list(copied["modes"][key].get("rule_links") or [])
+    fresh["rules"] = dict(copied["rules"])
+    return fresh
+
+
+def _settings_carry_other_guild_ids(settings: dict) -> bool:
+    """True when saved settings still contain a role or channel from the
+    server this file was written for, and this process is not that server."""
+    if GUILD_ID == _ORIGINAL_HOME_GUILD_ID or not isinstance(settings, dict):
+        return False
+    foreign: set[str] = set()
+    _walk_discord_ids(_settings_from_constants(""), foreign)
+    blank: set[str] = set()
+    _walk_discord_ids(_default_guild_settings(""), blank)
+    foreign -= blank
+    present: set[str] = set()
+    _walk_discord_ids(settings, present)
+    return bool(foreign & present)
+
+
 async def _bootstrap_server_settings() -> None:
     """Startup: record every server the bot is in, give each its runtime
     (seeding the home server's settings from this file the first time),
@@ -32471,12 +32519,37 @@ async def _bootstrap_server_settings() -> None:
 
     if home is not None:
         try:
-            current = _settings_from_constants(home.name)
-            if not seeded:
-                current["general"]["community_name"] = home.name[:60]
+            current = _settings_for_this_home(home.name)
+            saved = home_row.get("settings") if home_row else None
+            if isinstance(saved, str):
+                try:
+                    saved = json.loads(saved)
+                except Exception:
+                    saved = None
+            # A staging (or any non-TommyKay) home was seeded from this file's
+            # ids. Drop those roles and channels; keep mod links and rule numbers.
+            if seeded and _settings_carry_other_guild_ids(saved if isinstance(saved, dict) else {}):
+                current["general"]["community_name"] = (
+                    str((saved or {}).get("general", {}).get("community_name") or home.name)
+                )[:60]
                 ok = await _save_bot_settings(
-                    GUILD_ID, current, summary="Copied this server's existing roles, channels and rules into the settings",
-                    status="active",
+                    GUILD_ID, current,
+                    summary="Cleared roles and channels that belong to another server",
+                    status="needs_setup",
+                )
+                if ok:
+                    _apply_settings(_rt(GUILD_ID), _normalize_guild_settings(current, home.name))
+                    _rt(GUILD_ID).settings = current
+                print("⚙️ Cleared another server's roles and channels from the settings." if ok else "⚠️ Clearing those settings failed.")
+            elif not seeded:
+                current["general"]["community_name"] = home.name[:60]
+                first_status = "active" if GUILD_ID == _ORIGINAL_HOME_GUILD_ID else "needs_setup"
+                ok = await _save_bot_settings(
+                    GUILD_ID, current,
+                    summary="Copied this server's existing roles, channels and rules into the settings"
+                    if GUILD_ID == _ORIGINAL_HOME_GUILD_ID
+                    else "Started blank settings for this server",
+                    status=first_status,
                 )
                 if ok:
                     _apply_settings(_rt(GUILD_ID), _normalize_guild_settings(current, home.name))
