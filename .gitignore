@@ -1,0 +1,43 @@
+# Secrets — never commit these
+.env
+.env.*
+**/.env
+**/.env.*
+!**/.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Node / Next.js
+web/node_modules/
+web/.next/
+web/out/
+web/.vercel/
+
+# Legacy player exports (Discord ids, games, host stats). The live data is MySQL.
+GameMaster Bot/data/
+
+# Paradox game files and local map-build scratch. Not needed to run GameMaster.
+scripts/hoi4_files/
+scripts/raw_assets/
+scripts/_shots/
+scripts/__pycache__/
+scripts/_*.py
+scripts/_*.mjs
+scripts/_*.cjs
+scripts/_*.geojson
+scripts/_*.json
+
+# Separate projects that sit next to GameMaster on the owner's machine
+hoi4-casino/
+IronLegion Bot/
+TicketMaster Bot (outdated)/
+
+# OS / editor
+.DS_Store
+__MACOSX/
+*.pem
+*.log

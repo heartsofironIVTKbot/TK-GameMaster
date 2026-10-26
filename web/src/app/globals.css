@@ -1,0 +1,411 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* ==========================================================================
+   Nation highlight states (see components/nationHighlights.ts)
+
+   The base nation paths are static. Every state is drawn in its own overlay
+   pane (one <svg> each), so an animation only ever repaints a few strokes
+   and never the filled map. There is no CSS `filter` anywhere: neon glow is
+   stacked strokes, so nothing is re-rasterized per frame or cropped at path
+   edges.
+   ========================================================================== */
+
+/* Overlay panes never intercept the pointer (hover/click go to the map). */
+.leaflet-nation-hover-pane,
+.leaflet-nation-taken-pane,
+.leaflet-nation-locked-pane,
+.leaflet-nation-self-pane,
+.leaflet-nation-coop-pane,
+.leaflet-nation-pending-pane {
+  pointer-events: none;
+}
+
+/* 1. Hover: soft fade in/out. The continuous "breathing" while active is
+   driven from nationHighlights.ts (Web Animations API on this pane), so it
+   never depends on this stylesheet. Pane-level opacity is compositor-only
+   (zero repaint), so it keeps running while the map pans/zooms. */
+.leaflet-nation-hover-pane {
+  opacity: 0;
+  transition: opacity 0.24s ease-out;
+  will-change: opacity;
+}
+.leaflet-nation-hover-pane.nation-pane-active {
+  opacity: 1;
+}
+
+/* 3. Self (green): soft breathing glow. Animating the pane's opacity runs on
+   the compositor thread: zero repaint, zero main-thread work. */
+@keyframes nationSelfPulse {
+  0%,
+  100% {
+    opacity: 0.68;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.leaflet-nation-self-pane {
+  animation: nationSelfPulse 2.6s ease-in-out infinite;
+  will-change: opacity;
+}
+
+/* 5. Co-Op (blue): slower, shallower breathing — reads as "shared", calmer
+   than the self pulse. */
+@keyframes nationCoopBreathe {
+  0%,
+  100% {
+    opacity: 0.82;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.leaflet-nation-coop-pane {
+  animation: nationCoopBreathe 3.4s ease-in-out infinite;
+  will-change: opacity;
+}
+
+/* 2. Pending (yellow): clockwise chasing snake. The dash pattern advances by
+   exactly one period so the loop is seamless. The period is fixed at 240px
+   (matches nationHighlights.ts SNAKE_PERIOD) and is NOT read from a CSS
+   variable: `var()` inside @keyframes is unreliable in some engines, and a
+   hardcoded value keeps the animation from being silently dropped. Rings are
+   wound counter-clockwise, so a growing dash offset travels clockwise on
+   screen. This is the only animation that repaints, and it is confined to the
+   pending pane's own <svg>. */
+@keyframes nationSnakeChase {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: 240px;
+  }
+}
+.nation-snake {
+  animation: nationSnakeChase 2.1s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The chasing snake and the hover breathing are core indicators and keep
+     running (the breathing is an in-place opacity fade — no movement); only
+     the soft self/coop pulses are disabled under reduced motion (they are
+     cosmetic, and the borders themselves remain visible). */
+  .leaflet-nation-self-pane,
+  .leaflet-nation-coop-pane {
+    animation: none;
+  }
+}
+
+/* ==========================================================================
+   Country details drawer (see components/CountryDetailsDrawer.tsx)
+
+   Slides in from the right when a nation is selected. Pure transform, so it
+   runs on the compositor thread without blocking the map.
+   ========================================================================== */
+@keyframes countryDrawerSlideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+.country-drawer {
+  animation: countryDrawerSlideIn 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .country-drawer {
+    animation: none;
+  }
+}
+
+/* ==========================================================================
+   Top bar Rules/Mods breathing glow (see components/TopBar.tsx)
+
+   Continuous, subtle box-shadow + border-color pulses. These animate only
+   two tiny button elements (never the map), so the paint cost is negligible.
+   The two durations differ slightly so the buttons don't pulse in lockstep.
+   ========================================================================== */
+@keyframes topbarButtonGlowBlue {
+  0%,
+  100% {
+    border-color: rgba(51, 65, 85, 0.9); /* slate-700 */
+    box-shadow: 0 0 6px 0 rgba(56, 189, 248, 0);
+  }
+  50% {
+    border-color: rgba(56, 189, 248, 0.75); /* sky-400 */
+    box-shadow: 0 0 16px 3px rgba(56, 189, 248, 0.4);
+  }
+}
+@keyframes topbarButtonGlowAmber {
+  0%,
+  100% {
+    border-color: rgba(51, 65, 85, 0.9); /* slate-700 */
+    box-shadow: 0 0 6px 0 rgba(251, 191, 36, 0);
+  }
+  50% {
+    border-color: rgba(251, 191, 36, 0.7); /* amber-400 */
+    box-shadow: 0 0 16px 3px rgba(251, 191, 36, 0.35);
+  }
+}
+.topbar-btn-rules {
+  animation: topbarButtonGlowBlue 3.2s ease-in-out infinite;
+}
+.topbar-btn-mods {
+  animation: topbarButtonGlowAmber 3.6s ease-in-out infinite;
+}
+/* A light sweep across Rules / Mods every few seconds, on top of the glow. */
+.topbar-btn-shine {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.topbar-btn-shine::after {
+  content: "";
+  position: absolute;
+  inset: -2px auto -2px -60%;
+  width: 45%;
+  background: linear-gradient(100deg, transparent 0%, rgba(255, 255, 255, 0.32) 50%, transparent 100%);
+  transform: skewX(-18deg);
+  pointer-events: none;
+  animation: topbarButtonShine 4.2s ease-in-out infinite;
+  z-index: -1;
+}
+.topbar-btn-mods.topbar-btn-shine::after {
+  animation-delay: 0.6s;
+}
+.topbar-btn-shine:hover {
+  transform: translateY(-1px);
+}
+@keyframes topbarButtonShine {
+  0%,
+  55% {
+    left: -60%;
+  }
+  85%,
+  100% {
+    left: 130%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .topbar-btn-rules,
+  .topbar-btn-mods,
+  .topbar-btn-shine::after {
+    animation: none;
+  }
+}
+
+/* Bottom-center "Reserve Nation" CTA: a slow breathing amber glow that
+   draws the eye without repainting the map (box-shadow only, compositor
+   friendly). */
+@keyframes reserveCtaGlow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 18px 2px rgba(251, 191, 36, 0.45),
+      0 0 42px 6px rgba(251, 191, 36, 0.18);
+  }
+  50% {
+    box-shadow:
+      0 0 30px 6px rgba(251, 191, 36, 0.8),
+      0 0 64px 14px rgba(251, 191, 36, 0.32);
+  }
+}
+.reserve-cta-glow {
+  animation: reserveCtaGlow 2.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reserve-cta-glow {
+    animation: none;
+  }
+}
+
+/* ==========================================================================
+   Host calendar + game setup (see app/schedule and components/schedule)
+   ========================================================================== */
+
+/* Page backdrop: deep slate with soft amber/violet glows and a faint grid. */
+.gm-backdrop {
+  background-color: #050913;
+  background-image:
+    radial-gradient(60rem 40rem at 10% -10%, rgba(251, 191, 36, 0.09), transparent 60%),
+    radial-gradient(50rem 40rem at 110% 10%, rgba(139, 92, 246, 0.12), transparent 60%),
+    linear-gradient(rgba(148, 163, 184, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.045) 1px, transparent 1px);
+  background-size: auto, auto, 44px 44px, 44px 44px;
+}
+
+/* Staff-locked calendar day: diagonal hatch. */
+.gm-hatch {
+  background-image: repeating-linear-gradient(
+    135deg,
+    rgba(15, 23, 42, 0.9) 0 7px,
+    rgba(71, 85, 105, 0.55) 7px 14px
+  );
+}
+
+@keyframes gmFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.gm-fade-up {
+  animation: gmFadeUp 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes gmSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+.gm-slide-in {
+  animation: gmSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* "Live" indicator dot. */
+@keyframes gmLivePing {
+  0% {
+    transform: scale(1);
+    opacity: 0.75;
+  }
+  80%,
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+.gm-live-ping {
+  animation: gmLivePing 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes gmSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.gm-spin {
+  animation: gmSpin 0.9s linear infinite;
+}
+
+/* Range slider: amber filled track (the filled share comes from --fill). */
+.gm-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 22px;
+  background: transparent;
+  cursor: pointer;
+}
+.gm-range:focus-visible {
+  outline: none;
+}
+.gm-range::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    #fbbf24 0%,
+    #f59e0b var(--fill, 0%),
+    rgba(51, 65, 85, 0.9) var(--fill, 0%)
+  );
+}
+.gm-range::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(51, 65, 85, 0.9);
+}
+.gm-range::-moz-range-progress {
+  height: 6px;
+  border-radius: 999px;
+  background: #f59e0b;
+}
+.gm-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  margin-top: -6px;
+  border-radius: 999px;
+  background: #fffbeb;
+  border: 3px solid #f59e0b;
+  box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.18), 0 2px 8px rgba(0, 0, 0, 0.5);
+  transition: transform 0.15s ease;
+}
+.gm-range::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: #fffbeb;
+  border: 3px solid #f59e0b;
+  box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.18);
+}
+.gm-range:hover::-webkit-slider-thumb,
+.gm-range:focus-visible::-webkit-slider-thumb {
+  transform: scale(1.15);
+}
+.gm-range:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gm-fade-up,
+  .gm-slide-in,
+  .gm-live-ping {
+    animation: none;
+  }
+}
+
+/* Reservation Board: dark themed scrollbar (WebKit + Firefox). */
+.roster-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #334155 #0b1220;
+}
+.roster-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+.roster-scroll::-webkit-scrollbar-track {
+  background: #0b1220;
+}
+.roster-scroll::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
+.roster-scroll::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}

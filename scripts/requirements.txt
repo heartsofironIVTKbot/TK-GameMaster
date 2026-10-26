@@ -1,0 +1,11 @@
+# Python dependencies for scripts/hoi4_scraper.py
+#
+# Install with:
+#     py -m pip install -r scripts/requirements.txt
+#
+# Pillow  — reads TGA flags/portraits and writes the converted PNGs.
+# imageio — decodes DDS textures (DXT1/3/5, uncompressed) to pixel arrays.
+# numpy   — required by imageio for array output.
+Pillow>=10.0
+imageio>=2.34
+numpy>=1.24

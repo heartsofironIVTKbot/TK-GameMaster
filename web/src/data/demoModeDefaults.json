@@ -1,0 +1,1714 @@
+{
+  "mode_nations": {
+    "Roleplay": {
+      "majors": [
+        "France",
+        "Germany",
+        "Italy",
+        "Japan",
+        "Soviet Union",
+        "U.S.A",
+        "United Kingdom"
+      ],
+      "minors": [
+        "Afghanistan",
+        "Argentina",
+        "Australia",
+        "Austria",
+        "Belgian Congo",
+        "Belgium",
+        "Brazil",
+        "British Malaya",
+        "British Raj",
+        "Bulgaria",
+        "Canada",
+        "Chile",
+        "China",
+        "Chinese Soviet Republic",
+        "Colombia",
+        "Cuba",
+        "Czechoslovakia",
+        "Denmark",
+        "Dutch East Indies",
+        "Egypt",
+        "Estonia",
+        "Finland",
+        "French Indochina",
+        "Greece",
+        "Honduras",
+        "Hungary",
+        "Iran",
+        "Iraq",
+        "Ireland",
+        "Latvia",
+        "Lithuania",
+        "Manchuria",
+        "Mexico",
+        "Netherlands",
+        "Norway",
+        "Palestine",
+        "Peru",
+        "Philippines",
+        "Poland",
+        "Portugal",
+        "Romania",
+        "Saudi Arabia",
+        "Siam",
+        "South Africa",
+        "Spain",
+        "Sweden",
+        "Switzerland",
+        "Turkey",
+        "Venezuela",
+        "Yugoslavia"
+      ]
+    },
+    "Roleplay (Millennium Dawn)": {
+      "majors": [
+        "China",
+        "France",
+        "Germany",
+        "Japan",
+        "Russia",
+        "United Kingdom",
+        "United States"
+      ],
+      "minors": [
+        "Abkhazia",
+        "Afghanistan",
+        "Armenia",
+        "Artsakh",
+        "Azerbaijan",
+        "Bahrain",
+        "Belarus",
+        "Bosnia",
+        "Botswana",
+        "Brazil",
+        "Bulgaria",
+        "Canada",
+        "Comoros",
+        "Cuba",
+        "Czechia",
+        "Denmark",
+        "Egypt",
+        "Estonia",
+        "Ethiopia",
+        "Fiji",
+        "Finland",
+        "Georgia",
+        "Greece",
+        "Hezbollah",
+        "India",
+        "Indonesia",
+        "Iran",
+        "Iraq",
+        "Israel",
+        "Italy",
+        "Kazakhstan",
+        "Kuwait",
+        "Kyrgyzstan",
+        "Libya",
+        "Liechtenstein",
+        "Myanmar",
+        "Netherlands",
+        "Nigeria",
+        "North Korea",
+        "Norway",
+        "Oman",
+        "Poland",
+        "Qatar",
+        "Romania",
+        "San Marino",
+        "Saudi Arabia",
+        "Serbia",
+        "Singapore",
+        "South Korea",
+        "South Ossetia",
+        "Spain",
+        "Sweden",
+        "Switzerland",
+        "Syria",
+        "Tajikistan",
+        "Transnistria",
+        "Turkey",
+        "Ukraine",
+        "United Arab Emirates",
+        "Uzbekistan",
+        "Venezuela",
+        "Yugoslavia"
+      ]
+    },
+    "Roleplay (Novum Vexillum)": {
+      "majors": [
+        "China",
+        "France",
+        "Germany",
+        "Japan",
+        "Russia",
+        "United Kingdom",
+        "United States"
+      ],
+      "minors": [
+        "Abkhazia",
+        "Afghanistan",
+        "Armenia",
+        "Artsakh",
+        "Azerbaijan",
+        "Bahrain",
+        "Belarus",
+        "Bosnia",
+        "Botswana",
+        "Brazil",
+        "Bulgaria",
+        "Canada",
+        "Comoros",
+        "Cuba",
+        "Czechia",
+        "Denmark",
+        "Egypt",
+        "Estonia",
+        "Ethiopia",
+        "Fiji",
+        "Finland",
+        "Georgia",
+        "Greece",
+        "Hezbollah",
+        "India",
+        "Indonesia",
+        "Iran",
+        "Iraq",
+        "Israel",
+        "Italy",
+        "Kazakhstan",
+        "Kuwait",
+        "Kyrgyzstan",
+        "Libya",
+        "Liechtenstein",
+        "Myanmar",
+        "Netherlands",
+        "Nigeria",
+        "North Korea",
+        "Norway",
+        "Oman",
+        "Poland",
+        "Qatar",
+        "Romania",
+        "San Marino",
+        "Saudi Arabia",
+        "Serbia",
+        "Singapore",
+        "South Korea",
+        "South Ossetia",
+        "Spain",
+        "Sweden",
+        "Switzerland",
+        "Syria",
+        "Tajikistan",
+        "Transnistria",
+        "Turkey",
+        "Ukraine",
+        "United Arab Emirates",
+        "Uzbekistan",
+        "Venezuela",
+        "Yugoslavia"
+      ]
+    },
+    "Kaiserreich (FFA)": {
+      "majors": [
+        "American Union State",
+        "Austrian Empire",
+        "Combined Syndicates of America",
+        "Commune of France",
+        "Dominion of Canada",
+        "Empire of Japan",
+        "Fengtian Government",
+        "German Empire",
+        "Ottoman Empire",
+        "Pacific States of America",
+        "Russian Republic",
+        "Union of Britain",
+        "United States Federal Government"
+      ],
+      "minors": [
+        "Argentina",
+        "Australasia",
+        "Bharatiya Commune",
+        "Brazil",
+        "Bulgaria",
+        "Dominion of India",
+        "Dutch East Indies",
+        "Flanders-Wallonia",
+        "French Republic",
+        "German East Asia",
+        "Ireland",
+        "Kingdom of Finland",
+        "Kingdom of Spain",
+        "Lithuania",
+        "Mexico",
+        "Mittelafrika",
+        "Mongolia",
+        "Netherlands",
+        "Norway",
+        "Philippines",
+        "Poland",
+        "Princely Federation",
+        "Siam",
+        "Socialist Republic of Italy",
+        "Sweden",
+        "Ukrainian State",
+        "Union of South Africa",
+        "United Baltic Duchy",
+        "West Indies Federation",
+        "White Ruthenia"
+      ]
+    },
+    "TFR": {
+      "majors": [
+        "Germany",
+        "France",
+        "Italy",
+        "United Kingdom",
+        "Russia",
+        "People's Republic of China",
+        "Japan",
+        "India",
+        "Australia"
+      ],
+      "minors": [
+        "Atomwaffen",
+        "Biden or Trump",
+        "Commie USA",
+        "Iran",
+        "North Korea",
+        "Pakistan",
+        "Patriot Front",
+        "Poland",
+        "Republic of China",
+        "Serbia",
+        "South Korea",
+        "Ukraine",
+        "Vietnam"
+      ]
+    },
+    "Historical (Vanilla)": {
+      "majors": [
+        "Germany",
+        "Italy",
+        "Japan",
+        "Soviet Union",
+        "USA",
+        "United Kingdom"
+      ],
+      "minors": [
+        "Australia",
+        "Brazil",
+        "British Raj",
+        "Bulgaria",
+        "Canada",
+        "Finland",
+        "France",
+        "Hungary",
+        "Manchukuo",
+        "Mexico",
+        "Netherlands",
+        "Romania",
+        "Siam",
+        "South Africa",
+        "Spain"
+      ]
+    },
+    "Historical (TFB)": {
+      "majors": [
+        "Germany",
+        "Italy",
+        "Japan",
+        "Soviet Union",
+        "USA",
+        "United Kingdom"
+      ],
+      "minors": [
+        "Australia",
+        "Brazil",
+        "British Raj",
+        "Bulgaria",
+        "Canada",
+        "Finland",
+        "France",
+        "Hungary",
+        "Manchukuo",
+        "Mexico",
+        "Mongolia",
+        "Netherlands",
+        "New Zealand",
+        "Romania",
+        "Siam",
+        "South Africa",
+        "Spain",
+        "Vichy France",
+        "Yugoslavia"
+      ]
+    },
+    "Historical (Oak)": {
+      "majors": [
+        "Germany",
+        "Italy",
+        "Japan",
+        "Soviet Union",
+        "USA",
+        "United Kingdom"
+      ],
+      "minors": [
+        "Australia",
+        "British Raj",
+        "Bulgaria",
+        "Canada",
+        "China",
+        "France",
+        "Hungary",
+        "Manchuria",
+        "New Zealand",
+        "Poland",
+        "Rep Spain",
+        "Romania",
+        "Slovakia",
+        "South Africa",
+        "Spain",
+        "Vichy France"
+      ]
+    },
+    "Historical (Horst)": {
+      "majors": [
+        "China",
+        "Germany",
+        "Italy",
+        "Japan",
+        "Soviet Union",
+        "USA",
+        "United Kingdom"
+      ],
+      "minors": [
+        "Australia",
+        "Brazil",
+        "British Raj",
+        "Bulgaria",
+        "Canada",
+        "Croatia",
+        "Finland",
+        "France",
+        "Hungary",
+        "Manchukuo",
+        "Mongolia",
+        "Netherlands",
+        "Norway",
+        "Poland",
+        "Romania",
+        "Slovakia",
+        "South Africa",
+        "Spain",
+        "Vichy France"
+      ]
+    },
+    "Historical (BFFU)": {
+      "majors": [
+        "Germany",
+        "Italy",
+        "Japan",
+        "Soviet Union",
+        "USA",
+        "United Kingdom"
+      ],
+      "minors": [
+        "Australia",
+        "Brazil",
+        "British Raj",
+        "Bulgaria",
+        "Canada",
+        "Finland",
+        "France",
+        "Hungary",
+        "Manchukuo",
+        "Mexico",
+        "Mongolia",
+        "Netherlands",
+        "New Zealand",
+        "Romania",
+        "Siam",
+        "South Africa",
+        "Spain",
+        "Vichy France",
+        "Yugoslavia"
+      ]
+    }
+  },
+  "mode_layouts": {
+    "Roleplay": [
+      {
+        "name": "Majors",
+        "tiers": [
+          {
+            "label": null,
+            "nations": [
+              "U.S.A",
+              "Soviet Union",
+              "Germany",
+              "United Kingdom",
+              "France",
+              "Italy",
+              "Japan"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Europe",
+        "tiers": [
+          {
+            "label": null,
+            "nations": [
+              "Austria",
+              "Belgium",
+              "Bulgaria",
+              "Czechoslovakia",
+              "Denmark",
+              "Estonia",
+              "Finland",
+              "Greece",
+              "Hungary",
+              "Ireland",
+              "Latvia",
+              "Lithuania",
+              "Netherlands",
+              "Norway",
+              "Poland",
+              "Portugal",
+              "Romania",
+              "Spain",
+              "Sweden",
+              "Switzerland",
+              "Yugoslavia"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Asia",
+        "tiers": [
+          {
+            "label": null,
+            "nations": [
+              "Afghanistan",
+              "British Raj",
+              "China",
+              "Chinese Soviet Republic",
+              "French Indochina",
+              "Iran",
+              "Iraq",
+              "Manchuria",
+              "Palestine",
+              "Saudi Arabia",
+              "Siam",
+              "Turkey"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Oceania",
+        "tiers": [
+          {
+            "label": null,
+            "nations": [
+              "Australia",
+              "British Malaya",
+              "Dutch East Indies",
+              "Philippines"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "North America",
+        "tiers": [
+          {
+            "label": null,
+            "nations": [
+              "Canada",
+              "Cuba",
+              "Honduras",
+              "Mexico"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "South America",
+        "tiers": [
+          {
+            "label": null,
+            "nations": [
+              "Argentina",
+              "Brazil",
+              "Chile",
+              "Colombia",
+              "Peru",
+              "Venezuela"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Africa",
+        "tiers": [
+          {
+            "label": null,
+            "nations": [
+              "Belgian Congo",
+              "Egypt",
+              "South Africa"
+            ]
+          }
+        ]
+      }
+    ],
+    "Roleplay (Millennium Dawn)": [
+      {
+        "name": "Majors",
+        "tiers": [
+          {
+            "label": null,
+            "nations": [
+              "China",
+              "France",
+              "Germany",
+              "Japan",
+              "Russia",
+              "United Kingdom",
+              "United States"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Europe",
+        "tiers": [
+          {
+            "label": null,
+            "nations": [
+              "Belarus",
+              "Bosnia",
+              "Bulgaria",
+              "Czechia",
+              "Denmark",
+              "Estonia",
+              "Finland",
+              "Greece",
+              "Italy",
+              "Netherlands",
+              "Norway",
+              "Liechtenstein",
+              "Poland",
+              "Romania",
+              "Serbia",
+              "Spain",
+              "Sweden",
+              "Switzerland",
+              "San Marino",
+              "Ukraine",
+              "Yugoslavia"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Caucasia",
+        "tiers": [
+          {
+            "label": null,
+            "nations": [
+              "Abkhazia",
+              "Armenia",
+              "Artsakh",
+              "Azerbaijan",
+              "Georgia",
+              "South Ossetia",
+              "Transnistria"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Asia",
+        "tiers": [
+          {
+            "label": null,
+            "nations": [
+              "Afghanistan",
+              "India",
+              "Indonesia",
+              "Kazakhstan",
+              "Kyrgyzstan",
+              "Myanmar",
+              "North Korea",
+              "Singapore",
+              "South Korea",
+              "Tajikistan",
+              "Uzbekistan"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Middle East",
+        "tiers": [
+          {
+            "label": null,
+            "nations": [
+              "Bahrain",
+              "Hezbollah",
+              "Iran",
+              "Iraq",
+              "Israel",
+              "Kuwait",
+              "Oman",
+              "Qatar",
+              "Saudi Arabia",
+              "Syria",
+              "Turkey",
+              "United Arab Emirates"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Africa",
+        "tiers": [
+          {
+            "label": null,
+            "nations": [
+              "Botswana",
+              "Comoros",
+              "Egypt",
+              "Ethiopia",
+              "Libya",
+              "Nigeria"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Americas",
+        "tiers": [
+          {
+            "label": null,
+            "nations": [
+              "Brazil",
+              "Canada",
+              "Cuba",
+              "Fiji",
+              "Venezuela"
+            ]
+          }
+        ]
+      }
+    ],
+    "Roleplay (Novum Vexillum)": [
+      {
+        "name": "Majors",
+        "tiers": [
+          {
+            "label": null,
+            "nations": [
+              "China",
+              "France",
+              "Germany",
+              "Japan",
+              "Russia",
+              "United Kingdom",
+              "United States"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Europe",
+        "tiers": [
+          {
+            "label": null,
+            "nations": [
+              "Belarus",
+              "Bosnia",
+              "Bulgaria",
+              "Czechia",
+              "Denmark",
+              "Estonia",
+              "Finland",
+              "Greece",
+              "Italy",
+              "Netherlands",
+              "Norway",
+              "Liechtenstein",
+              "Poland",
+              "Romania",
+              "Serbia",
+              "Spain",
+              "Sweden",
+              "Switzerland",
+              "San Marino",
+              "Ukraine",
+              "Yugoslavia"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Caucasia",
+        "tiers": [
+          {
+            "label": null,
+            "nations": [
+              "Abkhazia",
+              "Armenia",
+              "Artsakh",
+              "Azerbaijan",
+              "Georgia",
+              "South Ossetia",
+              "Transnistria"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Asia",
+        "tiers": [
+          {
+            "label": null,
+            "nations": [
+              "Afghanistan",
+              "India",
+              "Indonesia",
+              "Kazakhstan",
+              "Kyrgyzstan",
+              "Myanmar",
+              "North Korea",
+              "Singapore",
+              "South Korea",
+              "Tajikistan",
+              "Uzbekistan"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Middle East",
+        "tiers": [
+          {
+            "label": null,
+            "nations": [
+              "Bahrain",
+              "Hezbollah",
+              "Iran",
+              "Iraq",
+              "Israel",
+              "Kuwait",
+              "Oman",
+              "Qatar",
+              "Saudi Arabia",
+              "Syria",
+              "Turkey",
+              "United Arab Emirates"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Africa",
+        "tiers": [
+          {
+            "label": null,
+            "nations": [
+              "Botswana",
+              "Comoros",
+              "Egypt",
+              "Ethiopia",
+              "Libya",
+              "Nigeria"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Americas",
+        "tiers": [
+          {
+            "label": null,
+            "nations": [
+              "Brazil",
+              "Canada",
+              "Cuba",
+              "Fiji",
+              "Venezuela"
+            ]
+          }
+        ]
+      }
+    ],
+    "Kaiserreich (FFA)": [
+      {
+        "name": "Entente",
+        "tiers": [
+          {
+            "label": "Majors",
+            "nations": [
+              "United States Federal Government",
+              "Dominion of Canada"
+            ]
+          },
+          {
+            "label": "Minors",
+            "nations": [
+              "Australasia",
+              "Brazil",
+              "French Republic",
+              "Mexico",
+              "Philippines",
+              "West Indies Federation",
+              "Argentina",
+              "Dominion of India"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Third International",
+        "tiers": [
+          {
+            "label": "Majors",
+            "nations": [
+              "Commune of France",
+              "Union of Britain",
+              "Combined Syndicates of America"
+            ]
+          },
+          {
+            "label": "Minors",
+            "nations": [
+              "Socialist Republic of Italy",
+              "Kingdom of Spain",
+              "Norway",
+              "Ireland",
+              "Union of South Africa",
+              "Bharatiya Commune"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Reichspakt",
+        "tiers": [
+          {
+            "label": "Majors",
+            "nations": [
+              "German Empire",
+              "Austrian Empire",
+              "Ottoman Empire",
+              "American Union State"
+            ]
+          },
+          {
+            "label": "Minors",
+            "nations": [
+              "German East Asia",
+              "Mittelafrika",
+              "Netherlands",
+              "Dutch East Indies",
+              "Flanders-Wallonia",
+              "Bulgaria",
+              "Sweden",
+              "Poland",
+              "Lithuania",
+              "White Ruthenia",
+              "United Baltic Duchy",
+              "Ukrainian State",
+              "Princely Federation"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Moscow Accord",
+        "tiers": [
+          {
+            "label": "Majors",
+            "nations": [
+              "Russian Republic",
+              "Fengtian Government",
+              "Empire of Japan",
+              "Pacific States of America"
+            ]
+          },
+          {
+            "label": "Minors",
+            "nations": [
+              "Kingdom of Finland",
+              "Mongolia",
+              "Siam"
+            ]
+          }
+        ]
+      }
+    ],
+    "TFR": [
+      {
+        "name": "NATO",
+        "tiers": [
+          {
+            "label": "Majors",
+            "nations": [
+              "Germany",
+              "France",
+              "Italy",
+              "United Kingdom"
+            ]
+          },
+          {
+            "label": "Minors",
+            "nations": [
+              "Poland",
+              "Ukraine"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "CSTO",
+        "tiers": [
+          {
+            "label": "Majors",
+            "nations": [
+              "Russia"
+            ]
+          },
+          {
+            "label": "Minors",
+            "nations": [
+              "Serbia",
+              "Iran"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "EADI",
+        "tiers": [
+          {
+            "label": "Majors",
+            "nations": [
+              "People's Republic of China"
+            ]
+          },
+          {
+            "label": "Minors",
+            "nations": [
+              "North Korea",
+              "Pakistan"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "PDTO",
+        "tiers": [
+          {
+            "label": "Majors",
+            "nations": [
+              "Japan",
+              "India",
+              "Australia"
+            ]
+          },
+          {
+            "label": "Minors",
+            "nations": [
+              "Republic of China",
+              "South Korea",
+              "Vietnam"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "USA",
+        "tiers": [
+          {
+            "label": "Majors",
+            "nations": []
+          },
+          {
+            "label": "Minors",
+            "nations": [
+              "Biden or Trump",
+              "Patriot Front",
+              "Commie USA",
+              "Atomwaffen"
+            ]
+          }
+        ]
+      }
+    ],
+    "Historical (Vanilla)": [
+      {
+        "name": "Allies",
+        "tiers": [
+          {
+            "label": "Majors",
+            "nations": [
+              "United Kingdom",
+              "USA"
+            ]
+          },
+          {
+            "label": "Important Minors",
+            "nations": [
+              "France",
+              "British Raj"
+            ]
+          },
+          {
+            "label": "Minors",
+            "nations": [
+              "Canada",
+              "South Africa",
+              "Australia",
+              "Brazil",
+              "Mexico",
+              "Netherlands"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Comintern",
+        "tiers": [
+          {
+            "label": "Majors",
+            "nations": [
+              "Soviet Union"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Axis",
+        "tiers": [
+          {
+            "label": "Majors",
+            "nations": [
+              "Germany",
+              "Italy"
+            ]
+          },
+          {
+            "label": "Important Minors",
+            "nations": [
+              "Bulgaria",
+              "Spain"
+            ]
+          },
+          {
+            "label": "Minors",
+            "nations": [
+              "Romania",
+              "Finland",
+              "Hungary"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "GEACPS",
+        "tiers": [
+          {
+            "label": "Majors",
+            "nations": [
+              "Japan"
+            ]
+          },
+          {
+            "label": "Important Minors",
+            "nations": [
+              "Manchukuo"
+            ]
+          },
+          {
+            "label": "Minors",
+            "nations": [
+              "Siam"
+            ]
+          }
+        ]
+      }
+    ],
+    "Historical (TFB)": [
+      {
+        "name": "Allies",
+        "tiers": [
+          {
+            "label": "Majors",
+            "nations": [
+              "United Kingdom",
+              "USA"
+            ]
+          },
+          {
+            "label": "Important Minors",
+            "nations": [
+              "France",
+              "British Raj"
+            ]
+          },
+          {
+            "label": "Minors",
+            "nations": [
+              "Canada",
+              "South Africa",
+              "Australia",
+              "New Zealand",
+              "Brazil",
+              "Mexico",
+              "Netherlands"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Comintern",
+        "tiers": [
+          {
+            "label": "Majors",
+            "nations": [
+              "Soviet Union"
+            ]
+          },
+          {
+            "label": "Important Minors",
+            "nations": []
+          },
+          {
+            "label": "Minors",
+            "nations": [
+              "Mongolia"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Axis",
+        "tiers": [
+          {
+            "label": "Majors",
+            "nations": [
+              "Germany",
+              "Italy"
+            ]
+          },
+          {
+            "label": "Important Minors",
+            "nations": [
+              "Bulgaria",
+              "Spain"
+            ]
+          },
+          {
+            "label": "Minors",
+            "nations": [
+              "Romania",
+              "Finland",
+              "Hungary",
+              "Vichy France",
+              "Yugoslavia"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "GEACPS",
+        "tiers": [
+          {
+            "label": "Majors",
+            "nations": [
+              "Japan"
+            ]
+          },
+          {
+            "label": "Important Minors",
+            "nations": [
+              "Manchukuo"
+            ]
+          },
+          {
+            "label": "Minors",
+            "nations": [
+              "Siam"
+            ]
+          }
+        ]
+      }
+    ],
+    "Historical (Oak)": [
+      {
+        "name": "Allies",
+        "tiers": [
+          {
+            "label": "Majors",
+            "nations": [
+              "United Kingdom",
+              "USA",
+              "Soviet Union"
+            ]
+          },
+          {
+            "label": "Important Minors",
+            "nations": [
+              "France",
+              "British Raj",
+              "China"
+            ]
+          },
+          {
+            "label": "Minors",
+            "nations": [
+              "Canada",
+              "South Africa",
+              "Australia",
+              "New Zealand",
+              "Poland",
+              "Rep Spain"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Axis",
+        "tiers": [
+          {
+            "label": "Majors",
+            "nations": [
+              "Germany",
+              "Italy",
+              "Japan"
+            ]
+          },
+          {
+            "label": "Important Minors",
+            "nations": [
+              "Spain",
+              "Romania",
+              "Manchuria"
+            ]
+          },
+          {
+            "label": "Minors",
+            "nations": [
+              "Hungary",
+              "Bulgaria",
+              "Vichy France",
+              "Slovakia"
+            ]
+          }
+        ]
+      }
+    ],
+    "Historical (Horst)": [
+      {
+        "name": "Allies",
+        "tiers": [
+          {
+            "label": "Majors",
+            "nations": [
+              "USA",
+              "United Kingdom"
+            ]
+          },
+          {
+            "label": "Important Minors",
+            "nations": [
+              "France",
+              "Canada",
+              "South Africa",
+              "British Raj",
+              "Brazil",
+              "Australia",
+              "Netherlands"
+            ]
+          },
+          {
+            "label": "Minors",
+            "nations": [
+              "Norway",
+              "Poland"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Comintern",
+        "tiers": [
+          {
+            "label": "Majors",
+            "nations": [
+              "Soviet Union"
+            ]
+          },
+          {
+            "label": "Important Minors",
+            "nations": []
+          },
+          {
+            "label": "Minors",
+            "nations": [
+              "Mongolia"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Axis",
+        "tiers": [
+          {
+            "label": "Majors",
+            "nations": [
+              "Germany",
+              "Italy"
+            ]
+          },
+          {
+            "label": "Important Minors",
+            "nations": [
+              "Croatia",
+              "Hungary",
+              "Romania",
+              "Bulgaria",
+              "Spain"
+            ]
+          },
+          {
+            "label": "Minors",
+            "nations": [
+              "Finland",
+              "Slovakia",
+              "Vichy France"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "GEACPS",
+        "tiers": [
+          {
+            "label": "Majors",
+            "nations": [
+              "Japan"
+            ]
+          },
+          {
+            "label": "Important Minors",
+            "nations": [
+              "Manchukuo"
+            ]
+          },
+          {
+            "label": "Minors",
+            "nations": []
+          }
+        ]
+      },
+      {
+        "name": "United Front",
+        "tiers": [
+          {
+            "label": "Majors",
+            "nations": [
+              "China"
+            ]
+          },
+          {
+            "label": "Important Minors",
+            "nations": []
+          },
+          {
+            "label": "Minors",
+            "nations": []
+          }
+        ]
+      }
+    ],
+    "Historical (BFFU)": [
+      {
+        "name": "Allies",
+        "tiers": [
+          {
+            "label": "Majors",
+            "nations": [
+              "United Kingdom",
+              "USA"
+            ]
+          },
+          {
+            "label": "Important Minors",
+            "nations": [
+              "France",
+              "British Raj"
+            ]
+          },
+          {
+            "label": "Minors",
+            "nations": [
+              "Canada",
+              "South Africa",
+              "Australia",
+              "New Zealand",
+              "Brazil",
+              "Mexico",
+              "Netherlands"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Comintern",
+        "tiers": [
+          {
+            "label": "Majors",
+            "nations": [
+              "Soviet Union"
+            ]
+          },
+          {
+            "label": "Important Minors",
+            "nations": []
+          },
+          {
+            "label": "Minors",
+            "nations": [
+              "Mongolia"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Axis",
+        "tiers": [
+          {
+            "label": "Majors",
+            "nations": [
+              "Germany",
+              "Italy"
+            ]
+          },
+          {
+            "label": "Important Minors",
+            "nations": [
+              "Bulgaria",
+              "Spain"
+            ]
+          },
+          {
+            "label": "Minors",
+            "nations": [
+              "Romania",
+              "Finland",
+              "Hungary",
+              "Vichy France",
+              "Yugoslavia"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "GEACPS",
+        "tiers": [
+          {
+            "label": "Majors",
+            "nations": [
+              "Japan"
+            ]
+          },
+          {
+            "label": "Important Minors",
+            "nations": [
+              "Manchukuo"
+            ]
+          },
+          {
+            "label": "Minors",
+            "nations": [
+              "Siam"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "mode_resources": {
+    "Roleplay": {
+      "mods": [
+        {
+          "name": "Road to 56 Mod",
+          "link": "https://steamcommunity.com/sharedfiles/filedetails/?id=820260968"
+        },
+        {
+          "name": "The Road to 56 RP Submod",
+          "link": "https://steamcommunity.com/sharedfiles/filedetails/?id=2790635823"
+        },
+        {
+          "name": "TommyKay R56RP Submod",
+          "link": "https://steamcommunity.com/sharedfiles/filedetails/?id=3342783457"
+        }
+      ],
+      "rules": [
+        {
+          "name": "Road to 56 Ruleset",
+          "link": "https://docs.google.com/document/d/1lstrrv8anR71-eaFWZP39Fg3dYK-c9MYLMvlZIBy2eM/edit?usp=sharing"
+        }
+      ]
+    },
+    "Roleplay (Millennium Dawn)": {
+      "mods": [
+        {
+          "name": "Millennium Dawn: A Modern Day Mod",
+          "link": "https://steamcommunity.com/sharedfiles/filedetails/?id=2777392649"
+        }
+      ],
+      "rules": [
+        {
+          "name": "Road to 56 Ruleset",
+          "link": "https://docs.google.com/document/d/1lstrrv8anR71-eaFWZP39Fg3dYK-c9MYLMvlZIBy2eM/edit?usp=sharing"
+        }
+      ]
+    },
+    "Roleplay (Novum Vexillum)": {
+      "mods": [
+        {
+          "name": "Novum Vexillum",
+          "link": "https://steamcommunity.com/sharedfiles/filedetails/?id=1827273767"
+        }
+      ],
+      "rules": [
+        {
+          "name": "Road to 56 Ruleset",
+          "link": "https://docs.google.com/document/d/1lstrrv8anR71-eaFWZP39Fg3dYK-c9MYLMvlZIBy2eM/edit?usp=sharing"
+        }
+      ]
+    },
+    "Kaiserreich (FFA)": {
+      "mods": [
+        {
+          "name": "Kaiserreich",
+          "link": "https://steamcommunity.com/sharedfiles/filedetails/?id=1521695605"
+        },
+        {
+          "name": "Kaiserreich FFA",
+          "link": "https://steamcommunity.com/sharedfiles/filedetails/?id=3820086060"
+        }
+      ],
+      "rules": [
+        {
+          "name": "TommyKay Kaiserreich MP Rules",
+          "link": "https://docs.google.com/document/d/1eMBO1ODN88qCH8PtR-6xedxbWtIiAKiV89Z0mTInIsc/edit?tab=t.0"
+        }
+      ]
+    },
+    "TFR": {
+      "mods": [
+        {
+          "name": "The Fire Rises (TFR) Mod",
+          "link": "https://steamcommunity.com/sharedfiles/filedetails/?id=3350890356"
+        },
+        {
+          "name": "TFR MP Submod (By Adds)",
+          "link": "https://steamcommunity.com/sharedfiles/filedetails/?id=3780172444"
+        }
+      ],
+      "rules": [
+        {
+          "name": "TFR Ruleset",
+          "link": "https://docs.google.com/document/d/1XHRIBBMG9WbS--uig9iOX8FhqUMbFKdFTPyEyfpOcn8/edit?usp=sharing"
+        }
+      ]
+    },
+    "Historical (Vanilla)": {
+      "mods": [
+        {
+          "name": "Vanilla Mod",
+          "link": "https://steamcommunity.com/sharedfiles/filedetails/?id=1827273767"
+        }
+      ],
+      "rules": [
+        {
+          "name": "Historical Ruleset",
+          "link": "https://docs.google.com/document/d/1lstrrv8anR71-eaFWZP39Fg3dYK-c9MYLMvlZIBy2eM/edit?usp=sharing"
+        }
+      ]
+    },
+    "Historical (TFB)": {
+      "mods": [
+        {
+          "name": "Their Finest Bruh Mod",
+          "link": "https://steamcommunity.com/sharedfiles/filedetails/?id=2559317737"
+        },
+        {
+          "name": "Their Finest Cope Submod",
+          "link": "https://steamcommunity.com/sharedfiles/filedetails/?id=3642935694&searchtext=their+finest+cope"
+        }
+      ],
+      "rules": [
+        {
+          "name": "Historical Ruleset",
+          "link": "https://docs.google.com/document/d/1lstrrv8anR71-eaFWZP39Fg3dYK-c9MYLMvlZIBy2eM/edit?usp=sharing"
+        }
+      ]
+    },
+    "Historical (Oak)": {
+      "mods": [
+        {
+          "name": "Hearts of Oak 2 Mod",
+          "link": "https://steamcommunity.com/sharedfiles/filedetails/?id=2566601386"
+        }
+      ],
+      "rules": [
+        {
+          "name": "Historical Ruleset",
+          "link": "https://docs.google.com/document/d/1lstrrv8anR71-eaFWZP39Fg3dYK-c9MYLMvlZIBy2eM/edit?usp=sharing"
+        }
+      ]
+    },
+    "Historical (Horst)": {
+      "mods": [
+        {
+          "name": "Horstorical Multiplayer 2 Mod",
+          "link": "https://steamcommunity.com/sharedfiles/filedetails/?id=3516496049&searchtext=horst"
+        }
+      ],
+      "rules": [
+        {
+          "name": "Historical Ruleset",
+          "link": "https://docs.google.com/document/d/1lstrrv8anR71-eaFWZP39Fg3dYK-c9MYLMvlZIBy2eM/edit?usp=sharing"
+        }
+      ]
+    },
+    "Historical (BFFU)": {
+      "mods": [
+        {
+          "name": "BFFU 2",
+          "link": "https://steamcommunity.com/sharedfiles/filedetails/?id=3765324616"
+        }
+      ],
+      "rules": [
+        {
+          "name": "Historical Ruleset",
+          "link": "https://docs.google.com/document/d/1lstrrv8anR71-eaFWZP39Fg3dYK-c9MYLMvlZIBy2eM/edit?usp=sharing"
+        }
+      ]
+    }
+  }
+}
