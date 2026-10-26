@@ -5,7 +5,7 @@ import { demoPlayerPortfolio } from "@/lib/databaseDemo";
 import { demoPlayerProfile } from "@/lib/liveDemo";
 import { isSchedulerDemo } from "@/lib/scheduleStore";
 import { lookupMembers } from "@/lib/memberDirectory";
-import { HOST_RANKS, RP_RANK_ROLES, type HostBranch, type HostRank } from "@/lib/hostBranches";
+import { HOST_RANKS, type HostBranch, type HostRank } from "@/lib/hostBranches";
 import { memberRoleIds as publishedRoleIds } from "@/lib/memberRoles";
 import {
   MERIT_RULES,
@@ -54,23 +54,13 @@ const portfolioCache = sharedCache<PlayerPortfolio>("player-portfolio", PORTFOLI
 
 const DISCORD_EPOCH_MS = BigInt(1420070400000);
 
-/** The home server's role ids (bot.py.py ROLE_IDS); other servers use the
- *  ids their setup chose (memberRoles.memberRoleIds). */
-export const ROLE = {
-  HOI4_RP_TRUSTED: "1423010943436329043",
-  HOI4_MP_TRUSTED: "1473110336277053480",
-  HOI4_VERIFIED: "1440832519221285035",
-  VALOR: "1462629336694788332",
-} as const;
-
-/** Per-mode stat columns + roles (the bot's get_mod_context / GAME_ROLE_CONFIG). */
+/** Per-mode stat columns (the bot's get_mod_context). Role ids come from each
+ *  server's setup (memberRoles.memberRoleIds). */
 const MODES: {
   mode: PortfolioMode;
   commends: string;
   warns: string;
   banned: string;
-  trustedRole: string;
-  verifiedRole: string;
   verifiedColumn: string;
 }[] = [
   {
@@ -78,8 +68,6 @@ const MODES: {
     commends: "rp_commends",
     warns: "rp_warns",
     banned: "banned",
-    trustedRole: ROLE.HOI4_RP_TRUSTED,
-    verifiedRole: ROLE.HOI4_VERIFIED,
     verifiedColumn: "hoi4_verified",
   },
   {
@@ -87,8 +75,6 @@ const MODES: {
     commends: "hist_commends",
     warns: "hist_warns",
     banned: "hist_banned",
-    trustedRole: ROLE.HOI4_MP_TRUSTED,
-    verifiedRole: ROLE.HOI4_VERIFIED,
     verifiedColumn: "hoi4_verified",
   },
 ];
@@ -153,12 +139,11 @@ async function directoryRow(userId: string, guildId: string): Promise<DirectoryR
   }
 }
 
-/** Rank role ids per host branch (home RP = the original roles; the rest from the bot). */
+/** Rank role ids per host branch (from each server's setup, published by the bot). */
 export async function hostRankRoles(guildId?: string): Promise<Record<HostBranch, Record<HostRank, string | null>>> {
   const guild = guildId ?? (await currentGuildId());
   const published = await publishedRoleIds(guild);
-  const rp = isHomeGuild(guild) ? { ...RP_RANK_ROLES, ...published.host_ranks.RP } : published.host_ranks.RP;
-  return { RP: rp, HIST: published.host_ranks.HIST };
+  return { RP: published.host_ranks.RP, HIST: published.host_ranks.HIST };
 }
 
 /** A member's rank in each branch, from their mirrored role ids. */

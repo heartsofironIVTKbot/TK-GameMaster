@@ -19,7 +19,7 @@ import {
  * _process_web_server_setup ("Create for me").
  */
 
-export const DEMO_HOME_ID = "341585283881631744";
+export const DEMO_HOME_ID = "880000000000000043";
 const BALTIC_ID = "600000000000000001";
 const PACIFIC_ID = "600000000000000002";
 
@@ -65,69 +65,69 @@ function permissions(missing: number[] = []): string {
 
 function tommyKaySnapshot(now: number): GuildSnapshot {
   const roles = [
-    role("341587483383037954", "Tommy and the Boys", 40, "#e74c3c", { hoist: true, members: 4 }),
+    role("880000000000000044", "Tommy and the Boys", 40, "#e74c3c", { hoist: true, members: 4 }),
     role("900000000000000001", "GameMaster", 39, "#f1c40f", { managed: true, members: 1 }),
-    role("559451723370987530", "SUPA Mods", 38, "#9b59b6", { hoist: true, members: 6 }),
-    role("1420327334627774554", "Game Community Manager", 37, "#1abc9c", { members: 2 }),
-    role("1485681095721750669", "Game Community Assistant", 36, "#16a085", { members: 3 }),
-    role("1429066717426089986", "Head Mod Developer", 35, "#3498db", { members: 1 }),
-    role("1485937962695786578", "Senior RP Host", 34, "#e67e22", { hoist: true, members: 4 }),
-    role("819120021464285184", "RP Host", 33, "#f39c12", { hoist: true, members: 11 }),
-    role("1420697977340821514", "RP Assistant Host", 32, "#f8c471", { members: 6 }),
+    role("880000000000000046", "SUPA Mods", 38, "#9b59b6", { hoist: true, members: 6 }),
+    role("880000000000000008", "Game Community Manager", 37, "#1abc9c", { members: 2 }),
+    role("880000000000000034", "Game Community Assistant", 36, "#16a085", { members: 3 }),
+    role("880000000000000013", "Head Mod Developer", 35, "#3498db", { members: 1 }),
+    role("880000000000000036", "Senior RP Host", 34, "#e67e22", { hoist: true, members: 4 }),
+    role("880000000000000048", "RP Host", 33, "#f39c12", { hoist: true, members: 11 }),
+    role("880000000000000009", "RP Assistant Host", 32, "#f8c471", { members: 6 }),
     role("900000000000000011", "Senior HIST Host", 31, "#2980b9", { members: 1 }),
     role("900000000000000012", "HIST Host", 30, "#5dade2", { members: 3 }),
     role("900000000000000013", "HIST Assistant Host", 29, "#aed6f1", { members: 2 }),
-    role("1472972575440371723", "Retired Organiser", 28, "#95a5a6", { members: 5 }),
-    role("361137756283338753", "VIP", 27, "#ff73fa", { hoist: true, members: 18 }),
-    role("1462629336694788332", "Hearts of Valor", 26, "#c0392b", { members: 9 }),
-    role("1423010943436329043", "HOI4 RP Trusted", 25, "#27ae60", { members: 64 }),
-    role("1473110336277053480", "HOI4 MP Trusted", 24, "#2ecc71", { members: 31 }),
-    role("1440832519221285035", "RP Verified", 23, "#58d68d", { members: 412 }),
+    role("880000000000000027", "Retired Organiser", 28, "#95a5a6", { members: 5 }),
+    role("880000000000000045", "VIP", 27, "#ff73fa", { hoist: true, members: 18 }),
+    role("880000000000000021", "Hearts of Valor", 26, "#c0392b", { members: 9 }),
+    role("880000000000000011", "HOI4 RP Trusted", 25, "#27ae60", { members: 64 }),
+    role("880000000000000031", "HOI4 MP Trusted", 24, "#2ecc71", { members: 31 }),
+    role("880000000000000017", "RP Verified", 23, "#58d68d", { members: 412 }),
     role("900000000000000014", "Hist Verified", 22, "#82e0aa", { members: 97 }),
-    role("1478964992169738342", "Dishonored", 21, "#7f8c8d", { members: 3 }),
-    role("1427744754585833512", "HOI4 RP Banned", 20, "#34495e", { members: 14 }),
-    role("1473137869039341609", "HOI4 MP Banned", 19, "#2c3e50", { members: 6 }),
-    role("1524530559198564362", "Mod Developer", 18, "#5499c7", { members: 4 }),
-    role("1441133363711836160", "Helper", 17, "#48c9b0", { members: 5 }),
-    role("819202186974199809", "HOI4 MP", 17, null, { mentionable: true, members: 1640 }),
-    role("1473009384647819510", "Historical Ping", 16, null, { mentionable: true, members: 870 }),
-    role("1436270629706797147", "Server Partner", 15, "#d4ac0d", { members: 7 }),
+    role("880000000000000033", "Dishonored", 21, "#7f8c8d", { members: 3 }),
+    role("880000000000000012", "HOI4 RP Banned", 20, "#34495e", { members: 14 }),
+    role("880000000000000032", "HOI4 MP Banned", 19, "#2c3e50", { members: 6 }),
+    role("880000000000000040", "Mod Developer", 18, "#5499c7", { members: 4 }),
+    role("880000000000000018", "Helper", 17, "#48c9b0", { members: 5 }),
+    role("880000000000000049", "HOI4 MP", 17, null, { mentionable: true, members: 1640 }),
+    role("880000000000000030", "Historical Ping", 16, null, { mentionable: true, members: 870 }),
+    role("880000000000000016", "Server Partner", 15, "#d4ac0d", { members: 7 }),
     role("900000000000000020", "Member", 1, null, { members: 4120 }),
     role(DEMO_HOME_ID, "@everyone", 0, null, { everyone: true, members: 4300 }),
   ];
   const channels = [
     chan("900000000000000101", "HOI4 ROLEPLAY", "category", null, 1),
-    chan("1368570751149412493", "rp-announcements", "text", "900000000000000101", 1),
-    chan("1467569177291391200", "kaiserreich-announcements", "text", "900000000000000101", 2),
-    chan("1421826371990196224", "rp-game-info", "text", "900000000000000101", 3),
-    chan("1368573825830354974", "rp-rules", "text", "900000000000000101", 4),
-    chan("1473008875673358376", "rp-mods", "text", "900000000000000101", 5),
-    chan("1457701862974423130", "rp-game-logs", "text", "900000000000000101", 6),
+    chan("880000000000000005", "rp-announcements", "text", "900000000000000101", 1),
+    chan("880000000000000026", "kaiserreich-announcements", "text", "900000000000000101", 2),
+    chan("880000000000000010", "rp-game-info", "text", "900000000000000101", 3),
+    chan("880000000000000006", "rp-rules", "text", "900000000000000101", 4),
+    chan("880000000000000029", "rp-mods", "text", "900000000000000101", 5),
+    chan("880000000000000020", "rp-game-logs", "text", "900000000000000101", 6),
     chan("900000000000000102", "HOI4 HISTORICAL", "category", null, 2),
-    chan("829789379799023657", "historical-announcements", "text", "900000000000000102", 1),
-    chan("1433072780827430922", "historical-game-info", "text", "900000000000000102", 2),
-    chan("1368260039592120391", "historical-rules", "text", "900000000000000102", 3),
-    chan("1368607763680329818", "historical-mods", "text", "900000000000000102", 4),
-    chan("1473008174339461160", "historical-game-logs", "text", "900000000000000102", 5),
+    chan("880000000000000050", "historical-announcements", "text", "900000000000000102", 1),
+    chan("880000000000000015", "historical-game-info", "text", "900000000000000102", 2),
+    chan("880000000000000002", "historical-rules", "text", "900000000000000102", 3),
+    chan("880000000000000007", "historical-mods", "text", "900000000000000102", 4),
+    chan("880000000000000028", "historical-game-logs", "text", "900000000000000102", 5),
     chan("900000000000000103", "HOST TEAM", "category", null, 3),
-    chan("1429383317014315058", "host-log", "text", "900000000000000103", 1),
-    chan("1485821152831209613", "host-management", "text", "900000000000000103", 2),
-    chan("1467436929027936362", "host-chatlogs", "forum", "900000000000000103", 3),
-    chan("1520000664477106247", "schedule", "text", "900000000000000103", 4),
-    chan("1444461630829367441", "tickets", "text", null, 4),
-    chan("1524563433763246330", "crash-reports", "text", null, 5),
-    chan("1465922001372713011", "HOI4 TICKETS", "category", null, 10),
-    chan("1465663114908532858", "ticket-transcripts", "text", "900000000000000103", 5),
-    chan("1465663244747407502", "private-ticket-transcripts", "text", "900000000000000103", 6),
+    chan("880000000000000014", "host-log", "text", "900000000000000103", 1),
+    chan("880000000000000035", "host-management", "text", "900000000000000103", 2),
+    chan("880000000000000025", "host-chatlogs", "forum", "900000000000000103", 3),
+    chan("880000000000000039", "schedule", "text", "900000000000000103", 4),
+    chan("880000000000000019", "tickets", "text", null, 4),
+    chan("880000000000000041", "crash-reports", "text", null, 5),
+    chan("880000000000000024", "HOI4 TICKETS", "category", null, 10),
+    chan("880000000000000022", "ticket-transcripts", "text", "900000000000000103", 5),
+    chan("880000000000000023", "private-ticket-transcripts", "text", "900000000000000103", 6),
     chan("900000000000000104", "CASINO", "category", null, 6),
-    chan("1544961375816650832", "casino-access", "text", "900000000000000104", 1),
-    chan("1493273590555213975", "randomizer-log", "text", "900000000000000104", 2),
-    chan("1518509646804160583", "fortunes-log", "text", "900000000000000104", 3),
-    chan("1368266605036966030", "RP GAME VOICE", "category", null, 7),
-    chan("1368263702641381548", "Game Lobby", "voice", "1368266605036966030", 1),
-    chan("819116208670507008", "HISTORICAL GAME VOICE", "category", null, 8),
-    chan("1367146329184276670", "COMMUNITY VOICE", "category", null, 9),
-    chan("900000000000000105", "General", "voice", "1367146329184276670", 1),
+    chan("880000000000000042", "casino-access", "text", "900000000000000104", 1),
+    chan("880000000000000037", "randomizer-log", "text", "900000000000000104", 2),
+    chan("880000000000000038", "fortunes-log", "text", "900000000000000104", 3),
+    chan("880000000000000004", "RP GAME VOICE", "category", null, 7),
+    chan("880000000000000003", "Game Lobby", "voice", "880000000000000004", 1),
+    chan("880000000000000047", "HISTORICAL GAME VOICE", "category", null, 8),
+    chan("880000000000000001", "COMMUNITY VOICE", "category", null, 9),
+    chan("900000000000000105", "General", "voice", "880000000000000001", 1),
   ];
   return {
     guild: { id: DEMO_HOME_ID, name: "TommyKay's HOI4 Community", icon: null, owner_id: "900000000000000900", member_count: 4300, system_channel_id: null, community: true },
@@ -142,63 +142,63 @@ function tommyKaySnapshot(now: number): GuildSnapshot {
 function tommyKaySettings(): ServerSettings {
   const s = defaultSettings("TommyKay's HOI4 Community");
   s.access = {
-    senior_staff_roles: ["1429066717426089986", "1485681095721750669", "1420327334627774554", "559451723370987530", "341587483383037954"],
+    senior_staff_roles: ["880000000000000013", "880000000000000034", "880000000000000008", "880000000000000046", "880000000000000044"],
     staff_can_edit_settings: true,
-    ticket_support_roles: ["1441133363711836160"],
-    developer_roles: ["1429066717426089986"],
+    ticket_support_roles: ["880000000000000018"],
+    developer_roles: ["880000000000000013"],
   };
-  s.branches.RP.ranks = { Assistant: "1420697977340821514", Full: "819120021464285184", Senior: "1485937962695786578" };
+  s.branches.RP.ranks = { Assistant: "880000000000000009", Full: "880000000000000048", Senior: "880000000000000036" };
   s.branches.HIST.ranks = { Assistant: "900000000000000013", Full: "900000000000000012", Senior: "900000000000000011" };
   s.roles = {
-    verified: { RP: "1440832519221285035", HIST: "900000000000000014" },
-    trusted: { RP: "1423010943436329043", HIST: "1473110336277053480" },
-    game_ban: { RP: "1427744754585833512", HIST: "1473137869039341609" },
-    dishonored: { RP: "1478964992169738342", HIST: "1478964992169738342" },
-    ping: { RP: "819202186974199809", HIST: "1473009384647819510" },
-    vip: "361137756283338753",
-    valor: "1462629336694788332",
-    crash_report_ping: "1524530559198564362",
+    verified: { RP: "880000000000000017", HIST: "900000000000000014" },
+    trusted: { RP: "880000000000000011", HIST: "880000000000000031" },
+    game_ban: { RP: "880000000000000012", HIST: "880000000000000032" },
+    dishonored: { RP: "880000000000000033", HIST: "880000000000000033" },
+    ping: { RP: "880000000000000049", HIST: "880000000000000030" },
+    vip: "880000000000000045",
+    valor: "880000000000000021",
+    crash_report_ping: "880000000000000040",
   };
   s.channels = {
-    host_log: "1429383317014315058",
-    staff_notices: "1485821152831209613",
-    schedule_panel: "1520000664477106247",
-    host_chatlogs_forum: "1467436929027936362",
-    tickets: "1444461630829367441",
-    crash_reports: "1524563433763246330",
-    ticket_category: "1465922001372713011",
-    ticket_log: "1465663114908532858",
-    ticket_private_log: "1465663244747407502",
+    host_log: "880000000000000014",
+    staff_notices: "880000000000000035",
+    schedule_panel: "880000000000000039",
+    host_chatlogs_forum: "880000000000000025",
+    tickets: "880000000000000019",
+    crash_reports: "880000000000000041",
+    ticket_category: "880000000000000024",
+    ticket_log: "880000000000000022",
+    ticket_private_log: "880000000000000023",
   };
-  s.lobby_voices = ["1368263702641381548"];
+  s.lobby_voices = ["880000000000000003"];
   s.voice = {
-    RP: { after_category: "1368266605036966030", before_category: "819116208670507008" },
-    HIST: { after_category: "819116208670507008", before_category: "1367146329184276670" },
+    RP: { after_category: "880000000000000004", before_category: "880000000000000047" },
+    HIST: { after_category: "880000000000000047", before_category: "880000000000000001" },
   };
   const rp = {
-    game_info_channel: "1421826371990196224",
-    rules_channel: "1368573825830354974",
-    mods_channel: "1473008875673358376",
-    public_log_channel: "1457701862974423130",
-    ping_role: "819202186974199809",
+    game_info_channel: "880000000000000010",
+    rules_channel: "880000000000000006",
+    mods_channel: "880000000000000029",
+    public_log_channel: "880000000000000020",
+    ping_role: "880000000000000049",
   };
   const hist = {
-    announcement_channel: "829789379799023657",
-    game_info_channel: "1433072780827430922",
-    rules_channel: "1368260039592120391",
-    mods_channel: "1368607763680329818",
-    public_log_channel: "1473008174339461160",
-    ping_role: "1473009384647819510",
+    announcement_channel: "880000000000000050",
+    game_info_channel: "880000000000000015",
+    rules_channel: "880000000000000002",
+    mods_channel: "880000000000000007",
+    public_log_channel: "880000000000000028",
+    ping_role: "880000000000000030",
   };
   for (const [key, mode] of Object.entries(s.modes)) {
     mode.enabled = true;
     if (key.startsWith("Historical")) Object.assign(mode, hist);
-    else Object.assign(mode, rp, { announcement_channel: key === "Kaiserreich (FFA)" ? "1467569177291391200" : "1368570751149412493" });
+    else Object.assign(mode, rp, { announcement_channel: key === "Kaiserreich (FFA)" ? "880000000000000026" : "880000000000000005" });
   }
   s.addons = {
-    casino_panel_channel: "1544961375816650832",
-    randomizer_log_channel: "1493273590555213975",
-    fortunes_log_channel: "1518509646804160583",
+    casino_panel_channel: "880000000000000042",
+    randomizer_log_channel: "880000000000000037",
+    fortunes_log_channel: "880000000000000038",
   };
   return normalizeSettings(s, "TommyKay's HOI4 Community");
 }
@@ -269,7 +269,7 @@ function build(): Map<string, DemoServer> {
           version: 2,
           actor_name: "Senior Host",
           summary: "Changed Channels (1 change)",
-          changes: [{ path: "channels.staff_notices", before: "1429383317014315058", after: "1485821152831209613" }],
+          changes: [{ path: "channels.staff_notices", before: "880000000000000014", after: "880000000000000035" }],
           created_at: now - 86_400,
         },
         {

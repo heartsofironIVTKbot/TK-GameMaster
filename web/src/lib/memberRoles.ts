@@ -1,11 +1,11 @@
 import type { RowDataPacket } from "mysql2";
-import { currentGuildId, isHomeGuild, playerRecords, readBotConfig } from "@/lib/currentGuild";
+import { currentGuildId, playerRecords, readBotConfig } from "@/lib/currentGuild";
 import { getPool } from "@/lib/db";
 import { lookupMembers } from "@/lib/memberDirectory";
 import { demoMemberRoles } from "@/lib/memberRolesDemo";
 import { isSchedulerDemo } from "@/lib/scheduleStore";
 import type { HostProfile } from "@/lib/scheduleTypes";
-import { HOST_RANKS, RP_RANK_ROLES, type HostBranch, type HostRank } from "@/lib/hostBranches";
+import { HOST_RANKS, type HostBranch, type HostRank } from "@/lib/hostBranches";
 import {
   VERIFIED_TRACKS,
   type HostTier,
@@ -39,17 +39,7 @@ export interface RoleIds {
 }
 
 const NO_RANKS: Record<HostRank, string | null> = { Assistant: null, Full: null, Senior: null };
-/** The home server's roles, until the bot has published them. */
-const HOME_ROLE_FALLBACK: RoleIds = {
-  rp_verified: "1440832519221285035",
-  hist_verified: null,
-  vip: "361137756283338753",
-  rp_trusted: "1423010943436329043",
-  hist_trusted: "1473110336277053480",
-  valor: "1462629336694788332",
-  host_ranks: { RP: { ...RP_RANK_ROLES }, HIST: { ...NO_RANKS } },
-};
-/** Another server knows only what its setup chose (published by the bot). */
+/** Every server, home included, knows only what its setup chose (published by the bot). */
 const NO_ROLES: RoleIds = {
   rp_verified: null,
   hist_verified: null,
@@ -94,11 +84,11 @@ export async function memberRoleIds(guildId?: string): Promise<RoleIds> {
       rp_verified: "700000000000000001",
       hist_verified: "700000000000000002",
       vip: "700000000000000003",
-      rp_trusted: "1423010943436329043",
-      hist_trusted: "1473110336277053480",
-      valor: "1462629336694788332",
+      rp_trusted: "700000000000000004",
+      hist_trusted: "700000000000000005",
+      valor: "700000000000000006",
       host_ranks: {
-        RP: { ...RP_RANK_ROLES },
+        RP: { Assistant: "700000000000000021", Full: "700000000000000022", Senior: "700000000000000023" },
         HIST: { Assistant: "700000000000000011", Full: "700000000000000012", Senior: "700000000000000013" },
       },
     };
@@ -113,7 +103,7 @@ export async function memberRoleIds(guildId?: string): Promise<RoleIds> {
     if (errorCode(error) !== "ER_NO_SUCH_TABLE" && errorCode(error) !== "ER_BAD_FIELD_ERROR") throw error;
   }
   const raw = json(published);
-  const fallbackOf = isHomeGuild(guild) ? HOME_ROLE_FALLBACK : NO_ROLES;
+  const fallbackOf = NO_ROLES;
   const id = (value: unknown) => (typeof value === "string" && /^\d{5,25}$/.test(value) ? value : null);
   const ranks = json(raw.host_ranks);
   const branchRanks = (branch: HostBranch): Record<HostRank, string | null> => {

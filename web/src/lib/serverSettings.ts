@@ -31,7 +31,7 @@ import { getSession, type SessionUser } from "@/lib/session";
  */
 
 /** The bot's home server (bot.py.py GUILD_ID). */
-export const HOME_GUILD_ID = process.env.DISCORD_GUILD_ID || "341585283881631744";
+export const HOME_GUILD_ID = process.env.DISCORD_GUILD_ID || "";
 const HISTORY_LIMIT = 40;
 
 // Same tables as the bot (it creates them too), so the pages work before its restart.

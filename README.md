@@ -57,7 +57,9 @@ npm run dev
 
 6. Open [http://localhost:3000/invite](http://localhost:3000/invite), add the bot to a server you own, then finish setup on **Your servers**.
 
-`HOME_GUILD_ID` in the bot's `.env` is the server this process treats as home. Leave it unset to keep the original TommyKay server. A second bot used for testing must have its **own** token and its **own** `HOME_GUILD_ID`. Do not point a test bot at the live database.
+`HOME_GUILD_ID` in the bot's `.env` is required: the server this process treats as home (Casino add-ons and AI log tools). The website's `DISCORD_GUILD_ID` must be the same id. No roles or channels are written in the code. Every server, home included, starts blank and is set up on the website. A second bot used for testing must have its **own** token and its **own** `HOME_GUILD_ID`. Do not point a test bot at the live database.
+
+IronLegion's Steam lock on reservations is off unless `IRONLEGION_AUTHENTICATED_ROLE_ID` is set on the bot.
 
 AI chat-log grading needs `GENAI_API_KEY`. Without that key the rest of GameMaster still runs.
 
@@ -89,7 +91,7 @@ Secrets go on the Apollo **Variables** tab (yellow **Create Variables**), not in
 | `MYSQL_USER` | Staging database user |
 | `MYSQL_PASSWORD` | Staging database password |
 | `MYSQL_DATABASE` | Staging database name |
-| `BASE_URL` | `http://localhost:3000` until the website has a public address |
+| `BASE_URL` | The website's public address, e.g. `https://hoi4gamemaster.online` |
 
 `GENAI_API_KEY`, `HOST_LOG_WEBHOOK_URL`, and `MESSAGE_CONTENT_INTENT` stay empty. Do this on the new server, not on the live TommyKay one.
 

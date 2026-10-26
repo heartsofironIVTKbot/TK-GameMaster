@@ -392,7 +392,7 @@ export function demoModerationOptions(): ModerationOptions {
     mode_nations: demoModeDefaults.mode_nations,
     mode_layouts: demoModeDefaults.mode_layouts,
     mode_resources: demoModeDefaults.mode_resources,
-    server: { id: "341585283881631744", name: "Preview Server" },
+    server: { id: "880000000000000043", name: "Preview Server" },
   };
 }
 

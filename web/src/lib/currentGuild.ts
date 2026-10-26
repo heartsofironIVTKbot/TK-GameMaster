@@ -19,7 +19,7 @@ import { getSession } from "@/lib/session";
  * servers' in `guild_users`.
  */
 
-export const HOME_GUILD_ID = process.env.DISCORD_GUILD_ID || "341585283881631744";
+export const HOME_GUILD_ID = process.env.DISCORD_GUILD_ID || "";
 export const GUILD_COOKIE = "gm_guild";
 const ID_RE = /^\d{15,25}$/;
 
