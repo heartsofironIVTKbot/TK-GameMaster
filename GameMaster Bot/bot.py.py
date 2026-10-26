@@ -1297,30 +1297,6 @@ _USERS_SCHEMA_COLUMNS = (
 )
 
 
-def _ensure_table_columns(cursor, db_name: str, table: str, columns: tuple) -> None:
-    """Add columns that a copied older database does not have yet."""
-    cursor.execute(
-        """
-        SELECT COLUMN_NAME FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s
-        """,
-        (db_name, table),
-    )
-    existing = {r[0] for r in cursor.fetchall()}
-    for col_name, col_ddl in columns:
-        if col_name in existing:
-            continue
-        try:
-            cursor.execute(f"ALTER TABLE {table} ADD COLUMN {col_name} {col_ddl}")
-            print(f"✅ {table} schema: added column `{col_name}`")
-        except Exception as col_err:
-            err = str(col_err)
-            if "1060" in err or "Duplicate column" in err:
-                continue
-            print(f"⚠️ {table} schema: failed to add `{col_name}`: {col_err}")
-            raise
-
-
 def _ensure_users_schema_mysql() -> list[str]:
     """Add any missing Merit/Dishonored/host-tier columns on `users`.
 
@@ -1739,13 +1715,9 @@ def _ensure_users_schema_mysql() -> list[str]:
         # Host → member messages (web Database page, formerly /dm).
         cursor.execute(_HOST_MESSAGES_DDL)
         # Server settings for the website setup (multi-server, Stage 1).
-        # CREATE TABLE does nothing when the copied live database already has
-        # these tables, so columns added later (version, …) are applied here.
         cursor.execute(_GUILD_SETTINGS_DDL)
         cursor.execute(_GUILD_SETTINGS_HISTORY_DDL)
         cursor.execute(_WEB_GUILD_SNAPSHOT_DDL)
-        _ensure_table_columns(cursor, db_name, "guild_settings", _GUILD_SETTINGS_COLUMNS)
-        _ensure_table_columns(cursor, db_name, "guild_settings_history", _GUILD_SETTINGS_HISTORY_COLUMNS)
         # Host branches: HIST Acclamations / Violations, roster branches.
         cursor.execute(
             "CREATE TABLE IF NOT EXISTS host_stats (host_id BIGINT NOT NULL PRIMARY KEY, "
@@ -31534,25 +31506,6 @@ CREATE TABLE IF NOT EXISTS guild_settings (
     updated_by VARCHAR(32) NULL
 )
 """
-# A database copied from the live server was created before these columns.
-# NOT NULL columns need defaults so existing rows can be altered.
-_GUILD_SETTINGS_COLUMNS = (
-    ("guild_name", "VARCHAR(100) NULL"),
-    ("icon", "VARCHAR(64) NULL"),
-    ("owner_id", "VARCHAR(32) NULL"),
-    ("status", "VARCHAR(16) NOT NULL DEFAULT 'needs_setup'"),
-    ("is_home", "TINYINT(1) NOT NULL DEFAULT 0"),
-    ("bot_present", "TINYINT(1) NOT NULL DEFAULT 1"),
-    ("settings", "JSON NULL"),
-    ("version", "INT NOT NULL DEFAULT 0"),
-    ("setup_step", "VARCHAR(32) NULL"),
-    ("setup_completed_at", "BIGINT NULL"),
-    ("joined_at", "BIGINT NULL"),
-    ("left_at", "BIGINT NULL"),
-    ("created_at", "BIGINT NOT NULL DEFAULT 0"),
-    ("updated_at", "BIGINT NOT NULL DEFAULT 0"),
-    ("updated_by", "VARCHAR(32) NULL"),
-)
 _GUILD_SETTINGS_HISTORY_DDL = """
 CREATE TABLE IF NOT EXISTS guild_settings_history (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -31566,15 +31519,6 @@ CREATE TABLE IF NOT EXISTS guild_settings_history (
     INDEX idx_guild_settings_history (guild_id, created_at)
 )
 """
-_GUILD_SETTINGS_HISTORY_COLUMNS = (
-    ("guild_id", "VARCHAR(32) NULL"),
-    ("version", "INT NOT NULL DEFAULT 0"),
-    ("actor_id", "VARCHAR(32) NULL"),
-    ("actor_name", "VARCHAR(100) NULL"),
-    ("summary", "VARCHAR(500) NULL"),
-    ("changes", "JSON NULL"),
-    ("created_at", "BIGINT NOT NULL DEFAULT 0"),
-)
 _WEB_GUILD_SNAPSHOT_DDL = """
 CREATE TABLE IF NOT EXISTS web_guild_snapshot (
     guild_id VARCHAR(32) PRIMARY KEY,
