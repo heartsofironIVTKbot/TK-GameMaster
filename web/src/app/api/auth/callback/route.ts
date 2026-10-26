@@ -32,8 +32,25 @@ interface DiscordUserResponse {
   accent_color?: number | null;
 }
 
+/**
+ * A page on this site. Behind a host's proxy, request.url is the internal
+ * address (e.g. http://localhost:10000), so the public origin comes from
+ * DISCORD_REDIRECT_URI — the address Discord already sends the user back to.
+ */
+function sitePage(path: string, request: NextRequest): URL {
+  const redirectUri = process.env.DISCORD_REDIRECT_URI;
+  if (redirectUri) {
+    try {
+      return new URL(path, new URL(redirectUri).origin);
+    } catch {
+      // Malformed env value: fall back to the request's own address.
+    }
+  }
+  return new URL(path, request.url);
+}
+
 function fail(request: NextRequest): NextResponse {
-  return NextResponse.redirect(new URL("/?auth=error", request.url));
+  return NextResponse.redirect(sitePage("/?auth=error", request));
 }
 
 export async function GET(request: NextRequest) {
@@ -55,7 +72,7 @@ export async function GET(request: NextRequest) {
   if (!code || !state || !expectedState || state !== expectedState) {
     // Cancelled on Discord's "Add to server" screen: back to the servers page.
     if (searchParams.get("error") === "access_denied" && state && state === expectedState) {
-      return NextResponse.redirect(new URL("/servers?invite=cancelled", request.url));
+      return NextResponse.redirect(sitePage("/servers?invite=cancelled", request));
     }
     return fail(request);
   }
@@ -136,7 +153,7 @@ export async function GET(request: NextRequest) {
   // The bot was just added: straight to that server's setup.
   const addedGuild = tokenData.guild?.id ?? searchParams.get("guild_id");
   if (addedGuild && /^\d{15,25}$/.test(addedGuild) && scopes.includes("bot")) {
-    return NextResponse.redirect(new URL(`/servers?guild=${addedGuild}&added=1`, request.url));
+    return NextResponse.redirect(sitePage(`/servers?guild=${addedGuild}&added=1`, request));
   }
-  return NextResponse.redirect(new URL(returnPath, request.url));
+  return NextResponse.redirect(sitePage(returnPath, request));
 }
