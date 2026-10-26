@@ -150,9 +150,11 @@ export async function GET(request: NextRequest) {
   // Other players' profile cards show this banner (bots can't read it).
   await saveLoginProfile(discordId, profile.banner ?? null, profile.accent_color ?? null);
 
-  // The bot was just added: straight to that server's setup.
+  // The bot was just added: straight to that server's setup. Discord's token
+  // scope does not always list "bot", so the returned guild is the signal.
+  // The setup page still checks the viewer may manage that server.
   const addedGuild = tokenData.guild?.id ?? searchParams.get("guild_id");
-  if (addedGuild && /^\d{15,25}$/.test(addedGuild) && scopes.includes("bot")) {
+  if (addedGuild && /^\d{15,25}$/.test(addedGuild)) {
     return NextResponse.redirect(sitePage(`/servers?guild=${addedGuild}&added=1`, request));
   }
   return NextResponse.redirect(sitePage(returnPath, request));
