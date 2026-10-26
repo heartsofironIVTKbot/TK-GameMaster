@@ -128,9 +128,9 @@ _DISCORD_WEBHOOK_HOSTS = ("discord.com", "discordapp.com")
 client = None
 if GENAI_API_KEY:
     client = genai.Client(api_key=GENAI_API_KEY)
-# Home server. Every other server is added through the website. Override this
-# when the bot is not running for TommyKay (a staging bot, or your own community).
-GUILD_ID = _env_int("HOME_GUILD_ID", 341585283881631744)
+# Home server (Casino add-ons, AI log tools, the `users` table). Every server,
+# home included, is set up on the website. Required: startup refuses without it.
+GUILD_ID = _env_int("HOME_GUILD_ID", 0)
 
 # ==========================================================================
 # PER-SERVER RUNTIME (multi-server, docs/server-setup.md Stage 2)
@@ -205,8 +205,9 @@ class GuildRuntime:
 
     @property
     def active(self) -> bool:
-        """The bot works in this server (home, or setup finished and still in it)."""
-        return self.gid == GUILD_ID or (self.status == "active" and self.present)
+        """The bot works in this server (setup finished and still in it).
+        The home server needs its setup finished too."""
+        return self.status == "active" and self.present
 
 
 _RUNTIMES: dict[int, GuildRuntime] = {}
@@ -338,7 +339,8 @@ _web_access_tokens: Dict[str, Tuple[int, float]] = {}
 
 # Casino Access Panel channel — /spawn_panel refuses to spawn the casino panel
 # anywhere else so the persistent panel stays in one fixed location.
-CASINO_PANEL_CHANNEL_ID = 1544961375816650832
+# Server settings → Add-ons (home server only).
+CASINO_PANEL_CHANNEL_ID = 0
 
 _WEB_ACCESS_TOKENS_DDL = """
 CREATE TABLE IF NOT EXISTS web_access_tokens (
@@ -1840,7 +1842,7 @@ def _ensure_multiguild_schema_mysql(cursor, db_name: str) -> None:
         )
         if not cursor.fetchone()[0]:
             cursor.execute(
-                f"ALTER TABLE {table} ADD COLUMN guild_id VARCHAR(32) NOT NULL DEFAULT '341585283881631744'"
+                f"ALTER TABLE {table} ADD COLUMN guild_id VARCHAR(32) NOT NULL DEFAULT '{int(GUILD_ID)}'"
             )
             print(f"✅ {table} schema: added column `guild_id` (existing rows = home server)")
         if primary_key:
@@ -2024,37 +2026,22 @@ LOCKED_DAYS_FILE = os.path.join(DATA_DIR, "locked_days.json")
 # Ensure Data Dir Exists
 if not os.path.exists(DATA_DIR): os.makedirs(DATA_DIR)
 
-ALLOWED_HOST_ROLES = [
-    1472972575440371723, # Retired Organiser
-    1420697977340821514, # HOI4 MP Trial Host
-    819120021464285184,  # HOI4 MP Host
-    1485937962695786578, # Senior HOI4 MP Host
-    1429066717426089986, # Head Mod Developer
-    1485681095721750669, # Game Community Assistant
-    1420327334627774554, # Game Community Manager
-    559451723370987530,  # SUPA Mods
-    341587483383037954,  # Tommy and the Boys (Admin)
-]
+# Every role and channel below starts empty; each server's setup on the
+# website fills its own copy (PER-SERVER RUNTIME, _apply_settings).
+ALLOWED_HOST_ROLES: list[int] = []
 
-SENIOR_MANAGEMENT_ROLES = [
-    1429066717426089986, # Head Mod Developer
-    1485681095721750669, # Game Community Assistant
-    1420327334627774554, # Game Community Manager
-    559451723370987530,  # SUPA Mods
-    341587483383037954   # Tommy and the Boys (Admin)
-]
+SENIOR_MANAGEMENT_ROLES: list[int] = []
 
 # Two host branches — RP (Roleplay games) and HIST (Historical games) — each
-# with Assistant / Full / Senior ranks. The RP ranks are the original host
-# roles ("Trial" is now called Assistant); the HIST role ids are found or
-# created on startup (_setup_host_branches). Acclamations / Violations are
-# counted per branch, and hosts host only their own branch's games.
+# with Assistant / Full / Senior ranks, chosen in server settings.
+# Acclamations / Violations are counted per branch, and hosts host only their
+# own branch's games.
 HOST_RANKS = ("Assistant", "Full", "Senior")
 HOST_BRANCHES = {
     "RP": {
         "label": "RP", "category": "Roleplay", "tier_db_field": "hoi4_host_tier",
         "acclamations_key": "acclamations", "violations_key": "violations",
-        "ranks": {"Assistant": 1420697977340821514, "Full": 819120021464285184, "Senior": 1485937962695786578},
+        "ranks": {"Assistant": 0, "Full": 0, "Senior": 0},
         "role_names": {"Assistant": "RP Assistant Host", "Full": "RP Host", "Senior": "Senior RP Host"},
     },
     "HIST": {
@@ -2067,48 +2054,26 @@ HOST_BRANCHES = {
 HOST_PROMOTE_AT = {"Full": 2, "Senior": 4}  # Acclamations in that branch
 HOST_TERMINATE_AT = 3                      # Violations in that branch → its rank is stripped
 
-# Updated Role Definitions
+# Player roles. Server settings → Player roles fill each server's copy.
 ROLE_IDS = {
-    "HOI4_RP_TRUSTED": 1423010943436329043,
-    "HOI4_MP_TRUSTED": 1473110336277053480,
-
-    "HOI4_VERIFIED": 1440832519221285035,  # RP Verified (Roleplay games)
-    # Hist Verified (Historical games): found or created by the bot on startup
-    # (_setup_member_roles), so it is 0 until then.
-    "HIST_VERIFIED": 0,
-
-    # BANNED ROLES
-    "HOI4_RP_BANNED": 1427744754585833512,  # Old GAME_BANNED
-    "HOI4_MP_BANNED": 1473137869039341609,  # New Historical Ban
-
-    "VIP_ROLE_ID": 361137756283338753,
-    "SERVER_PARTNER": 1436270629706797147,
-    "MODS": 361141080575574027,
-    "HELPER": 1441133363711836160,
-
+    "HOI4_RP_TRUSTED": 0,
+    "HOI4_MP_TRUSTED": 0,
+    "HOI4_VERIFIED": 0,   # RP Verified (Roleplay games)
+    "HIST_VERIFIED": 0,   # Hist Verified (Historical games)
+    "HOI4_RP_BANNED": 0,
+    "HOI4_MP_BANNED": 0,
+    "VIP_ROLE_ID": 0,
     # Universal Merit / Dishonored systems
-    "VALOR": 1462629336694788332,        # Hearts of Valor title — 25 merit points + 50 attended games
-    "DISHONORED": 1478964992169738342,
-    "HIST_DISHONORED": 1478964992169738342,  # one role for both branches until set apart in the settings   # Dishonored title — auto-granted while any restriction is active
-
-    # Steam Verification (IronLegion) — the v2 "Authenticated" role granted once
-    # a member passes Steam verification over on the IronLegion bot. Must match
-    # AUTHENTICATED_ROLE_ID in steam_verify_bot.py exactly (same guild, same role).
-    # This is the v2 credential; the v1 legacy role (1532491553908457532) is NOT
-    # sufficient and legacy accounts must re-verify to upgrade.
-    "AUTHENTICATED": 1541423779157254194,
+    "VALOR": 0,           # Hearts of Valor title — 25 merit points + 50 attended games
+    "DISHONORED": 0,      # Dishonored title — auto-granted while any restriction is active
+    "HIST_DISHONORED": 0,
+    # Steam Verification (IronLegion): the v2 "Authenticated" role the IronLegion
+    # bot grants on the home server. Unset = no Steam lock on reservations.
+    "AUTHENTICATED": _env_int("IRONLEGION_AUTHENTICATED_ROLE_ID", 0),
 }
 
-# The channel players should be pointed to in order to start Steam
-# verification with LegionMaster (used by the reservation-thread "Verify
-# Account" button). Falls back to a raw URL if you'd rather link somewhere
-# else (e.g. a public docs page) instead of a Discord channel.
-LEGION_MASTER_VERIFY_CHANNEL_ID: Optional[int] = 1532528552136806570  # #verify-me
-LEGION_MASTER_VERIFY_URL: str = (
-    f"https://discord.com/channels/{GUILD_ID}/{LEGION_MASTER_VERIFY_CHANNEL_ID}"
-    if LEGION_MASTER_VERIFY_CHANNEL_ID
-    else "https://discord.com/channels/@me"  # placeholder until the channel ID above is set
-)
+# The channel players are pointed to for Steam verification with LegionMaster.
+LEGION_MASTER_VERIFY_CHANNEL_ID: Optional[int] = _env_int("IRONLEGION_VERIFY_CHANNEL_ID", 0) or None
 
 
 async def is_user_authenticated(
@@ -2117,20 +2082,19 @@ async def is_user_authenticated(
     """IronLegion v2 hard-lock — active by design (previously a disabled stub).
 
     True when the member holds the active v2 "Authenticated" role granted by
-    IronLegion (steam_verify_bot) — ROLE_IDS["AUTHENTICATED"]
-    (1541423779157254194). Staff, hosts, senior management and VIPs always
-    bypass so moderation and hosting are never locked out. Fails open for None /
-    non-Member values (no guild roles to inspect), matching the historical call
-    sites that pass a cached (or possibly None) member.
+    IronLegion (steam_verify_bot) — ROLE_IDS["AUTHENTICATED"], set with
+    IRONLEGION_AUTHENTICATED_ROLE_ID. Without that role there is no lock.
+    Staff, hosts, senior management and VIPs always bypass so moderation and
+    hosting are never locked out. Fails open for None / non-Member values (no
+    guild roles to inspect), matching the historical call sites that pass a
+    cached (or possibly None) member.
 
     Also honors the shared IronLegion override state: if verification is disabled
     globally (server-wide) or for `thread_id` (via /disable_ironlegion), returns
     True so the command is allowed regardless of the v2 role.
 
-    The v1.0 legacy "Authenticated" role (1532491553908457532) deliberately
-    does NOT satisfy this check — legacy accounts must re-verify via IronLegion
-    to upgrade to v2 (and collect the +1 Commendation Point returning-user
-    reward). VIPs still bypass via VIP_ROLE_ID.
+    IronLegion's v1.0 legacy "Authenticated" role deliberately does NOT satisfy
+    this check — legacy accounts must re-verify via IronLegion to upgrade to v2.
     """
     if not isinstance(member, discord.Member):
         return True
@@ -2160,7 +2124,9 @@ async def is_user_authenticated(
             pass
 
     authenticated_id = ROLE_IDS.get("AUTHENTICATED")
-    return bool(authenticated_id and authenticated_id in role_ids)
+    if not authenticated_id:
+        return True  # No IronLegion role on this server: nothing to lock.
+    return authenticated_id in role_ids
 
 
 RESERVATION_REJECTED_UNVERIFIED_MESSAGE = (
@@ -2293,7 +2259,7 @@ FEEDBACK_VOTE_MERIT = 1              # +1 merit the first time a player rates a 
 FEEDBACK_EVAL_AFTER_SEC = 24 * 3600      # Successful / Not Successful Hosting after 24h
 FEEDBACK_ARCHIVE_AFTER_SEC = 48 * 3600   # Move feedback off announcement → host chatlogs at 48h
 HOSTING_SUCCESS_MIN_AVG = 3.0            # ≥ 3.0/5 = Successful Hosting
-HOST_MANAGEMENT_CHANNEL_ID = 1485821152831209613  # streak alerts for management
+HOST_MANAGEMENT_CHANNEL_ID = 0  # streak alerts for management (Server settings → Channels)
 
 # The two base categories the Dishonored title / restrictions are keyed by.
 DISHONORED_CATEGORIES = ["Roleplay", "Historical"]
@@ -2303,7 +2269,7 @@ TRUSTED_ROLE = ROLE_IDS["HOI4_RP_TRUSTED"]
 GAME_BANNED_ROLE = ROLE_IDS["HOI4_RP_BANNED"]
 
 # List of all ban IDs for global checks
-ALL_BAN_IDS = [ROLE_IDS["HOI4_RP_BANNED"], ROLE_IDS["HOI4_MP_BANNED"]]
+ALL_BAN_IDS: list[int] = []
 
 # ==========================================================================
 # GAME VERIFICATION / TRUSTED / HOST-TIER ROLE ARCHITECTURE (HOI4)
@@ -2317,20 +2283,16 @@ ALL_BAN_IDS = [ROLE_IDS["HOI4_RP_BANNED"], ROLE_IDS["HOI4_MP_BANNED"]]
 GAME_ROLE_CONFIG = {
     "HOI4": {
         "label": "Hearts of Iron 4",
-        "verified_role_id": ROLE_IDS["HOI4_VERIFIED"],        # 1440832519221285035
+        "verified_role_id": 0,
         "verified_db_field": "hoi4_verified",
         # Verification is split by game type (VERIFIED_TRACKS): RP Verified
-        # and Hist Verified. The Hist role id is filled in on startup.
-        "verified_roles": {"hoi4_verified": ROLE_IDS["HOI4_VERIFIED"], "hist_verified": 0},
-        # Each Trusted role needs the Verified role of its own game type.
-        "trusted_verified": {
-            ROLE_IDS["HOI4_RP_TRUSTED"]: "hoi4_verified",
-            ROLE_IDS["HOI4_MP_TRUSTED"]: "hist_verified",
-        },
-        "trusted_roles": {
-            ROLE_IDS["HOI4_RP_TRUSTED"]: "commends",          # RP Trusted -> 1423010943436329043
-            ROLE_IDS["HOI4_MP_TRUSTED"]: "hist_commends",     # MP Trusted -> 1473110336277053480
-        },
+        # and Hist Verified. Filled from server settings (_apply_settings).
+        "verified_roles": {"hoi4_verified": 0, "hist_verified": 0},
+        # Each Trusted role needs the Verified role of its own game type:
+        # {trusted role id: verified column}.
+        "trusted_verified": {},
+        # {trusted role id: commend column}.
+        "trusted_roles": {},
         # The RP host branch (HOST_BRANCHES has both branches).
         "host_tier_db_field": "hoi4_host_tier",
         "host_tiers": HOST_BRANCHES["RP"]["ranks"],
@@ -2344,46 +2306,38 @@ GAME_CHOICES = [
 MIN_TRUSTED_COMMENDS = 5
 WARNINGS_FOR_BAN = 3  # warnings in a mode = automatic game ban in that mode
 TRUSTED_ROLE_AUDIT_SLEEP_SEC = 1.5
-ROLE_AUDIT_LOG_CHANNEL_ID = 1429383317014315058
+ROLE_AUDIT_LOG_CHANNEL_ID = 0
 
 CHANNELS = {
-    "GENERAL": 1465663114908532858,
-    "HOST_LOG_CHANNEL": 1429383317014315058,
-    "HOST_APPS": 1465663244747407502,
-    "VERIFICATION": 1465663114908532858,
+    "GENERAL": 0,
+    "HOST_LOG_CHANNEL": 0,
+    "HOST_APPS": 0,
+    "VERIFICATION": 0,
 }
 
 HOST_LOG_CHANNEL_ID = CHANNELS["HOST_LOG_CHANNEL"]
-LOBBY_VC_ID = 1368263702641381548
+LOBBY_VC_ID = 0
 # Every waiting-room voice channel (server settings → Channels): people in
 # them are never counted present in a game's attendance.
-LOBBY_VC_IDS: list[int] = [LOBBY_VC_ID]
+LOBBY_VC_IDS: list[int] = []
 # Game voice channels: new categories go right after the first category and
 # stay above the second (per branch). Server settings → Channels.
 GAME_VOICE_ANCHORS = {
-    "RP": (1368266605036966030, 819116208670507008),
-    "HIST": (819116208670507008, 1367146329184276670),
+    "RP": (0, 0),
+    "HIST": (0, 0),
 }
-# Roles that manage each game's voice channels (Game Community Manager).
-GAME_VOICE_MANAGER_ROLES = [1420327334627774554]
-
-ASSIGNABLE_ROLES = {
-    "HOI4 MP": 819202186974199809,
-    "HoI4 Kaiser-reich/redux": 1459926698505277726,
-    "RP Gamer Pass": 1421828827277168781,
-    "KR Gamer Pass": 1434514962256232501,
-    "HT Gamer Pass": 1434515168049762376,
-}
+# Roles that manage each game's voice channels (Host Management).
+GAME_VOICE_MANAGER_ROLES: list[int] = []
 
 
 MODE_CONFIG = {
     "Roleplay": {
-        "announcement_channel_id": 1368570751149412493,
-        "game_info_channel_id": 1421826371990196224,
-        "rules_channel_id": 1368573825830354974,
-        "mods_channel_id": 1473008875673358376,
-        "ping_role_id": 819202186974199809,
-        "public_log_channel_id": 1457701862974423130,
+        "announcement_channel_id": 0,
+        "game_info_channel_id": 0,
+        "rules_channel_id": 0,
+        "mods_channel_id": 0,
+        "ping_role_id": 0,
+        "public_log_channel_id": 0,
         "trusted_role_id": ROLE_IDS["HOI4_RP_TRUSTED"],
         "verified_role_id": ROLE_IDS["HOI4_VERIFIED"],
         "banned_role_id": ROLE_IDS["HOI4_RP_BANNED"],
@@ -2397,12 +2351,12 @@ MODE_CONFIG = {
         ]
     },
     "TFR": {
-        "announcement_channel_id": 1368570751149412493,
-        "game_info_channel_id": 1421826371990196224,
-        "rules_channel_id": 1368573825830354974,
-        "mods_channel_id": 1473008875673358376,
-        "ping_role_id": 819202186974199809,
-        "public_log_channel_id": 1457701862974423130,
+        "announcement_channel_id": 0,
+        "game_info_channel_id": 0,
+        "rules_channel_id": 0,
+        "mods_channel_id": 0,
+        "ping_role_id": 0,
+        "public_log_channel_id": 0,
         "trusted_role_id": ROLE_IDS["HOI4_RP_TRUSTED"],
         "verified_role_id": ROLE_IDS["HOI4_VERIFIED"],
         "banned_role_id": ROLE_IDS["HOI4_RP_BANNED"],
@@ -2415,12 +2369,12 @@ MODE_CONFIG = {
         ]
     },
     "Roleplay (Millennium Dawn)": {
-        "announcement_channel_id": 1368570751149412493,
-        "game_info_channel_id": 1421826371990196224,
-        "rules_channel_id": 1368573825830354974,
-        "mods_channel_id": 1473008875673358376,
-        "ping_role_id": 819202186974199809,
-        "public_log_channel_id": 1457701862974423130,
+        "announcement_channel_id": 0,
+        "game_info_channel_id": 0,
+        "rules_channel_id": 0,
+        "mods_channel_id": 0,
+        "ping_role_id": 0,
+        "public_log_channel_id": 0,
         "trusted_role_id": ROLE_IDS["HOI4_RP_TRUSTED"],
         "verified_role_id": ROLE_IDS["HOI4_VERIFIED"],
         "banned_role_id": ROLE_IDS["HOI4_RP_BANNED"],
@@ -2432,12 +2386,12 @@ MODE_CONFIG = {
         ]
     },
     "Roleplay (Novum Vexillum)": {
-        "announcement_channel_id": 1368570751149412493,
-        "game_info_channel_id": 1421826371990196224,
-        "rules_channel_id": 1368573825830354974,
-        "mods_channel_id": 1473008875673358376,
-        "ping_role_id": 819202186974199809,
-        "public_log_channel_id": 1457701862974423130,
+        "announcement_channel_id": 0,
+        "game_info_channel_id": 0,
+        "rules_channel_id": 0,
+        "mods_channel_id": 0,
+        "ping_role_id": 0,
+        "public_log_channel_id": 0,
         "trusted_role_id": ROLE_IDS["HOI4_RP_TRUSTED"],
         "verified_role_id": ROLE_IDS["HOI4_VERIFIED"],
         "banned_role_id": ROLE_IDS["HOI4_RP_BANNED"],
@@ -2449,12 +2403,12 @@ MODE_CONFIG = {
         ]
     },
     "Kaiserreich (FFA)": {
-        "announcement_channel_id": 1467569177291391200,
-        "game_info_channel_id": 1421826371990196224,
-        "rules_channel_id": 1368573825830354974,
-        "mods_channel_id": 1473008875673358376,
-        "ping_role_id": 819202186974199809,
-        "public_log_channel_id": 1457701862974423130,
+        "announcement_channel_id": 0,
+        "game_info_channel_id": 0,
+        "rules_channel_id": 0,
+        "mods_channel_id": 0,
+        "ping_role_id": 0,
+        "public_log_channel_id": 0,
         "trusted_role_id": ROLE_IDS["HOI4_RP_TRUSTED"],
         "verified_role_id": ROLE_IDS["HOI4_VERIFIED"],
         "banned_role_id": ROLE_IDS["HOI4_RP_BANNED"],
@@ -2467,12 +2421,12 @@ MODE_CONFIG = {
         ]
     },
     "Historical (Vanilla)": {
-        "announcement_channel_id": 829789379799023657,
-        "game_info_channel_id": 1433072780827430922,
-        "rules_channel_id": 1368260039592120391,
-        "mods_channel_id": 1368607763680329818,
-        "ping_role_id": 1473009384647819510,
-        "public_log_channel_id": 1473008174339461160,
+        "announcement_channel_id": 0,
+        "game_info_channel_id": 0,
+        "rules_channel_id": 0,
+        "mods_channel_id": 0,
+        "ping_role_id": 0,
+        "public_log_channel_id": 0,
         "trusted_role_id": ROLE_IDS["HOI4_MP_TRUSTED"],
         "verified_role_id": ROLE_IDS["HOI4_VERIFIED"],
         "banned_role_id": ROLE_IDS["HOI4_MP_BANNED"],
@@ -2484,12 +2438,12 @@ MODE_CONFIG = {
         ]
     },
     "Historical (TFB)": {
-        "announcement_channel_id": 829789379799023657,
-        "game_info_channel_id": 1433072780827430922,
-        "rules_channel_id": 1368260039592120391,
-        "mods_channel_id": 1368607763680329818,
-        "ping_role_id": 1473009384647819510,
-        "public_log_channel_id": 1473008174339461160,
+        "announcement_channel_id": 0,
+        "game_info_channel_id": 0,
+        "rules_channel_id": 0,
+        "mods_channel_id": 0,
+        "ping_role_id": 0,
+        "public_log_channel_id": 0,
         "trusted_role_id": ROLE_IDS["HOI4_MP_TRUSTED"],
         "verified_role_id": ROLE_IDS["HOI4_VERIFIED"],
         "banned_role_id": ROLE_IDS["HOI4_MP_BANNED"],
@@ -2502,12 +2456,12 @@ MODE_CONFIG = {
         ]
     },
     "Historical (Oak)": {
-        "announcement_channel_id": 829789379799023657,
-        "game_info_channel_id": 1433072780827430922,
-        "rules_channel_id": 1368260039592120391,
-        "mods_channel_id": 1368607763680329818,
-        "ping_role_id": 1473009384647819510,
-        "public_log_channel_id": 1473008174339461160,
+        "announcement_channel_id": 0,
+        "game_info_channel_id": 0,
+        "rules_channel_id": 0,
+        "mods_channel_id": 0,
+        "ping_role_id": 0,
+        "public_log_channel_id": 0,
         "trusted_role_id": ROLE_IDS["HOI4_MP_TRUSTED"],
         "verified_role_id": ROLE_IDS["HOI4_VERIFIED"],
         "banned_role_id": ROLE_IDS["HOI4_MP_BANNED"],
@@ -2519,12 +2473,12 @@ MODE_CONFIG = {
         ]
     },
     "Historical (Horst)": {
-        "announcement_channel_id": 829789379799023657,
-        "game_info_channel_id": 1433072780827430922,
-        "rules_channel_id": 1368260039592120391,
-        "mods_channel_id": 1368607763680329818,
-        "ping_role_id": 1473009384647819510,
-        "public_log_channel_id": 1473008174339461160,
+        "announcement_channel_id": 0,
+        "game_info_channel_id": 0,
+        "rules_channel_id": 0,
+        "mods_channel_id": 0,
+        "ping_role_id": 0,
+        "public_log_channel_id": 0,
         "trusted_role_id": ROLE_IDS["HOI4_MP_TRUSTED"],
         "verified_role_id": ROLE_IDS["HOI4_VERIFIED"],
         "banned_role_id": ROLE_IDS["HOI4_MP_BANNED"],
@@ -2536,12 +2490,12 @@ MODE_CONFIG = {
         ]
     },
     "Historical (BFFU)": {
-        "announcement_channel_id": 829789379799023657,
-        "game_info_channel_id": 1433072780827430922,
-        "rules_channel_id": 1368260039592120391,
-        "mods_channel_id": 1368607763680329818,
-        "ping_role_id": 1473009384647819510,
-        "public_log_channel_id": 1473008174339461160,
+        "announcement_channel_id": 0,
+        "game_info_channel_id": 0,
+        "rules_channel_id": 0,
+        "mods_channel_id": 0,
+        "ping_role_id": 0,
+        "public_log_channel_id": 0,
         "trusted_role_id": ROLE_IDS["HOI4_MP_TRUSTED"],
         "verified_role_id": ROLE_IDS["HOI4_VERIFIED"],
         "banned_role_id": ROLE_IDS["HOI4_MP_BANNED"],
@@ -2987,7 +2941,7 @@ def _build_tfr_list(reservations: dict, game_started: bool = False, game: dict =
 
 # REWORKED GAMBLER / RANDOMIZER DATA
 SLOT_EMOJI = "<a:slots:1496437915742371901>"
-RANDOMIZER_LOG_CHANNEL_ID = 1493273590555213975
+RANDOMIZER_LOG_CHANNEL_ID = 0
 
 # Category Emojis
 CAT_LAND = "<:custom:1496437895526092800>"
@@ -11779,7 +11733,7 @@ async def _perform_reservation(interaction: discord.Interaction, nation: str, ga
 # FORTUNES OF WAR — Faked card-flipping power-up add-on (/draw)
 # Works in any active game thread for players who hold a reservation.
 # =====================================================================
-FORTUNES_LOG_CHANNEL_ID = 1518509646804160583
+FORTUNES_LOG_CHANNEL_ID = 0
 FORTUNE_CARD_BACK = "🎴"
 
 # Custom card-back emojis for the Fortunes of War buttons. They are scattered at
@@ -13574,7 +13528,7 @@ async def _send_randomizer_dm(recipient, dm_content: str, view=None, embeds=None
 # log channel, and (3) persists the embed's message id on the reservation row
 # (`game_reservations.log_message_id`). Unreserves flip that embed to RED with
 # a [UNRESERVED / LEGACY ROLL] status.
-RECEIPT_LOG_CHANNEL_ID = 1493273590555213975
+RECEIPT_LOG_CHANNEL_ID = 0
 
 
 def _fetch_session_audit_message_id(thread_id: str, user_id: int):
@@ -13884,7 +13838,7 @@ def _receipt_rules_summary(roll: dict, rtype) -> str:
 # re-roll grant update, unreserve) posts an identical copy to this channel
 # with a DYNAMIC embed color: GREEN (0x2ECC71) = original run, RED
 # (0xE74C3C) = modified / override / cancelled.
-RECEIPT_AUDIT_CHANNEL_ID = 1493273590555213975
+RECEIPT_AUDIT_CHANNEL_ID = 0
 
 
 def _receipt_audit_embed(
@@ -13988,7 +13942,7 @@ async def _post_or_edit_receipt_audit(
     footer_text: str | None = None,
 ) -> None:
     """Post-or-edit the single receipt audit embed in the receipt audit
-    channel (1493273590555213975).
+    channel (the randomizer log channel).
 
     · No stored message id  → POST a new embed (GREEN when the run is an
       original, RED when the caller marks it modified) and persist the
@@ -16700,7 +16654,7 @@ class AdminTriggerView(discord.ui.View):
 # with the multi-sample attendance snapshot; the "No" flow only notifies the host
 # and tells the player their dispute path. Buttons lock lazily once sampling finishes.
 # ==========================================================================
-TICKET_CHANNEL_ID = 1444461630829367441
+TICKET_CHANNEL_ID = 0
 
 
 def _participation_dm_text(game_mode: str, role_name: str, info_channel_id, crash_url: str | None = None) -> str:
@@ -17981,8 +17935,8 @@ async def _disable_message_buttons(msg, note: str = None):
 # =============================================================================
 # CRASH REPORT SUBMISSION SYSTEM (DM-based log upload → mod developer)
 # =============================================================================
-CRASH_REPORT_DEV_ROLE_ID = 1524530559198564362   # Mod Developer — ping on delivery
-CRASH_REPORT_CHANNEL_ID = 1524563433763246330      # #crash-reports log channel
+CRASH_REPORT_DEV_ROLE_ID = 0   # pinged on delivery (Server settings)
+CRASH_REPORT_CHANNEL_ID = 0    # crash-report log channel (Server settings)
 CRASH_REPORT_ALLOWED_ARCHIVE_EXTS = {".zip", ".rar", ".7z"}
 CRASH_REPORT_MIN_ARCHIVE_BYTES = 500 * 1024  # 500 KB — real crash folders include minidump + logs
 CRASH_REPORT_COMMEND_COOLDOWN_SEC = 6 * 3600  # 6 hours between Roleplay commend rewards
@@ -20214,7 +20168,7 @@ def _game_status_is_ended(game: dict | None) -> bool:
     return str(game.get("status") or "").strip().lower() == "ended"
 
 
-HOST_FORUM_CHANNEL_ID = 1467436929027936362
+HOST_FORUM_CHANNEL_ID = 0
 
 
 # ==========================================================================
@@ -24084,58 +24038,18 @@ def _apply_hist_verified_role_id(role_id: int) -> None:
 
 
 async def _setup_member_roles() -> None:
-    """Startup: find or create the Hist Verified role, point Historical games
-    at it, publish the role ids for the website and (once) give the current
-    VIPs Hist Verified — VIP has always meant Verified for every game type."""
+    """Startup: point Historical games at the Hist Verified role chosen in the
+    server settings, publish the role ids for the website and (once) give the
+    current VIPs Hist Verified — VIP has always meant Verified for every game
+    type. Roles are never created here; setup's "Create for me" does that."""
     await bot.wait_until_ready()
     guild = bot.get_guild(cur_gid())
     if guild is None:
         return
-    wanted = HIST_VERIFIED_ROLE_NAME.lower()
-    # The role chosen in the server settings wins; otherwise find it by name.
-    role = guild.get_role(int(ROLE_IDS.get("HIST_VERIFIED") or 0)) or discord.utils.find(
-        lambda r: r.name.strip().lower() == wanted, guild.roles
-    )
-    if role is None and not HOST_BRANCHES["HIST"].get("enabled", True):
-        pass  # the Historical branch is off: no Hist Verified role needed
-    elif role is None:
-        rp_role = guild.get_role(ROLE_IDS["HOI4_VERIFIED"])
-        try:
-            role = await guild.create_role(
-                name=HIST_VERIFIED_ROLE_NAME,
-                colour=rp_role.colour if rp_role else discord.Colour.default(),
-                reason="GameMaster: verification is split into RP Verified and Hist Verified",
-            )
-            print(f"✅ Created the {HIST_VERIFIED_ROLE_NAME} role ({role.id}).")
-            if rp_role is not None:
-                try:
-                    await role.edit(position=max(1, rp_role.position))
-                except Exception as e:
-                    print(f"[WARN] Couldn't move {HIST_VERIFIED_ROLE_NAME} next to RP Verified: {e}")
-        except Exception as e:
-            print(f"⚠️ Couldn't create the {HIST_VERIFIED_ROLE_NAME} role (Manage Roles?): {e}")
-            role = None
+    role = guild.get_role(int(ROLE_IDS.get("HIST_VERIFIED") or 0))
     if role is not None:
         _apply_hist_verified_role_id(role.id)
-    try:
-        await _setup_host_branches(guild)
-    except Exception as e:
-        print(f"[WARN] host branch setup failed: {e}")
-    try:
-        def publish(cfg):
-            cfg[_WEB_MEMBER_ROLES_KEY] = {
-                "rp_verified": str(ROLE_IDS["HOI4_VERIFIED"]),
-                "hist_verified": str(role.id) if role is not None else None,
-                "vip": str(ROLE_IDS.get("VIP_ROLE_ID") or ""),
-                "host_ranks": {
-                    branch: {rank: str(rid) if rid else None for rank, rid in cfg["ranks"].items()}
-                    for branch, cfg in HOST_BRANCHES.items()
-                },
-                "guild_name": guild.name,
-            }
-        await _bot_config_mutate(publish)
-    except Exception as e:
-        print(f"[WARN] publishing member role ids failed: {e}")
+    await _publish_member_role_ids()
     if role is not None:
         await _migrate_vips_to_hist_verified(guild, role)
 
@@ -25154,7 +25068,7 @@ async def help_command(interaction: discord.Interaction):
 
 
 
-SCHEDULE_CHANNEL_ID = 1520000664477106247
+SCHEDULE_CHANNEL_ID = 0
 DAY_ORDER = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
 # Custom category emojis shown on each schedule row (game/mode marker).
@@ -26532,7 +26446,7 @@ def _all_command_names() -> list[str]:
 
 # ----------- Search logs -------------
 
-LOG_CHANNEL_ID = 1429383317014315058
+LOG_CHANNEL_ID = 0
 LOG_SEARCH_MESSAGE_LIMIT = 5000
 LOG_SEARCH_RESULT_LIMIT = 50
 LOG_SEARCH_TIMEOUT_SECONDS = 55
@@ -26657,7 +26571,7 @@ RESERVATION_SYNC_INTERVAL_SEC = 10
 # Zero-trust audit trail (Phase 9): the web app queues audit events here and
 # audit_events_sync_loop posts them as rich embeds to the dedicated audit
 # channel. The web never talks to Discord directly — the bot IS the webhook.
-AUDIT_CHANNEL_ID = 1429383317014315058
+AUDIT_CHANNEL_ID = 0
 AUDIT_EVENTS_INTERVAL_SEC = 10
 
 _AUDIT_EVENTS_DDL = """
@@ -27272,7 +27186,7 @@ async def _post_receipt_dm_audit(
     user_id: int, thread_id: str, status: str, receipt_url: str, error: str | None
 ) -> None:
     """Structured audit-channel log for every receipt DM dispatch attempt
-    (channel 1429383317014315058): User Mention, Game ID, Status
+    (the host log channel): User Mention, Game ID, Status
     (SUCCESS / DM_CLOSED / FAILED), Generated Receipt URL, raw exception."""
     try:
         channel = bot.get_channel(G.AUDIT_CHANNEL_ID)
@@ -28612,10 +28526,10 @@ async def _process_web_day_lock(req: dict, lock: bool) -> tuple[bool, dict | Non
 # after 24 hours without messages, closed as unresolved 24 hours later.
 # Roles and channels come from each server's settings (Tickets step).
 # =============================================================================
-TICKET_CATEGORY_ID = 1465922001372713011             # home: the HOI4 tickets category
-TICKET_LOG_CHANNEL_ID = 1465663114908532858          # home: closed-ticket transcripts
-TICKET_PRIVATE_LOG_CHANNEL_ID = 1465663244747407502  # home: host applications / host reports
-TICKET_SUPPORT_ROLES: list[int] = [1441133363711836160]  # home: Helper
+TICKET_CATEGORY_ID = 0             # Server settings → Tickets
+TICKET_LOG_CHANNEL_ID = 0          # closed-ticket transcripts
+TICKET_PRIVATE_LOG_CHANNEL_ID = 0  # host applications / host reports
+TICKET_SUPPORT_ROLES: list[int] = []
 DEVELOPER_ROLES: list[int] = []
 TICKET_REMIND_AFTER_SEC = 24 * 3600
 TICKET_CLOSE_AFTER_SEC = 24 * 3600   # after the reminder: 48 hours in total
@@ -30807,41 +30721,6 @@ def _host_branch_refusal(member, mode, *, who: str = "You") -> str:
     return f"❌ {mode} is a {kind} game — {who} need{'' if who == 'You' else 's'} an {branch} host rank (or Host Management) to host it."
 
 
-async def _setup_host_branches(guild) -> None:
-    """Startup: find or create the HIST host rank roles (next to the RP ones)
-    and let them count as host roles everywhere."""
-    for branch, cfg in HOST_BRANCHES.items():
-        if not cfg.get("enabled", True):
-            continue
-        for rank in HOST_RANKS:
-            if cfg["ranks"].get(rank):
-                continue
-            wanted = cfg["role_names"][rank].lower()
-            role = discord.utils.find(lambda r: r.name.strip().lower() == wanted, guild.roles)
-            if role is None:
-                twin = guild.get_role(HOST_BRANCHES["RP"]["ranks"].get(rank) or 0)
-                try:
-                    role = await guild.create_role(
-                        name=cfg["role_names"][rank],
-                        colour=twin.colour if twin else discord.Colour.default(),
-                        hoist=bool(twin and twin.hoist),
-                        reason="GameMaster: separate RP and HIST host branches",
-                    )
-                    print(f"✅ Created the {role.name} role ({role.id}).")
-                    if twin is not None:
-                        try:
-                            await role.edit(position=max(1, twin.position))
-                        except Exception as e:
-                            print(f"[WARN] Couldn't move {role.name}: {e}")
-                except Exception as e:
-                    print(f"⚠️ Couldn't create the {cfg['role_names'][rank]} role (Manage Roles?): {e}")
-                    continue
-            cfg["ranks"][rank] = role.id
-        for role_id in cfg["ranks"].values():
-            if role_id and role_id not in ALLOWED_HOST_ROLES:
-                ALLOWED_HOST_ROLES.append(role_id)
-
-
 ROLE_SCAN_LAST_KEY = "web_role_scan_last"  # bot_config: the last preview and the last applied run
 ROLE_SCAN_DAILY_TIME_UTC = datetime.time(hour=4, minute=0, tzinfo=datetime.timezone.utc)
 ROLE_SCAN_MAX_CHANGES = 400
@@ -31475,9 +31354,8 @@ SERVER_FEATURES = {
     "ticket_inactivity_close": True,
 }
 # The host log webhook (HOST_LOG_WEBHOOK_URL) posts to one fixed channel of the
-# home server — it's only used while the home host log is still that channel.
+# home server — it's only used once the home server has a host log channel.
 _HOST_LOG_WEBHOOK_ENV = HOST_LOG_WEBHOOK_URL
-_HOST_LOG_WEBHOOK_CHANNEL = HOST_LOG_CHANNEL_ID
 _DEFAULT_MODE_MOD_LINKS: dict[str, list] = {}
 # The home server's modes as written in this file (before saved settings are
 # applied) — a mode added to the bot later starts from these on the home server.
@@ -31791,7 +31669,6 @@ def _install_guild_runtime() -> None:
         return
     g = globals()
     home = GuildRuntime(GUILD_ID)
-    home.status = "active"
     for name in _PER_GUILD_DICTS:
         home.dicts[name] = g[name]
     for name in _PER_GUILD_LISTS:
@@ -31944,7 +31821,7 @@ def _apply_settings(rt: GuildRuntime, settings: dict) -> None:
     d["CHANNELS"]["HOST_LOG_CHANNEL"] = host_log
     sc["HOST_TEAM_CHANNEL_ID"] = host_log
     sc["HOST_LOG_WEBHOOK_URL"] = (
-        _HOST_LOG_WEBHOOK_ENV if rt.gid == GUILD_ID and host_log == _HOST_LOG_WEBHOOK_CHANNEL else None
+        _HOST_LOG_WEBHOOK_ENV if rt.gid == GUILD_ID and host_log else None
     )
     sc["HOST_MANAGEMENT_CHANNEL_ID"] = _iid(ch["staff_notices"])
     sc["VIP_NOTICE_CHANNEL_ID"] = sc["HOST_MANAGEMENT_CHANNEL_ID"]
@@ -32370,8 +32247,7 @@ def _load_runtime_from_row(guild, row: dict | None) -> GuildRuntime:
     elif guild.id != GUILD_ID:
         _apply_settings(rt, _default_guild_settings(name))
         rt.version = int((row or {}).get("version") or 0)
-    if guild.id != GUILD_ID:
-        rt.status = str((row or {}).get("status") or "needs_setup")
+    rt.status = str((row or {}).get("status") or "needs_setup")
     return rt
 
 
@@ -32405,20 +32281,6 @@ async def _sync_server_commands(guild) -> int:
     return len(synced)
 
 
-def _home_tickets_to_seed(stored) -> bool:
-    """The home server's saved settings predate the ticket system (fill its
-    channels and Ticket Support role from the old ticket bot's ids once)."""
-    if isinstance(stored, str):
-        try:
-            stored = json.loads(stored)
-        except Exception:
-            stored = None
-    if not isinstance(stored, dict):
-        return False
-    channels = stored.get("channels") if isinstance(stored.get("channels"), dict) else {}
-    return "ticket_category" not in channels
-
-
 def _home_modes_to_add(stored) -> list[str]:
     """Built-in modes missing from the home server's saved settings (added to
     the bot after the settings were first saved)."""
@@ -32433,31 +32295,10 @@ def _home_modes_to_add(stored) -> list[str]:
     return [key for key, _ in BUILTIN_MODES if key not in modes and key in _HOME_MODE_SEED]
 
 
-# The Discord server the ids in this file belong to. Any other home server
-# (a staging bot, or someone running their own copy) must not inherit them.
-_ORIGINAL_HOME_GUILD_ID = 341585283881631744
-
-
-def _walk_discord_ids(value, found: set[str]) -> None:
-    if isinstance(value, dict):
-        for item in value.values():
-            _walk_discord_ids(item, found)
-    elif isinstance(value, list):
-        for item in value:
-            _walk_discord_ids(item, found)
-    elif isinstance(value, str) and value.isdigit() and len(value) >= 15:
-        found.add(value)
-    elif isinstance(value, int) and value >= 10**14:
-        found.add(str(value))
-
-
-def _settings_for_this_home(name: str) -> dict:
-    """TommyKay keeps the roles and channels written in this file. Every other
-    server starts with nothing mapped. Mod links, rule links and the rule
-    numbers carry over."""
+def _fresh_home_settings(name: str) -> dict:
+    """The home server's first settings: nothing mapped, like any server.
+    The game modes' mod and rule links and the rule numbers carry over."""
     copied = _settings_from_constants(name)
-    if GUILD_ID == _ORIGINAL_HOME_GUILD_ID:
-        return copied
     fresh = _default_guild_settings(name)
     for key, _branch in BUILTIN_MODES:
         fresh["modes"][key]["mod_links"] = list(copied["modes"][key].get("mod_links") or [])
@@ -32466,26 +32307,11 @@ def _settings_for_this_home(name: str) -> dict:
     return fresh
 
 
-def _settings_carry_other_guild_ids(settings: dict) -> bool:
-    """True when saved settings still contain a role or channel from the
-    server this file was written for, and this process is not that server."""
-    if GUILD_ID == _ORIGINAL_HOME_GUILD_ID or not isinstance(settings, dict):
-        return False
-    foreign: set[str] = set()
-    _walk_discord_ids(_settings_from_constants(""), foreign)
-    blank: set[str] = set()
-    _walk_discord_ids(_default_guild_settings(""), blank)
-    foreign -= blank
-    present: set[str] = set()
-    _walk_discord_ids(settings, present)
-    return bool(foreign & present)
-
-
 async def _bootstrap_server_settings() -> None:
     """Startup: record every server the bot is in, give each its runtime
-    (seeding the home server's settings from this file the first time),
-    mirror roles / channels for the website, and switch on every server whose
-    setup is finished."""
+    (blank settings for the home server the first time), mirror roles /
+    channels for the website, and switch on every server whose setup is
+    finished."""
     await bot.wait_until_ready()
     home = bot.get_guild(GUILD_ID)
     for guild in list(bot.guilds):
@@ -32501,7 +32327,7 @@ async def _bootstrap_server_settings() -> None:
     try:
         rows = await _run_mysql_io(_load_all_guild_settings_mysql, label="guild settings read")
     except Exception as e:
-        print(f"⚠️ Loading server settings failed — home server runs on the built-in values: {e}")
+        print(f"⚠️ Loading server settings failed — servers stay off until it works: {e}")
         rows = {}
     home_row = rows.get(str(GUILD_ID))
     seeded = bool(home_row and home_row.get("settings"))
@@ -32513,80 +32339,32 @@ async def _bootstrap_server_settings() -> None:
     if seeded:
         print(f"⚙️ Home server settings v{_rt(GUILD_ID).version} applied.")
 
-    # Roles the bot finds or creates on the home server (Hist Verified, HIST host ranks), VIP migration.
+    # Hist Verified and the website's role ids for the home server; VIPs get Hist Verified once.
     with guild_scope(GUILD_ID):
         await _setup_member_roles()
 
     if home is not None:
         try:
-            current = _settings_for_this_home(home.name)
-            saved = home_row.get("settings") if home_row else None
-            if isinstance(saved, str):
-                try:
-                    saved = json.loads(saved)
-                except Exception:
-                    saved = None
-            # A staging (or any non-TommyKay) home was seeded from this file's
-            # ids. Drop those roles and channels; keep mod links and rule numbers.
-            if seeded and _settings_carry_other_guild_ids(saved if isinstance(saved, dict) else {}):
-                current["general"]["community_name"] = (
-                    str((saved or {}).get("general", {}).get("community_name") or home.name)
-                )[:60]
-                ok = await _save_bot_settings(
-                    GUILD_ID, current,
-                    summary="Cleared roles and channels that belong to another server",
-                    status="needs_setup",
-                )
-                if ok:
-                    _apply_settings(_rt(GUILD_ID), _normalize_guild_settings(current, home.name))
-                    _rt(GUILD_ID).settings = current
-                print("⚙️ Cleared another server's roles and channels from the settings." if ok else "⚠️ Clearing those settings failed.")
-            elif not seeded:
+            if not seeded:
+                current = _fresh_home_settings(home.name)
                 current["general"]["community_name"] = home.name[:60]
-                first_status = "active" if GUILD_ID == _ORIGINAL_HOME_GUILD_ID else "needs_setup"
                 ok = await _save_bot_settings(
-                    GUILD_ID, current,
-                    summary="Copied this server's existing roles, channels and rules into the settings"
-                    if GUILD_ID == _ORIGINAL_HOME_GUILD_ID
-                    else "Started blank settings for this server",
-                    status=first_status,
+                    GUILD_ID, current, summary="Started blank settings for this server", status="needs_setup",
                 )
                 if ok:
                     _apply_settings(_rt(GUILD_ID), _normalize_guild_settings(current, home.name))
-                print("⚙️ Server settings seeded from the built-in values." if ok else "⚠️ Seeding server settings failed.")
+                    _rt(GUILD_ID).status = "needs_setup"
+                print("⚙️ Server settings started blank — finish setup on the website." if ok else "⚠️ Starting server settings failed.")
             elif _rt(GUILD_ID).settings is not None:
-                # Keep what the website set; only fill ids the bot just created.
-                merged = json.loads(json.dumps(_rt(GUILD_ID).settings))
-                filled = []
-                for b in SETTINGS_BRANCHES:
-                    for rank in HOST_RANKS:
-                        if merged["branches"][b]["enabled"] and not merged["branches"][b]["ranks"][rank] and current["branches"][b]["ranks"][rank]:
-                            merged["branches"][b]["ranks"][rank] = current["branches"][b]["ranks"][rank]
-                            filled.append(f"{b} {rank} host")
-                if merged["branches"]["HIST"]["enabled"] and not merged["roles"]["verified"]["HIST"] and current["roles"]["verified"]["HIST"]:
-                    merged["roles"]["verified"]["HIST"] = current["roles"]["verified"]["HIST"]
-                    filled.append("Hist Verified")
-                # Game modes added to the bot since the settings were saved.
+                # Game modes added to the bot since the settings were saved (switched off).
                 added_modes = _home_modes_to_add(home_row.get("settings"))
-                for key in added_modes:
-                    merged["modes"][key] = json.loads(json.dumps(_HOME_MODE_SEED[key]))
-                tickets_seeded = _home_tickets_to_seed(home_row.get("settings"))
-                if tickets_seeded:
-                    for key in ("ticket_category", "ticket_log", "ticket_private_log"):
-                        merged["channels"][key] = merged["channels"].get(key) or current["channels"][key]
-                    merged["access"]["ticket_support_roles"] = (
-                        merged["access"].get("ticket_support_roles") or current["access"]["ticket_support_roles"]
-                    )
-                summary = "; ".join(
-                    part for part in (
-                        ("Created missing roles: " + ", ".join(filled)) if filled else "",
-                        ("Added new game modes: " + ", ".join(added_modes)) if added_modes else "",
-                        "Copied the ticket bot's channels and Ticket Support role" if tickets_seeded else "",
-                    ) if part
-                )
-                if summary and await _save_bot_settings(GUILD_ID, merged, summary=summary):
-                    _rt(GUILD_ID).settings = merged
-                    if added_modes or tickets_seeded:
+                if added_modes:
+                    merged = json.loads(json.dumps(_rt(GUILD_ID).settings))
+                    fresh_modes = _fresh_home_settings(home.name)["modes"]
+                    for key in added_modes:
+                        merged["modes"][key] = fresh_modes[key]
+                    if await _save_bot_settings(GUILD_ID, merged, summary="Added new game modes: " + ", ".join(added_modes)):
+                        _rt(GUILD_ID).settings = merged
                         _apply_settings(_rt(GUILD_ID), merged)
         except Exception as e:
             print(f"⚠️ Saving server settings failed: {e}")
@@ -32651,7 +32429,7 @@ async def guild_settings_loop():
         rt = _rt(guild.id)
         version = int(row.get("version") or 0)
         status = str(row.get("status") or "needs_setup")
-        if version <= rt.version and (guild.id == GUILD_ID or status == rt.status):
+        if version <= rt.version and status == rt.status:
             continue
         try:
             fresh = await _run_mysql_io(_load_guild_settings_row_mysql, guild.id, label="guild settings read")
@@ -32737,14 +32515,13 @@ async def on_guild_join(guild: discord.Guild):
             row = await _run_mysql_io(_load_guild_settings_row_mysql, guild.id, label="guild settings read")
         rt = _load_runtime_from_row(guild, row)
         await _refresh_guild_snapshot(guild)
-        if rt.active and guild.id != GUILD_ID:
+        if rt.active:
             # Re-added after setup was finished: straight back on.
             await _guild_switched_on(guild)
             return
     except Exception as e:
         print(f"[WARN] recording new server {guild.id} failed: {e}")
-    if guild.id != GUILD_ID:
-        await _welcome_new_guild(guild)
+    await _welcome_new_guild(guild)
 
 
 @bot.event
@@ -33471,6 +33248,8 @@ _install_interaction_routing()
 if __name__ == "__main__":
     if not BOT_TOKEN:
         print("❌ CRITICAL ERROR: DISCORD_BOT_TOKEN is not set.")
+    elif not GUILD_ID:
+        print("❌ CRITICAL ERROR: HOME_GUILD_ID is not set (the id of the bot's home Discord server).")
     elif db_pool is None:
         print(
             "❌ CRITICAL ERROR: MySQL is not configured. "
