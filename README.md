@@ -82,7 +82,20 @@ The new Apollo server runs the bot only. Changes take this path:
 
 After unarchive, `bot.py.py`, `start.sh`, `requirements.txt`, `schema.sql`, and `assets` sit at the top of Files. The startup command is `bash start.sh`.
 
-The first time only, copy `.env.example` to `.env` on that server and fill in the staging bot token, `HOME_GUILD_ID`, and the staging database. The zip does not contain `.env`, so later uploads leave it alone. Do this on the new server, not on the live TommyKay one.
+Secrets go on the Apollo **Variables** tab (yellow **Create Variables**), not in a file. A zip upload cannot overwrite them, and they are not part of GitHub. Create one variable per line below. Leave the optional ones unset.
+
+| Name | Staging value |
+| --- | --- |
+| `DISCORD_BOT_TOKEN` | Token from the staging Discord application |
+| `HOME_GUILD_ID` | The test Discord server's id |
+| `MYSQL_HOST` | Host shown on the database page |
+| `MYSQL_PORT` | `3306` |
+| `MYSQL_USER` | Staging database user |
+| `MYSQL_PASSWORD` | Staging database password |
+| `MYSQL_DATABASE` | Staging database name |
+| `BASE_URL` | `http://localhost:3000` until the website has a public address |
+
+`GENAI_API_KEY`, `HOST_LOG_WEBHOOK_URL`, and `MESSAGE_CONTENT_INTENT` stay empty. Do this on the new server, not on the live TommyKay one.
 
 ## Where the live service stands
 
