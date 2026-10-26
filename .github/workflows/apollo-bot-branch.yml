@@ -1,0 +1,47 @@
+name: Apollo bot branch
+
+# Apollo's Git install clones one branch into the server's Files. This keeps
+# apollo-bot holding only what the bot needs, at the top level.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "GameMaster Bot/bot.py.py"
+      - "GameMaster Bot/requirements.txt"
+      - ".github/workflows/apollo-bot-branch.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency: apollo-bot-branch
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Publish the bot files to apollo-bot
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          out="$(mktemp -d)"
+          cp "GameMaster Bot/bot.py.py" "GameMaster Bot/requirements.txt" "$out/"
+          cd "$out"
+          git init -q
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git symbolic-ref HEAD refs/heads/apollo-bot
+          if git fetch -q --depth 1 origin apollo-bot; then
+            git update-ref refs/heads/apollo-bot FETCH_HEAD
+          fi
+          git add -A
+          if git rev-parse -q --verify HEAD >/dev/null && git diff --cached --quiet HEAD; then
+            echo "Bot files unchanged."
+            exit 0
+          fi
+          git commit -q -m "Bot from main ${GITHUB_SHA::7}"
+          git push -q origin HEAD:apollo-bot
+          echo "Published apollo-bot from ${GITHUB_SHA::7}."

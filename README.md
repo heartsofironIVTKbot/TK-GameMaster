@@ -72,17 +72,13 @@ Map files the website serves are in `web/public/`.
 
 ## Updating the new Apollo server
 
-The new Apollo server runs the bot only. Changes take this path:
+The new Apollo server runs the bot only. Every push to `main` that changes `GameMaster Bot/bot.py.py` or its `requirements.txt` copies those two files to the `apollo-bot` branch. Apollo installs that branch, so its Files hold only `bot.py.py` and `requirements.txt` (plus the packages Apollo installs and the bot's `data` folder).
 
-1. Edit the code on this PC.
-2. Push `main` to GitHub.
-3. Download the fresh zip from the [Apollo upload release](https://github.com/heartsofironIVTKbot/TK-GameMaster/releases/tag/apollo).
-4. On the **new** Apollo server, open **Files**, upload `gamemaster-apollo.zip`, then right-click it and choose **Unarchive**.
-5. Restart that server.
+One-time setup on the Apollo **Startup** tab: **Git repo address** `https://github.com/heartsofironIVTKbot/TK-GameMaster.git`, **Git install branch** `apollo-bot`, **Startup file** `bot.py.py`, username and token empty. Then delete everything in **Files** and use **Settings → Reinstall server**.
 
-After unarchive, `bot.py.py`, `start.sh`, `requirements.txt`, `schema.sql`, and `assets` sit at the top of Files. The startup command is `bash start.sh`.
+After that, a change goes live with **Restart**: the startup command runs `git pull` before starting the bot.
 
-Secrets go on the Apollo **Variables** tab (yellow **Create Variables**), not in a file. A zip upload cannot overwrite them, and they are not part of GitHub. Create one variable per line below. Leave the optional ones unset.
+Secrets go on the Apollo **Variables** tab (yellow **Create Variables**), not in a file. A reinstall or pull cannot overwrite them, and they are not part of GitHub. Create one variable per line below. Leave the optional ones unset.
 
 | Name | Staging value |
 | --- | --- |
