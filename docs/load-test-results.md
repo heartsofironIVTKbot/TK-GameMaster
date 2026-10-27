@@ -124,8 +124,12 @@ local copy with 1,000 players showed:
   to the open connections is the largest cost.
 - **The joining rush is the expensive part.** Every new player costs five
   requests: the page plus four API calls.
-- **Memory** reached about 380 MB of Render Starter's 512 MB with 1,000 open
-  connections. That fits, but with little room to spare.
+- **Memory is not a limit.** Render's own graph peaked at about half of the
+  512 MB with 1,000 players. The local copy reached about 380 MB, but that
+  includes the profiler.
+
+Render's Metrics page confirms this: CPU sat near zero all night and hit 100 %
+of the 0.5 CPU in every test run.
 
 When the CPU is saturated, Cloudflare gets no answer in time and returns 502.
 After the fixes this happens to 0.5 % of requests at 1,000 players. The server
