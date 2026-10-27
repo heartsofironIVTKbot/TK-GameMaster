@@ -43,13 +43,19 @@ export default function HotJoinBar({ threadId, selected, selectionKind, ownerLab
       if (!cancelled && !document.hidden) void load();
     };
     run();
-    // The host's decision arrives while the page is open.
-    const timer = window.setInterval(run, 15_000);
     return () => {
       cancelled = true;
-      window.clearInterval(timer);
     };
   }, [load]);
+  // The host's decision arrives while the page is open (logged-out viewers have none).
+  const loggedOut = mine?.threadId === threadId && !mine.loggedIn;
+  useEffect(() => {
+    if (loggedOut) return undefined;
+    const timer = window.setInterval(() => {
+      if (!document.hidden) void load();
+    }, 15_000);
+    return () => window.clearInterval(timer);
+  }, [load, loggedOut]);
 
   const request = usePlayerRequest("/api/hotjoin", (result) => {
     void load();

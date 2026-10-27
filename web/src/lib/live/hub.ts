@@ -12,10 +12,11 @@ import { invalidateLobby, lobbySnapshot, lobbyVersion } from "@/lib/lobbySnapsho
  *    writes (Discord commands, Host Tool, drafts) land within a second.
  *  - Selections ("Ivan is looking at Germany") are memory only, never
  *    stored. Rate-limited per player, dropped when the player's last map
- *    closes or 40 s after their last refresh. A new map gets the full list once; after that only changes
- *    go out, merged at most every 100 ms per room — the full list to every
- *    viewer on every change grows with viewers × selections and swamps the
- *    server at a few hundred players.
+ *    closes or 40 s after their last refresh. A new map gets the full list
+ *    once; after that only changes go out, merged at most every 100 ms per
+ *    room (250 ms with over 200 viewers). The full list to every viewer on
+ *    every change grows with viewers × selections and swamps the server at
+ *    a few hundred players.
  *  - Every event is serialized once per room, not once per viewer.
  *  - One process: the website runs as a single server. With several
  *    servers this needs a shared bus (Redis pub/sub) behind the same API.
@@ -47,6 +48,7 @@ interface Room {
   selections: Map<string, LiveSelection & { until: number }>;
   /** Selections changed since the last flush: the new one, or null = gone. */
   changed: Map<string, LiveSelection | null>;
+  lastFlush: number;
   viewers: number;
   checking: boolean;
   recheck: boolean;
@@ -60,6 +62,12 @@ const personOf = (client: LiveClient) => client.userId ?? `anonymous:${client.id
 
 const CHECK_MS = 1_000;
 const FLUSH_MS = 100;
+/**
+ * Rooms this big merge selection changes over 250 ms: each flush is one
+ * socket write per viewer, the largest CPU cost of a full room (load test).
+ */
+const BIG_ROOM = 200;
+const BIG_ROOM_FLUSH_MS = 250;
 const PING_MS = 20_000;
 /** A safety net: closing the map already drops the selection. */
 const SELECTION_TTL_MS = 40_000;
@@ -97,6 +105,7 @@ export class LiveHub {
         content: null,
         selections: new Map(),
         changed: new Map(),
+        lastFlush: 0,
         viewers: 0,
         checking: false,
         recheck: false,
@@ -234,8 +243,11 @@ export class LiveHub {
 
   /** Changed selections since the last flush: `{set: [...], gone: [user ids]}`. */
   private flush(): void {
+    const now = Date.now();
     for (const room of this.rooms.values()) {
       if (room.changed.size === 0) continue;
+      if (room.clients.size > BIG_ROOM && now - room.lastFlush < BIG_ROOM_FLUSH_MS - FLUSH_MS / 2) continue;
+      room.lastFlush = now;
       const set: LiveSelection[] = [];
       const gone: string[] = [];
       for (const [userId, selection] of room.changed) {

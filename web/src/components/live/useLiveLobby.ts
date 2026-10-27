@@ -30,6 +30,8 @@ export interface LiveLobbyState {
 const HIDDEN_GRACE_MS = 60_000;
 /** After the server refused live updates (204 / errors), try again this much later. */
 const RETRY_MS = 30_000;
+/** The server pings every 20 s: this long without a word, the connection is stuck. Reconnect. */
+const SILENT_MS = 50_000;
 
 const IDLE: LiveLobbyState = { connected: false, selections: [], viewers: null };
 
@@ -57,12 +59,14 @@ export function useLiveLobby(
     let retryTimer: number | undefined;
     let hiddenTimer: number | undefined;
     let stopped = false;
+    let lastHeard = Date.now();
     const update = (patch: Partial<LiveLobbyState>) =>
       setState((current) => ({
         threadId,
         live: { ...(current.threadId === threadId ? current.live : IDLE), ...patch },
       }));
     const parse = (event: MessageEvent) => {
+      lastHeard = Date.now();
       try {
         return JSON.parse(String(event.data)) as unknown;
       } catch {
@@ -77,7 +81,11 @@ export function useLiveLobby(
       if (known) params.set("known", known);
       const next = new EventSource(`/api/live?${params}`);
       source = next;
-      next.onopen = () => update({ connected: true });
+      lastHeard = Date.now();
+      next.onopen = () => {
+        lastHeard = Date.now();
+        update({ connected: true });
+      };
       next.onerror = () => {
         update({ connected: false });
         // CLOSED: the server said no (204 / an error page) — EventSource won't
@@ -108,6 +116,9 @@ export function useLiveLobby(
         const payload = parse(event as MessageEvent) as { count?: unknown } | null;
         if (typeof payload?.count === "number") update({ viewers: payload.count });
       });
+      next.addEventListener("ping", () => {
+        lastHeard = Date.now();
+      });
     };
     const close = () => {
       source?.close();
@@ -122,8 +133,15 @@ export function useLiveLobby(
 
     open();
     document.addEventListener("visibilitychange", onVisibility);
+    const watchdog = window.setInterval(() => {
+      if (source?.readyState === EventSource.OPEN && Date.now() - lastHeard > SILENT_MS) {
+        close();
+        open();
+      }
+    }, 10_000);
     return () => {
       stopped = true;
+      window.clearInterval(watchdog);
       window.clearTimeout(retryTimer);
       window.clearTimeout(hiddenTimer);
       document.removeEventListener("visibilitychange", onVisibility);

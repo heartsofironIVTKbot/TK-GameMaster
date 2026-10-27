@@ -135,7 +135,8 @@ const HOVER_DEBOUNCE_MS = 100;
 // While the live connection (/api/live) is up, changes are pushed and the
 // poll is only a slow safety net.
 const RESERVATION_POLL_MS = 8000;
-const RESERVATION_SAFETY_POLL_MS = 60_000;
+/** With live updates on (they also reconnect by themselves when they go quiet). */
+const RESERVATION_SAFETY_POLL_MS = 300_000;
 // Custom SVG renderer with a large clipping padding: geometries well outside
 // the visible area stay rendered during fast panning, so no vector pop-in or
 // vertical cutoff appears mid-drag. Created per component instance (never
@@ -980,28 +981,33 @@ export default function MapViewer({
   // Load the lobby's reservations on selection and keep them live: poll while
   // the tab is visible and refresh immediately when it becomes visible again
   // (or when `reservationsNonce` bumps — host tools edits just landed).
-  // With the live connection up, the poll slows to a safety net.
+  // With the live connection up, the poll slows to a safety net, and the
+  // connection itself catches up after a hidden tab (no reload on connect).
   const liveConnected = live.connected;
+  const liveConnectedRef = useRef(liveConnected);
+  useEffect(() => {
+    liveConnectedRef.current = liveConnected;
+  }, [liveConnected]);
   useEffect(() => {
     if (!selectedThread) return undefined;
     let cancelled = false;
-    const load = () => {
-      if (!cancelled) void loadLobby(selectedThread);
-    };
-    load();
-    const interval = window.setInterval(() => {
-      if (!document.hidden) load();
-    }, liveConnected ? RESERVATION_SAFETY_POLL_MS : RESERVATION_POLL_MS);
+    void loadLobby(selectedThread);
     const onVisibility = () => {
-      if (!document.hidden) load();
+      if (!cancelled && !document.hidden && !liveConnectedRef.current) void loadLobby(selectedThread);
     };
     document.addEventListener("visibilitychange", onVisibility);
     return () => {
       cancelled = true;
-      window.clearInterval(interval);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [selectedThread, loadLobby, reservationsNonce, liveConnected]);
+  }, [selectedThread, loadLobby, reservationsNonce]);
+  useEffect(() => {
+    if (!selectedThread) return undefined;
+    const interval = window.setInterval(() => {
+      if (!document.hidden) void loadLobby(selectedThread);
+    }, liveConnected ? RESERVATION_SAFETY_POLL_MS : RESERVATION_POLL_MS);
+    return () => window.clearInterval(interval);
+  }, [selectedThread, loadLobby, liveConnected]);
 
   // Static base style: never depends on hover/selection, so react-leaflet
   // never re-styles the 288 base paths when those change.
