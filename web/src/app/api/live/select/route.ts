@@ -31,9 +31,6 @@ export async function POST(request: Request) {
   const accepted = liveHub().select(threadId, {
     user_id: session.discord_id,
     name: session.ingame_nickname?.trim() || session.username,
-    avatar_url: session.avatar
-      ? `https://cdn.discordapp.com/avatars/${session.discord_id}/${session.avatar}.png?size=64`
-      : null,
     tag,
   });
   return accepted ? new Response(null, { status: 204 }) : Response.json({ error: "Too many updates" }, { status: 429 });

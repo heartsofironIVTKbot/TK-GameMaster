@@ -9,7 +9,8 @@ import { getSession } from "@/lib/session";
  *
  *   lobby       the full lobby (same shape as GET /api/reserve) on every change,
  *               or {unchanged: true, version} when only the version rolled over
- *   selections  other players' selected nations [{user_id, name, avatar_url, tag}]
+ *   selections  other players' selected nations [{user_id, name, tag}], once on connect
+ *   selected    changes since: {set: [{user_id, name, tag}], gone: [user_id]}
  *   viewers     {count}: people with this game's map open
  *   ping        keeps proxies from closing a quiet connection
  *
@@ -58,7 +59,7 @@ export async function GET(request: NextRequest) {
       const client: LiveClient = {
         id: hub.newClientId(),
         userId: session?.discord_id ?? null,
-        send: (event, data) => write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`),
+        send: write,
         close,
       };
       write("retry: 3000\n: connected\n\n");

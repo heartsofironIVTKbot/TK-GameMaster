@@ -6,8 +6,16 @@ import { useEffect, useRef, useState } from "react";
 export interface LiveSelection {
   user_id: string;
   name: string;
-  avatar_url: string | null;
   tag: string;
+}
+
+/** Apply a `selected` event ({set, gone}) to the current list. */
+function mergeSelections(current: LiveSelection[], payload: unknown): LiveSelection[] {
+  const { set, gone } = (payload ?? {}) as { set?: unknown; gone?: unknown };
+  const byUser = new Map(current.map((selection) => [selection.user_id, selection]));
+  if (Array.isArray(gone)) for (const userId of gone) byUser.delete(String(userId));
+  if (Array.isArray(set)) for (const selection of set as LiveSelection[]) byUser.set(selection.user_id, selection);
+  return [...byUser.values()];
 }
 
 export interface LiveLobbyState {
@@ -87,6 +95,14 @@ export function useLiveLobby(
       next.addEventListener("selections", (event) => {
         const payload = parse(event as MessageEvent);
         if (Array.isArray(payload)) update({ selections: payload as LiveSelection[] });
+      });
+      next.addEventListener("selected", (event) => {
+        const payload = parse(event as MessageEvent);
+        if (!payload) return;
+        setState((current) => {
+          const live = current.threadId === threadId ? current.live : IDLE;
+          return { threadId, live: { ...live, selections: mergeSelections(live.selections, payload) } };
+        });
       });
       next.addEventListener("viewers", (event) => {
         const payload = parse(event as MessageEvent) as { count?: unknown } | null;

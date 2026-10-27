@@ -11,8 +11,12 @@ import { invalidateLobby, lobbySnapshot, lobbyVersion } from "@/lib/lobbySnapsho
  *    by this website call `lobbyChanged` and go out at once; the bot's
  *    writes (Discord commands, Host Tool, drafts) land within a second.
  *  - Selections ("Ivan is looking at Germany") are memory only, never
- *    stored. Rate-limited per player, merged and sent at most every 100 ms
- *    per room, and dropped 12 s after the player's last refresh.
+ *    stored. Rate-limited per player, dropped 12 s after the player's last
+ *    refresh. A new map gets the full list once; after that only changes
+ *    go out, merged at most every 100 ms per room — the full list to every
+ *    viewer on every change grows with viewers × selections and swamps the
+ *    server at a few hundred players.
+ *  - Every event is serialized once per room, not once per viewer.
  *  - One process: the website runs as a single server. With several
  *    servers this needs a shared bus (Redis pub/sub) behind the same API.
  */
@@ -21,30 +25,38 @@ export interface LiveClient {
   readonly id: number;
   /** Logged-in viewer's Discord id (null = anonymous). */
   readonly userId: string | null;
-  /** Queue an event; false when the connection is gone or hopelessly behind. */
-  send(event: string, data: unknown): boolean;
+  /** Queue a ready SSE frame (see `sseFrame`); false when the connection is gone or hopelessly behind. */
+  send(frame: string): boolean;
   close(): void;
 }
 
 export interface LiveSelection {
   user_id: string;
   name: string;
-  avatar_url: string | null;
   tag: string;
 }
 
 interface Room {
   threadId: string;
   clients: Set<LiveClient>;
+  /** Open maps per person (Discord id, or `anonymous:<client id>`). */
+  people: Map<string, number>;
   version: string | null;
   /** The last lobby sent (JSON), so an unchanged rebuild isn't sent again. */
   content: string | null;
   selections: Map<string, LiveSelection & { until: number }>;
-  selectionsDirty: boolean;
+  /** Selections changed since the last flush: the new one, or null = gone. */
+  changed: Map<string, LiveSelection | null>;
   viewers: number;
   checking: boolean;
   recheck: boolean;
 }
+
+export function sseFrame(event: string, data: unknown): string {
+  return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+}
+
+const personOf = (client: LiveClient) => client.userId ?? `anonymous:${client.id}`;
 
 const CHECK_MS = 1_000;
 const FLUSH_MS = 100;
@@ -79,10 +91,11 @@ export class LiveHub {
       room = {
         threadId,
         clients: new Set(),
+        people: new Map(),
         version: null,
         content: null,
         selections: new Map(),
-        selectionsDirty: false,
+        changed: new Map(),
         viewers: 0,
         checking: false,
         recheck: false,
@@ -91,6 +104,7 @@ export class LiveHub {
     }
     if (room.clients.size >= MAX_CLIENTS_PER_ROOM) return null;
     room.clients.add(client);
+    room.people.set(personOf(client), (room.people.get(personOf(client)) ?? 0) + 1);
     void this.greet(room, client, known);
     let done = false;
     return () => {
@@ -113,25 +127,21 @@ export class LiveHub {
    */
   select(threadId: string, selection: Omit<LiveSelection, "tag"> & { tag: string | null }): boolean {
     const room = this.rooms.get(threadId);
-    if (!room || ![...room.clients].some((client) => client.userId === selection.user_id)) return true;
+    if (!room || !room.people.has(selection.user_id)) return true;
     if (!this.take(selection.user_id)) return false;
     const current = room.selections.get(selection.user_id);
     if (!selection.tag) {
-      if (current) {
-        room.selections.delete(selection.user_id);
-        room.selectionsDirty = true;
-      }
+      if (current) this.dropSelection(room, selection.user_id);
       return true;
     }
-    if (current?.tag !== selection.tag || current.name !== selection.name) room.selectionsDirty = true;
-    room.selections.set(selection.user_id, {
-      user_id: selection.user_id,
-      name: selection.name,
-      avatar_url: selection.avatar_url,
-      tag: selection.tag,
-      until: Date.now() + SELECTION_TTL_MS,
-    });
+    const next = { user_id: selection.user_id, name: selection.name, tag: selection.tag };
+    if (current?.tag !== next.tag || current.name !== next.name) room.changed.set(next.user_id, next);
+    room.selections.set(next.user_id, { ...next, until: Date.now() + SELECTION_TTL_MS });
     return true;
+  }
+
+  private dropSelection(room: Room, userId: string): void {
+    if (room.selections.delete(userId)) room.changed.set(userId, null);
   }
 
   private async greet(room: Room, client: LiveClient, known: string | null): Promise<void> {
@@ -139,7 +149,7 @@ export class LiveHub {
       const version = await lobbyVersion(room.threadId);
       if (version !== known) {
         const snapshot = await lobbySnapshot(room.threadId, version);
-        client.send("lobby", { ...snapshot, version });
+        client.send(sseFrame("lobby", { ...snapshot, version }));
         if (room.version === null) {
           room.version = version;
           room.content = JSON.stringify(snapshot);
@@ -149,15 +159,19 @@ export class LiveHub {
     } catch (error) {
       console.error("[live] first lobby read failed:", error);
     }
-    client.send("selections", this.selectionList(room));
-    // Everyone else hears about a changed count from the next flush.
-    client.send("viewers", { count: this.viewerCount(room) });
+    client.send(sseFrame("selections", this.selectionList(room)));
+    // Everyone else hears about a changed count from the next tick.
+    client.send(sseFrame("viewers", { count: room.people.size }));
   }
 
   private leave(room: Room, client: LiveClient): void {
-    room.clients.delete(client);
-    if (client.userId && ![...room.clients].some((other) => other.userId === client.userId)) {
-      if (room.selections.delete(client.userId)) room.selectionsDirty = true;
+    if (!room.clients.delete(client)) return;
+    const person = personOf(client);
+    const left = (room.people.get(person) ?? 1) - 1;
+    if (left > 0) room.people.set(person, left);
+    else {
+      room.people.delete(person);
+      if (client.userId) this.dropSelection(room, client.userId);
     }
     if (room.clients.size === 0) this.rooms.delete(room.threadId);
   }
@@ -200,10 +214,12 @@ export class LiveHub {
     for (const room of this.rooms.values()) {
       void this.check(room);
       for (const [userId, selection] of room.selections) {
-        if (selection.until < now) {
-          room.selections.delete(userId);
-          room.selectionsDirty = true;
-        }
+        if (selection.until < now) this.dropSelection(room, userId);
+      }
+      // People, not tabs: one logged-in player with two tabs counts once.
+      if (room.people.size !== room.viewers) {
+        room.viewers = room.people.size;
+        this.broadcast(room, "viewers", { count: room.viewers });
       }
     }
     if (now - this.lastPing >= PING_MS) {
@@ -215,23 +231,25 @@ export class LiveHub {
     }
   }
 
+  /** Changed selections since the last flush: `{set: [...], gone: [user ids]}`. */
   private flush(): void {
     for (const room of this.rooms.values()) {
-      if (room.selectionsDirty) {
-        room.selectionsDirty = false;
-        this.broadcast(room, "selections", this.selectionList(room));
+      if (room.changed.size === 0) continue;
+      const set: LiveSelection[] = [];
+      const gone: string[] = [];
+      for (const [userId, selection] of room.changed) {
+        if (selection) set.push(selection);
+        else gone.push(userId);
       }
-      const viewers = this.viewerCount(room);
-      if (viewers !== room.viewers) {
-        room.viewers = viewers;
-        this.broadcast(room, "viewers", { count: viewers });
-      }
+      room.changed.clear();
+      this.broadcast(room, "selected", { set, gone });
     }
   }
 
   private broadcast(room: Room, event: string, data: unknown): void {
+    const frame = sseFrame(event, data);
     for (const client of room.clients) {
-      if (!client.send(event, data)) {
+      if (!client.send(frame)) {
         client.close();
         this.leave(room, client);
       }
@@ -239,19 +257,7 @@ export class LiveHub {
   }
 
   private selectionList(room: Room): LiveSelection[] {
-    return [...room.selections.values()].map((selection) => ({
-      user_id: selection.user_id,
-      name: selection.name,
-      avatar_url: selection.avatar_url,
-      tag: selection.tag,
-    }));
-  }
-
-  /** People, not tabs: one logged-in player with two tabs counts once. */
-  private viewerCount(room: Room): number {
-    const people = new Set<string>();
-    for (const client of room.clients) people.add(client.userId ?? `anonymous:${client.id}`);
-    return people.size;
+    return [...room.selections.values()].map(({ user_id, name, tag }) => ({ user_id, name, tag }));
   }
 
   private take(userId: string): boolean {
