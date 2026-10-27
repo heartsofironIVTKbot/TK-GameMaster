@@ -10,6 +10,7 @@ import ActionPanel from "./ActionPanel";
 import Avatar from "./Avatar";
 import HostStandingPanel from "./HostStandingPanel";
 import MessagePanel from "./MessagePanel";
+import PlayerHistory from "./PlayerHistory";
 import RolesPanel from "./RolesPanel";
 
 /**
@@ -152,25 +153,28 @@ export default function PlayerRecord({
       </section>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_420px]">
-        <section className={`min-w-0 space-y-4 rounded-3xl p-4 sm:p-5 ${GLASS}`}>
-          <div className="flex items-center justify-between">
-            <h2 className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">📊 Portfolio</h2>
-            {refreshing && data && (
-              <span className="flex items-center gap-1.5 text-[11px] text-slate-400">
-                <Spinner className="h-3 w-3 text-amber-300" /> Updating…
-              </span>
-            )}
-          </div>
-          {portfolio?.error && (
-            <p className="rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">{portfolio.error}</p>
-          )}
-          {!data && !portfolio?.error && (
-            <div className="flex items-center gap-2 text-sm text-slate-400">
-              <Spinner className="h-4 w-4 text-amber-300" /> Loading the record…
+        <div className="min-w-0 space-y-4">
+          <section className={`min-w-0 space-y-4 rounded-3xl p-4 sm:p-5 ${GLASS}`}>
+            <div className="flex items-center justify-between">
+              <h2 className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">📊 Portfolio</h2>
+              {refreshing && data && (
+                <span className="flex items-center gap-1.5 text-[11px] text-slate-400">
+                  <Spinner className="h-3 w-3 text-amber-300" /> Updating…
+                </span>
+              )}
             </div>
-          )}
-          {data && <PortfolioBody portfolio={data} />}
-        </section>
+            {portfolio?.error && (
+              <p className="rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">{portfolio.error}</p>
+            )}
+            {!data && !portfolio?.error && (
+              <div className="flex items-center gap-2 text-sm text-slate-400">
+                <Spinner className="h-4 w-4 text-amber-300" /> Loading the record…
+              </div>
+            )}
+            {data && <PortfolioBody portfolio={data} />}
+          </section>
+          {host.is_staff && <PlayerHistory key={playerId} playerId={playerId} />}
+        </div>
 
         <div className="order-first xl:order-none">
           {/* Scrolls on its own when taller than the screen, so its bottom (result, Undo) stays reachable. */}

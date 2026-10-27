@@ -7,6 +7,7 @@ import { getSession } from "@/lib/session";
 import { canonicalName } from "@/data/nationCategories";
 import { demoLobbyState } from "@/lib/liveDemo";
 import { liveHub } from "@/lib/live/hub";
+import { recordAudit } from "@/lib/auditLog";
 import { lobbySnapshot, lobbyVersion, versionOf } from "@/lib/lobbySnapshot";
 import { memberRoleIds } from "@/lib/memberRoles";
 import { categoryOfMode } from "@/lib/scheduleOptions";
@@ -48,6 +49,7 @@ interface GamesRow extends RowDataPacket {
   thread_id: string;
   /** The game's Discord server (multi-server). */
   guild_id?: string | null;
+  thread_name?: string | null;
   mode: string | null;
   status: string | null;
   game_started: number | boolean;
@@ -98,6 +100,38 @@ function isFillerSlot(slotKey: string): boolean {
 
 function jsonError(message: string, status: number): NextResponse {
   return NextResponse.json({ error: message }, { status });
+}
+
+/** "Germany", "the Germany co-op slot", "a filler slot (Spare)". */
+function slotLabel(slotKey: string): string {
+  if (isFillerSlot(slotKey)) {
+    const name = slotKey.slice("_FILL_".length).replace(/_/g, " ").trim();
+    return name ? `a filler slot (${name})` : "a filler slot";
+  }
+  if (isCoopSlot(slotKey)) return `the ${slotKey.split("_coop", 1)[0]} co-op slot`;
+  return slotKey;
+}
+
+function auditReservation(
+  game: GamesRow,
+  threadId: string,
+  session: { discord_id: string; username: string; ingame_nickname?: string | null },
+  action: "reserve" | "reserve_coop" | "reserve_filler" | "unreserve",
+  slotKey: string,
+) {
+  const who = session.ingame_nickname || session.username;
+  const verb = action === "unreserve" ? "unreserved" : "reserved";
+  const where = game.thread_name ? ` in ${game.thread_name}` : "";
+  void recordAudit({
+    guildId: game.guild_id ? String(game.guild_id) : HOME_GUILD_ID,
+    category: "reservation",
+    action,
+    summary: `${who} ${verb} ${slotKey ? slotLabel(slotKey) : "their slot"}${where}`,
+    actorId: session.discord_id,
+    actorName: who,
+    gameId: threadId,
+    details: { slot: slotKey || null },
+  });
 }
 
 /**
@@ -328,6 +362,13 @@ export async function POST(request: NextRequest) {
 
     await connection.commit();
     liveHub().lobbyChanged(threadId);
+    auditReservation(
+      game,
+      threadId,
+      session,
+      isFillerSlot(resolvedSlotKey) ? "reserve_filler" : isCoopSlot(resolvedSlotKey) ? "reserve_coop" : "reserve",
+      resolvedSlotKey,
+    );
     return NextResponse.json({
       ok: true,
       reservation: {
@@ -399,6 +440,10 @@ export async function DELETE(request: NextRequest) {
       return jsonError("Reservations are locked — this game has started or ended", 409);
     }
 
+    const [heldRows] = await connection.query<SlotRow[]>(
+      "SELECT slot_key, user_id FROM game_reservations WHERE thread_id = ? AND user_id = ?",
+      [threadId, session.discord_id],
+    );
     const [result] = await connection.query<ResultSetHeader>(
       "DELETE FROM game_reservations WHERE thread_id = ? AND user_id = ?",
       [threadId, session.discord_id],
@@ -423,6 +468,7 @@ export async function DELETE(request: NextRequest) {
 
     await connection.commit();
     liveHub().lobbyChanged(threadId);
+    auditReservation(game, threadId, session, "unreserve", heldRows.map((row) => String(row.slot_key)).join(", "));
     return NextResponse.json({
       ok: true,
       unreserved: {

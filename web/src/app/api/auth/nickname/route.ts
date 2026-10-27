@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import type { ResultSetHeader, RowDataPacket } from "mysql2";
 import { getSession, createSession, publicSessionUser } from "@/lib/session";
 import { getPool, DatabaseConfigError } from "@/lib/db";
+import { recordAudit } from "@/lib/auditLog";
+import { currentGuildId } from "@/lib/currentGuild";
 
 /**
  * POST /api/auth/nickname
@@ -96,6 +98,20 @@ export async function POST(request: NextRequest) {
     }
     console.error("[auth/nickname] save failed:", error);
     return jsonError("Database unavailable", 503);
+  }
+
+  if (nickname !== session.ingame_nickname) {
+    void recordAudit({
+      guildId: await currentGuildId(),
+      category: "reservation",
+      action: "nickname_set",
+      summary: session.ingame_nickname
+        ? `${session.username} changed their in-game nickname from ${session.ingame_nickname} to ${nickname}`
+        : `${session.username} set their in-game nickname to ${nickname}`,
+      actorId: session.discord_id,
+      actorName: session.username,
+      details: { from: session.ingame_nickname ?? null, to: nickname },
+    });
   }
 
   // Re-seal the session so the nickname survives page reloads without a

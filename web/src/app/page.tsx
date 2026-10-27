@@ -740,6 +740,7 @@ export default function Home() {
           host.isHost
             ? {
                 enabled: host.enabled,
+                isStaff: host.isStaff,
                 onToggle: () => {
                   host.setEnabled(!host.enabled);
                   setHeldPlayer(null);

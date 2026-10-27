@@ -22,6 +22,7 @@ import {
   type StepId,
 } from "@/lib/serverSettingsTypes";
 import { getSession, type SessionUser } from "@/lib/session";
+import { recordAudit } from "@/lib/auditLog";
 
 /**
  * Server settings on the website (docs/server-setup.md): which servers a
@@ -373,6 +374,14 @@ export async function saveServerSettings(guildId: string, body: SaveSettingsBody
     });
     if (changes.length > 0 || finishing) {
       server.history.unshift({ version, actor_name: actorName, summary: summaryText, changes: changes.slice(0, 60), created_at: now });
+      await recordAudit({
+        guildId,
+        category: "settings",
+        action: finishing ? "setup_finished" : "settings_saved",
+        summary: `${actorName} ${finishing ? "finished the server setup" : "saved the server settings"}: ${summaryText}`,
+        actorId: who.session.discord_id,
+        actorName,
+      });
     }
     return { ok: true, version, setup: setupState(true, status), changed: changes.length };
   }
@@ -393,6 +402,15 @@ export async function saveServerSettings(guildId: string, body: SaveSettingsBody
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [guildId, version, who.session.discord_id, actorName, summaryText.slice(0, 500), JSON.stringify(changes.slice(0, 200)), now],
     );
+    await recordAudit({
+      guildId,
+      category: "settings",
+      action: finishing ? "setup_finished" : "settings_saved",
+      summary: `${actorName} ${finishing ? "finished the server setup" : "saved the server settings"}: ${summaryText}`,
+      actorId: who.session.discord_id,
+      actorName,
+      details: { version, changes: changes.slice(0, 20).map((change) => change.path) },
+    });
   }
   return { ok: true, version, setup: setupState(true, status), changed: changes.length };
 }

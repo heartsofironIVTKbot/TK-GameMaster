@@ -129,7 +129,10 @@ local copy with 1,000 players showed:
   includes the profiler.
 
 Render's Metrics page confirms this: CPU sat near zero all night and hit 100 %
-of the 0.5 CPU in every test run.
+of the 0.5 CPU in every test run. In the first run (1,000 players, before the
+fixes), the server was too busy to answer Render's health check, and Render
+logged "Instance failed: dial tcp …:10000: i/o timeout". The later runs didn't
+trigger it, and UptimeRobot saw no downtime.
 
 When the CPU is saturated, Cloudflare gets no answer in time and returns 502.
 After the fixes this happens to 0.5 % of requests at 1,000 players. The server

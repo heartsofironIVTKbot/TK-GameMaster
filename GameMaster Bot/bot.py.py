@@ -1494,6 +1494,8 @@ def _ensure_users_schema_mysql() -> list[str]:
                     raise
         # Zero-trust audit trail queue (Phase 9) → Discord audit channel.
         cursor.execute(_AUDIT_EVENTS_DDL)
+        # Audit trail (web /audit page): one row per action, bot and website.
+        cursor.execute(_AUDIT_TRAIL_DDL)
 
         # House Receipt logging (Phase 3): game_reservations gains an optional
         # log_message_id column (self-healed for tables created before it).
@@ -6603,11 +6605,14 @@ async def _post_webhook(payload: dict, wait: bool = False):
         return False
 
 
-async def send_host_log_embed(embed: discord.Embed, content: str = None) -> dict | None:
+async def send_host_log_embed(embed: discord.Embed, content: str = None, *, audit: bool = True) -> dict | None:
     """Post to host log via webhook (separate rate-limit bucket) or fall back to channel.
 
     Returns {"url", "message_id"} of the posted log when known (moderation
-    events store it as their evidence link), else None."""
+    events store it as their evidence link), else None. `audit=False` when the
+    caller writes its own audit-trail row."""
+    if audit:
+        _audit_mirror_embed(embed, content)
     if G.HOST_LOG_WEBHOOK_URL:
         payload: dict = {"embeds": [embed.to_dict()]}
         if content:
@@ -6630,12 +6635,232 @@ async def send_host_log_embed(embed: discord.Embed, content: str = None) -> dict
 
 async def send_log_message(content: str):
     """Plain-text host log via webhook or channel fallback."""
+    _audit_mirror_embed(None, content)
     if G.HOST_LOG_WEBHOOK_URL:
         if await _post_webhook({"content": content}):
             return
     channel = bot.get_channel(G.HOST_LOG_CHANNEL_ID)
     if channel:
         await channel.send(content)
+
+
+# ==========================================================================
+# AUDIT TRAIL — one row per action in `audit_trail`, shown on the website's
+# staff-only /audit page. Rows are append-only: nothing updates or deletes
+# them except audit_trail_retention_loop. The website creates the same table
+# (web/src/lib/auditLog.ts) — keep the DDL identical.
+# ==========================================================================
+_AUDIT_TRAIL_DDL = """
+CREATE TABLE IF NOT EXISTS audit_trail (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    guild_id VARCHAR(32) NOT NULL,
+    created_at BIGINT NOT NULL,
+    category VARCHAR(24) NOT NULL,
+    action VARCHAR(48) NOT NULL,
+    actor_id VARCHAR(32) NULL,
+    actor_name VARCHAR(64) NULL,
+    target_id VARCHAR(32) NULL,
+    target_name VARCHAR(64) NULL,
+    game_id VARCHAR(32) NULL,
+    summary VARCHAR(400) NOT NULL,
+    details JSON NULL,
+    source VARCHAR(12) NOT NULL,
+    INDEX idx_audit_guild_time (guild_id, created_at),
+    INDEX idx_audit_guild_actor (guild_id, actor_id, created_at),
+    INDEX idx_audit_guild_target (guild_id, target_id, created_at),
+    INDEX idx_audit_guild_game (guild_id, game_id, created_at),
+    INDEX idx_audit_guild_cat (guild_id, category, created_at)
+)
+"""
+AUDIT_TRAIL_RETENTION_DAYS = 400
+_AUDIT_DETAILS_MAX = 4000
+_AUDIT_SECRET_KEYS = ("password", "token", "secret", "webhook")
+# True while a website request (and the background work it starts) runs: the
+# request loop writes those rows, so the Discord-log mirror stays quiet.
+_AUDIT_IN_WEB_REQUEST: contextvars.ContextVar[bool] = contextvars.ContextVar("gamemaster_audit_web", default=False)
+
+
+def _audit_who(user_id) -> str | None:
+    """A member's display name from the cache (None when unknown)."""
+    if not str(user_id or "").isdigit():
+        return None
+    try:
+        guild = bot.get_guild(cur_gid())
+        member = guild.get_member(int(user_id)) if guild else None
+        if member is not None:
+            return member.display_name
+        user = bot.get_user(int(user_id))
+        return getattr(user, "global_name", None) or getattr(user, "name", None)
+    except Exception:
+        return None
+
+
+def _audit_game_name(game_id) -> str | None:
+    if not game_id:
+        return None
+    try:
+        _, game = _find_game_entry(get_cached_games_data(), str(game_id))
+        return (game or {}).get("thread_name") or None
+    except Exception:
+        return None
+
+
+def _audit_plain(text) -> str:
+    """Discord markup → plain text (mentions become names)."""
+    s = str(text or "")
+    guild = None
+    try:
+        guild = bot.get_guild(cur_gid())
+    except Exception:
+        pass
+
+    def role(m):
+        r = guild.get_role(int(m.group(1))) if guild else None
+        return f"@{r.name}" if r else "@role"
+
+    def channel(m):
+        c = bot.get_channel(int(m.group(1)))
+        return f"#{c.name}" if c is not None and getattr(c, "name", None) else "#channel"
+
+    s = re.sub(r"<@&(\d+)>", role, s)
+    s = re.sub(r"<@!?(\d+)>", lambda m: "@" + (_audit_who(m.group(1)) or m.group(1)), s)
+    s = re.sub(r"<#(\d+)>", channel, s)
+    s = re.sub(r"<a?(:\w+:)\d+>", r"\1", s)
+    s = re.sub(r"<t:(\d+)(?::\w)?>", lambda m: datetime.datetime.fromtimestamp(
+        int(m.group(1)), datetime.timezone.utc).strftime("%d %b %Y %H:%M UTC"), s)
+    s = s.replace("**", "").replace("__", "").replace("`", "").replace(">>> ", "")
+    return re.sub(r"\s+", " ", s).strip()
+
+
+def _audit_clean_details(value):
+    if isinstance(value, dict):
+        return {
+            str(k): _audit_clean_details(v)
+            for k, v in value.items()
+            if not any(word in str(k).lower() for word in _AUDIT_SECRET_KEYS)
+        }
+    if isinstance(value, (list, tuple)):
+        return [_audit_clean_details(v) for v in value]
+    return value
+
+
+def _write_audit_trail_mysql(rows: list[tuple]) -> None:
+    conn = None
+    cur = None
+    try:
+        conn = _db_get_connection()
+        cur = conn.cursor()
+        cur.executemany(
+            "INSERT INTO audit_trail (guild_id, created_at, category, action, actor_id, actor_name, "
+            "target_id, target_name, game_id, summary, details, source) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+            rows,
+        )
+        conn.commit()
+    finally:
+        if cur is not None:
+            try:
+                cur.close()
+            except Exception:
+                pass
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+
+def audit_event(
+    category: str,
+    action: str,
+    summary: str,
+    *,
+    actor_id=None,
+    actor_name: str | None = None,
+    target_id=None,
+    target_name: str | None = None,
+    game_id=None,
+    details: dict | None = None,
+    source: str = "bot",
+) -> None:
+    """Record one audit-trail row (fire-and-forget; never blocks or raises)."""
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return
+    try:
+        actor = str(actor_id) if str(actor_id or "").isdigit() else None
+        target = str(target_id) if str(target_id or "").isdigit() else None
+        payload = None
+        if details:
+            payload = json.dumps(_audit_clean_details(details), default=str, ensure_ascii=False)
+            if len(payload) > _AUDIT_DETAILS_MAX:
+                payload = json.dumps({"truncated": payload[: _AUDIT_DETAILS_MAX - 100]}, ensure_ascii=False)
+        row = (
+            str(cur_gid()),
+            int(time.time()),
+            str(category)[:24],
+            str(action)[:48],
+            actor,
+            (actor_name or _audit_who(actor) or None) and str(actor_name or _audit_who(actor))[:64],
+            target,
+            (target_name or _audit_who(target) or None) and str(target_name or _audit_who(target))[:64],
+            str(game_id)[:32] if game_id else None,
+            (_audit_plain(summary) or f"{category} {action}")[:400],
+            payload,
+            str(source)[:12],
+        )
+        _spawn_background(
+            _run_mysql_io(_write_audit_trail_mysql, [row], label="audit trail write"),
+            "audit trail write",
+        )
+    except Exception as e:
+        print(f"[WARN] audit_event({category}/{action}) failed: {e}")
+
+
+_AUDIT_ACTOR_FIELDS = ("admin", "host", "by", "actor", "staff", "moderator", "user", "approved by", "requested by")
+_AUDIT_TARGET_FIELDS = ("target", "player", "member", "recipient")
+
+
+def _audit_mirror_embed(embed, content: str | None = None) -> None:
+    """Copy a Discord host-log post into the audit trail (system/bot_log), so
+    nothing the old log channel showed is lost. Website requests record their
+    own rows, so they're skipped here."""
+    if _AUDIT_IN_WEB_REQUEST.get():
+        return
+    try:
+        parts: list[str] = []
+        actor_id = target_id = None
+        fields: dict = {}
+        if embed is not None:
+            if embed.title:
+                parts.append(str(embed.title))
+            if embed.description:
+                parts.append(str(embed.description).split("\n", 1)[0])
+            for field in embed.fields:
+                name = _audit_plain(field.name)
+                value = str(field.value or "")
+                fields[name] = _audit_plain(value)[:300]
+                lowered = name.lower()
+                mention = re.search(r"<@!?(\d+)>", value)
+                if mention and actor_id is None and lowered in _AUDIT_ACTOR_FIELDS:
+                    actor_id = mention.group(1)
+                elif mention and target_id is None and lowered in _AUDIT_TARGET_FIELDS:
+                    target_id = mention.group(1)
+            parts.extend(f"{k}: {v}" for k, v in list(fields.items())[:4] if v)
+        if content:
+            parts.append(str(content))
+        summary = " · ".join(_audit_plain(p) for p in parts if p)
+        if not summary:
+            return
+        audit_event(
+            "system", "bot_log", summary,
+            actor_id=actor_id, target_id=target_id,
+            details={"fields": fields} if fields else None,
+            source="discord",
+        )
+    except Exception as e:
+        print(f"[WARN] audit mirror failed: {e}")
 
 
 def _invalidate_reservation_message_cache(thread_key: str, msg_id: int = None):
@@ -10538,8 +10763,61 @@ def record_moderation_event(
             _run_mysql_io(_insert_moderation_events_mysql, [row], True, label="moderation event write"),
             "moderation event write",
         )
+        _audit_moderation_event(user_id, action, mode, amount, reason, actor_id, thread_id, automatic, details)
     except Exception as e:
         print(f"[WARN] record_moderation_event({action}) failed: {e}")
+
+
+# moderation_events action → (audit category, audit action, sentence).
+_AUDIT_MODERATION = {
+    "commend": ("moderation", "commend", "{actor} gave {target} {n} commend(s){mode}"),
+    "commend_removed": ("moderation", "take", "{actor} took {n} commend(s){mode} from {target}"),
+    "warn": ("moderation", "warn", "{actor} gave {target} {n} warning(s){mode}"),
+    "warn_removed": ("moderation", "take", "{actor} removed {n} warning(s){mode} from {target}"),
+    "merit": ("moderation", "merit", "{actor} gave {target} {n} Merit"),
+    "merit_removed": ("moderation", "take", "{actor} took {n} Merit from {target}"),
+    "ban": ("moderation", "ban", "{actor} game-banned {target}{mode}"),
+    "unban": ("moderation", "unban", "{actor} lifted {target}'s game ban{mode}"),
+    "redeem": ("moderation", "undo", "{actor} let {target} spend {n} commend(s) to clear warnings{mode}"),
+    "dishonored_give": ("moderation", "dishonored", "{actor} marked {target} Dishonored{mode}"),
+    "dishonored_take": ("moderation", "dishonored", "{actor} lifted {target}'s Dishonored mark{mode}"),
+    "appeal": ("moderation", "appeal", "{target} appealed a moderation action"),
+    "host_acclamation": ("host", "acclamation", "{actor} gave {target} {n} Acclamation(s){mode}"),
+    "host_acclamation_removed": ("host", "acclamation_taken", "{actor} took {n} Acclamation(s){mode} from {target}"),
+    "host_violation": ("host", "violation", "{actor} gave {target} {n} Violation(s){mode}"),
+    "host_violation_removed": ("host", "violation_taken", "{actor} took {n} Violation(s){mode} from {target}"),
+    "host_tier_set": ("host", "host_rank_set", "{actor} set {target}'s host rank{mode}"),
+    "verified_granted": ("roles", "verify", "{actor} verified {target}{mode}"),
+    "verified_removed": ("roles", "verify", "{actor} removed {target}'s Verified{mode}"),
+    "vip_granted": ("roles", "vip", "{actor} gave {target} VIP"),
+    "vip_removed": ("roles", "vip", "{actor} removed {target}'s VIP"),
+    "vip_declined": ("roles", "vip", "{actor} declined {target}'s VIP request"),
+    "valor_earned": ("roles", "trusted_auto", "{target} earned Hearts of Valor"),
+    "valor_trusted": ("roles", "trusted_auto", "{target} picked Trusted{mode} with Hearts of Valor"),
+}
+
+
+def _audit_moderation_event(user_id, action, mode, amount, reason, actor_id, thread_id, automatic, details) -> None:
+    category, audit_action, sentence = _AUDIT_MODERATION.get(
+        str(action), ("moderation", str(action), "{actor}: " + str(action).replace("_", " ") + " — {target}{mode}")
+    )
+    target = _audit_who(user_id) or str(user_id)
+    actor = "GameMaster" if automatic or not actor_id else (_audit_who(actor_id) or str(actor_id))
+    text = sentence.format(
+        actor=actor, target=target, n=amount if amount is not None else 1, mode=f" ({mode})" if mode else ""
+    )
+    if action == "host_tier_set" and isinstance(details, dict) and details.get("to"):
+        text += f": {details.get('from') or 'None'} → {details['to']}"
+    if reason:
+        text += f" — {reason}"
+    audit_event(
+        category, audit_action, text,
+        actor_id=None if automatic else actor_id,
+        target_id=user_id,
+        game_id=thread_id,
+        details={"event": action, "mode": mode, "amount": amount, "reason": reason, **(details or {})},
+        source="web" if _AUDIT_IN_WEB_REQUEST.get() else "bot",
+    )
 
 
 # attendance_events: the per-game attendance audit trail shown on the web
@@ -21839,6 +22117,19 @@ async def _run_web_game_lifecycle(request_id: str, action: str, key: str, actor,
     except Exception as e:
         print(f"[WARN] web lifecycle finish write failed for {request_id}: {e}")
     _audit_log("INFO", f"web {action} game={key} by={getattr(actor, 'id', '?')} -> {status}")
+    if status == "done":
+        verb = {"game_start": "started", "game_end": "ended", "game_cancel": "cancelled"}.get(action, action)
+        name = _audit_game_name(key) or "a game"
+        reason = kwargs.get("reason")
+        audit_event(
+            "game", verb,
+            f"{getattr(actor, 'display_name', 'A host')} {verb} {name}" + (f" — {reason}" if reason else ""),
+            actor_id=getattr(actor, "id", None), actor_name=getattr(actor, "display_name", None),
+            game_id=key,
+            details={"reason": reason} if reason else ({"attendance_minutes": kwargs.get("attendance_delay")}
+                                                      if action == "game_start" else None),
+            source="web",
+        )
 
 
 # ==========================================================================
@@ -22147,6 +22438,7 @@ def _host_message_text(payload: dict) -> tuple[str | None, str | None]:
 
 
 async def _post_host_log_embed(embed: discord.Embed, label: str) -> None:
+    _audit_mirror_embed(embed)
     channel = bot.get_channel(G.HOST_LOG_CHANNEL_ID)
     if channel is None:
         return
@@ -22913,8 +23205,18 @@ async def send_command_audit_log(interaction: discord.Interaction, command_name:
 
     embed.set_footer(text="Advanced Game Logger")
 
+    where = getattr(interaction.channel, "name", None)
+    audit_event(
+        "system", "command_used",
+        f"{interaction.user.display_name} used /{command_name}" + (f" in #{where}" if where else ""),
+        actor_id=interaction.user.id,
+        actor_name=interaction.user.display_name,
+        details={"command": command_name, "options": _audit_plain(args_str) if args_str != "None" else None},
+        source="discord",
+    )
+
     # 3. Send via the webhook bucket (keeps the bot's global bucket free for autocomplete)
-    await send_host_log_embed(embed)
+    await send_host_log_embed(embed, audit=False)
 
 @bot.event
 async def on_interaction(interaction: discord.Interaction):
@@ -22929,7 +23231,8 @@ async def on_interaction(interaction: discord.Interaction):
             args_data = interaction.data.get("options", [])
 
             # Send the log
-            await send_command_audit_log(interaction, command_name, args_data)
+            with guild_scope(_interaction_guild(interaction)):
+                await send_command_audit_log(interaction, command_name, args_data)
 
         except Exception as e:
             print(f"Logging Error: {e}")
@@ -29681,6 +29984,134 @@ async def _process_web_crash_report(req: dict):
 
 
 
+def _prune_audit_trail_mysql(cutoff: int, batch: int = 5000) -> int:
+    """The only code allowed to delete audit_trail rows (older than the
+    retention window, in small batches so the table never locks for long)."""
+    conn = None
+    cur = None
+    total = 0
+    try:
+        conn = _db_get_connection()
+        cur = conn.cursor()
+        while True:
+            cur.execute("DELETE FROM audit_trail WHERE created_at < %s LIMIT %s", (cutoff, batch))
+            conn.commit()
+            total += int(cur.rowcount or 0)
+            if (cur.rowcount or 0) < batch:
+                return total
+    finally:
+        if cur is not None:
+            try:
+                cur.close()
+            except Exception:
+                pass
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+
+@tasks.loop(hours=24)
+async def audit_trail_retention_loop():
+    await bot.wait_until_ready()
+    cutoff = int(time.time()) - AUDIT_TRAIL_RETENTION_DAYS * 86400
+    try:
+        removed = await _run_mysql_io(_prune_audit_trail_mysql, cutoff, label="audit trail retention")
+        if removed:
+            print(f"🧹 Audit trail: removed {removed} row(s) older than {AUDIT_TRAIL_RETENTION_DAYS} days")
+            audit_event(
+                "system", "retention",
+                f"Removed {removed} audit row(s) older than {AUDIT_TRAIL_RETENTION_DAYS} days (all servers)",
+                details={"removed": removed, "cutoff": cutoff},
+            )
+    except Exception as e:
+        print(f"⚠️ audit trail retention failed: {e}")
+
+
+# Web requests that write their own audit rows (roster handlers, game
+# lifecycle, and everything that goes through record_moderation_event).
+_AUDIT_SELF_RECORDED = frozenset({
+    "roster_assign", "roster_remove", "moderation", "dishonored", "host_rating", "member_roles",
+    *GAME_LIFECYCLE_ACTIONS,
+})
+# Request action → (audit category, audit action, what the actor did).
+_AUDIT_WEB_ACTIONS = {
+    "create": ("game", "scheduled", "scheduled a game"),
+    "update": ("game", "schedule_edited", "edited a scheduled game"),
+    "cancel": ("game", "schedule_cancelled", "cancelled a scheduled game"),
+    "lock_day": ("game", "day_locked", "locked a calendar day"),
+    "unlock_day": ("game", "day_unlocked", "unlocked a calendar day"),
+    "att_check": ("game", "attendance_check", "ran an attendance check"),
+    "att_sample": ("game", "attendance_sample", "took an attendance sample"),
+    "att_override": ("game", "attendance_override", "corrected attendance"),
+    "att_finalize": ("game", "attendance_finalized", "finalized attendance"),
+    "game_access": ("game", "access_changed", "changed who can reserve"),
+    "game_remind": ("game", "reminder_sent", "sent a reminder"),
+    "game_resources": ("game", "resources_updated", "updated the game resources"),
+    "game_log_analysis": ("game", "log_analysis", "ran the AI log analysis"),
+    "draft_join": ("draft", "draft_join", "joined the draft"),
+    "draft_leave": ("draft", "draft_leave", "left the draft"),
+    "draft_pick": ("draft", "draft_pick", "made a draft pick"),
+    "draft_control": ("draft", "draft_control", "ran a draft action"),
+    "hotjoin_request": ("roster", "hotjoin_request", "asked to hot-join"),
+    "hotjoin_cancel": ("roster", "hotjoin_cancelled", "withdrew a hot-join request"),
+    "hotjoin_decide": ("roster", "hotjoin_decided", "answered a hot-join request"),
+    "crash_report": ("system", "crash_report", "sent a crash report"),
+    "role_scan": ("roles", "role_scan", "ran the role check"),
+    "server_setup": ("settings", "setup_finished", "changed the server setup"),
+    "host_dm": ("message", "host_message", "sent a direct message"),
+    "game_message": ("message", "players_messaged", "messaged a game's players"),
+}
+
+
+def _audit_result_text(result) -> str:
+    """The "title — summary" a handler returned, when it has one."""
+    if not isinstance(result, dict):
+        return ""
+    for value in [result, *result.values()]:
+        if isinstance(value, dict) and (value.get("title") or value.get("summary")):
+            title = str(value.get("title") or "").strip()
+            summary = str(value.get("summary") or "").strip()
+            return title if summary in ("", title) else " — ".join(p for p in (title, summary) if p)
+    return ""
+
+
+def _audit_web_request(req: dict, action: str, result) -> None:
+    """The audit row for a finished website request."""
+    payload = req.get("payload") or {}
+    if not isinstance(payload, dict):
+        payload = {}
+    category, audit_action, did = _AUDIT_WEB_ACTIONS.get(
+        action, ("system", action or "web_request", f"ran {action.replace('_', ' ') or 'a request'}")
+    )
+    actor_id = req.get("host_id")
+    actor_name = _audit_who(actor_id) or (str(actor_id) if actor_id else "Someone")
+    game_id = payload.get("thread_id") or payload.get("game_id") or req.get("slot_id")
+    target_id = payload.get("user_id") if str(payload.get("user_id") or "").isdigit() else None
+    sentence = f"{actor_name} {did}"
+    if action == "draft_control" and payload.get("op"):
+        sentence = f"{actor_name} ran the draft action '{payload['op']}'"
+    if target_id and str(target_id) != str(actor_id):
+        sentence += f" {'to' if category == 'message' else 'for'} {_audit_who(target_id) or target_id}"
+    name = _audit_game_name(game_id)
+    if name:
+        sentence += f" in {name}"
+    elif action in ("create", "update", "cancel") and (payload.get("title") or payload.get("mode")):
+        sentence += f": {payload.get('title') or payload.get('mode')}"
+    extra = _audit_result_text(result)
+    if extra:
+        sentence += f" — {extra}"
+    details = {"request_id": req.get("request_id")}
+    if action not in ("host_dm", "game_message", "crash_report"):
+        details["payload"] = payload
+    audit_event(
+        category, audit_action, sentence,
+        actor_id=actor_id, actor_name=actor_name if actor_name != str(actor_id) else None,
+        target_id=target_id, game_id=game_id, details=details, source="web",
+    )
+
+
 @tasks.loop(seconds=WEB_SCHEDULE_SYNC_INTERVAL_SEC)
 async def web_schedule_request_loop():
     """Drain pending web calendar requests (oldest first)."""
@@ -29710,6 +30141,7 @@ async def web_schedule_request_loop():
         action = str(req.get("action") or "")
         # Each request is for one server (the column; older rows: the home server).
         scope_token = _CURRENT_GUILD.set(_as_gid(req.get("guild_id")))
+        web_token = _AUDIT_IN_WEB_REQUEST.set(True)
         try:
             if action != "server_setup" and not _guild_active():
                 ok, result, err = False, None, (
@@ -29765,7 +30197,11 @@ async def web_schedule_request_loop():
             print(f"[ERROR] web schedule request {req.get('request_id')}: {e}")
             ok, result, err = False, None, "❌ The bot hit an error while scheduling — please try again."
         finally:
+            _AUDIT_IN_WEB_REQUEST.reset(web_token)
             _CURRENT_GUILD.reset(scope_token)
+        if ok and ok not in (WEB_REQUEST_RUNNING, WEB_REQUEST_CONFIRM) and action not in _AUDIT_SELF_RECORDED:
+            with guild_scope(req.get("guild_id")):
+                _audit_web_request(req, action, result)
         # Game start / end / cancel run in the background and finish the row themselves.
         if ok == WEB_REQUEST_RUNNING:
             continue
@@ -30206,6 +30642,15 @@ async def _process_web_roster_assign(req: dict):
         if force and override_kind:
             await _roster_dm_host_override(game, actor, target, label, override_kind, last_played)
         _audit_log("INFO", f"web late join thread={thread_id} by={actor.id} user={user_id} slot={key} from={current_key}")
+        audit_event(
+            "roster", "late_join",
+            f"{actor.display_name} added {target.display_name} to the running game {game.get('thread_name') or ''} as {label}"
+            + (f" (was {_pretty_reservation_name(current_key)})" if current_key else "")
+            + (" — overrode a warning" if force and override_kind else ""),
+            actor_id=actor.id, actor_name=actor.display_name,
+            target_id=user_id, target_name=target.display_name, game_id=thread_id,
+            details={"slot": key, "from": current_key, "forced": force}, source="web",
+        )
         return True, {"slot_key": key, "moved_from": current_key, "displaced": None, "late_join": True}, None
 
     # Apply on a fresh read: the board may have changed while we checked.
@@ -30286,6 +30731,33 @@ async def _process_web_roster_assign(req: dict):
         f"web roster assign thread={thread_id} by={actor.id} user={user_id} slot={key} "
         f"from={current_key} displaced={occupant} swapped_to={swapped_to} forced={force} notified={notify}",
     )
+    other_name = displaced.display_name if displaced is not None else (str(occupant) if occupant else None)
+    if swapped_to:
+        roster_action = "roster_swap"
+        sentence = (f"{actor.display_name} swapped {target.display_name} ({_pretty_reservation_name(current_key)}) "
+                    f"with {other_name} ({label})")
+    elif occupant is not None:
+        roster_action = "roster_replace"
+        sentence = f"{actor.display_name} gave {label} to {target.display_name}, removing {other_name}"
+    elif current_key:
+        roster_action = "roster_move"
+        sentence = (f"{actor.display_name} moved {target.display_name} from "
+                    f"{_pretty_reservation_name(current_key)} to {label}")
+    else:
+        roster_action = "roster_add"
+        sentence = f"{actor.display_name} added {target.display_name} as {label}"
+    if game.get("thread_name"):
+        sentence += f" in {game['thread_name']}"
+    if force and override_kind:
+        sentence += " — overrode a warning"
+    audit_event(
+        "roster", roster_action, sentence,
+        actor_id=actor.id, actor_name=actor.display_name,
+        target_id=user_id, target_name=target.display_name, game_id=thread_id,
+        details={"slot": key, "from": current_key, "displaced": str(occupant) if occupant else None,
+                 "swapped_to": swapped_to, "forced": force, "notified": notify},
+        source="web",
+    )
     return True, {"slot_key": key, "moved_from": current_key, "displaced": str(occupant) if occupant else None}, None
 
 
@@ -30320,6 +30792,15 @@ async def _process_web_roster_remove(req: dict):
             color=discord.Color.red(), label="roster remove",
         )
     _audit_log("INFO", f"web roster remove thread={thread_id} by={actor.id} user={user_id} slots={keys}")
+    target_name = _audit_who(user_id) or str(user_id)
+    audit_event(
+        "roster", "roster_remove",
+        f"{actor.display_name} removed {target_name} from {_pretty_reservation_name(keys[0])}"
+        + (f" in {game['thread_name']}" if game.get("thread_name") else ""),
+        actor_id=actor.id, actor_name=actor.display_name,
+        target_id=user_id, target_name=target_name, game_id=thread_id,
+        details={"slots": keys}, source="web",
+    )
     return True, {"removed": keys[0]}, None
 
 
@@ -33189,6 +33670,8 @@ async def on_ready():
         if not web_host_roster_loop.is_running():
             web_host_roster_loop.start()
             print("🗓️ Web Host Roster Loop: Started")
+        if not audit_trail_retention_loop.is_running():
+            audit_trail_retention_loop.start()
         if not web_schedule_request_loop.is_running():
             web_schedule_request_loop.start()
             print("🗓️ Web Schedule Request Loop (web calendar + live map host tools): Started")

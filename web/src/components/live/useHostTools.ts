@@ -182,6 +182,7 @@ export function useHostTools(onRosterChanged: () => void) {
 
   return {
     isHost,
+    isStaff: hostStatus?.status === "ok" && hostStatus.host.is_staff,
     demo: hostStatus?.status === "ok" && hostStatus.host.demo,
     enabled: isHost && enabled,
     setEnabled: setToolsEnabled,

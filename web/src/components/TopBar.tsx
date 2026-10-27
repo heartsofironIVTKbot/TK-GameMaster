@@ -23,16 +23,17 @@ interface TopBarProps {
   /** Close the drawer entirely (the ✕ button). */
   onCloseDrawer?: () => void;
   /** Hosts only: the live map host tools switch (also shows the host pages). */
-  hostTools?: { enabled: boolean; onToggle: () => void } | null;
+  hostTools?: { enabled: boolean; isStaff?: boolean; onToggle: () => void } | null;
 }
 
 /** Host pages, shown in the top bar to hosts only. */
-const HOST_LINKS = [
+const HOST_LINKS: { href: string; label: string; title: string; staffOnly?: boolean }[] = [
   { href: "/schedule", label: "🗓️ Schedule", title: "Schedule — host calendar" },
   { href: "/database", label: "🗂️ Database", title: "Database — search players, give and take commends, warnings, bans and Dishonored" },
   { href: "/games", label: "🎮 Games", title: "Games — start, end and cancel games" },
   { href: "/attendance", label: "🎯 Attendance", title: "Attendance — live voice samples, corrections and the audit log for started games" },
   { href: "/servers", label: "⚙️ Servers", title: "Servers — add GameMaster to a server and set up its roles, channels and game modes" },
+  { href: "/audit", label: "📜 Audit", title: "Audit log — every action on the server, searchable (Host Management only)", staffOnly: true },
 ];
 
 const CHIP_STYLES: Record<SelectionKind, string> = {
@@ -94,7 +95,7 @@ export default function TopBar({
             👤 My profile
           </a>
           {hostTools &&
-            HOST_LINKS.map((link) => (
+            HOST_LINKS.filter((link) => !link.staffOnly || hostTools.isStaff).map((link) => (
               <a
                 key={link.href}
                 href={link.href}
