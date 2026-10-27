@@ -79,6 +79,40 @@ def _env_int(name: str, default: int) -> int:
         return default
 
 
+_PEM_BLOCK = re.compile(r"-----BEGIN CERTIFICATE-----(.*?)-----END CERTIFICATE-----", re.S)
+
+
+def _mysql_ca_options() -> dict:
+    """MYSQL_SSL_CA: the database provider's CA certificate, as a file name or
+    as the PEM text itself. Panels often turn the certificate's line breaks
+    into spaces or literal \\n, so the PEM is rebuilt from its base64 body."""
+    raw = os.getenv("MYSQL_SSL_CA", "").strip().strip("'\"").strip()
+    if not raw:
+        return {}
+    candidates = [raw, os.path.join(os.path.dirname(os.path.abspath(__file__)), raw)]
+    path = next((p for p in candidates if len(p) < 260 and os.path.isfile(p)), None)
+    text = raw
+    if path:
+        with open(path, encoding="utf-8") as handle:
+            text = handle.read()
+    blocks = []
+    for body in _PEM_BLOCK.findall(text.replace("\\r", "").replace("\\n", "\n")):
+        b64 = re.sub(r"[^A-Za-z0-9+/=]", "", body)
+        lines = [b64[i:i + 64] for i in range(0, len(b64), 64)]
+        blocks.append("-----BEGIN CERTIFICATE-----\n" + "\n".join(lines) + "\n-----END CERTIFICATE-----\n")
+    if not blocks:
+        print(
+            f"⚠️ MYSQL_SSL_CA has no complete certificate ({len(raw)} characters; it must run from "
+            "-----BEGIN CERTIFICATE----- to -----END CERTIFICATE-----). The database connection is "
+            "still encrypted, but the server's certificate is NOT checked."
+        )
+        return {"ssl_disabled": False}
+    ca_path = os.path.join(tempfile.gettempdir(), "gamemaster-mysql-ca.pem")
+    with open(ca_path, "w", encoding="utf-8") as handle:
+        handle.write("".join(blocks))
+    return {"ssl_disabled": False, "ssl_ca": ca_path, "ssl_verify_cert": True}
+
+
 def _build_db_config() -> dict:
     host = os.getenv("MYSQL_HOST")
     user = os.getenv("MYSQL_USER")
@@ -95,15 +129,6 @@ def _build_db_config() -> dict:
     ]
     if missing:
         raise RuntimeError(f"Missing MySQL env vars: {', '.join(missing)}")
-    ssl: dict = {}
-    ca_pem = os.getenv("MYSQL_SSL_CA", "").replace("\\n", "\n").strip()
-    if ca_pem:
-        # The provider's CA certificate (PEM text, e.g. DigitalOcean's): the
-        # connection is encrypted AND the server's certificate is checked.
-        ca_path = os.path.join(tempfile.gettempdir(), "gamemaster-mysql-ca.pem")
-        with open(ca_path, "w", encoding="utf-8") as handle:
-            handle.write(ca_pem + "\n")
-        ssl = {"ssl_disabled": False, "ssl_ca": ca_path, "ssl_verify_cert": True}
     return {
         "host": host,
         "user": user,
@@ -111,7 +136,7 @@ def _build_db_config() -> dict:
         "database": database,
         "port": int(os.getenv("MYSQL_PORT", "3306")),
         "ssl_disabled": _env_bool("MYSQL_SSL_DISABLED", True),
-        **ssl,
+        **_mysql_ca_options(),
         # use_pure=True is REQUIRED for connection_timeout to act as a socket-level
         # timeout on every read/write (the C extension only applies it to the
         # connect phase). Without this, a dead socket blocks its worker thread
