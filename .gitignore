@@ -30,6 +30,10 @@ scripts/_*.mjs
 scripts/_*.cjs
 scripts/_*.geojson
 scripts/_*.json
+# Database copy credentials and the provider's CA certificate
+scripts/_*.env
+scripts/_*.crt
+*.crt
 
 # Separate projects that sit next to GameMaster on the owner's machine
 hoi4-casino/

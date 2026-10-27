@@ -118,6 +118,13 @@ runs** (a proper, dedicated host) and **backups**.
 **Rough cost:** **$25–60 per month** for a solid setup (check current prices
 before buying).
 
+**Chosen (Oct 2026):** website on Render (Frankfurt), bot on Apollo,
+**DigitalOcean Managed MySQL** (Frankfurt, own database — not shared with
+IronLegion), Cloudflare in front, UptimeRobot/BetterStack for alerts. Both
+apps connect with `MYSQL_SSL_CA` (DigitalOcean's CA certificate) so the
+connection is encrypted and the server is checked. Data is copied with
+`scripts/copy_database.py` (skips IronLegion's tables, compares row counts).
+
 ### Steps
 1. Buy a domain (if not already) and put it on Cloudflare.
 2. Create the production database; import the data; check row counts.

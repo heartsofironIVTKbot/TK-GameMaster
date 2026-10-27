@@ -24,6 +24,7 @@ import uuid
 import enum
 import secrets
 import string
+import tempfile
 from dataclasses import dataclass
 from google import genai
 from typing import List, Dict, Any, Union, Optional, Tuple, Sequence
@@ -94,6 +95,15 @@ def _build_db_config() -> dict:
     ]
     if missing:
         raise RuntimeError(f"Missing MySQL env vars: {', '.join(missing)}")
+    ssl: dict = {}
+    ca_pem = os.getenv("MYSQL_SSL_CA", "").replace("\\n", "\n").strip()
+    if ca_pem:
+        # The provider's CA certificate (PEM text, e.g. DigitalOcean's): the
+        # connection is encrypted AND the server's certificate is checked.
+        ca_path = os.path.join(tempfile.gettempdir(), "gamemaster-mysql-ca.pem")
+        with open(ca_path, "w", encoding="utf-8") as handle:
+            handle.write(ca_pem + "\n")
+        ssl = {"ssl_disabled": False, "ssl_ca": ca_path, "ssl_verify_cert": True}
     return {
         "host": host,
         "user": user,
@@ -101,6 +111,7 @@ def _build_db_config() -> dict:
         "database": database,
         "port": int(os.getenv("MYSQL_PORT", "3306")),
         "ssl_disabled": _env_bool("MYSQL_SSL_DISABLED", True),
+        **ssl,
         # use_pure=True is REQUIRED for connection_timeout to act as a socket-level
         # timeout on every read/write (the C extension only applies it to the
         # connect phase). Without this, a dead socket blocks its worker thread

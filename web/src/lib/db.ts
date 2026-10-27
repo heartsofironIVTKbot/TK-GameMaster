@@ -12,7 +12,7 @@ import type { Pool } from "mysql2/promise";
  * Env vars are loaded by Next.js from `web/.env.local` (see
  * `web/.env.example`): MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD,
  * MYSQL_DATABASE, MYSQL_PORT (default 3306), MYSQL_SSL_DISABLED (default
- * true — matches the bot's default). Key names are case-sensitive.
+ * true — matches the bot's default), MYSQL_SSL_CA. Key names are case-sensitive.
  */
 
 let pool: Pool | null = null;
@@ -96,11 +96,18 @@ export function getPool(): Pool {
     connectionLimit: 10,
     enableKeepAlive: true,
     connectTimeout: 10_000,
-    // Matches the bot's MYSQL_SSL_DISABLED default (true). When SSL is
-    // enabled, skip CA verification (hosted MySQL providers vary).
-    ...(envBool("MYSQL_SSL_DISABLED", true)
-      ? {}
-      : { ssl: { rejectUnauthorized: false } }),
+    ...sslOptions(),
   });
   return pool;
+}
+
+/**
+ * MYSQL_SSL_CA (the provider's CA certificate as PEM text): encrypted and
+ * the server's certificate is checked. Otherwise MYSQL_SSL_DISABLED (default
+ * true, like the bot) decides; enabled without a CA skips the check.
+ */
+function sslOptions() {
+  const ca = (process.env.MYSQL_SSL_CA ?? "").replace(/\\n/g, "\n").trim();
+  if (ca) return { ssl: { ca, rejectUnauthorized: true } };
+  return envBool("MYSQL_SSL_DISABLED", true) ? {} : { ssl: { rejectUnauthorized: false } };
 }
