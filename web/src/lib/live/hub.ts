@@ -14,7 +14,7 @@ import { invalidateLobby, lobbySnapshot, lobbyVersion } from "@/lib/lobbySnapsho
  *    stored. Rate-limited per player, dropped when the player's last map
  *    closes or 40 s after their last refresh. A new map gets the full list
  *    once; after that only changes go out, merged at most every 100 ms per
- *    room (250 ms with over 200 viewers). The full list to every viewer on
+ *    room (250 ms with over 400 viewers). The full list to every viewer on
  *    every change grows with viewers × selections and swamps the server at
  *    a few hundred players.
  *  - Every event is serialized once per room, not once per viewer.
@@ -66,7 +66,7 @@ const FLUSH_MS = 100;
  * Rooms this big merge selection changes over 250 ms: each flush is one
  * socket write per viewer, the largest CPU cost of a full room (load test).
  */
-const BIG_ROOM = 200;
+const BIG_ROOM = 400;
 const BIG_ROOM_FLUSH_MS = 250;
 const PING_MS = 20_000;
 /** A safety net: closing the map already drops the selection. */
