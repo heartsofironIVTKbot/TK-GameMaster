@@ -101,11 +101,15 @@ make the role or channel with a sensible name.
   Management too.
 
 ### 4. Host ranks (one block per branch that's on)
-- **Full host** role: always on.
+- **Full host** role: always used.
 - **Assistant (Trialist)** and **Senior host**: each has an on/off switch.
   - Assistant off: new hosts (and approved host applications) start at Full.
-  - Senior off: promotions stop at Full, and only Host Management rates
-    hosts (gives or takes Acclamations and Violations) in that branch.
+  - Senior off: promotions stop at Full. The **Full hosts take over Senior
+    host powers** switch (under Full host, greyed out while Senior is on, on
+    by default) then lets Full hosts give Acclamations and Violations to
+    hosts of their branch. With it off, only Host Management rates hosts in
+    that branch. Rating hosts is the only power Senior hosts have over Full
+    hosts; managing other hosts' games is Host Management's.
   - A switched-off rank has no role, isn't shown on the Database page and
     can't be given.
 - **Promotion numbers**: Acclamations to reach Full (2) and Senior (4), and
@@ -135,10 +139,12 @@ make the role or channel with a sensible name.
   separate audit log setting was merged into it.
 - **Staff notices**: VIP notices, streak alerts and cross-server ban
   alerts.
-- **Scheduling panel channel**: a host channel. GameMaster posts and pins a
-  panel there with buttons to the Calendar, Games and Attendance pages.
-  **Post / re-post the panel** (also on Health) removes the old one and pins a
-  new one. The old weekly schedule board is gone; the Calendar replaces it.
+- **Host Panel channel** (was "Scheduling panel"): a host channel.
+  GameMaster posts and pins the Host Panel there with buttons to the
+  Calendar, Games, Attendance and Database pages. **Post / re-post the panel**
+  (also on Health) removes the old one and pins a new one; an older panel is
+  replaced automatically when the bot starts. The old weekly schedule board
+  is gone; the Calendar replaces it.
 - **Host chat-logs forum**: when a game ends, GameMaster opens one thread
   for it, named like `20.05.2026 · The Fire Rises · #1234` (date, game mode,
   game number), with a **Manage this game** link to its Games page panel.
@@ -330,7 +336,7 @@ slash commands synced, website requests not stuck or failing.
 
 **Fix-it buttons** (Dashboard and Health): **Re-check now** (re-read roles,
 channels, permissions), **Re-sync commands**, **Test the audit log** (posts a
-test message), **Re-post scheduling panel**, **Re-send welcome**, **Fix permissions** (re-invite with every
+test message), **Re-post Host Panel**, **Re-send welcome**, **Fix permissions** (re-invite with every
 permission; settings stay). The bot does each one and the page shows the result.
 
 **Public status page** (`/status`, anyone): online or offline, how long it's

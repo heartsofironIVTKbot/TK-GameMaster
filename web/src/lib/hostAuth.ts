@@ -43,11 +43,21 @@ export async function getHostStatus(): Promise<HostStatusResponse> {
     const entry = await getHostRosterEntry(session.discord_id, guildId);
     if (!entry) return { status: "not_host", username: session.username };
     // Same rule as the bot's _can_rate_hosts(): staff rate both branches, a
-    // Senior Host rates the branch they're Senior in.
+    // Senior Host rates the branch they're Senior in (with Senior switched
+    // off, a Full Host does when Full hosts take over Senior host powers).
+    const settings = await settingsOf(guildId);
     const ranks = entry.is_staff ? null : await hostRanksOf(await memberRoleIds(session.discord_id));
+    const ratingRank = (branch: HostBranch) => {
+      const config = settings?.branches[branch];
+      if (!config || config.ranks_on.Senior) return "Senior";
+      return config.full_takes_senior ? "Full" : null;
+    };
     const rateBranches: HostBranch[] = entry.is_staff
       ? [...HOST_BRANCH_VALUES]
-      : HOST_BRANCH_VALUES.filter((branch) => ranks?.[branch] === "Senior");
+      : HOST_BRANCH_VALUES.filter((branch) => {
+          const needed = ratingRank(branch);
+          return Boolean(needed && ranks?.[branch] === needed);
+        });
     // Before the bot reports branches, fall back to the member's rank roles.
     const branches: HostBranch[] = entry.is_staff
       ? [...HOST_BRANCH_VALUES]
@@ -63,7 +73,7 @@ export async function getHostStatus(): Promise<HostStatusResponse> {
       can_rate_hosts: rateBranches.length > 0,
       rate_branches: rateBranches,
       branches,
-      disabled_modes: disabledModes(await settingsOf(guildId)),
+      disabled_modes: disabledModes(settings),
       guild_id: guildId,
       servers: await hostServersOf(session.discord_id),
       demo: false,

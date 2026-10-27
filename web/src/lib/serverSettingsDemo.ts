@@ -328,10 +328,10 @@ export function applyDemoServerSetup(payload: Record<string, unknown>): DemoOutc
     sync_commands: "Re-synced 10 slash commands",
     test_post: "Posted a test message in #bot-logs",
     resend_welcome: "Sent the setup welcome again (to the owner's DMs, else the system channel)",
-    schedule_panel: "Posted and pinned the scheduling panel",
+    schedule_panel: "Posted and pinned the Host Panel",
   };
   if (payload.op === "schedule_panel" && !server.settings?.channels.schedule_panel) {
-    return refuse("❌ Pick the scheduling panel channel and save first.");
+    return refuse("❌ Pick the Host Panel channel and save first.");
   }
   if (typeof payload.op === "string" && payload.op in fixed) {
     if (payload.op === "sync_commands" && server.status !== "active") {

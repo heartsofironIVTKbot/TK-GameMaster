@@ -249,11 +249,23 @@ export function BranchesStep({ ctx }: { ctx: StepContext }) {
                   required={on}
                   issues={on ? issuesAt(ctx.issues, `branches.${branch}.ranks.${rank}`) : []}
                 >
-                  {optional && (
+                  {optional ? (
                     <Toggle
                       checked={on}
                       onChange={(checked) => ctx.update((s) => void (s.branches[branch].ranks_on[rank as OptionalRank] = checked))}
                       label={`Use ${RANK_INFO[rank].label.toLowerCase()}s`}
+                    />
+                  ) : (
+                    <Toggle
+                      checked={!draft.branches[branch].ranks_on.Senior && draft.branches[branch].full_takes_senior}
+                      disabled={draft.branches[branch].ranks_on.Senior}
+                      onChange={(checked) => ctx.update((s) => void (s.branches[branch].full_takes_senior = checked))}
+                      label="Full hosts take over Senior host powers"
+                      description={
+                        draft.branches[branch].ranks_on.Senior
+                          ? "Only available when Senior hosts are switched off."
+                          : `Full ${branch} hosts can give Acclamations and Violations to ${branch} hosts, like Senior hosts.`
+                      }
                     />
                   )}
                   {on && (
@@ -283,7 +295,7 @@ export function BranchesStep({ ctx }: { ctx: StepContext }) {
           <RuleNumber ctx={ctx} rule="host_strip_at" />
         </div>
         <p className="text-[11px] text-slate-500">
-          They work exactly like commends and warnings. Senior hosts of a branch and Host Management give them on the Database page;
+          They work exactly like commends and warnings. Senior hosts of a branch (or its Full hosts, when they take over Senior host powers) and Host Management give them on the Database page;
           Acclamations promote a host, Violations strip their rank. A Violation never removes an Acclamation (or the other way round) —
           only Host Management can take either back, and a host whose rank was stripped by Violations gets it back when they drop
           below the number again.

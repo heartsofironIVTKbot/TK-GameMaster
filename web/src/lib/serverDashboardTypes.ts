@@ -15,9 +15,9 @@ export const FIX_ACTIONS: readonly { op: FixOp; label: string; icon: string; hin
   { op: "test_post", label: "Test the audit log", icon: "🧪", hint: "Posts a short test message in the audit log channel." },
   {
     op: "schedule_panel",
-    label: "Re-post scheduling panel",
+    label: "Re-post Host Panel",
     icon: "📅",
-    hint: "Posts the scheduling panel again in its channel, pins it and removes the old one.",
+    hint: "Posts the Host Panel again in its channel, pins it and removes the old one.",
   },
   { op: "resend_welcome", label: "Re-send welcome", icon: "👋", hint: "Sends the setup welcome again (owner's DMs, else the system channel)." },
 ];

@@ -68,9 +68,10 @@ rank only. Senior Hosts can give them to hosts of their own branch; Host
 Management can give them in both and is the only one who can take them back.
 Like commends and warnings, giving one kind never removes the other. A server
 can switch off the Assistant or Senior rank (Settings → Host ranks): with
-Assistant off new hosts start at Full; with Senior off promotions stop at Full
-and only Host Management rates hosts. Everyone's existing counts became RP
-counts.
+Assistant off new hosts start at Full; with Senior off promotions stop at Full,
+and Full hosts rate their branch's hosts if "Full hosts take over Senior host
+powers" is on (otherwise only Host Management does). Everyone's existing
+counts became RP counts.
 
 ## VIP
 

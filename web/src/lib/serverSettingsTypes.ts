@@ -24,11 +24,11 @@ export const RANK_INFO: Record<Rank, { label: string; hint: string; off: string;
     off: "Off: new hosts (and approved host applications) start as Full hosts.",
     suggested: (b) => `${b} Assistant Host`,
   },
-  Full: { label: "Full host", hint: "Regular hosts. Always on.", off: "", suggested: (b) => `${b} Host` },
+  Full: { label: "Full host", hint: "Regular hosts. Always used.", off: "", suggested: (b) => `${b} Host` },
   Senior: {
     label: "Senior host",
     hint: "Can give Acclamations and Violations to hosts of their branch.",
-    off: "Off: promotions stop at Full, and only Host Management gives Acclamations and Violations.",
+    off: "Off: promotions stop at Full. Full hosts can take over Senior host powers (the switch under Full host); otherwise only Host Management gives Acclamations and Violations.",
     suggested: (b) => `Senior ${b} Host`,
   },
 };
@@ -79,10 +79,10 @@ export const CHANNEL_FIELDS = [
   { key: "staff_notices", label: "Staff notices", kind: "text", required: false, hint: "VIP notices with Remove / Approve buttons, hosting streak alerts, and ban alerts from other servers." },
   {
     key: "schedule_panel",
-    label: "Scheduling panel channel",
+    label: "Host Panel channel",
     kind: "text",
     required: false,
-    hint: "A host channel. GameMaster posts and pins the scheduling panel here — the buttons hosts use to open the Calendar and the Games page.",
+    hint: "A host channel. GameMaster posts and pins the Host Panel here — the buttons hosts use to open the Calendar, Games, Attendance and Database pages.",
   },
   {
     key: "host_chatlogs_forum",
@@ -139,7 +139,16 @@ export interface ServerSettings {
     /** Developers: see bug report and suggestion tickets. */
     developer_roles: string[];
   };
-  branches: Record<Branch, { enabled: boolean; ranks: Record<Rank, string | null>; ranks_on: Record<OptionalRank, boolean> }>;
+  branches: Record<
+    Branch,
+    {
+      enabled: boolean;
+      ranks: Record<Rank, string | null>;
+      ranks_on: Record<OptionalRank, boolean>;
+      /** With Senior off: Full hosts get Senior host powers (rating the branch's hosts). */
+      full_takes_senior: boolean;
+    }
+  >;
   roles: {
     verified: Record<Branch, string | null>;
     trusted: Record<Branch, string | null>;
@@ -223,11 +232,11 @@ export interface GuildSnapshot {
 
 export const REQUIRED_PERMISSIONS: readonly { bit: number; name: string; why: string }[] = [
   { bit: 10, name: "View Channels", why: "See the channels it posts in." },
-  { bit: 11, name: "Send Messages", why: "Announcements, the scheduling panel, logs." },
+  { bit: 11, name: "Send Messages", why: "Announcements, the Host Panel, logs." },
   { bit: 14, name: "Embed Links", why: "Rich announcement and log cards." },
   { bit: 15, name: "Attach Files", why: "Chat logs, crash reports and ticket transcripts." },
   { bit: 16, name: "Read Message History", why: "Write ticket transcripts and spot inactive tickets." },
-  { bit: 13, name: "Manage Messages", why: "Pin the scheduling panel and clean up its own old posts." },
+  { bit: 13, name: "Manage Messages", why: "Pin the Host Panel and clean up its own old posts." },
   { bit: 17, name: "Mention Everyone", why: "Ping a mode's role on announcements even if the role isn't mentionable." },
   { bit: 18, name: "Use External Emojis", why: "GameMaster's own emojis in its messages." },
   { bit: 28, name: "Manage Roles", why: "Give host ranks, Verified, Trusted, bans, VIP and each game's pass role." },
@@ -349,6 +358,7 @@ export function defaultSettings(name = ""): ServerSettings {
       enabled: true,
       ranks: { Assistant: null, Full: null, Senior: null },
       ranks_on: { Assistant: true, Senior: true },
+      full_takes_senior: true,
     })),
     roles: {
       verified: perBranch(() => null),
@@ -425,6 +435,7 @@ export function normalizeSettings(raw: unknown, name = ""): ServerSettings {
         Assistant: on.Assistant === undefined ? true : Boolean(on.Assistant),
         Senior: on.Senior === undefined ? true : Boolean(on.Senior),
       },
+      full_takes_senior: entry.full_takes_senior === undefined ? true : Boolean(entry.full_takes_senior),
     };
   }
   if (!BRANCHES.some((branch) => s.branches[branch].enabled)) s.branches.RP.enabled = true;
