@@ -2071,6 +2071,23 @@ ROLE_IDS = {
     # bot grants on the home server. Unset = no Steam lock on reservations.
     "AUTHENTICATED": _env_int("IRONLEGION_AUTHENTICATED_ROLE_ID", 0),
 }
+# Every VIP role (Server settings → Player roles). Any of them counts as VIP;
+# ROLE_IDS["VIP_ROLE_ID"] is the first, the one GameMaster gives out.
+VIP_ROLE_IDS: list[int] = []
+
+
+def _vip_role_ids() -> list[int]:
+    ids = [int(rid) for rid in VIP_ROLE_IDS if rid]
+    first = int(ROLE_IDS.get("VIP_ROLE_ID") or 0)
+    return ids or ([first] if first else [])
+
+
+def _has_vip_role(member) -> bool:
+    """The member holds any VIP role (a Member, or anything with .roles)."""
+    if member is None:
+        return False
+    vip_ids = set(_vip_role_ids())
+    return bool(vip_ids) and any(int(getattr(role, "id", 0) or 0) in vip_ids for role in getattr(member, "roles", []) or [])
 
 # The channel players are pointed to for Steam verification with LegionMaster.
 LEGION_MASTER_VERIFY_CHANNEL_ID: Optional[int] = _env_int("IRONLEGION_VERIFY_CHANNEL_ID", 0) or None
@@ -2105,8 +2122,7 @@ async def is_user_authenticated(
         return True
     if role_ids.intersection(SENIOR_MANAGEMENT_ROLES):
         return True
-    vip_id = ROLE_IDS.get("VIP_ROLE_ID")
-    if vip_id and vip_id in role_ids:
+    if role_ids.intersection(_vip_role_ids()):
         return True
 
     # Override-aware: /disable_ironlegion (global or per-thread) lifts the lock.
@@ -8915,19 +8931,10 @@ def _member_has_vip(member) -> bool:
     are the sole authority; the resolved boolean is stamped onto the
     single-use web token at mint time so the web app never needs to query
     Discord (or any database) for VIP status."""
-    vip_id = ROLE_IDS.get("VIP_ROLE_ID")
-    if vip_id and member is not None:
-        try:
-            # Prefer get_role when available (Member), else scan role ids.
-            if hasattr(member, "get_role"):
-                return member.get_role(int(vip_id)) is not None
-            return any(
-                int(getattr(r, "id", 0) or 0) == int(vip_id)
-                for r in getattr(member, "roles", [])
-            )
-        except Exception:
-            pass
-    return False
+    try:
+        return _has_vip_role(member)
+    except Exception:
+        return False
 
 
 def _user_is_vip(guild, user_id) -> bool:
@@ -9004,16 +9011,11 @@ async def _backfill_users_vip_flags() -> None:
     blocks startup — the live Discord role check remains authoritative
     regardless of backfill success."""
     try:
-        vip_id = ROLE_IDS.get("VIP_ROLE_ID")
         guild = bot.get_guild(cur_gid())
-        if guild is None or not vip_id:
-            print("[VIP-BACKFILL] skipped — guild or VIP_ROLE_ID unavailable")
+        if guild is None or not _vip_role_ids():
+            print("[VIP-BACKFILL] skipped — guild or VIP role unavailable")
             return
-        vip_holders = [
-            m.id
-            for m in list(guild.members)
-            if m.get_role(int(vip_id)) is not None
-        ]
+        vip_holders = [m.id for m in list(guild.members) if _has_vip_role(m)]
         if not vip_holders:
             print("[VIP-BACKFILL] no VIP role holders in the member cache — nothing to backfill")
             return
@@ -9989,9 +9991,7 @@ def _member_meets_lock_level(member, level: str, mode_cfg: dict) -> bool:
 
     trusted_id = mode_cfg.get("trusted_role_id")
     verified_id = mode_cfg.get("verified_role_id")
-    vip_id = ROLE_IDS.get("VIP_ROLE_ID")
-
-    has_vip = (vip_id in user_role_ids) if vip_id else False
+    has_vip = any(rid in user_role_ids for rid in _vip_role_ids())
     has_trusted = (trusted_id in user_role_ids) if trusted_id else False
     has_verified = (verified_id in user_role_ids) if verified_id else False
 
@@ -17935,7 +17935,6 @@ async def _disable_message_buttons(msg, note: str = None):
 # =============================================================================
 # CRASH REPORT SUBMISSION SYSTEM (DM-based log upload → mod developer)
 # =============================================================================
-CRASH_REPORT_DEV_ROLE_ID = 0   # pinged on delivery (Server settings)
 CRASH_REPORT_CHANNEL_ID = 0    # crash-report log channel (Server settings)
 CRASH_REPORT_ALLOWED_ARCHIVE_EXTS = {".zip", ".rar", ".7z"}
 CRASH_REPORT_MIN_ARCHIVE_BYTES = 500 * 1024  # 500 KB — real crash folders include minidump + logs
@@ -18247,17 +18246,16 @@ async def _award_crash_report_merit(user_id: int, verified: bool) -> int:
 
 
 async def _forward_crash_report_to_developer(user: discord.User, sess: dict) -> bool:
-    """Post crash report to #crash-reports and ping the Mod Developer role."""
+    """Post crash report to #crash-reports (else the host log)."""
     embed = _crash_report_build_embed(user, sess)
     files = _crash_report_build_files(sess)
     total_bytes = sum(len(a.get("data") or b"") for a in sess.get("attachments", []))
     too_large = total_bytes > _crash_upload_limit()
-    dev_ping = f"<@&{G.CRASH_REPORT_DEV_ROLE_ID}>"
     game_tag = ""
     if sess.get("thread_id"):
         game_link = sess.get("game_link") or f"<#{sess['thread_id']}>"
         game_tag = f" — **{sess.get('game_mode', 'Unknown')}** ({game_link})"
-    header = f"{dev_ping} **New crash report** from {user.mention}{game_tag}"
+    header = f"**New crash report** from {user.mention}{game_tag}"
 
     if too_large:
         embed.add_field(
@@ -18348,12 +18346,13 @@ class CrashReportPanelButton(
 # roles grant web permissions. MP Trusted & Verified roles
 # deliberately do NOT count. Evaluated against the caller's CURRENT guild
 # roles at mint time — NO users-table / database role reads.
-_LIVE_ROLE_IDS: dict[str, int] = {
-    "vip": ROLE_IDS["VIP_ROLE_ID"],
-    "trusted": ROLE_IDS["HOI4_RP_TRUSTED"],       # RP Trusted only
-    "verified": ROLE_IDS["HOI4_VERIFIED"],        # HOI4 (RP) Verified only
-    "authenticated": ROLE_IDS["AUTHENTICATED"],   # Authenticated V.2 (Steam)
-}
+def _live_role_ids() -> dict[str, int]:
+    """The current server's roles (read per call: settings can change)."""
+    return {
+        "trusted": ROLE_IDS["HOI4_RP_TRUSTED"],       # RP Trusted only
+        "verified": ROLE_IDS["HOI4_VERIFIED"],        # HOI4 (RP) Verified only
+        "authenticated": ROLE_IDS["AUTHENTICATED"],   # Authenticated V.2 (Steam)
+    }
 
 
 def _live_role_flags(member) -> dict:
@@ -18375,6 +18374,7 @@ def _live_role_flags(member) -> dict:
         # tracks (ROLE_IDS + host + senior-management role lists) are shown.
         tracked_role_ids = (
             set(ROLE_IDS.values())
+            | set(_vip_role_ids())
             | set(ALLOWED_HOST_ROLES)
             | set(SENIOR_MANAGEMENT_ROLES)
         )
@@ -18387,10 +18387,11 @@ def _live_role_flags(member) -> dict:
     def _has(role_id: int) -> bool:
         return bool(role_id) and role_id in role_ids
 
-    is_vip = _has(_LIVE_ROLE_IDS["vip"]) or is_admin
-    is_trusted = _has(_LIVE_ROLE_IDS["trusted"])
-    is_verified = _has(_LIVE_ROLE_IDS["verified"])
-    is_authenticated = _has(_LIVE_ROLE_IDS["authenticated"])
+    live = _live_role_ids()
+    is_vip = any(_has(rid) for rid in _vip_role_ids()) or is_admin
+    is_trusted = _has(live["trusted"])
+    is_verified = _has(live["verified"])
+    is_authenticated = _has(live["authenticated"])
 
     if is_vip:
         role_tier = _ROLE_TIER_NUM["vip"]
@@ -23130,8 +23131,7 @@ def _trusted_protected(stats: dict, member, label: str) -> bool:
     mode's Trusted below 5 commends (role scan rules)."""
     if member is None or _is_game_banned_any(stats):
         return False
-    vip_role_id = ROLE_IDS.get("VIP_ROLE_ID")
-    if vip_role_id and member.get_role(vip_role_id):
+    if _has_vip_role(member):
         return True
     return stats.get("valor_trusted") == label and member.get_role(ROLE_IDS["VALOR"]) is not None
 
@@ -24067,8 +24067,8 @@ async def _migrate_vips_to_hist_verified(guild, hist_role) -> None:
     except Exception as e:
         print(f"[WARN] Hist Verified VIP migration skipped: {e}")
         return
-    vip_role = guild.get_role(int(ROLE_IDS.get("VIP_ROLE_ID") or 0))
-    if vip_role is None:
+    vip_roles = [role for role in (guild.get_role(rid) for rid in _vip_role_ids()) if role is not None]
+    if not vip_roles:
         return
     if not guild.chunked:
         try:
@@ -24076,7 +24076,8 @@ async def _migrate_vips_to_hist_verified(guild, hist_role) -> None:
         except Exception:
             pass
     given = 0
-    for member in list(vip_role.members):
+    vip_members = {member.id: member for role in vip_roles for member in role.members}
+    for member in list(vip_members.values()):
         if member.bot or hist_role in member.roles:
             continue
         try:
@@ -24330,14 +24331,15 @@ async def _vip_give_roles(member, reason: str, *, actor_id=None) -> list:
 
 
 async def _vip_take_role(member, user_id: str, reason: str) -> str:
-    """Take the VIP role (Verified / Trusted stay — they're earned on their own)."""
+    """Take every VIP role (Verified / Trusted stay — they're earned on their own)."""
     note = "ℹ️ They're not in the server — only the record changed."
     if member is not None:
-        role = member.guild.get_role(int(ROLE_IDS.get("VIP_ROLE_ID") or 0))
-        if role is not None and role in member.roles:
+        vip_ids = set(_vip_role_ids())
+        held = [role for role in member.roles if role.id in vip_ids]
+        if held:
             try:
-                await member.remove_roles(role, reason=reason)
-                note = f"✅ Removed **{role.name}**."
+                await member.remove_roles(*held, reason=reason)
+                note = "✅ Removed " + ", ".join(f"**{role.name}**" for role in held) + "."
             except Exception as e:
                 note = f"⚠️ Couldn't remove the VIP role: {e}"
         else:
@@ -24487,8 +24489,7 @@ async def apply_vip_remove(*, guild, actor, user_id: int, reason: str, by_self: 
     uid = str(user_id)
     member = await _get_member_safe(guild, uid)
     rows = [row for row in await _vip_local_rows(uid) if row["status"] == "active"]
-    vip_role_id = int(ROLE_IDS.get("VIP_ROLE_ID") or 0)
-    has_role = bool(member is not None and vip_role_id and member.get_role(vip_role_id) is not None)
+    has_role = _has_vip_role(member)
     if not rows and not has_role:
         raise ModerationError("ℹ️ They aren't VIP here.")
     actor_id = str(getattr(actor, "id", "") or "")
@@ -24588,8 +24589,7 @@ async def _vip_sync_member(member, *, trigger: str = "sweep"):
     local = await _vip_local_rows(uid)
     if any(row["status"] in ("active", "pending") for row in local):
         return None
-    vip_role_id = int(ROLE_IDS.get("VIP_ROLE_ID") or 0)
-    if vip_role_id and member.get_role(vip_role_id) is not None:
+    if _has_vip_role(member):
         return None  # already VIP here (given before VIP records existed)
     seen = {row.get("source_grant_id") for row in local}
     candidates = [row for row in foreign if row["grant_id"] not in seen]
@@ -24986,7 +24986,7 @@ class HelpSelect(discord.ui.Select):
         try:
             if choice == "how_to_play":
                 msg = (
-                    f"- First, make sure that you are on reservation list before game start date. You can learn how to reserve in: <#{MODE_CONFIG['Roleplay']['rules_channel_id']}>\n\n"
+                    "- First, make sure that you are on reservation list before game start date. Reserve through the map link in the game's announcement.\n\n"
                     "- When the host opens the multiplayer lobby, you will get DM from me (the Gamemaster bot).\n\n"
                     "- After you get the DM, you'll gain access to secret game Information channel, where ID, Password and game Checksum is posted. You'll also get **Roleplay Pass** discord role, which also grants you access to more voice channels. Every nation gets their unique voice channel.\n\n"
                     "❓ *Don't have the right checksum? Request help from the bot!*\n\n"
@@ -29785,11 +29785,10 @@ def _member_role_verified(member) -> bool:
     role_ids = {role.id for role in getattr(member, "roles", [])}
     if role_ids.intersection(ALLOWED_HOST_ROLES) or role_ids.intersection(SENIOR_MANAGEMENT_ROLES):
         return True
-    for key in ("VIP_ROLE_ID", "AUTHENTICATED"):
-        role_id = ROLE_IDS.get(key)
-        if role_id and role_id in role_ids:
-            return True
-    return False
+    if role_ids.intersection(_vip_role_ids()):
+        return True
+    authenticated = ROLE_IDS.get("AUTHENTICATED")
+    return bool(authenticated and authenticated in role_ids)
 
 
 def _replace_web_member_directory_mysql(rows: list, role_rows: list) -> None:
@@ -30849,8 +30848,7 @@ async def _run_role_verification_scan(*, apply: bool = True, trigger: str = "man
                 verified_role = cfg["verified_roles"].get(verified_field) or cfg["verified_role_id"]
                 verified = verified_role in member_role_ids
                 commends = int(stats.get(commend_key, 0) or 0)
-                vip_role_id = ROLE_IDS.get("VIP_ROLE_ID")
-                has_vip = bool(vip_role_id and vip_role_id in member_role_ids)
+                has_vip = any(rid in member_role_ids for rid in _vip_role_ids())
                 # The Trusted role the host team approved as a Valor perk.
                 valor_entitled = (
                     ROLE_IDS["VALOR"] in member_role_ids
@@ -31310,11 +31308,10 @@ MODE_CHANNEL_FIELDS = {
     # settings field → MODE_CONFIG key
     "announcement_channel": "announcement_channel_id",
     "game_info_channel": "game_info_channel_id",
-    "rules_channel": "rules_channel_id",
-    "mods_channel": "mods_channel_id",
-    "public_log_channel": "public_log_channel_id",
     "ping_role": "ping_role_id",
 }
+# The casino add-on exists only on TommyKay (live) and its test server.
+CASINO_GUILD_IDS = {341585283881631744, 1434977277115891725}
 SETTINGS_CHANNEL_KEYS = (
     "host_log", "staff_notices", "schedule_panel", "host_chatlogs_forum",
     "tickets", "crash_reports", "ticket_category", "ticket_log", "ticket_private_log",
@@ -31336,12 +31333,12 @@ _PER_GUILD_DICTS = (
 )
 _PER_GUILD_LISTS = (
     "ALLOWED_HOST_ROLES", "SENIOR_MANAGEMENT_ROLES", "ALL_BAN_IDS", "GAME_VOICE_MANAGER_ROLES",
-    "TICKET_SUPPORT_ROLES", "DEVELOPER_ROLES", "LOBBY_VC_IDS",
+    "TICKET_SUPPORT_ROLES", "DEVELOPER_ROLES", "LOBBY_VC_IDS", "VIP_ROLE_IDS",
 )
 _PER_GUILD_SCALARS = (
     "HOST_LOG_CHANNEL_ID", "HOST_TEAM_CHANNEL_ID", "HOST_MANAGEMENT_CHANNEL_ID", "VIP_NOTICE_CHANNEL_ID",
     "LOG_CHANNEL_ID", "AUDIT_CHANNEL_ID", "ROLE_AUDIT_LOG_CHANNEL_ID", "SCHEDULE_CHANNEL_ID",
-    "HOST_FORUM_CHANNEL_ID", "TICKET_CHANNEL_ID", "CRASH_REPORT_CHANNEL_ID", "CRASH_REPORT_DEV_ROLE_ID",
+    "HOST_FORUM_CHANNEL_ID", "TICKET_CHANNEL_ID", "CRASH_REPORT_CHANNEL_ID",
     "LOBBY_VC_ID", "TRUSTED_ROLE", "GAME_BANNED_ROLE", "MIN_TRUSTED_COMMENDS", "WARNINGS_FOR_BAN",
     "HOST_TERMINATE_AT", "MERIT_VALOR_THRESHOLD", "MERIT_VALOR_GAMES_REQUIRED", "HOSTING_SUCCESS_MIN_AVG",
     "HOST_LOG_WEBHOOK_URL", "TICKET_CATEGORY_ID", "TICKET_LOG_CHANNEL_ID", "TICKET_PRIVATE_LOG_CHANNEL_ID",
@@ -31485,7 +31482,8 @@ def _default_guild_settings(name: str = "") -> dict:
             "game_ban": {b: None for b in SETTINGS_BRANCHES},
             "dishonored": {b: None for b in SETTINGS_BRANCHES},
             "ping": {b: None for b in SETTINGS_BRANCHES},
-            "vip": None, "valor": None, "crash_report_ping": None,
+            # Any of them counts as VIP; giving VIP adds the first one.
+            "vip": [], "valor": None,
         },
         "channels": {key: None for key in SETTINGS_CHANNEL_KEYS},
         "lobby_voices": [],
@@ -31499,12 +31497,14 @@ def _default_guild_settings(name: str = "") -> dict:
             }
             for key, _ in BUILTIN_MODES
         },
+        # Per branch: every mode of the branch uses the same channels and ping role.
+        "mode_sharing": {b: False for b in SETTINGS_BRANCHES},
         "rules": dict(SETTINGS_RULE_DEFAULTS),
         "features": {
             "valor_merit": True, "daily_role_check": True, "vip_auto_carry_over": True,
             "cross_server_ban_alerts": True, "ticket_inactivity_close": True,
         },
-        "addons": {"casino_panel_channel": None, "randomizer_log_channel": None, "fortunes_log_channel": None},
+        "addons": {"casino_panel_channel": None},
     }
 
 
@@ -31528,7 +31528,7 @@ def _settings_from_constants(name: str = "") -> dict:
         s["roles"]["verified"] = {"RP": _sid(ROLE_IDS.get("HOI4_VERIFIED")), "HIST": _sid(ROLE_IDS.get("HIST_VERIFIED"))}
         s["roles"]["trusted"] = {"RP": _sid(ROLE_IDS.get("HOI4_RP_TRUSTED")), "HIST": _sid(ROLE_IDS.get("HOI4_MP_TRUSTED"))}
         s["roles"]["game_ban"] = {"RP": _sid(ROLE_IDS.get("HOI4_RP_BANNED")), "HIST": _sid(ROLE_IDS.get("HOI4_MP_BANNED"))}
-        s["roles"]["vip"] = _sid(ROLE_IDS.get("VIP_ROLE_ID"))
+        s["roles"]["vip"] = _sids(VIP_ROLE_IDS or [ROLE_IDS.get("VIP_ROLE_ID")])
         s["roles"]["valor"] = _sid(ROLE_IDS.get("VALOR"))
         s["roles"]["dishonored"] = {"RP": _sid(ROLE_IDS.get("DISHONORED")), "HIST": _sid(ROLE_IDS.get("HIST_DISHONORED"))}
         for branch in SETTINGS_BRANCHES:
@@ -31537,7 +31537,6 @@ def _settings_from_constants(name: str = "") -> dict:
                 {},
             )
             s["roles"]["ping"][branch] = _sid(first.get("ping_role_id"))
-        s["roles"]["crash_report_ping"] = _sid(sc["CRASH_REPORT_DEV_ROLE_ID"])
         s["channels"] = {
             "host_log": _sid(sc["HOST_LOG_CHANNEL_ID"]), "staff_notices": _sid(sc["HOST_MANAGEMENT_CHANNEL_ID"]),
             "schedule_panel": _sid(sc["SCHEDULE_CHANNEL_ID"]),
@@ -31565,11 +31564,7 @@ def _settings_from_constants(name: str = "") -> dict:
             "host_strip_at": sc["HOST_TERMINATE_AT"], "valor_merit": sc["MERIT_VALOR_THRESHOLD"],
             "valor_games": sc["MERIT_VALOR_GAMES_REQUIRED"], "hosting_success_avg": float(sc["HOSTING_SUCCESS_MIN_AVG"]),
         }
-        s["addons"] = {
-            "casino_panel_channel": _sid(CASINO_PANEL_CHANNEL_ID),
-            "randomizer_log_channel": _sid(RANDOMIZER_LOG_CHANNEL_ID),
-            "fortunes_log_channel": _sid(FORTUNES_LOG_CHANNEL_ID),
-        }
+        s["addons"] = {"casino_panel_channel": _sid(CASINO_PANEL_CHANNEL_ID)}
         return s
 
 
@@ -31610,8 +31605,10 @@ def _normalize_guild_settings(raw, name: str = "") -> dict:
             continue
         per = roles.get(key) if isinstance(roles.get(key), dict) else {}
         s["roles"][key] = {b: _sid(per.get(b)) for b in SETTINGS_BRANCHES}
-    for key in ("vip", "valor", "crash_report_ping"):
-        s["roles"][key] = _sid(roles.get(key))
+    s["roles"]["valor"] = _sid(roles.get("valor"))
+    # Older settings: one VIP role.
+    vip = roles.get("vip")
+    s["roles"]["vip"] = _sids(vip if isinstance(vip, list) else [vip])
     channels = section("channels")
     s["channels"] = {key: _sid(channels.get(key)) for key in SETTINGS_CHANNEL_KEYS}
     if not s["channels"]["schedule_panel"]:
@@ -31641,6 +31638,8 @@ def _normalize_guild_settings(raw, name: str = "") -> dict:
                 (s["modes"][key]["ping_role"] for key, branch in BUILTIN_MODES if branch == b and s["modes"][key].get("ping_role")),
                 None,
             )
+    sharing = section("mode_sharing")
+    s["mode_sharing"] = {b: bool(sharing.get(b, False)) for b in SETTINGS_BRANCHES}
     rules = section("rules")
     for key, default in SETTINGS_RULE_DEFAULTS.items():
         low, high = SETTINGS_RULE_LIMITS[key]
@@ -31764,8 +31763,7 @@ def _new_runtime(gid: int) -> GuildRuntime:
 def _apply_settings(rt: GuildRuntime, settings: dict) -> None:
     """Turn a server's settings into its runtime values (everything is updated
     in place, so MODE_CONFIG aliases like "Historical" follow)."""
-    global CASINO_PANEL_CHANNEL_ID, RANDOMIZER_LOG_CHANNEL_ID, RECEIPT_LOG_CHANNEL_ID, RECEIPT_AUDIT_CHANNEL_ID
-    global FORTUNES_LOG_CHANNEL_ID
+    global CASINO_PANEL_CHANNEL_ID
     s = settings
     roles = s["roles"]
     d, lists, sc = rt.dicts, rt.lists, rt.scalars
@@ -31796,11 +31794,11 @@ def _apply_settings(rt: GuildRuntime, settings: dict) -> None:
     role_ids["HOI4_MP_TRUSTED"] = _iid(roles["trusted"]["HIST"])
     role_ids["HOI4_RP_BANNED"] = _iid(roles["game_ban"]["RP"])
     role_ids["HOI4_MP_BANNED"] = _iid(roles["game_ban"]["HIST"])
-    role_ids["VIP_ROLE_ID"] = _iid(roles["vip"])
+    lists["VIP_ROLE_IDS"][:] = [int(r) for r in roles["vip"]]
+    role_ids["VIP_ROLE_ID"] = lists["VIP_ROLE_IDS"][0] if lists["VIP_ROLE_IDS"] else 0
     role_ids["VALOR"] = _iid(roles["valor"])
     role_ids["DISHONORED"] = _iid(roles["dishonored"]["RP"])
     role_ids["HIST_DISHONORED"] = _iid(roles["dishonored"]["HIST"])
-    sc["CRASH_REPORT_DEV_ROLE_ID"] = _iid(roles["crash_report_ping"])
     sc["TRUSTED_ROLE"] = role_ids["HOI4_RP_TRUSTED"]
     sc["GAME_BANNED_ROLE"] = role_ids["HOI4_RP_BANNED"]
     lists["ALL_BAN_IDS"][:] = [rid for rid in (role_ids["HOI4_RP_BANNED"], role_ids["HOI4_MP_BANNED"]) if rid]
@@ -31840,14 +31838,8 @@ def _apply_settings(rt: GuildRuntime, settings: dict) -> None:
     sc["TICKET_PRIVATE_LOG_CHANNEL_ID"] = _iid(ch["ticket_private_log"])
     for b in SETTINGS_BRANCHES:
         d["GAME_VOICE_ANCHORS"][b] = (_iid(s["voice"][b]["after_category"]), _iid(s["voice"][b]["before_category"]))
-    if rt.gid == GUILD_ID:
-        # Casino / add-on channels exist only on the home server.
-        addons = s["addons"]
-        CASINO_PANEL_CHANNEL_ID = _iid(addons["casino_panel_channel"])
-        RANDOMIZER_LOG_CHANNEL_ID = _iid(addons["randomizer_log_channel"])
-        RECEIPT_LOG_CHANNEL_ID = RANDOMIZER_LOG_CHANNEL_ID
-        RECEIPT_AUDIT_CHANNEL_ID = RANDOMIZER_LOG_CHANNEL_ID
-        FORTUNES_LOG_CHANNEL_ID = _iid(addons["fortunes_log_channel"])
+    if rt.gid == GUILD_ID and rt.gid in CASINO_GUILD_IDS:
+        CASINO_PANEL_CHANNEL_ID = _iid(s["addons"]["casino_panel_channel"])
 
     # Game modes (in place: "Historical" and the old names share these dicts).
     for key, branch in BUILTIN_MODES:
@@ -32481,6 +32473,7 @@ async def _publish_member_role_ids() -> None:
             "rp_verified": str(ROLE_IDS["HOI4_VERIFIED"]) if ROLE_IDS["HOI4_VERIFIED"] else None,
             "hist_verified": str(ROLE_IDS["HIST_VERIFIED"]) if ROLE_IDS.get("HIST_VERIFIED") else None,
             "vip": str(ROLE_IDS.get("VIP_ROLE_ID") or "") or None,
+            "vip_all": [str(rid) for rid in _vip_role_ids()],
             # The player card's Trusted / Hearts of Valor checks (multi-server).
             "rp_trusted": str(ROLE_IDS.get("HOI4_RP_TRUSTED") or "") or None,
             "hist_trusted": str(ROLE_IDS.get("HOI4_MP_TRUSTED") or "") or None,
