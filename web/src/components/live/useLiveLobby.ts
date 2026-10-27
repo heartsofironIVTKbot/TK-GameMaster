@@ -134,8 +134,8 @@ export function useLiveLobby(
   return state.threadId === threadId ? state.live : IDLE;
 }
 
-/** How often a held selection is refreshed (the server forgets it after 12 s). */
-const KEEPALIVE_MS = 5_000;
+/** How often a held selection is refreshed (the server forgets it after 40 s). */
+const KEEPALIVE_MS = 15_000;
 /** Quick clicks across nations send only the one the player settles on. */
 const SETTLE_MS = 120;
 

@@ -11,8 +11,8 @@ import { invalidateLobby, lobbySnapshot, lobbyVersion } from "@/lib/lobbySnapsho
  *    by this website call `lobbyChanged` and go out at once; the bot's
  *    writes (Discord commands, Host Tool, drafts) land within a second.
  *  - Selections ("Ivan is looking at Germany") are memory only, never
- *    stored. Rate-limited per player, dropped 12 s after the player's last
- *    refresh. A new map gets the full list once; after that only changes
+ *    stored. Rate-limited per player, dropped when the player's last map
+ *    closes or 40 s after their last refresh. A new map gets the full list once; after that only changes
  *    go out, merged at most every 100 ms per room — the full list to every
  *    viewer on every change grows with viewers × selections and swamps the
  *    server at a few hundred players.
@@ -61,7 +61,8 @@ const personOf = (client: LiveClient) => client.userId ?? `anonymous:${client.id
 const CHECK_MS = 1_000;
 const FLUSH_MS = 100;
 const PING_MS = 20_000;
-const SELECTION_TTL_MS = 12_000;
+/** A safety net: closing the map already drops the selection. */
+const SELECTION_TTL_MS = 40_000;
 /** Per player: a burst of 10 selection updates, then 5 per second. */
 const BUCKET_SIZE = 10;
 const BUCKET_REFILL_PER_MS = 5 / 1_000;
