@@ -12983,7 +12983,7 @@ async def _update_fortunes_script_message(thread_id: str = None, *, force_repost
     """Creates/edits the global submod-sync message(s) in the Fortunes channel.
 
     Chunks across multiple messages when needed (Discord 2000-char limit).
-    Every 10th update (or when force_repost=True /list_code): delete old
+    With force_repost=True: delete old
     panel(s), repost fresh, and pin **every** part.
     """
     del thread_id  # kept for call-site compatibility; one post covers all games
@@ -13032,7 +13032,7 @@ async def _update_fortunes_script_message(thread_id: str = None, *, force_repost
                 except Exception:
                     pass
             existing_msgs = []
-            why = "forced (/list_code)" if force_repost else f"edit #{edit_count}"
+            why = "forced" if force_repost else f"edit #{edit_count}"
             print(f"🔒 Fortunes submod-sync: repost+pin cycle ({why}).")
 
         new_ids = []
@@ -13564,37 +13564,6 @@ async def send_fortunes_dm(interaction: discord.Interaction, thread_id: int, fla
 
 
 
-
-
-
-@tree.command(
-    name="list_code",
-    description="[Host] Delete & rebuild Fortunes Submod Sync messages (fresh full code, all parts pinned).",
-    guild=discord.Object(id=GUILD_ID),
-)
-@is_host()
-async def list_code(interaction: discord.Interaction):
-    """Force a full Submod Sync wipe + repost so the pasteable HOI4 block is final."""
-    await interaction.response.defer(ephemeral=True)
-    try:
-        await _update_fortunes_script_message(force_repost=True)
-    except Exception as e:
-        print(f"[WARN] /list_code failed: {e}")
-        return await interaction.followup.send(
-            f"❌ Failed to rebuild Submod Sync: `{e}`",
-            ephemeral=True,
-        )
-
-    bot_config = await read_json(BOT_CONFIG_FILE)
-    ids = bot_config.get("fortunes_global_sync_msg_ids") or []
-    if not isinstance(ids, list):
-        ids = []
-    n = len(ids)
-    await interaction.followup.send(
-        f"✅ **Submod Sync rebuilt** in <#{FORTUNES_LOG_CHANNEL_ID}> — "
-        f"**{n}** message part(s) posted and pinned.",
-        ephemeral=True,
-    )
 
 
 
@@ -32117,8 +32086,8 @@ _PER_GUILD_SCALARS = (
     "HOST_TERMINATE_AT", "MERIT_VALOR_THRESHOLD", "MERIT_VALOR_GAMES_REQUIRED", "HOSTING_SUCCESS_MIN_AVG",
     "HOST_LOG_WEBHOOK_URL", "TICKET_CATEGORY_ID", "TICKET_LOG_CHANNEL_ID", "TICKET_PRIVATE_LOG_CHANNEL_ID",
 )
-# Slash commands only the home server gets (Fortunes submod sync, AI log tools).
-HOME_ONLY_COMMANDS = {"list_code"}
+# Slash commands only the home server gets.
+HOME_ONLY_COMMANDS: set[str] = set()
 # Features a server can switch off (server settings → Features).
 SERVER_FEATURES = {
     "valor_merit": True, "daily_role_check": True, "vip_auto_carry_over": True, "cross_server_ban_alerts": True,
