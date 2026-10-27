@@ -1496,6 +1496,10 @@ def _ensure_users_schema_mysql() -> list[str]:
         cursor.execute(_AUDIT_EVENTS_DDL)
         # Audit trail (web /audit page): one row per action, bot and website.
         cursor.execute(_AUDIT_TRAIL_DDL)
+        # Closed tickets (web /tickets page).
+        cursor.execute(_TICKET_RECORDS_DDL)
+        cursor.execute(_TICKET_MESSAGES_DDL)
+        cursor.execute(_TICKET_FILES_DDL)
 
         # House Receipt logging (Phase 3): game_reservations gains an optional
         # log_message_id column (self-healed for tables created before it).
@@ -1730,6 +1734,7 @@ def _ensure_users_schema_mysql() -> list[str]:
             ("role_ids", "TEXT NULL"),
             ("banner_hash", "VARCHAR(64) NULL"),
             ("accent_color", "INT NULL"),
+            ("is_admin", "TINYINT(1) NOT NULL DEFAULT 0"),
         ):
             if col_name not in existing_dir:
                 try:
@@ -6672,6 +6677,60 @@ CREATE TABLE IF NOT EXISTS audit_trail (
     INDEX idx_audit_guild_cat (guild_id, category, created_at)
 )
 """
+# Closed tickets on the website (/tickets). ticket_id = the ticket channel's id.
+_TICKET_RECORDS_DDL = """
+CREATE TABLE IF NOT EXISTS ticket_records (
+    ticket_id VARCHAR(32) NOT NULL PRIMARY KEY,
+    guild_id VARCHAR(32) NOT NULL,
+    number INT NOT NULL,
+    kind VARCHAR(24) NOT NULL,
+    channel_name VARCHAR(100) NOT NULL,
+    opener_id VARCHAR(32) NOT NULL,
+    opener_name VARCHAR(64) NULL,
+    host_id VARCHAR(32) NULL,
+    target_id VARCHAR(32) NULL,
+    status VARCHAR(16) NOT NULL,
+    closed_by_id VARCHAR(32) NULL,
+    closed_by_name VARCHAR(64) NULL,
+    close_reason VARCHAR(400) NULL,
+    opened_at BIGINT NOT NULL,
+    closed_at BIGINT NOT NULL,
+    message_count INT NOT NULL DEFAULT 0,
+    INDEX idx_ticket_guild_time (guild_id, closed_at),
+    INDEX idx_ticket_guild_kind (guild_id, kind, closed_at),
+    INDEX idx_ticket_opener (guild_id, opener_id)
+)
+"""
+_TICKET_MESSAGES_DDL = """
+CREATE TABLE IF NOT EXISTS ticket_messages (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    ticket_id VARCHAR(32) NOT NULL,
+    position INT NOT NULL,
+    author_id VARCHAR(32) NOT NULL,
+    author_name VARCHAR(64) NOT NULL,
+    is_bot TINYINT NOT NULL DEFAULT 0,
+    created_at BIGINT NOT NULL,
+    content TEXT NULL,
+    embeds_json JSON NULL,
+    INDEX idx_ticket_messages (ticket_id, position)
+)
+"""
+_TICKET_FILES_DDL = """
+CREATE TABLE IF NOT EXISTS ticket_files (
+    file_id VARCHAR(32) NOT NULL PRIMARY KEY,
+    ticket_id VARCHAR(32) NOT NULL,
+    message_position INT NOT NULL,
+    filename VARCHAR(200) NOT NULL,
+    content_type VARCHAR(100) NULL,
+    bytes INT NOT NULL,
+    content LONGBLOB NULL,
+    created_at BIGINT NOT NULL DEFAULT 0,
+    INDEX idx_ticket_files (ticket_id)
+)
+"""
+TICKET_FILE_MAX_BYTES = 8 * 1024 * 1024
+TICKET_FILES_MAX_BYTES = 40 * 1024 * 1024
+TICKET_FILE_RETENTION_DAYS = 180
 AUDIT_TRAIL_RETENTION_DAYS = 400
 _AUDIT_DETAILS_MAX = 4000
 _AUDIT_SECRET_KEYS = ("password", "token", "secret", "webhook")
@@ -29170,14 +29229,148 @@ async def _ticket_grant(channel, closer, meta: dict) -> None:
         await channel.send("⚠️ Couldn't give the role — please give it by hand on the website's Database page.")
 
 
-async def _ticket_transcript(channel, closer_name: str, status: str, meta: dict | None, why: str | None = None) -> None:
+def _save_ticket_record_mysql(record: tuple, messages: list[tuple], files: list[tuple]) -> None:
+    conn = None
+    cur = None
+    try:
+        conn = _db_get_connection()
+        cur = conn.cursor()
+        conn.start_transaction()
+        cur.execute(
+            "INSERT INTO ticket_records (ticket_id, guild_id, number, kind, channel_name, opener_id, opener_name, "
+            "host_id, target_id, status, closed_by_id, closed_by_name, close_reason, opened_at, closed_at, message_count) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+            record,
+        )
+        for start in range(0, len(messages), 200):
+            cur.executemany(
+                "INSERT INTO ticket_messages (ticket_id, position, author_id, author_name, is_bot, created_at, "
+                "content, embeds_json) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+                messages[start:start + 200],
+            )
+        for row in files:
+            cur.execute(
+                "INSERT INTO ticket_files (file_id, ticket_id, message_position, filename, content_type, bytes, "
+                "content, created_at) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+                row,
+            )
+        conn.commit()
+    except Exception:
+        if conn is not None:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+        raise
+    finally:
+        if cur is not None:
+            try:
+                cur.close()
+            except Exception:
+                pass
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+
+def _ticket_embed_json(embeds) -> str | None:
+    """Bot embeds as small {title, description, fields} cards (≈2 KB)."""
+    cards = []
+    for embed in embeds or []:
+        card = {
+            "title": (embed.title or "")[:256] or None,
+            "description": (embed.description or "")[:1000] or None,
+            "fields": [{"name": str(f.name)[:100], "value": str(f.value)[:300]} for f in embed.fields[:8]],
+        }
+        if card["title"] or card["description"] or card["fields"]:
+            cards.append(card)
+    if not cards:
+        return None
+    text = json.dumps(cards, ensure_ascii=False)
+    while len(text) > 2000 and cards:
+        cards.pop()
+        text = json.dumps(cards, ensure_ascii=False)
+    return text if cards else None
+
+
+async def _ticket_save_record(channel, messages: list, closer, status: str, meta: dict, why: str | None) -> str | None:
+    """Store the closed ticket for the website (record, messages, files —
+    downloaded now, Discord's file links expire). Returns its id, or None
+    when it couldn't be saved (the Discord transcript still goes out)."""
+    ticket_id = str(channel.id)
+    gid = str(cur_gid())
+    now = int(time.time())
+    match = re.match(r"ticket-(\d+)", channel.name or "")
+    opener = await _get_member_safe(channel.guild, meta["opener"])
+    automatic = bool(getattr(closer, "bot", False))
+    closer_id = None if automatic else getattr(closer, "id", None)
+    record = (
+        ticket_id, gid, int(match.group(1)) if match else 0, str(meta.get("kind") or "")[:24], (channel.name or "")[:100],
+        str(meta["opener"]), (getattr(opener, "display_name", None) or _audit_who(meta["opener"]) or None),
+        str(meta["host"]) if meta.get("host") else None, str(meta["target"]) if meta.get("target") else None,
+        status[:16], str(closer_id) if closer_id else None,
+        "GameMaster (automatic)" if automatic else (getattr(closer, "display_name", None) or str(closer or "") or None),
+        (why or None) and why[:400],
+        int(messages[0].created_at.timestamp()) if messages else now, now, len(messages),
+    )
+    record = tuple(value[:64] if index in (6, 11) and isinstance(value, str) else value for index, value in enumerate(record))
+    rows: list[tuple] = []
+    files: list[tuple] = []
+    kept = 0
+    for position, message in enumerate(messages):
+        author = message.author
+        rows.append((
+            ticket_id, position, str(author.id), (getattr(author, "display_name", None) or author.name or "?")[:64],
+            1 if author.bot else 0, int(message.created_at.timestamp()), message.content or None,
+            _ticket_embed_json(message.embeds) if author.bot else None,
+        ))
+        for att in message.attachments:
+            size = int(att.size or 0)
+            content = None
+            if size <= TICKET_FILE_MAX_BYTES and kept + size <= TICKET_FILES_MAX_BYTES:
+                try:
+                    content = await asyncio.wait_for(att.read(), timeout=30)
+                    kept += len(content)
+                except Exception as e:
+                    print(f"[WARN] ticket file download failed ({att.filename}): {e}")
+            files.append((
+                secrets.token_hex(16), ticket_id, position, (att.filename or "file")[:200],
+                (att.content_type or None) and att.content_type[:100], size, content, now,
+            ))
+    try:
+        await _run_mysql_io(_save_ticket_record_mysql, record, rows, files, label="ticket record save")
+    except Exception as e:
+        print(f"[WARN] ticket record save failed for #{channel.name}: {e}")
+        return None
+    kind = str(meta.get("kind") or "")
+    if not (TICKET_KINDS.get(kind) or {}).get("private"):
+        audit_event(
+            "system", "ticket_closed",
+            f"{record[11] or 'GameMaster'} closed {channel.name} ({_ticket_kind_label(kind)}) as {status}"
+            + (f" — {why}" if why else ""),
+            actor_id=closer_id, target_id=meta["opener"],
+            details={"ticket_id": ticket_id, "messages": len(rows), "files": len(files)},
+        )
+    return ticket_id
+
+
+async def _ticket_transcript(channel, closer, status: str, meta: dict | None, why: str | None = None) -> None:
     """HTML transcript to the ticket log (private log for host applications /
-    reports) and to the player by DM."""
+    reports) and to the player by DM; the ticket is also saved for the website."""
+    closer_name = getattr(closer, "display_name", None) or str(closer)
     try:
         messages = [message async for message in channel.history(limit=None, oldest_first=True)]
     except discord.HTTPException as e:
         print(f"[WARN] ticket history read failed for #{channel.name}: {e}")
         messages = []
+    ticket_id = None
+    if meta:
+        try:
+            ticket_id = await _ticket_save_record(channel, messages, closer, status, meta, why)
+        except Exception as e:
+            print(f"[WARN] ticket record failed for #{channel.name}: {e}")
     kind = (meta or {}).get("kind")
     parts = [
         "<!DOCTYPE html><html><head><meta charset='UTF-8'>",
@@ -29222,7 +29415,9 @@ async def _ticket_transcript(channel, closer_name: str, status: str, meta: dict 
             try:
                 await asyncio.wait_for(
                     opener.send(
-                        f"Your ticket **{channel.name}** was closed ({status}). The transcript is attached.",
+                        f"Your ticket **{channel.name}** was closed ({status}). The transcript is attached"
+                        + (f" — you can also read it on the website: {WEB_SITE_URL}/tickets/{ticket_id}" if ticket_id else "")
+                        + ".",
                         file=discord.File(io.BytesIO(data), filename=f"{channel.name}.html"),
                     ),
                     timeout=10,
@@ -29245,7 +29440,7 @@ async def _finish_ticket(channel, closer, status: str, meta: dict | None, *, why
                 print(f"[WARN] ticket grant step failed for #{channel.name}: {e}")
         try:
             await asyncio.wait_for(
-                _ticket_transcript(channel, getattr(closer, "display_name", str(closer)), status, meta, why), timeout=120,
+                _ticket_transcript(channel, closer, status, meta, why), timeout=180,
             )
         except Exception as e:
             print(f"[WARN] ticket transcript failed for #{channel.name}: {e}")
@@ -30012,9 +30207,49 @@ def _prune_audit_trail_mysql(cutoff: int, batch: int = 5000) -> int:
                 pass
 
 
+def _prune_ticket_files_mysql(cutoff: int, batch: int = 200) -> int:
+    """Drop the stored bytes of ticket files older than the window (the row
+    and its name stay, so the transcript says the file wasn't kept)."""
+    conn = None
+    cur = None
+    total = 0
+    try:
+        conn = _db_get_connection()
+        cur = conn.cursor()
+        while True:
+            cur.execute(
+                "UPDATE ticket_files SET content = NULL WHERE created_at < %s AND content IS NOT NULL LIMIT %s",
+                (cutoff, batch),
+            )
+            conn.commit()
+            total += int(cur.rowcount or 0)
+            if (cur.rowcount or 0) < batch:
+                return total
+    finally:
+        if cur is not None:
+            try:
+                cur.close()
+            except Exception:
+                pass
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+
 @tasks.loop(hours=24)
 async def audit_trail_retention_loop():
     await bot.wait_until_ready()
+    try:
+        cleared = await _run_mysql_io(
+            _prune_ticket_files_mysql, int(time.time()) - TICKET_FILE_RETENTION_DAYS * 86400,
+            label="ticket file retention",
+        )
+        if cleared:
+            print(f"🧹 Tickets: cleared {cleared} file(s) older than {TICKET_FILE_RETENTION_DAYS} days")
+    except Exception as e:
+        print(f"⚠️ ticket file retention failed: {e}")
     cutoff = int(time.time()) - AUDIT_TRAIL_RETENTION_DAYS * 86400
     try:
         removed = await _run_mysql_io(_prune_audit_trail_mysql, cutoff, label="audit trail retention")
@@ -30299,12 +30534,12 @@ def _replace_web_member_directory_mysql(rows: list, role_rows: list) -> None:
         gid = str(cur_gid())
         upsert = (
             "INSERT INTO web_member_directory "
-            "(guild_id, user_id, username, display_name, avatar_url, verified, is_vip, role_ids, updated_at) "
-            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) "
+            "(guild_id, user_id, username, display_name, avatar_url, verified, is_vip, role_ids, is_admin, updated_at) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) "
             "ON DUPLICATE KEY UPDATE username = VALUES(username), "
             "display_name = VALUES(display_name), avatar_url = VALUES(avatar_url), "
             "verified = VALUES(verified), is_vip = VALUES(is_vip), "
-            "role_ids = VALUES(role_ids), updated_at = VALUES(updated_at)"
+            "role_ids = VALUES(role_ids), is_admin = VALUES(is_admin), updated_at = VALUES(updated_at)"
         )
         for start in range(0, len(rows), 500):
             cur.executemany(upsert, [(gid,) + row + (now,) for row in rows[start:start + 500]])
@@ -30376,6 +30611,7 @@ async def _web_member_directory_loop_for_guild():
                 1 if _member_role_verified(member) else 0,
                 1 if _member_has_vip(member) else 0,
                 json.dumps(role_ids),
+                1 if member.guild_permissions.administrator or member.id == guild.owner_id else 0,
             ))
         role_rows = []
         for role in guild.roles:

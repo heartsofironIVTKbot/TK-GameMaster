@@ -33,6 +33,7 @@ const HOST_LINKS: { href: string; label: string; title: string; staffOnly?: bool
   { href: "/games", label: "🎮 Games", title: "Games — start, end and cancel games" },
   { href: "/attendance", label: "🎯 Attendance", title: "Attendance — live voice samples, corrections and the audit log for started games" },
   { href: "/servers", label: "⚙️ Servers", title: "Servers — add GameMaster to a server and set up its roles, channels and game modes" },
+  { href: "/tickets", label: "🎫 Tickets", title: "Tickets — read closed tickets you opened or your role handles" },
   { href: "/audit", label: "📜 Audit", title: "Audit log — every action on the server, searchable (Host Management only)", staffOnly: true },
 ];
 

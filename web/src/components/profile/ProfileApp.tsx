@@ -99,6 +99,9 @@ export default function ProfileApp() {
             </span>
           </Link>
           <nav className="ml-auto flex items-center gap-2">
+            <Link href="/tickets" className={NAV_LINK} title="Read your closed tickets">
+              🎫 My tickets
+            </Link>
             <Link href="/" className={NAV_LINK}>
               🗺️ Map
             </Link>
