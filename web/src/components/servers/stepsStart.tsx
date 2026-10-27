@@ -187,7 +187,7 @@ export function StaffStep({ ctx }: { ctx: StepContext }) {
       >
         <Field
           label="Host Management roles"
-          hint="Everything a Senior host can do, and more: lock calendar days, manage every host's games, give VIP, verification and host ranks, run the role check, rate hosts in both branches, and handle host applications and host reports. They also manage the voice channels GameMaster makes for each game (rename, move people, fix permissions) and can delete GameMaster's messages by hand (right-click a message → Apps → Delete GameMaster message). This can be a moderation role, a team lead role, or a dedicated Host Management role."
+          hint="Everything a Senior host can do, and more: lock calendar days, manage every host's games, give VIP, verification and host ranks, run the role check, rate hosts in both branches, and handle host applications and host reports. They also manage the voice channels GameMaster makes for each game (rename, move people, fix permissions). This can be a moderation role, a team lead role, or a dedicated Host Management role."
           issues={issuesAt(ctx.issues, "access.senior_staff_roles")}
         >
           <RoleMultiPicker

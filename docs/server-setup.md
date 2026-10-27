@@ -92,9 +92,7 @@ make the role or channel with a sensible name.
   a team lead role or a dedicated Host Management role. Server admins always
   count as Host Management. Host Management also manages the voice channels
   GameMaster makes for each game (this replaced the old "Game channel
-  managers" setting) and can delete GameMaster's messages by hand:
-  right-click a message → **Apps** → **Delete GameMaster message** (only the
-  bot's own messages; logged in the audit log).
+  managers" setting).
 - The old **Extra host-page roles** setting is gone: only host ranks and Host
   Management open the host pages.
 - **Who can change settings**: owner and admins always. Optionally Host

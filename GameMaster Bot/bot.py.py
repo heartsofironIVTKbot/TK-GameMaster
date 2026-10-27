@@ -29738,28 +29738,6 @@ class TicketPanelView(discord.ui.View):
         ))
 
 
-@tree.context_menu(name="Delete GameMaster message", guild=discord.Object(id=GUILD_ID))
-async def delete_gamemaster_message(interaction: discord.Interaction, message: discord.Message):
-    """Host Management (and admins) remove one of GameMaster's own messages
-    — no Manage Messages permission needed. Logged in the audit log."""
-    if interaction.guild is None or not _member_is_staff(interaction.user):
-        return await _ticket_reply(interaction, "❌ Only Host Management (or admins) can delete GameMaster's messages.")
-    if bot.user is None or message.author.id != bot.user.id:
-        return await _ticket_reply(interaction, "❌ That message isn't GameMaster's.")
-    try:
-        await message.delete()
-    except discord.HTTPException as e:
-        return await _ticket_reply(interaction, f"❌ Couldn't delete it: {e}")
-    await _ticket_reply(interaction, "🗑️ Deleted.")
-    try:
-        await send_log_message(
-            f"🗑️ {interaction.user.mention} deleted a GameMaster message in <#{message.channel.id}> "
-            f"({len(message.content or '')} characters, {len(message.embeds)} embed(s))."
-        )
-    except Exception as e:
-        print(f"[WARN] delete-message audit failed: {e}")
-
-
 @tree.command(name="spawn", description="[Host Management] Post the ticket panel in this channel.", guild=discord.Object(id=GUILD_ID))
 async def spawn_ticket_panel(interaction: discord.Interaction):
     if interaction.guild is None:
