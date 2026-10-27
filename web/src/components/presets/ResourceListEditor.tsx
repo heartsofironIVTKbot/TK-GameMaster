@@ -56,8 +56,8 @@ export default function ResourceListEditor({
       title={isMods ? "Mods" : "Rules"}
       subtitle={
         isMods
-          ? "Posted in the mods channel when the game is announced."
-          : "Posted in the rules channel when the game is announced."
+          ? "Shown behind the game's Mods button on the website."
+          : "Shown behind the game's Rules button on the website."
       }
       right={
         <span className="rounded-full bg-white/5 px-2.5 py-1 text-[11px] font-bold text-slate-300">

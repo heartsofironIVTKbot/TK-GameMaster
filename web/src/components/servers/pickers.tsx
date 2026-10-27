@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import type { SnapshotChannel, SnapshotRole } from "@/lib/serverSettingsTypes";
+import { hasPermission, type SnapshotChannel, type SnapshotRole } from "@/lib/serverSettingsTypes";
 import { Spinner } from "@/components/schedule/ui";
 import { CHANNEL_ICON, channelById, inputClass, roleById, useCreateItem, useDismiss, type StepContext } from "./shared";
 
@@ -18,13 +18,27 @@ function RoleDot({ role }: { role: Pick<SnapshotRole, "color"> }) {
   return <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: role.color ?? "#99aab5" }} />;
 }
 
-function roleProblem(role: SnapshotRole, purpose: RolePurpose, botTop: number): { block: boolean; text: string } | null {
+/** With Mention Everyone, GameMaster pings any role, mentionable or not. */
+function roleProblem(role: SnapshotRole, purpose: RolePurpose, botTop: number, canPingAll: boolean): { block: boolean; text: string } | null {
   if (role.everyone) return { block: true, text: "everyone" };
   if (purpose === "give" && role.managed) return { block: true, text: "bot / integration role" };
   if (purpose === "give" && role.position >= botTop) return { block: false, text: "above GameMaster" };
-  if (purpose === "ping" && !role.mentionable) return { block: false, text: "not mentionable" };
+  if (purpose === "ping" && !role.mentionable && !canPingAll) return { block: false, text: "GameMaster can't ping it" };
   return null;
 }
+
+const MENU_HEIGHT = 380;
+const SAVE_BAR_HEIGHT = 80;
+
+/** Open upward when the menu wouldn't fit below (the sticky save bar covers the bottom). */
+function opensUp(element: Element | null): boolean {
+  if (!element) return false;
+  const rect = element.getBoundingClientRect();
+  const below = window.innerHeight - rect.bottom - SAVE_BAR_HEIGHT;
+  return below < MENU_HEIGHT && rect.top > below;
+}
+
+const menuPlacement = (up: boolean) => (up ? "bottom-full mb-1" : "top-full mt-1");
 
 function RoleMenu({
   ctx,
@@ -32,6 +46,7 @@ function RoleMenu({
   selected,
   exclude = [],
   suggestedName,
+  up,
   onPick,
   onClose,
 }: {
@@ -40,6 +55,7 @@ function RoleMenu({
   selected: string | null;
   exclude?: string[];
   suggestedName?: string;
+  up: boolean;
   onPick: (id: string | null) => void;
   onClose: () => void;
 }) {
@@ -57,11 +73,14 @@ function RoleMenu({
   );
   const creator = useCreateItem(ctx.serverId, pick, ctx.refreshSnapshot);
   const botTop = ctx.snapshot?.bot.top_role_position ?? 0;
+  const canPingAll = hasPermission(ctx.snapshot?.bot.permissions ?? "0", 17);
   const roles = (ctx.snapshot?.roles ?? []).filter(
     (role) => !role.everyone && !exclude.includes(role.id) && role.name.toLowerCase().includes(query.trim().toLowerCase()),
   );
   return (
-    <div className="absolute left-0 top-full z-30 mt-1 w-72 min-w-full max-w-[85vw] rounded-xl border border-white/15 bg-slate-900 p-2 shadow-2xl shadow-black/60">
+    <div
+      className={`absolute left-0 z-30 w-72 min-w-full max-w-[85vw] rounded-xl border border-white/15 bg-slate-900 p-2 shadow-2xl shadow-black/60 ${menuPlacement(up)}`}
+    >
       <input
         autoFocus
         value={query}
@@ -73,7 +92,7 @@ function RoleMenu({
       <ul role="listbox" className="roster-scroll max-h-64 space-y-0.5 overflow-y-auto">
         {roles.length === 0 && <li className="px-2 py-3 text-center text-xs text-slate-500">No roles match.</li>}
         {roles.map((role) => {
-          const problem = roleProblem(role, purpose, botTop);
+          const problem = roleProblem(role, purpose, botTop, canPingAll);
           const active = role.id === selected;
           return (
             <li key={role.id}>
@@ -184,6 +203,7 @@ export function RolePicker({
   label: string;
 }) {
   const [open, setOpen] = useState(false);
+  const [up, setUp] = useState(false);
   const close = useCallback(() => setOpen(false), []);
   const ref = useDismiss(open, close);
   const role = roleById(ctx.snapshot, value);
@@ -194,7 +214,10 @@ export function RolePicker({
         aria-label={label}
         aria-expanded={open}
         disabled={!ctx.snapshot}
-        onClick={() => setOpen((current) => !current)}
+        onClick={() => {
+          setUp(opensUp(ref.current));
+          setOpen((current) => !current);
+        }}
         className={`flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition disabled:opacity-50 ${
           open ? "border-amber-300/60 bg-slate-950" : "border-white/10 bg-slate-950/70 hover:border-white/25"
         }`}
@@ -211,7 +234,7 @@ export function RolePicker({
         )}
         <span className="text-[10px] text-slate-500">▾</span>
       </button>
-      {open && <RoleMenu ctx={ctx} purpose={purpose} selected={value} suggestedName={suggestedName} onPick={onChange} onClose={close} />}
+      {open && <RoleMenu ctx={ctx} purpose={purpose} selected={value} suggestedName={suggestedName} up={up} onPick={onChange} onClose={close} />}
     </div>
   );
 }
@@ -232,6 +255,7 @@ export function RoleMultiPicker({
   suggestedName?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const [up, setUp] = useState(false);
   const close = useCallback(() => setOpen(false), []);
   const ref = useDismiss(open, close);
   return (
@@ -260,7 +284,10 @@ export function RoleMultiPicker({
           aria-label={label}
           aria-expanded={open}
           disabled={!ctx.snapshot}
-          onClick={() => setOpen((current) => !current)}
+          onClick={() => {
+            setUp(opensUp(ref.current));
+            setOpen((current) => !current);
+          }}
           className="rounded-md px-2 py-0.5 text-xs font-bold text-amber-300 hover:bg-amber-400/10 disabled:opacity-40"
         >
           ＋ Add role
@@ -273,6 +300,7 @@ export function RoleMultiPicker({
           selected={null}
           exclude={value}
           suggestedName={suggestedName}
+          up={up}
           onPick={(id) => {
             if (id) onChange([...value, id]);
           }}
@@ -371,6 +399,7 @@ export function ChannelPicker({
   label: string;
 }) {
   const [open, setOpen] = useState(false);
+  const [up, setUp] = useState(false);
   const close = useCallback(() => setOpen(false), []);
   const ref = useDismiss(open, close);
   const [query, setQuery] = useState("");
@@ -407,7 +436,10 @@ export function ChannelPicker({
         aria-label={label}
         aria-expanded={open}
         disabled={!ctx.snapshot}
-        onClick={() => setOpen((current) => !current)}
+        onClick={() => {
+          setUp(opensUp(ref.current));
+          setOpen((current) => !current);
+        }}
         className={`flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition disabled:opacity-50 ${
           open ? "border-amber-300/60 bg-slate-950" : "border-white/10 bg-slate-950/70 hover:border-white/25"
         }`}
@@ -425,7 +457,9 @@ export function ChannelPicker({
         <span className="text-[10px] text-slate-500">▾</span>
       </button>
       {open && (
-        <div className="absolute left-0 top-full z-30 mt-1 w-72 min-w-full max-w-[85vw] rounded-xl border border-white/15 bg-slate-900 p-2 shadow-2xl shadow-black/60">
+        <div
+          className={`absolute left-0 z-30 w-72 min-w-full max-w-[85vw] rounded-xl border border-white/15 bg-slate-900 p-2 shadow-2xl shadow-black/60 ${menuPlacement(up)}`}
+        >
           <input
             autoFocus
             value={query}

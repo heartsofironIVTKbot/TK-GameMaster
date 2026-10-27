@@ -347,7 +347,10 @@ export async function saveServerSettings(guildId: string, body: SaveSettingsBody
       return { status: 409, message: `This would break the setup: ${added.slice(0, 3).map((issue) => issue.message.replace(/\*\*/g, "")).join(" · ")}` };
     }
   }
-  const step = stepId(body.step);
+  // The furthest step saved: saving an earlier step again doesn't lock the later ones.
+  const order = (id: StepId | null) => STEPS.findIndex((entry) => entry.id === id);
+  const requested = stepId(body.step);
+  const step = requested && order(requested) < order(row.setup_step) ? row.setup_step : requested;
   if (changes.length === 0 && !finishing && (!step || step === row.setup_step)) {
     return { ok: true, version: row.version, setup: summary.setup, changed: 0 };
   }

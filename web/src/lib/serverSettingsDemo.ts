@@ -155,9 +155,8 @@ function tommyKaySettings(): ServerSettings {
     game_ban: { RP: "880000000000000012", HIST: "880000000000000032" },
     dishonored: { RP: "880000000000000033", HIST: "880000000000000033" },
     ping: { RP: "880000000000000049", HIST: "880000000000000030" },
-    vip: "880000000000000045",
+    vip: ["880000000000000045"],
     valor: "880000000000000021",
-    crash_report_ping: "880000000000000040",
   };
   s.channels = {
     host_log: "880000000000000014",
@@ -177,17 +176,11 @@ function tommyKaySettings(): ServerSettings {
   };
   const rp = {
     game_info_channel: "880000000000000010",
-    rules_channel: "880000000000000006",
-    mods_channel: "880000000000000029",
-    public_log_channel: "880000000000000020",
     ping_role: "880000000000000049",
   };
   const hist = {
     announcement_channel: "880000000000000050",
     game_info_channel: "880000000000000015",
-    rules_channel: "880000000000000002",
-    mods_channel: "880000000000000007",
-    public_log_channel: "880000000000000028",
     ping_role: "880000000000000030",
   };
   for (const [key, mode] of Object.entries(s.modes)) {
@@ -195,11 +188,7 @@ function tommyKaySettings(): ServerSettings {
     if (key.startsWith("Historical")) Object.assign(mode, hist);
     else Object.assign(mode, rp, { announcement_channel: key === "Kaiserreich (FFA)" ? "880000000000000026" : "880000000000000005" });
   }
-  s.addons = {
-    casino_panel_channel: "880000000000000042",
-    randomizer_log_channel: "880000000000000037",
-    fortunes_log_channel: "880000000000000038",
-  };
+  s.addons = { casino_panel_channel: "880000000000000042" };
   return normalizeSettings(s, "TommyKay's HOI4 Community");
 }
 

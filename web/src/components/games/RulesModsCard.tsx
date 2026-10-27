@@ -13,8 +13,7 @@ type Kind = "mods" | "rules";
 
 /**
  * A game's rules and mods (formerly /post_mods and /post_rules): the lists
- * in its public posts in the rules and mods channels. Editing one replaces
- * the whole list; the bot edits the post (or posts it, if there was none).
+ * behind its Rules and Mods buttons. Editing one replaces the whole list.
  */
 export default function RulesModsCard({ game, onChanged }: { game: GameControl; onChanged: () => void }) {
   const request = useBotRequest(onChanged);
@@ -77,7 +76,7 @@ export default function RulesModsCard({ game, onChanged }: { game: GameControl; 
     <section className={`rounded-3xl p-4 sm:p-6 ${GLASS}`}>
       <p className="text-[11px] font-black uppercase tracking-[0.18em] text-amber-300">Rules &amp; mods</p>
       <p className="mt-1 text-sm text-slate-300">
-        What the game&apos;s posts in the rules and mods channels list. Changes show up there right away.
+        What the game&apos;s Rules and Mods buttons list. Changes show up there right away.
       </p>
       {game.preset && (
         <p className="mt-1 text-[11px] text-slate-500">Set from the preset “{game.preset.name ?? "custom"}” when it was scheduled.</p>

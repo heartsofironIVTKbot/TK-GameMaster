@@ -51,9 +51,6 @@ export type ModeKey = (typeof MODE_CATALOG)[number]["key"];
 export const MODE_CHANNEL_FIELDS = [
   { key: "announcement_channel", label: "Announcement channel", kind: "text", required: true, hint: "Games are announced here; the post links players to the map to reserve." },
   { key: "game_info_channel", label: "Game info channel", kind: "text", required: false, hint: "Where the lobby ID, password and checksum go (only players with the game's pass see it)." },
-  { key: "rules_channel", label: "Rules channel", kind: "text", required: false, hint: "Where the mode's rules post lives." },
-  { key: "mods_channel", label: "Mods channel", kind: "text", required: false, hint: "Where the mode's mods post lives." },
-  { key: "public_log_channel", label: "Public chat-log channel", kind: "text", required: false, hint: "Finished games' chat logs are posted here." },
 ] as const;
 export type ModeChannelField = (typeof MODE_CHANNEL_FIELDS)[number]["key"];
 
@@ -66,9 +63,6 @@ export interface ModeSettings {
   enabled: boolean;
   announcement_channel: string | null;
   game_info_channel: string | null;
-  rules_channel: string | null;
-  mods_channel: string | null;
-  public_log_channel: string | null;
   ping_role: string | null;
   mod_links: LinkEntry[];
   rule_links: LinkEntry[];
@@ -119,7 +113,7 @@ export const RULE_FIELDS = [
   { key: "host_strip_at", label: "Violations that strip the rank", min: 1, max: 20, step: 1, hint: "Per branch: the host loses that branch's rank." },
   { key: "valor_merit", label: "Merit for Hearts of Valor", min: 1, max: 1000, step: 1, hint: "Merit points needed." },
   { key: "valor_games", label: "Attended games for Hearts of Valor", min: 0, max: 1000, step: 1, hint: "Games the player was marked present in." },
-  { key: "hosting_success_avg", label: "Rating that counts as successful hosting", min: 1, max: 5, step: 0.1, hint: "Average player rating out of 5." },
+  { key: "hosting_success_avg", label: "Rating that counts as successful hosting", min: 1, max: 5, step: 0.1, hint: "Average player feedback rating out of 5 star system." },
 ] as const;
 export type RuleKey = (typeof RULE_FIELDS)[number]["key"];
 export const RULE_DEFAULTS: Record<RuleKey, number> = {
@@ -154,15 +148,17 @@ export interface ServerSettings {
     dishonored: Record<Branch, string | null>;
     /** Pinged when a game of that branch is announced (a mode can use its own). */
     ping: Record<Branch, string | null>;
-    vip: string | null;
+    /** Any of them counts as VIP; giving VIP adds the first one. */
+    vip: string[];
     valor: string | null;
-    crash_report_ping: string | null;
   };
   channels: Record<ChannelKey, string | null>;
   /** Waiting-room voice channels: people in them are never counted present. */
   lobby_voices: string[];
   voice: Record<Branch, { after_category: string | null; before_category: string | null }>;
   modes: Record<string, ModeSettings>;
+  /** Per branch: every mode of the branch uses the same channels and ping role. */
+  mode_sharing: Record<Branch, boolean>;
   rules: Record<RuleKey, number>;
   features: {
     valor_merit: boolean;
@@ -173,9 +169,13 @@ export interface ServerSettings {
     /** Ping after 24 h without messages in a ticket, close it as unresolved after 48 h. */
     ticket_inactivity_close: boolean;
   };
-  /** TommyKay only: the casino / Fortunes add-on channels. */
-  addons: { casino_panel_channel: string | null; randomizer_log_channel: string | null; fortunes_log_channel: string | null };
+  /** TommyKay only (CASINO_GUILD_IDS): the casino panel channel. */
+  addons: { casino_panel_channel: string | null };
 }
+
+/** The casino add-on exists only on TommyKay (live) and its test server. */
+export const CASINO_GUILD_IDS: readonly string[] = ["341585283881631744", "1434977277115891725"];
+export const hasCasino = (guildId: string) => CASINO_GUILD_IDS.includes(guildId);
 
 // ————— What the bot mirrors (web_guild_snapshot) —————
 
@@ -328,9 +328,6 @@ function emptyMode(key: string): ModeSettings {
     enabled: false,
     announcement_channel: null,
     game_info_channel: null,
-    rules_channel: null,
-    mods_channel: null,
-    public_log_channel: null,
     ping_role: null,
     mod_links: links.mods.map((entry) => ({ ...entry })),
     rule_links: links.rules.map((entry) => ({ ...entry })),
@@ -359,14 +356,14 @@ export function defaultSettings(name = ""): ServerSettings {
       game_ban: perBranch(() => null),
       dishonored: perBranch(() => null),
       ping: perBranch(() => null),
-      vip: null,
+      vip: [],
       valor: null,
-      crash_report_ping: null,
     },
     channels: Object.fromEntries(ALL_CHANNEL_FIELDS.map((field) => [field.key, null])) as Record<ChannelKey, string | null>,
     lobby_voices: [],
     voice: perBranch(() => ({ after_category: null, before_category: null })),
     modes: Object.fromEntries(MODE_CATALOG.map((mode) => [mode.key, emptyMode(mode.key)])),
+    mode_sharing: perBranch(() => false),
     rules: { ...RULE_DEFAULTS },
     features: {
       valor_merit: true,
@@ -375,7 +372,7 @@ export function defaultSettings(name = ""): ServerSettings {
       cross_server_ban_alerts: true,
       ticket_inactivity_close: true,
     },
-    addons: { casino_panel_channel: null, randomizer_log_channel: null, fortunes_log_channel: null },
+    addons: { casino_panel_channel: null },
   };
 }
 
@@ -441,7 +438,9 @@ export function normalizeSettings(raw: unknown, name = ""): ServerSettings {
     const per = obj(roles[key]);
     s.roles[key] = { RP: sid(per.RP), HIST: sid(per.HIST) };
   }
-  for (const key of ["vip", "valor", "crash_report_ping"] as const) s.roles[key] = sid(roles[key]);
+  s.roles.valor = sid(roles.valor);
+  // Older settings: one VIP role.
+  s.roles.vip = sids(Array.isArray(roles.vip) ? roles.vip : [roles.vip]);
   const channels = obj(source.channels);
   for (const field of ALL_CHANNEL_FIELDS) s.channels[field.key] = sid(channels[field.key]);
   // Older settings: one lobby channel.
@@ -459,9 +458,6 @@ export function normalizeSettings(raw: unknown, name = ""): ServerSettings {
       enabled: entry.enabled === undefined ? true : Boolean(entry.enabled),
       announcement_channel: sid(entry.announcement_channel),
       game_info_channel: sid(entry.game_info_channel),
-      rules_channel: sid(entry.rules_channel),
-      mods_channel: sid(entry.mods_channel),
-      public_log_channel: sid(entry.public_log_channel),
       ping_role: sid(entry.ping_role),
       mod_links: links(entry.mod_links),
       rule_links: links(entry.rule_links),
@@ -473,6 +469,8 @@ export function normalizeSettings(raw: unknown, name = ""): ServerSettings {
       s.roles.ping[branch] = first ? s.modes[first.key].ping_role : null;
     }
   }
+  const sharing = obj(source.mode_sharing);
+  for (const branch of BRANCHES) s.mode_sharing[branch] = Boolean(sharing[branch]);
   const rules = obj(source.rules);
   for (const field of RULE_FIELDS) {
     const rawValue = Number(rules[field.key] ?? RULE_DEFAULTS[field.key]);
@@ -485,7 +483,7 @@ export function normalizeSettings(raw: unknown, name = ""): ServerSettings {
     if (key in features) s.features[key] = Boolean(features[key]);
   }
   const addons = obj(source.addons);
-  for (const key of ["casino_panel_channel", "randomizer_log_channel", "fortunes_log_channel"] as const) s.addons[key] = sid(addons[key]);
+  s.addons.casino_panel_channel = sid(addons.casino_panel_channel);
   return s;
 }
 
@@ -507,7 +505,7 @@ export function settingsChanges(before: unknown, after: unknown, prefix = ""): {
 
 // ————— Wizard steps + health check —————
 
-export type StepId = "welcome" | "basics" | "staff" | "branches" | "roles" | "channels" | "tickets" | "modes" | "features" | "review";
+export type StepId = "welcome" | "basics" | "staff" | "branches" | "roles" | "channels" | "modes" | "features" | "tickets" | "review";
 export const STEPS: readonly { id: StepId; label: string; icon: string; blurb: string }[] = [
   { id: "welcome", label: "Bot check", icon: "🤖", blurb: "Permissions and role position" },
   { id: "basics", label: "Basics", icon: "🏷️", blurb: "Name and host branches" },
@@ -515,9 +513,9 @@ export const STEPS: readonly { id: StepId; label: string; icon: string; blurb: s
   { id: "branches", label: "Host ranks", icon: "🎖️", blurb: "Assistant, Full and Senior hosts" },
   { id: "roles", label: "Player roles", icon: "🪪", blurb: "Verified, Trusted, bans, VIP" },
   { id: "channels", label: "Channels", icon: "📺", blurb: "Logs, schedule, voice" },
-  { id: "tickets", label: "Tickets", icon: "🎫", blurb: "Ticket staff, channels and auto-close" },
   { id: "modes", label: "Game modes", icon: "🎮", blurb: "Modes, their channels and ping roles" },
   { id: "features", label: "Features", icon: "✨", blurb: "Hearts of Valor and more" },
+  { id: "tickets", label: "Tickets", icon: "🎫", blurb: "Ticket staff, channels and auto-close" },
   { id: "review", label: "Review", icon: "✅", blurb: "Check everything and finish" },
 ];
 
@@ -530,7 +528,7 @@ export function stepOfPath(path: string): StepId {
   if (path.startsWith("roles.valor") || path.startsWith("features") || path.startsWith("rules.valor") || path.startsWith("rules.hosting")) return "features";
   if (path.startsWith("roles") || path.startsWith("rules")) return "roles";
   if (path.startsWith("channels") || path.startsWith("voice") || path.startsWith("addons") || path.startsWith("lobby_voices")) return "channels";
-  if (path.startsWith("modes")) return "modes";
+  if (path.startsWith("modes") || path.startsWith("mode_sharing")) return "modes";
   return "review";
 }
 
@@ -630,7 +628,7 @@ export function settingsIssues(s: ServerSettings, snap: GuildSnapshot | null, bo
     markUsed(s.roles.trusted[branch], `${branch} Trusted`);
     markUsed(s.roles.game_ban[branch], `${branch} game ban`);
     const ping = s.roles.ping[branch];
-    if (!ping) add("warning", "roles", `roles.ping.${branch}`, `No ${branch} notification ping role — ${BRANCH_INFO[branch].games} announcements won't ping anyone.`);
+    if (!ping) add("error", "roles", `roles.ping.${branch}`, `Pick the ${branch} notification ping role.`);
     else {
       const role = roles.get(ping);
       if (!role) add("error", "roles", `roles.ping.${branch}`, `The ${branch} notification ping role no longer exists.`);
@@ -642,9 +640,12 @@ export function settingsIssues(s: ServerSettings, snap: GuildSnapshot | null, bo
   if (s.rules.host_senior_at < s.rules.host_full_at) {
     add("warning", "branches", "rules.host_senior_at", "Senior needs fewer Acclamations than Full — GameMaster will use the Full number for both.");
   }
-  givenRole("roles", "roles.vip", s.roles.vip, "VIP", false);
-  markUsed(s.roles.vip, "VIP");
-  if (s.roles.crash_report_ping) checkedRole("roles", "roles.crash_report_ping", s.roles.crash_report_ping, "crash report ping");
+  // The first VIP role is the one GameMaster gives; the others only count as VIP.
+  s.roles.vip.forEach((id, i) => {
+    if (i === 0) givenRole("roles", "roles.vip.0", id, "VIP", false);
+    else checkedRole("roles", `roles.vip.${i}`, id, "VIP");
+    markUsed(id, "VIP");
+  });
   if (s.features.valor_merit) {
     givenRole("features", "roles.valor", s.roles.valor, "Hearts of Valor", true);
     markUsed(s.roles.valor, "Hearts of Valor");

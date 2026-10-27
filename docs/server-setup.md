@@ -50,7 +50,10 @@ set up entirely on the website.
    buttons.
 5. **The setup wizard** (`/servers?guild=<id>`) walks through the steps
    below, shown as a numbered strip across the top. Progress is saved as you
-   go: close the tab and pick up where you left off. **Finish setup** is only
+   go: close the tab and pick up where you left off. Steps you've reached can
+   be opened from the strip at any time (unsaved changes stay until you save
+   or discard them); later steps stay locked until **Save & continue** gets
+   you there. **Finish setup** is only
    enabled once every required field is filled and the health check has no
    blocking problems.
 6. After setup, the same page becomes **Settings**: a grid of square tiles
@@ -115,15 +118,16 @@ make the role or channel with a sensible name.
 
 ### 5. Player roles
 - Per branch: **Verified**, **Trusted** and **Game ban** roles (required),
-  plus **Dishonored** (shown while that branch has an active restriction)
-  and a **Notification ping** role (pinged for that branch's game
-  announcements; a game mode can use its own). Both are optional, and one
-  role can be used for both branches.
-- **VIP** role, and whether Content Creator and PDX Staff VIPs from other
-  servers are accepted automatically. Highly Trusted VIPs always need
-  approval.
+  and a **Notification ping** role (required; pinged for that branch's game
+  announcements; a game mode can use its own), plus **Dishonored** (optional,
+  shown while that branch has an active restriction). One role can be used
+  for both branches. GameMaster has Mention Everyone, so a ping role doesn't
+  need to be mentionable.
+- **VIP roles** (several allowed): anyone with any of them counts as VIP.
+  Giving VIP adds the first role; taking VIP away removes all of them. Also
+  whether Content Creator and PDX Staff VIPs from other servers are accepted
+  automatically. Highly Trusted VIPs always need approval.
 - **Commends for Trusted** (5) and **warnings for an automatic game ban** (3).
-- **Crash report ping role**: pinged when a crash report arrives (optional).
 
 ### 6. Channels
 - **Audit log** (required, was "Host log"): every host and staff action,
@@ -148,27 +152,27 @@ make the role or channel with a sensible name.
   must be listed.
 - **Game voice channels**, per branch: the category they're created under,
   and the category they must stay above.
+- **Casino**: only on TommyKay (`341585283881631744`) and its test server
+  (`1434977277115891725`); no other server sees it. The casino panel channel
+  is set here.
 
-### 7. Tickets
-- **Ticket Support roles** (verification tickets only) and **Developer
-  roles** (bug reports and suggestions).
-- **Ticket panel channel**, **ticket category**, **ticket transcripts** and
-  **private ticket transcripts** (host applications and host reports).
-- **Remind and close inactive tickets**: a ping after 24 hours without
-  messages, closed as unresolved after 48.
-- Details in [tickets.md](tickets.md).
-
-### 7b. Game modes
+### 7. Game modes
 Only modes of branches that are on are shown. A new server starts with every
 mode **off**; it switches on the ones it runs (at least one). Modes that are
-off are hidden on the calendar and refused by the bot. **Same channels as…**
-copies another mode's channels and ping role. Per mode:
+off are hidden on the calendar and refused by the bot.
+
+Each branch first picks **One set for all RP (or HIST) modes** or **Set up
+each mode separately**. With one set, a single announcement channel, game
+info channel and own ping role are filled into every mode of that branch.
+Separately, every mode has its own, and **Same channels as…** copies another
+mode's. Per mode:
 - **On / off**.
-- **Announcement channel** (game announcements; they link to the map), **game info**,
-  **rules**, **mods** and **public log** channels.
-- **Ping role** for announcements.
+- **Announcement channel** (game announcements; they link to the map) and
+  **game info** channel.
+- **Own ping role** for announcements (empty = the branch's notification ping).
 - **Standard rules and mod links** (name + link), used when a game has no
-  preset.
+  preset. Players see them through the game's Rules and Mods buttons on the
+  website, so modes no longer have rules or mods channels.
 
 ### 8. Features
 - **Hearts of Valor & Merit**: on/off, the Hearts of Valor role, Merit
@@ -180,13 +184,20 @@ copies another mode's channels and ping role. Per mode:
   get a notice in Staff notices (or the host log) naming the server, the
   game type and since when, with a link to the player's record. Nothing
   changes automatically.
-- **Hosting success**: average rating that counts as a successful hosting
-  (3.0 / 5).
-- **Casino & add-ons**: TommyKay only. Its channels (casino panel,
-  randomizer / receipt log, Fortunes log) are set here on TommyKay.
+- **Hosting success**: average player feedback rating (out of 5 stars) that
+  counts as a successful hosting (3.0).
 - *Coming later:* IronLegion Steam verification.
 
-### 9. Review & finish
+### 9. Tickets
+- **Ticket Support roles** (verification tickets only) and **Developer
+  roles** (bug reports and suggestions).
+- **Ticket panel channel**, **ticket category**, **ticket transcripts** and
+  **private ticket transcripts** (host applications and host reports).
+- **Remind and close inactive tickets**: a ping after 24 hours without
+  messages, closed as unresolved after 48.
+- Details in [tickets.md](tickets.md).
+
+### 10. Review & finish
 A summary of every step with **Edit** links, the health check, and
 **Finish setup**.
 
@@ -229,6 +240,20 @@ Not moved to settings yet:
 - The website's previews (Database page "what will happen") still use the
   default numbers (5 commends, 3 warnings, 2 / 4 Acclamations). The bot
   always uses the server's numbers.
+
+## To do
+
+- **Rework the public chat log.** The per-mode "Public chat-log channel"
+  setting is gone, so finished games' chat logs (and the AI analysis posted
+  with them) are no longer posted to any public channel. The bot still has
+  the old posting code (`public_log_channel_id`,
+  `_public_log_channel_for_base`, `_archive_game_chat_log`); it does nothing
+  while no channel is set. Decide where public chat logs should live (likely
+  on the website, next to the game), then remove the old code.
+- **Casino, randomizer and Fortunes of War rework.** The randomizer / receipt
+  log and Fortunes of War log channels were removed from the settings; the
+  rework won't need them. Only the casino panel channel is left, and only on
+  TommyKay and its test server.
 
 ## Adding a game mode later (Novum Vexillum and BFFU 2, October 2026)
 

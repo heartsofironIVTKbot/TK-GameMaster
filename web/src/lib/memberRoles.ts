@@ -29,7 +29,10 @@ import {
 export interface RoleIds {
   rp_verified: string | null;
   hist_verified: string | null;
+  /** The VIP role GameMaster gives (the first of vip_all). */
   vip: string | null;
+  /** Every VIP role: any of them counts as VIP. */
+  vip_all: string[];
   /** Trusted (RP / Historical) and Hearts of Valor — the player card's checks. */
   rp_trusted: string | null;
   hist_trusted: string | null;
@@ -44,6 +47,7 @@ const NO_ROLES: RoleIds = {
   rp_verified: null,
   hist_verified: null,
   vip: null,
+  vip_all: [],
   rp_trusted: null,
   hist_trusted: null,
   valor: null,
@@ -84,6 +88,7 @@ export async function memberRoleIds(guildId?: string): Promise<RoleIds> {
       rp_verified: "700000000000000001",
       hist_verified: "700000000000000002",
       vip: "700000000000000003",
+      vip_all: ["700000000000000003"],
       rp_trusted: "700000000000000004",
       hist_trusted: "700000000000000005",
       valor: "700000000000000006",
@@ -115,10 +120,13 @@ export async function memberRoleIds(guildId?: string): Promise<RoleIds> {
       Senior: id(fromBot.Senior) ?? fallback.Senior,
     };
   };
+  const vip = id(raw.vip) ?? fallbackOf.vip;
+  const vipAll = (Array.isArray(raw.vip_all) ? raw.vip_all : []).map(id).filter((entry): entry is string => entry !== null);
   const value: RoleIds = {
     rp_verified: id(raw.rp_verified) ?? fallbackOf.rp_verified,
     hist_verified: id(raw.hist_verified),
-    vip: id(raw.vip) ?? fallbackOf.vip,
+    vip,
+    vip_all: vipAll.length > 0 ? vipAll : vip ? [vip] : [],
     rp_trusted: id(raw.rp_trusted) ?? fallbackOf.rp_trusted,
     hist_trusted: id(raw.hist_trusted) ?? fallbackOf.hist_trusted,
     valor: id(raw.valor) ?? fallbackOf.valor,
@@ -279,7 +287,7 @@ export async function getMemberRoles(userId: string, viewer: HostProfile): Promi
     verification,
     host: { branches: [hostBranch("RP"), hostBranch("HIST")] },
     vip: {
-      has_role: roles && roleIds.vip ? roles.has(roleIds.vip) : flag(user.vip),
+      has_role: roles && roleIds.vip_all.length > 0 ? roleIds.vip_all.some((vipId) => roles.has(vipId)) : flag(user.vip),
       current: local.find((grant) => grant.status === "active") ?? null,
       pending: local.find((grant) => grant.status === "pending") ?? null,
       history: local.filter((grant) => grant.status === "removed" || grant.status === "declined").slice(0, 10),

@@ -8,8 +8,10 @@ import {
   MODE_CATALOG,
   MODE_CHANNEL_FIELDS,
   TICKET_CHANNEL_FIELDS,
+  hasCasino,
   type Branch,
   type LinkEntry,
+  type ModeChannelField,
   type ModeSettings,
 } from "@/lib/serverSettingsTypes";
 import { Spinner, Toggle } from "@/components/schedule/ui";
@@ -55,7 +57,7 @@ const BRANCH_ROLE_FIELDS = [
   },
 ] as const;
 
-const OPTIONAL_BRANCH_ROLES = new Set(["dishonored", "ping"]);
+const OPTIONAL_BRANCH_ROLES = new Set(["dishonored"]);
 
 export function RolesStep({ ctx }: { ctx: StepContext }) {
   const { draft } = ctx;
@@ -92,14 +94,18 @@ export function RolesStep({ ctx }: { ctx: StepContext }) {
         </div>
       </Card>
       <Card icon="🌟" title="VIP" subtitle="Given on the Database page. VIP comes with every Verified and Trusted role.">
-        <Field label="VIP role" issues={issuesAt(ctx.issues, "roles.vip")}>
-          <RolePicker
+        <Field
+          label="VIP roles"
+          hint="Anyone with any of these roles counts as VIP. Giving VIP adds the first role; taking VIP away removes all of them."
+          issues={issuesAt(ctx.issues, "roles.vip")}
+        >
+          <RoleMultiPicker
             ctx={ctx}
             value={draft.roles.vip}
-            onChange={(id) => ctx.update((s) => void (s.roles.vip = id))}
+            onChange={(ids) => ctx.update((s) => void (s.roles.vip = ids))}
             purpose="give"
             suggestedName="VIP"
-            label="VIP role"
+            label="Add a VIP role"
           />
         </Field>
         <Toggle
@@ -108,20 +114,6 @@ export function RolesStep({ ctx }: { ctx: StepContext }) {
           label="Accept Content Creator and PDX Staff VIPs from other servers automatically"
           description="Off: every VIP from another server waits for your staff to approve it. Highly Trusted VIPs always wait for approval."
         />
-      </Card>
-      <Card icon="🏚️" title="Other roles">
-        <div className="grid gap-4 md:grid-cols-2">
-          <Field label="Crash report ping" hint="Pinged when a player sends a crash report. Optional." issues={issuesAt(ctx.issues, "roles.crash_report_ping")}>
-            <RolePicker
-              ctx={ctx}
-              value={draft.roles.crash_report_ping}
-              onChange={(id) => ctx.update((s) => void (s.roles.crash_report_ping = id))}
-              purpose="ping"
-              suggestedName="Mod Developer"
-              label="Crash report ping role"
-            />
-          </Field>
-        </div>
       </Card>
     </div>
   );
@@ -222,26 +214,18 @@ export function ChannelsStep({ ctx }: { ctx: StepContext }) {
           </div>
         ))}
       </Card>
-      {ctx.isHome && (
-        <Card icon="🎰" title="Casino & add-ons" subtitle="Only on this server: the casino, randomizer and Fortunes of War channels.">
-          <div className="grid gap-4 md:grid-cols-3">
-            {(
-              [
-                ["casino_panel_channel", "Casino panel", "The casino access panel lives here."],
-                ["randomizer_log_channel", "Randomizer & receipt log", "Rolls, receipts and the host config panel."],
-                ["fortunes_log_channel", "Fortunes of War log", "Card draws and the submod sync."],
-              ] as const
-            ).map(([key, label, hint]) => (
-              <Field key={key} label={label} hint={hint}>
-                <ChannelPicker
-                  ctx={ctx}
-                  value={draft.addons[key]}
-                  onChange={(id) => ctx.update((s) => void (s.addons[key] = id))}
-                  kind="text"
-                  label={label}
-                />
-              </Field>
-            ))}
+      {hasCasino(ctx.serverId) && (
+        <Card icon="🎰" title="Casino" subtitle="Only on this server.">
+          <div className="grid gap-4 md:grid-cols-2">
+            <Field label="Casino panel" hint="The casino access panel lives here.">
+              <ChannelPicker
+                ctx={ctx}
+                value={draft.addons.casino_panel_channel}
+                onChange={(id) => ctx.update((s) => void (s.addons.casino_panel_channel = id))}
+                kind="text"
+                label="Casino panel"
+              />
+            </Field>
           </div>
         </Card>
       )}
@@ -310,12 +294,123 @@ function LinkList({ title, value, onChange }: { title: string; value: LinkEntry[
   );
 }
 
+const modesOf = (branch: Branch) => MODE_CATALOG.filter((mode) => mode.branch === branch);
+
+function ModeFields({
+  ctx,
+  values,
+  issuePath,
+  slug,
+  title,
+  onChange,
+}: {
+  ctx: StepContext;
+  values: Pick<ModeSettings, ModeChannelField | "ping_role">;
+  issuePath: string | null;
+  slug: string;
+  title: string;
+  onChange: (mutate: (m: ModeSettings) => void) => void;
+}) {
+  const issues = (field: string) => (issuePath ? issuesAt(ctx.issues, `${issuePath}.${field}`) : []);
+  return (
+    <div className="grid gap-4 md:grid-cols-2">
+      {MODE_CHANNEL_FIELDS.map((field) => (
+        <Field key={field.key} label={field.label} hint={field.hint} required={field.required} issues={issues(field.key)}>
+          <ChannelPicker
+            ctx={ctx}
+            value={values[field.key]}
+            onChange={(id) => onChange((m) => void (m[field.key] = id))}
+            kind="text"
+            suggestedName={`${slug}-${field.key.replace(/_channel$/, "").replace(/_/g, "-")}`}
+            label={`${title}: ${field.label}`}
+          />
+        </Field>
+      ))}
+      <Field
+        label="Own ping role (optional)"
+        hint="Leave empty to ping the branch's notification ping role (Player roles step)."
+        issues={issues("ping_role")}
+      >
+        <RolePicker
+          ctx={ctx}
+          value={values.ping_role}
+          onChange={(id) => onChange((m) => void (m.ping_role = id))}
+          purpose="ping"
+          suggestedName={`${title} Ping`}
+          label={`${title}: ping role`}
+        />
+      </Field>
+    </div>
+  );
+}
+
+/** One set of channels and ping role for every mode of a branch, or each mode its own. */
+function BranchSharing({ ctx, branch }: { ctx: StepContext; branch: Branch }) {
+  const shared = ctx.draft.mode_sharing[branch];
+  const modes = modesOf(branch);
+  const first = ctx.draft.modes[modes[0].key];
+  const firstEnabled = modes.find((mode) => ctx.draft.modes[mode.key]?.enabled);
+  const setAll = (mutate: (m: ModeSettings) => void) =>
+    ctx.update((s) => {
+      for (const mode of modesOf(branch)) mutate(s.modes[mode.key]);
+    });
+  const choose = (next: boolean) =>
+    ctx.update((s) => {
+      s.mode_sharing[branch] = next;
+      if (!next) return;
+      const keys = modesOf(branch).map((mode) => mode.key);
+      const source =
+        keys.find((key) => s.modes[key].enabled && s.modes[key].announcement_channel) ?? keys.find((key) => s.modes[key].enabled) ?? keys[0];
+      const from = s.modes[source];
+      for (const key of keys) {
+        for (const field of MODE_CHANNEL_FIELDS) s.modes[key][field.key] = from[field.key];
+        s.modes[key].ping_role = from.ping_role;
+      }
+    });
+  const option = (value: boolean, label: string) => (
+    <button
+      type="button"
+      aria-pressed={shared === value}
+      onClick={() => choose(value)}
+      className={`flex-1 rounded-lg border px-3 py-1.5 text-xs font-bold transition ${
+        shared === value ? "border-amber-300/60 bg-amber-400/15 text-amber-100" : "border-white/10 text-slate-300 hover:border-white/25"
+      }`}
+    >
+      {label}
+    </button>
+  );
+  return (
+    <div className="space-y-3 rounded-2xl border border-white/10 bg-slate-950/40 p-3">
+      <div className="flex flex-col gap-1.5 sm:flex-row">
+        {option(true, `One set for all ${branch} modes`)}
+        {option(false, "Set up each mode separately")}
+      </div>
+      {shared && (
+        <>
+          <p className="text-[11px] text-slate-500">
+            Every {branch} mode uses these channels and this ping role. Each mode&apos;s mods and rules are still set below.
+          </p>
+          <ModeFields
+            ctx={ctx}
+            values={first}
+            issuePath={firstEnabled ? `modes.${firstEnabled.key}` : null}
+            slug={branch.toLowerCase()}
+            title={`${branch} modes`}
+            onChange={setAll}
+          />
+        </>
+      )}
+    </div>
+  );
+}
+
 function ModeCard({ ctx, modeKey }: { ctx: StepContext; modeKey: string }) {
   const mode = MODE_CATALOG.find((entry) => entry.key === modeKey)!;
   const settings = ctx.draft.modes[modeKey];
+  const shared = ctx.draft.mode_sharing[mode.branch];
   const issues = issuesAt(ctx.issues, `modes.${modeKey}`);
   const errors = issues.filter((issue) => issue.level === "error").length;
-  const [open, setOpen] = useState(settings.enabled && errors > 0);
+  const [open, setOpen] = useState(settings.enabled && errors > 0 && !shared);
   const siblings = MODE_CATALOG.filter((entry) => entry.branch === mode.branch && entry.key !== modeKey && ctx.draft.modes[entry.key]?.enabled);
   const set = (mutate: (m: ModeSettings) => void) => ctx.update((s) => mutate(s.modes[modeKey]));
   return (
@@ -343,7 +438,10 @@ function ModeCard({ ctx, modeKey }: { ctx: StepContext; modeKey: string }) {
       </div>
       {settings.enabled && open && (
         <div className="space-y-4 border-t border-white/10 p-3">
-          {siblings.length > 0 && (
+          {shared && (
+            <p className="text-xs text-slate-400">Uses the shared {mode.branch} channels and ping role above.</p>
+          )}
+          {!shared && siblings.length > 0 && (
             <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
               Same channels and ping role as:
               {siblings.map((sibling) => (
@@ -364,34 +462,16 @@ function ModeCard({ ctx, modeKey }: { ctx: StepContext; modeKey: string }) {
               ))}
             </div>
           )}
-          <div className="grid gap-4 md:grid-cols-2">
-            {MODE_CHANNEL_FIELDS.map((field) => (
-              <Field key={field.key} label={field.label} hint={field.hint} required={field.required} issues={issuesAt(ctx.issues, `modes.${modeKey}.${field.key}`)}>
-                <ChannelPicker
-                  ctx={ctx}
-                  value={settings[field.key]}
-                  onChange={(id) => set((m) => void (m[field.key] = id))}
-                  kind="text"
-                  suggestedName={`${mode.key.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-${field.key.replace(/_channel$/, "").replace(/_/g, "-")}`}
-                  label={`${mode.label}: ${field.label}`}
-                />
-              </Field>
-            ))}
-            <Field
-              label="Own ping role (optional)"
-              hint="Leave empty to ping the branch's notification ping role (Player roles step). Pick one only if this mode has its own."
-              issues={issuesAt(ctx.issues, `modes.${modeKey}.ping_role`)}
-            >
-              <RolePicker
-                ctx={ctx}
-                value={settings.ping_role}
-                onChange={(id) => set((m) => void (m.ping_role = id))}
-                purpose="ping"
-                suggestedName={`${mode.label} Ping`}
-                label={`${mode.label}: ping role`}
-              />
-            </Field>
-          </div>
+          {!shared && (
+            <ModeFields
+              ctx={ctx}
+              values={settings}
+              issuePath={`modes.${modeKey}`}
+              slug={mode.key.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}
+              title={mode.label}
+              onChange={set}
+            />
+          )}
           <div className="grid gap-4 md:grid-cols-2">
             <LinkList title="Standard mods" value={settings.mod_links} onChange={(links) => set((m) => void (m.mod_links = links))} />
             <LinkList title="Standard rules" value={settings.rule_links} onChange={(links) => set((m) => void (m.rule_links = links))} />
@@ -418,7 +498,8 @@ export function ModesStep({ ctx }: { ctx: StepContext }) {
           <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
             {BRANCH_INFO[branch].emoji} {BRANCH_INFO[branch].long}
           </p>
-          {MODE_CATALOG.filter((mode) => mode.branch === branch).map((mode) => (
+          <BranchSharing ctx={ctx} branch={branch} />
+          {modesOf(branch).map((mode) => (
             <ModeCard key={mode.key} ctx={ctx} modeKey={mode.key} />
           ))}
         </div>
@@ -430,7 +511,7 @@ export function ModesStep({ ctx }: { ctx: StepContext }) {
   );
 }
 
-// ————— 7. Tickets —————
+// ————— 9. Tickets —————
 
 const TICKET_ACCESS = [
   ["✅ Verification (RP and Historical)", "Ticket Support, Host Management"],
@@ -575,7 +656,6 @@ export function FeaturesStep({ ctx }: { ctx: StepContext }) {
         <div className="space-y-3 opacity-60">
           <Toggle checked={false} disabled onChange={() => {}} label="IronLegion Steam verification" description="Players must link Steam through IronLegion before reserving. Coming in a later stage." />
         </div>
-        {!ctx.isHome && <p className="text-[11px] text-slate-500">The Casino and Fortunes of War add-ons are only available on TommyKay&apos;s server.</p>}
       </Card>
     </div>
   );

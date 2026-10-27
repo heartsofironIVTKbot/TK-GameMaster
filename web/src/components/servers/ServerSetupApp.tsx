@@ -38,6 +38,8 @@ export default function ServerSetupApp({ serverId, initialStep, added }: { serve
   const [saved, setSaved] = useState<ServerSettings | null>(null);
   const [version, setVersion] = useState(0);
   const [view, setView] = useState<View>(() => (VIEWS.includes(initialStep as View) ? (initialStep as View) : "welcome"));
+  /** During setup: the furthest step that can be opened (later ones unlock with Save & continue). */
+  const [reached, setReached] = useState(0);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<number | null>(null);
@@ -64,11 +66,14 @@ export default function ServerSetupApp({ serverId, initialStep, added }: { serve
       setDraft(settings);
       setSaved(settings);
       setVersion(result.version);
-      // Pick up where the setup was left.
-      if (!initialStep && result.setup_step && result.server.setup !== "active") {
-        const next = STEPS.findIndex((step) => step.id === result.setup_step);
-        setView(STEPS[Math.min(STEPS.length - 1, next + 1)]?.id ?? "welcome");
-      } else if (!initialStep && result.server.setup === "active") {
+      if (result.server.setup !== "active") {
+        // Pick up where the setup was left; a link can't skip past it.
+        const saved = result.setup_step ? STEPS.findIndex((step) => step.id === result.setup_step) : -1;
+        const limit = Math.min(STEPS.length - 1, saved + 1);
+        setReached(limit);
+        const asked = STEPS.findIndex((step) => step.id === initialStep);
+        if (!initialStep || asked > limit) setView(STEPS[limit].id);
+      } else if (!initialStep) {
         // A set-up server opens on its settings tiles.
         setView("home");
       }
@@ -334,7 +339,10 @@ export default function ServerSetupApp({ serverId, initialStep, added }: { serve
             type="button"
             disabled={saving}
             onClick={async () => {
-              if (await save({ step: view as StepId })) goTo(nextStep);
+              if (await save({ step: view as StepId })) {
+                setReached((current) => Math.max(current, stepIndex + 1));
+                goTo(nextStep);
+              }
             }}
             className="flex items-center gap-2 rounded-xl bg-amber-400 px-5 py-2 text-xs font-black text-slate-950 hover:bg-amber-300 disabled:opacity-40"
           >
@@ -413,26 +421,30 @@ export default function ServerSetupApp({ serverId, initialStep, added }: { serve
             <ol className="flex gap-1.5 overflow-x-auto pb-1 [scrollbar-color:rgba(255,255,255,0.15)_transparent] [scrollbar-width:thin]">
               {STEPS.map((step, index) => {
                 const active = step.id === view;
+                const locked = index > reached;
                 const errors = issues.filter((issue) => issue.step === step.id && issue.level === "error").length;
-                const done = index < stepIndex && !blocking.has(step.id);
+                const done = index < reached && !blocking.has(step.id);
                 return (
                   <li key={step.id} className="shrink-0">
                     <button
                       type="button"
+                      disabled={locked}
                       onClick={() => goTo(step.id)}
                       aria-current={active ? "step" : undefined}
-                      title={step.blurb}
-                      className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition ${
+                      title={locked ? "Press Save & continue to get here" : step.blurb}
+                      className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-40 ${
                         active
                           ? "border-amber-300/60 bg-amber-400/15 text-white"
-                          : "border-white/10 bg-white/[0.03] text-slate-300 hover:border-white/25"
+                          : "border-white/10 bg-white/[0.03] text-slate-300 enabled:hover:border-white/25"
                       }`}
                     >
                       <span>{step.icon}</span>
                       <span>
                         {index + 1}. {step.label}
                       </span>
-                      {errors > 0 ? (
+                      {locked ? (
+                        <span className="text-[10px]">🔒</span>
+                      ) : errors > 0 ? (
                         <span className="rounded-full bg-rose-500/25 px-1.5 text-[10px] font-black text-rose-100">{errors}</span>
                       ) : done ? (
                         <span className="text-emerald-400">✓</span>
