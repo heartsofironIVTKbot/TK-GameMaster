@@ -107,7 +107,22 @@ export function getPool(): Pool {
  * true, like the bot) decides; enabled without a CA skips the check.
  */
 function sslOptions() {
-  const ca = (process.env.MYSQL_SSL_CA ?? "").replace(/\\n/g, "\n").trim();
-  if (ca) return { ssl: { ca, rejectUnauthorized: true } };
+  const raw = process.env.MYSQL_SSL_CA ?? "";
+  if (raw.trim()) {
+    const ca = caPem(raw);
+    if (ca) return { ssl: { ca, rejectUnauthorized: true } };
+    console.warn("[db] MYSQL_SSL_CA has no complete certificate; the connection is encrypted but not checked.");
+    return { ssl: { rejectUnauthorized: false } };
+  }
   return envBool("MYSQL_SSL_DISABLED", true) ? {} : { ssl: { rejectUnauthorized: false } };
+}
+
+/** Rebuilds the PEM from its base64 body: settings fields often turn its line breaks into spaces or literal \n. */
+function caPem(raw: string): string | null {
+  const text = raw.replace(/\\r/g, "").replace(/\\n/g, "\n");
+  const blocks = [...text.matchAll(/-----BEGIN CERTIFICATE-----([\s\S]*?)-----END CERTIFICATE-----/g)].map((match) => {
+    const body = match[1].replace(/[^A-Za-z0-9+/=]/g, "").match(/.{1,64}/g) ?? [];
+    return `-----BEGIN CERTIFICATE-----\n${body.join("\n")}\n-----END CERTIFICATE-----\n`;
+  });
+  return blocks.length ? blocks.join("") : null;
 }
