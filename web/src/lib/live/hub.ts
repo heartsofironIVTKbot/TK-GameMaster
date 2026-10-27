@@ -150,7 +150,8 @@ export class LiveHub {
       console.error("[live] first lobby read failed:", error);
     }
     client.send("selections", this.selectionList(room));
-    room.viewers = -1; // the next flush sends the new count to everyone
+    // Everyone else hears about a changed count from the next flush.
+    client.send("viewers", { count: this.viewerCount(room) });
   }
 
   private leave(room: Room, client: LiveClient): void {
@@ -159,7 +160,6 @@ export class LiveHub {
       if (room.selections.delete(client.userId)) room.selectionsDirty = true;
     }
     if (room.clients.size === 0) this.rooms.delete(room.threadId);
-    else room.viewers = -1;
   }
 
   private async check(room: Room): Promise<void> {
