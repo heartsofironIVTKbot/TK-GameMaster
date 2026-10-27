@@ -224,6 +224,20 @@ servers; the hub's API stays the same.
 **Done when:** the targets pass at 500 players and the system stays up
 (slower but working) at 1,000.
 
+**Result (Oct 2026):** see [load-test-results.md](load-test-results.md).
+
+- On Render Starter ($7), every target passes at **250 players on one game**.
+  Real games have had 100–200.
+- At **500**, everyone stays connected, but the glow (p95 0.51 s) and page opens
+  (2.3 s typical) are slower than the targets while players are still joining.
+- At **1,000**, the site stays up, slower but working: 99.4 % connected and 0.5 %
+  of requests failed.
+- Four fixes made during the test took 1,000 players from 31 % failed requests
+  to 0.5 %.
+- The limit is the website server's CPU, not the database (at most 21 of 46
+  connections). Next steps are listed under "When to act".
+- Not load-tested yet: reservation writes and the 20 hosts.
+
 ---
 
 ## Phase 5 — Audit and Tickets pages
