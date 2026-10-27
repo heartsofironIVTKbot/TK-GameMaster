@@ -6,7 +6,8 @@ import { getPool, DatabaseConfigError } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { canonicalName } from "@/data/nationCategories";
 import { demoLobbyState } from "@/lib/liveDemo";
-import { invalidateLobby, lobbySnapshot, lobbyVersion, versionOf } from "@/lib/lobbySnapshot";
+import { liveHub } from "@/lib/live/hub";
+import { lobbySnapshot, lobbyVersion, versionOf } from "@/lib/lobbySnapshot";
 import { memberRoleIds } from "@/lib/memberRoles";
 import { categoryOfMode } from "@/lib/scheduleOptions";
 import { isSchedulerDemo } from "@/lib/scheduleStore";
@@ -326,7 +327,7 @@ export async function POST(request: NextRequest) {
     );
 
     await connection.commit();
-    invalidateLobby(threadId);
+    liveHub().lobbyChanged(threadId);
     return NextResponse.json({
       ok: true,
       reservation: {
@@ -421,7 +422,7 @@ export async function DELETE(request: NextRequest) {
     );
 
     await connection.commit();
-    invalidateLobby(threadId);
+    liveHub().lobbyChanged(threadId);
     return NextResponse.json({
       ok: true,
       unreserved: {

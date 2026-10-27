@@ -15,6 +15,8 @@ import { lighten } from "./nationGeometry";
  *  - locked   solid red neon border + dimmed fill (clicked a taken minor —
  *             can't be co-oped; also the host lock editor's active group)
  *  - coop     electric-blue beaded border (reserved major power inspected)
+ *  - others   dashed yellow border, softly breathing (other players on the
+ *             same game's map have this nation selected — live)
  *
  * Why overlays instead of CSS classes on the base paths:
  *  - Each pane owns its own <svg>, so an animation only repaints its own few
@@ -34,7 +36,7 @@ import { lighten } from "./nationGeometry";
  * a string join, instead of a second pass over ~470k vertices on every zoom.
  */
 
-export type HighlightKind = "hover" | "taken" | "locked" | "self" | "coop" | "pending";
+export type HighlightKind = "hover" | "taken" | "locked" | "self" | "coop" | "others" | "pending";
 
 /** The seven major powers: a reserved one opens the Co-Op flow when clicked. */
 export const MAJOR_TAGS: ReadonlySet<string> = new Set([
@@ -69,6 +71,8 @@ export interface HighlightState {
   /** Red border: a clicked taken minor (live map) or the host lock editor's
       active group. */
   lockedTags: readonly string[];
+  /** Nations other players on the same game's map have selected (live). */
+  othersTags?: readonly string[];
 }
 
 /** Pane z-order: hover sits under the reservation borders so they stay crisp. */
@@ -78,6 +82,7 @@ const PANE_Z: Record<HighlightKind, number> = {
   locked: 410,
   self: 420,
   coop: 430,
+  others: 435,
   pending: 440,
 };
 const KINDS = Object.keys(PANE_Z) as HighlightKind[];
@@ -129,6 +134,9 @@ const HOVER_BREATH_MS = 1600;
  */
 const HOVER_LINGER_MS = 130;
 const HOVER_FADE_MS = 240;
+/** Other players' selections breathe slower and shallower than hover. */
+const OTHERS_BREATH_KEYFRAMES: Keyframe[] = [{ opacity: 1 }, { opacity: 0.45 }, { opacity: 1 }];
+const OTHERS_BREATH_MS = 2200;
 
 // --- stroke layers ---------------------------------------------------------
 
@@ -297,6 +305,20 @@ const COOP_RECIPE: readonly LayerSpec[] = [
   },
 ];
 
+/** Other players' live selections: the pending yellow, but a still, dashed
+    border and a faint wash — never the snake (no per-frame dash animation,
+    however many players are clicking around). The pane breathes instead. */
+const OTHERS_RECIPE: readonly LayerSpec[] = [
+  {
+    fill: PALETTE.pending.body,
+    fillOpacity: 0.1,
+    stroke: PALETTE.pending.glow,
+    strokeOpacity: 0.3,
+    width: 8,
+  },
+  { stroke: PALETTE.pending.track, strokeOpacity: 0.95, width: 1.8, dash: [7, 5] },
+];
+
 const PENDING_RECIPE: readonly LayerSpec[] = (() => {
   const dash = (length: number) => [length, SNAKE_PERIOD - length] as const;
   return [
@@ -372,6 +394,7 @@ export class NationHighlightController {
   private lingerTimer: number | null = null;
   private fadeTimer: number | null = null;
   private hoverBreath: Animation | null = null;
+  private othersBreath: Animation | null = null;
   private destroyed = false;
 
   constructor(
@@ -417,6 +440,7 @@ export class NationHighlightController {
     this.overlays.get("locked")?.setRecipe(LOCKED_RECIPE);
     this.overlays.get("self")?.setRecipe(SELF_RECIPE);
     this.overlays.get("coop")?.setRecipe(COOP_RECIPE);
+    this.overlays.get("others")?.setRecipe(OTHERS_RECIPE);
     this.overlays.get("pending")?.setRecipe(PENDING_RECIPE);
 
     // Registered after the base renderer's own listeners, so by the time this
@@ -435,8 +459,26 @@ export class NationHighlightController {
       "coop",
       state.coopTags ?? (state.coopTag ? [state.coopTag] : []),
     );
+    this.syncTags("others", state.othersTags ?? []);
+    this.syncOthersBreath((state.othersTags ?? []).length > 0);
     this.syncTags("pending", state.pendingTag ? [state.pendingTag] : []);
     this.syncHover(state.hover);
+  }
+
+  private syncOthersBreath(active: boolean): void {
+    const pane = this.map.getPane(paneName("others"));
+    if (!active) {
+      this.othersBreath?.cancel();
+      this.othersBreath = null;
+      return;
+    }
+    if (pane && !this.othersBreath && typeof pane.animate === "function") {
+      this.othersBreath = pane.animate(OTHERS_BREATH_KEYFRAMES, {
+        duration: OTHERS_BREATH_MS,
+        iterations: Infinity,
+        easing: "ease-in-out",
+      });
+    }
   }
 
   destroy(): void {
@@ -448,6 +490,8 @@ export class NationHighlightController {
     }
     this.hoverBreath?.cancel();
     this.hoverBreath = null;
+    this.othersBreath?.cancel();
+    this.othersBreath = null;
     for (const renderer of this.renderers.values()) {
       if (this.map.hasLayer(renderer)) this.map.removeLayer(renderer);
     }

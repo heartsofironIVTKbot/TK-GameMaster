@@ -182,6 +182,27 @@ made that cheap (it only downloads when something changed, see
 **Done when:** two browsers see each other's clicks and reservations in
 under 0.3 s, and pulling the plug on the live server doesn't break the map.
 
+**Built (Oct 2026) — inside the website, no extra service:** the website
+runs as one always-on server on Render, so the live part is a hub in the
+website process (`web/src/lib/live/hub.ts`) instead of a separate WebSocket
+server + Redis. Redis is only needed once the website runs on several
+servers; the hub's API stays the same.
+
+- `GET /api/live?thread_id=` — Server-Sent Events per open map: `lobby`
+  (pushed on every change; website writes go out at once, the bot's within
+  ~1 s via a 1 s version check per open game), `selections`, `viewers`,
+  `ping` every 20 s (Cloudflare closes quiet connections after 100 s).
+- `POST /api/live/select` — a logged-in player's selected free nation;
+  everyone on the map sees it as a dashed, breathing yellow outline with the
+  player's name on the capital. Memory only; 5/s per player (burst 10);
+  merged and sent every 100 ms; gone 12 s after the last refresh or when the
+  player closes the map.
+- "N viewing" counter (people, not tabs) on the map.
+- Fallback: without the live connection the map polls every 8 s as before;
+  with it, a 60 s safety poll.
+- Measured locally against the real database: a selection reaches another
+  viewer in ~110 ms.
+
 ---
 
 ## Phase 4 — Load test and harden

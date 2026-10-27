@@ -33,6 +33,8 @@ import mapCapitalsData from "@/data/mapCapitals.json";
 import { boardDisplayName, classifyRegions } from "@/data/nationCategories";
 import { reservationLookup } from "@/lib/reservationMatch";
 import { versionedMapUrl } from "@/lib/mapVersion";
+import { useLiveLobby, useShareSelection } from "./live/useLiveLobby";
+import LiveSelectionLabels, { type LiveSelectionLabel } from "./live/LiveSelectionLabels";
 import {
   DEFAULT_SCENARIO,
   SCENARIOS,
@@ -130,7 +132,10 @@ export const OCEAN_BLUE = "#16283b";
 // nation this long, so fast sweeps across dense regions don't flash.
 const HOVER_DEBOUNCE_MS = 100;
 // Keep lobby reservations live (the bot syncs web reservations every ~10s).
+// While the live connection (/api/live) is up, changes are pushed and the
+// poll is only a slow safety net.
 const RESERVATION_POLL_MS = 8000;
+const RESERVATION_SAFETY_POLL_MS = 60_000;
 // Custom SVG renderer with a large clipping padding: geometries well outside
 // the visible area stay rendered during fast panning, so no vector pop-in or
 // vertical cutoff appears mid-drag. Created per component instance (never
@@ -648,6 +653,52 @@ export function buildRosterNations(
   });
 }
 
+type LobbyReply =
+  | { unchanged: true; version: string }
+  | {
+      unchanged: false;
+      version: string | null;
+      reservations: LobbyReservation[];
+      lock: LobbyGameLock | null;
+    };
+
+/** A lobby payload (GET /api/reserve, or pushed by /api/live) → map state. */
+function parseLobby(raw: unknown): LobbyReply | null {
+  if (typeof raw !== "object" || raw === null) return null;
+  const result = raw as {
+    unchanged?: boolean;
+    version?: string;
+    reservations?: LobbyReservation[];
+    game?: {
+      lockdown?: boolean;
+      locked_regions?: string[];
+      nation_layout?: LobbyGameLock["nation_layout"];
+      layout_disabled_nations?: string[];
+      draft?: LobbyGameLock["draft"];
+    } | null;
+  };
+  if (result.unchanged && result.version) return { unchanged: true, version: result.version };
+  const game = result.game ?? null;
+  return {
+    unchanged: false,
+    version: result.version ?? null,
+    reservations: Array.isArray(result.reservations) ? result.reservations : [],
+    lock: game
+      ? {
+          lockdown: Boolean(game.lockdown),
+          locked_regions: Array.isArray(game.locked_regions)
+            ? game.locked_regions
+            : [],
+          nation_layout: Array.isArray(game.nation_layout) ? game.nation_layout : null,
+          hidden_nations: Array.isArray(game.layout_disabled_nations)
+            ? game.layout_disabled_nations
+            : [],
+          draft: game.draft ?? null,
+        }
+      : null,
+  };
+}
+
 /**
  * Fetch a lobby's reservations + host lock state; null on any failure.
  * `known` is the version from the previous response: while the lobby is
@@ -656,53 +707,13 @@ export function buildRosterNations(
 async function fetchReservations(
   threadId: string,
   known: string | null = null,
-): Promise<
-  | { unchanged: true; version: string }
-  | {
-      unchanged: false;
-      version: string | null;
-      reservations: LobbyReservation[];
-      lock: LobbyGameLock | null;
-    }
-  | null
-> {
+): Promise<LobbyReply | null> {
   try {
     const params = new URLSearchParams({ thread_id: threadId });
     if (known) params.set("known", known);
     const response = await fetch(`/api/reserve?${params}`, { cache: "no-store" });
     if (!response.ok) return null;
-    const result = (await response.json()) as {
-      unchanged?: boolean;
-      version?: string;
-      reservations?: LobbyReservation[];
-      game?: {
-        lockdown?: boolean;
-        locked_regions?: string[];
-        nation_layout?: LobbyGameLock["nation_layout"];
-        layout_disabled_nations?: string[];
-        draft?: LobbyGameLock["draft"];
-      } | null;
-    };
-    if (result.unchanged && result.version) return { unchanged: true, version: result.version };
-    const game = result.game ?? null;
-    return {
-      unchanged: false,
-      version: result.version ?? null,
-      reservations: result.reservations ?? [],
-      lock: game
-        ? {
-            lockdown: Boolean(game.lockdown),
-            locked_regions: Array.isArray(game.locked_regions)
-              ? game.locked_regions
-              : [],
-            nation_layout: Array.isArray(game.nation_layout) ? game.nation_layout : null,
-            hidden_nations: Array.isArray(game.layout_disabled_nations)
-              ? game.layout_disabled_nations
-              : [],
-            draft: game.draft ?? null,
-          }
-        : null,
-    };
+    return parseLobby(await response.json());
   } catch {
     return null;
   }
@@ -744,6 +755,8 @@ function sameReservations(
  *  4. taken    grey wash (reserved by another player)
  *  5. locked   red neon (clicked a taken minor: no Co-Op possible)
  *  6. co-op    electric blue (clicked a taken major: Co-Op inspection)
+ *  7. others   dashed, breathing yellow + name tag: nations other players on
+ *              this game's map have selected right now (/api/live)
  */
 export default function MapViewer({
   scenarioId = DEFAULT_SCENARIO,
@@ -924,6 +937,27 @@ export default function MapViewer({
     await loadLobby(selectedThread);
   }, [selectedThread, loadLobby]);
 
+  // Pushed lobby changes + other players' selections + the viewer count.
+  const handleLivePayload = useCallback(
+    (payload: unknown) => {
+      const threadId = selectedThreadRef.current;
+      const parsed = parseLobby(payload);
+      if (!threadId || !parsed) return;
+      if (parsed.unchanged) {
+        if (lobbyVersionRef.current?.threadId === threadId) lobbyVersionRef.current = { threadId, version: parsed.version };
+        return;
+      }
+      lobbyVersionRef.current = parsed.version ? { threadId, version: parsed.version } : null;
+      applyReservations(threadId, parsed.reservations, parsed.lock);
+    },
+    [applyReservations],
+  );
+  const knownLobbyVersion = useCallback(
+    () => (lobbyVersionRef.current?.threadId === selectedThreadRef.current ? lobbyVersionRef.current.version : null),
+    [],
+  );
+  const live = useLiveLobby(selectedThread || null, handleLivePayload, knownLobbyVersion);
+
   /** Nation under a viewport point (the base path the pointer is over). */
   const nationAtPoint = useCallback((x: number, y: number): NationFeatureProps | null => {
     const layer = geoJsonRef.current;
@@ -946,6 +980,8 @@ export default function MapViewer({
   // Load the lobby's reservations on selection and keep them live: poll while
   // the tab is visible and refresh immediately when it becomes visible again
   // (or when `reservationsNonce` bumps — host tools edits just landed).
+  // With the live connection up, the poll slows to a safety net.
+  const liveConnected = live.connected;
   useEffect(() => {
     if (!selectedThread) return undefined;
     let cancelled = false;
@@ -955,7 +991,7 @@ export default function MapViewer({
     load();
     const interval = window.setInterval(() => {
       if (!document.hidden) load();
-    }, RESERVATION_POLL_MS);
+    }, liveConnected ? RESERVATION_SAFETY_POLL_MS : RESERVATION_POLL_MS);
     const onVisibility = () => {
       if (!document.hidden) load();
     };
@@ -965,7 +1001,7 @@ export default function MapViewer({
       window.clearInterval(interval);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [selectedThread, loadLobby, reservationsNonce]);
+  }, [selectedThread, loadLobby, reservationsNonce, liveConnected]);
 
   // Static base style: never depends on hover/selection, so react-leaflet
   // never re-styles the 288 base paths when those change.
@@ -1235,8 +1271,39 @@ export default function MapViewer({
     );
   }, [selected, selectionKind, ownerLabel, onSelectionSummaryChange]);
 
+  // Other players' live selections: free nations only (a nation that just got
+  // taken drops its glow), never the viewer's own.
+  const liveSelections = live.selections;
+  const othersByTag = useMemo(() => {
+    const taken = new Set([...selfTags, ...lockedTags]);
+    const byTag = new Map<string, string[]>();
+    for (const selection of liveSelections) {
+      if (authUser && selection.user_id === authUser.discord_id) continue;
+      if (taken.has(selection.tag) || !tagNations.has(selection.tag)) continue;
+      byTag.set(selection.tag, [...(byTag.get(selection.tag) ?? []), selection.name]);
+    }
+    return byTag;
+  }, [liveSelections, authUser, selfTags, lockedTags, tagNations]);
+  const othersTags = useMemo(() => [...othersByTag.keys()], [othersByTag]);
+  const selectionLabels = useMemo<LiveSelectionLabel[]>(() => {
+    const capitals = MAP_CAPITALS[mapNameOf(geoJsonUrl)] ?? {};
+    const labels: LiveSelectionLabel[] = [];
+    for (const [tag, names] of othersByTag) {
+      const point = capitals[tag];
+      if (point) labels.push({ tag, x: point[0], y: point[1], names });
+    }
+    return labels;
+  }, [othersByTag, geoJsonUrl]);
+
+  // Share this player's own pick (a free nation, reservable right now).
+  const gameStarted = Boolean(selectedThread && games.find((game) => game.thread_id === selectedThread)?.game_started);
+  const sharedTag =
+    selectionKind === "pending" && selected && !dropTag && !gameStarted && !lobbyLock?.draft ? selected.tag : null;
+  useShareSelection(selectedThread || null, sharedTag, Boolean(authUser));
+
   const highlightState = useMemo<HighlightState>(
     () => ({
+      othersTags,
       // The selected nation has its own state; hover is for the others.
       hover: hover && hover.tag !== selected?.tag ? hover : null,
       // A player being dragged over a nation marks it as the drop target.
@@ -1252,7 +1319,7 @@ export default function MapViewer({
       // Red only when the player clicks a taken nation that can't be co-oped.
       lockedTags: selectionKind === "locked" && selected ? [selected.tag] : [],
     }),
-    [hover, selected, selectionKind, selfTags, lockedTags, dropTag],
+    [hover, selected, selectionKind, selfTags, lockedTags, dropTag, othersTags],
   );
 
   // Reserved players' avatars on their nations' capitals (co-ops beside them).
@@ -1287,7 +1354,7 @@ export default function MapViewer({
     });
   }, []);
   const activeHostId = games.find((game) => game.thread_id === selectedThread)?.host_id ?? null;
-  const gameRunning = Boolean(selectedThread && games.find((game) => game.thread_id === selectedThread)?.game_started);
+  const gameRunning = gameStarted;
 
   if (error) {
     return (
@@ -1397,7 +1464,19 @@ export default function MapViewer({
             draggable={hostTools?.dragAvatars ?? false}
             onOpen={handleOpenAvatar}
           />
+          <LiveSelectionLabels labels={selectionLabels} worldWidth={worldWidth} />
         </MapContainer>
+
+        {/* Live: how many people have this game's map open right now. */}
+        {live.connected && live.viewers !== null && live.viewers > 1 && (
+          <div
+            className="pointer-events-none absolute bottom-4 z-[900] flex items-center gap-1.5 rounded-full border border-white/10 bg-slate-950/75 px-3 py-1 text-xs font-semibold text-slate-200 shadow-lg backdrop-blur-md transition-[right]"
+            style={{ right: selected ? (drawerMinimized ? 64 : 396) : 16 }}
+          >
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" aria-hidden />
+            {live.viewers} viewing
+          </div>
+        )}
 
         {/* Hovered nation's name — the same pill as the game setup map. */}
         {hoverName && (
