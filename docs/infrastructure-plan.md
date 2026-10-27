@@ -124,8 +124,9 @@ the data is ~20 MB of the 1 GB limit), Cloudflare in front,
 UptimeRobot/BetterStack for alerts. Both apps connect with `MYSQL_SSL_CA`
 (Aiven's CA certificate) so the connection is encrypted and the server is
 checked. Data is copied with `scripts/copy_database.py` (skips IronLegion's
-tables, compares row counts). Backups are manual, before every major update:
-`py -3 scripts/copy_database.py --backup` (restore with `--restore FILE`).
+tables, compares row counts). Backups: nightly to a private Backblaze B2
+bucket (GitHub job, newest 14 kept) plus a manual one before every major
+update — see `docs/backups.md`.
 
 > **Reminder — before the final switch-over (step 7):** upgrade Aiven Free
 > to **Aiven Developer ($5/month)** for (a) choosing the region (Frankfurt,
