@@ -1,0 +1,69 @@
+name: Database backup
+
+# Nightly copy of the GameMaster database (Aiven) to a private Backblaze B2
+# bucket, keeping the newest 14. Restore steps: docs/backups.md.
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency: db-backup
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -q mysql-connector-python
+
+      - name: Back up the database
+        env:
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_CA: ${{ secrets.DB_CA }}
+        run: |
+          set -euo pipefail
+          printf '%s\n' "$DB_CA" > scripts/_ca.pem
+          {
+            printf 'TARGET_HOST=%s\n' "$DB_HOST"
+            printf 'TARGET_PORT=%s\n' "$DB_PORT"
+            printf 'TARGET_USER=%s\n' "$DB_USER"
+            printf 'TARGET_PASSWORD=%s\n' "$DB_PASSWORD"
+            printf 'TARGET_DATABASE=%s\n' "$DB_NAME"
+            printf 'TARGET_SSL_CA=scripts/_ca.pem\n'
+          } > scripts/_copy.env
+          python scripts/copy_database.py --backup
+
+      - name: Upload to Backblaze B2 and keep the newest 14
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.B2_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.B2_APP_KEY }}
+          B2_BUCKET: ${{ secrets.B2_BUCKET }}
+          B2_ENDPOINT: ${{ secrets.B2_ENDPOINT }}
+          AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+          AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
+        run: |
+          set -euo pipefail
+          host="${B2_ENDPOINT#https://}"
+          export AWS_DEFAULT_REGION="$(echo "$host" | cut -d. -f2)"
+          s3() { aws s3 "$@" --endpoint-url "https://$host" --only-show-errors; }
+          for file in backups/*.json.gz; do
+            s3 cp "$file" "s3://$B2_BUCKET/$(basename "$file")"
+            echo "Uploaded $(basename "$file") ($(du -k "$file" | cut -f1) KB)."
+          done
+          aws s3 ls "s3://$B2_BUCKET/" --endpoint-url "https://$host" \
+            | awk '{print $4}' | grep '^gamemaster-.*\.json\.gz$' | sort | head -n -14 \
+            | while read -r old; do
+                s3 rm "s3://$B2_BUCKET/$old"
+                echo "Removed old backup $old."
+              done
