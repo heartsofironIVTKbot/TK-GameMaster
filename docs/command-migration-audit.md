@@ -45,7 +45,7 @@ website.
 > Attendance pages) took its place.
 > Rows marked ✅ below are done; ❌ = removed.
 >
-> Now: /help, /info, /list_code, /spawn, /close.
+> Now: /help, /info, /spawn, /close.
 >
 > The chat-log upload + AI analysis (lived in the Host Control Center) is
 > now on the Games page, with stricter grading — see
@@ -135,7 +135,7 @@ and /game_start, /game_end, /game_cancel and /announce_game (Games page).
 | ✅ /empty_draft_pool | Host | Clear leftover pool players and finish the draft | Same card: "Finish the draft" |
 | ❌ /draw_for | Host | Draw (or redraw) a Fortunes of War card for a player | Removed; comes back with the Casino integration |
 | ❌ /gamble_for | Host / Senior | Get a link to the web casino override panel for a player | Removed; comes back with the Casino integration |
-| /list_code | Host | Rebuild the Fortunes submod sync messages | Add-on card button |
+| ❌ /list_code | Host | Rebuild the Fortunes submod sync messages | Removed; comes back with the Fortunes of War → Casino merge |
 
 ### Move to the Database page (member and role admin)
 

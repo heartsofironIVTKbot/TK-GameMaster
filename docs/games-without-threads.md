@@ -20,7 +20,8 @@ announcement post stays and links to the map.
 
 Removed commands: **/spawn_panel** (no panels to re-post) and
 **/run_ai_analysis** (the Games page's chat-log card does it). Discord now
-has three commands: `/help`, `/info` and `/list_code`.
+has two commands: `/help` and `/info` (`/list_code` was removed later; it
+comes back with the Fortunes of War → Casino merge).
 
 ## The announcement post
 

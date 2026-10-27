@@ -279,8 +279,7 @@ Bruh's factions (it's built on TFB's country files).
 **Which servers are live.** The bot works on TommyKay always, and on any
 other server once its setup is finished and the bot is in it. Until then the
 bot stays quiet there (only the setup wizard's "Create for me" works). A
-server that finishes setup gets GameMaster's slash commands right away,
-except the TommyKay-only `/list_code`. (Re-syncing
+server that finishes setup gets GameMaster's slash commands right away. (Re-syncing
 commands is the dashboard's "Re-sync commands" button; the bot also syncs on
 every start.)
 
