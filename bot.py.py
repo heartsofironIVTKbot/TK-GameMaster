@@ -23751,15 +23751,29 @@ def _rank_for_acclamations(branch: str, acclamations: int) -> str:
     return _lowest_host_rank(branch)
 
 
+def _senior_powers_rank(branch: str) -> str | None:
+    """The rank with Senior host powers in a branch: Senior, or Full when
+    Senior is switched off and Full hosts take over (None = nobody)."""
+    if _host_rank_on(branch, "Senior"):
+        return "Senior"
+    return "Full" if (HOST_BRANCHES.get(branch) or {}).get("full_takes_senior", True) else None
+
+
 def _can_rate_hosts(member, branch: str | None = None) -> bool:
-    """Host Management and admins rate any branch; a Senior Host rates the
-    branch they're Senior in (branch None = any branch)."""
+    """Host Management and admins rate any branch; a host with Senior host
+    powers rates their own branch (branch None = any branch)."""
     if member is None:
         return False
     if _member_is_staff(member):
         return True
     branches = [branch] if branch else list(HOST_BRANCHES)
-    return any(_host_rank(member, b) == "Senior" for b in branches if b in HOST_BRANCHES)
+    for b in branches:
+        if b not in HOST_BRANCHES:
+            continue
+        needed = _senior_powers_rank(b)
+        if needed and _host_rank(member, b) == needed:
+            return True
+    return False
 
 
 async def apply_host_rating(
@@ -25333,24 +25347,27 @@ _SCHEDULE_STATUS_EMOJI = {
 
 
 
-# ————— Scheduling panel (server settings → Channels) —————
-# A pinned post in a host channel with buttons to the website — scheduling
-# happens on the Calendar. It replaced the old auto-updating schedule board.
+# ————— Host Panel (server settings → Channels) —————
+# A pinned post in a host channel with buttons to the website's host pages.
+# It replaced the old auto-updating schedule board.
 # Posted once automatically when its channel is set, and again from the
 # settings ("Post / re-post the panel"), which removes the old one.
-SCHEDULE_PANEL_KEY = "schedule_panel"  # bot_config: {"channel_id", "message_id"}
+SCHEDULE_PANEL_KEY = "schedule_panel"  # bot_config: {"channel_id", "message_id", "version"}
+# Raise when the panel's text or buttons change: older panels are re-posted on start.
+SCHEDULE_PANEL_VERSION = 2
 
 
 def _schedule_panel_embed() -> discord.Embed:
     embed = discord.Embed(
-        title="📅 Game Scheduling",
+        title="🛠️ Host Panel",
         color=discord.Color.brand_green(),
         description=(
             "Games are scheduled and run on the website.\n\n"
             "🗓️ **Calendar** — schedule a game, edit or cancel yours, and see every game and locked day.\n"
             "🎮 **Games** — start, end and cancel games, reminders, hot-join requests, rules & mods, "
             "the chat log and its AI analysis.\n"
-            "📋 **Attendance** — who showed up, corrections and each game's history.\n\n"
+            "📋 **Attendance** — who showed up, corrections and each game's history.\n"
+            "🗂️ **Database** — player records: commends, warnings, bans, Merit, verification, VIP and host ranks.\n\n"
             f"Log in with Discord — you need a host rank in {_community_name()}."
         ),
     )
@@ -25364,6 +25381,7 @@ def _schedule_panel_view() -> discord.ui.View:
         ("Open the Calendar", HOST_CALENDAR_URL, "🗓️"),
         ("Games", f"{WEB_SITE_URL}/games", "🎮"),
         ("Attendance", f"{WEB_SITE_URL}/attendance", "📋"),
+        ("Database", f"{WEB_SITE_URL}/database", "🗂️"),
     ):
         view.add_item(discord.ui.Button(label=label, style=discord.ButtonStyle.link, url=url, emoji=emoji))
     return view
@@ -25375,14 +25393,14 @@ async def _post_schedule_panel(guild) -> str:
     channel_id = int(G.SCHEDULE_CHANNEL_ID or 0)
     channel = guild.get_channel(channel_id) if channel_id else None
     if channel is None:
-        raise ModerationError("❌ Pick the scheduling panel channel in Channels (and save) first.")
+        raise ModerationError("❌ Pick the Host Panel channel in Channels (and save) first.")
     try:
         message = await channel.send(embed=_schedule_panel_embed(), view=_schedule_panel_view())
     except discord.Forbidden:
         raise ModerationError(f"❌ GameMaster can't post in #{channel.name} — give it View Channel and Send Messages there.")
     pinned = True
     try:
-        await message.pin(reason="GameMaster scheduling panel")
+        await message.pin(reason="GameMaster Host Panel")
     except discord.HTTPException:
         pinned = False
     config = await read_json(BOT_CONFIG_FILE)
@@ -25394,26 +25412,29 @@ async def _post_schedule_panel(guild) -> str:
                 await (await old_channel.fetch_message(int(old["message_id"]))).delete()
         except Exception:
             pass  # already gone
-    config[SCHEDULE_PANEL_KEY] = {"channel_id": channel.id, "message_id": message.id}
+    config[SCHEDULE_PANEL_KEY] = {"channel_id": channel.id, "message_id": message.id, "version": SCHEDULE_PANEL_VERSION}
     await write_json(BOT_CONFIG_FILE, config)
-    return f"Posted the scheduling panel in #{channel.name}" + (
+    return f"Posted the Host Panel in #{channel.name}" + (
         " and pinned it" if pinned else " (couldn't pin it — GameMaster needs Manage Messages there)"
     )
 
 
 async def _ensure_schedule_panel(guild) -> None:
-    """Post the panel once when its channel is set and it isn't there yet."""
+    """Post the panel when its channel is set and it isn't there yet (or is an older version)."""
     with guild_scope(guild.id):
         if not G.SCHEDULE_CHANNEL_ID:
             return
         config = await read_json(BOT_CONFIG_FILE)
         current = config.get(SCHEDULE_PANEL_KEY) or {}
-        if int(current.get("channel_id") or 0) == int(G.SCHEDULE_CHANNEL_ID):
+        if (
+            int(current.get("channel_id") or 0) == int(G.SCHEDULE_CHANNEL_ID)
+            and int(current.get("version") or 1) >= SCHEDULE_PANEL_VERSION
+        ):
             return
         try:
             print(f"📅 {guild.name}: {await _post_schedule_panel(guild)}")
         except Exception as e:
-            print(f"[WARN] scheduling panel for {guild.id} failed: {e}")
+            print(f"[WARN] Host Panel for {guild.id} failed: {e}")
 
 
 SCHEDULE_MODE_CHOICES = [
@@ -31473,7 +31494,11 @@ def _default_guild_settings(name: str = "") -> dict:
             "ticket_support_roles": [], "developer_roles": [],
         },
         "branches": {
-            b: {"enabled": True, "ranks": {r: None for r in HOST_RANKS}, "ranks_on": {r: True for r in OPTIONAL_HOST_RANKS}}
+            b: {
+                "enabled": True, "ranks": {r: None for r in HOST_RANKS}, "ranks_on": {r: True for r in OPTIONAL_HOST_RANKS},
+                # With Senior off: Full hosts get Senior host powers (rating the branch's hosts).
+                "full_takes_senior": True,
+            }
             for b in SETTINGS_BRANCHES
         },
         "roles": {
@@ -31524,6 +31549,7 @@ def _settings_from_constants(name: str = "") -> dict:
                 "enabled": bool(cfg.get("enabled", True)),
                 "ranks": {rank: _sid(cfg["ranks"].get(rank)) for rank in HOST_RANKS},
                 "ranks_on": {rank: True for rank in OPTIONAL_HOST_RANKS},
+                "full_takes_senior": True,
             }
         s["roles"]["verified"] = {"RP": _sid(ROLE_IDS.get("HOI4_VERIFIED")), "HIST": _sid(ROLE_IDS.get("HIST_VERIFIED"))}
         s["roles"]["trusted"] = {"RP": _sid(ROLE_IDS.get("HOI4_RP_TRUSTED")), "HIST": _sid(ROLE_IDS.get("HOI4_MP_TRUSTED"))}
@@ -31594,6 +31620,7 @@ def _normalize_guild_settings(raw, name: str = "") -> dict:
             "enabled": bool(entry.get("enabled", True)),
             "ranks": {rank: _sid(ranks.get(rank)) for rank in HOST_RANKS},
             "ranks_on": {rank: bool(ranks_on.get(rank, True)) for rank in OPTIONAL_HOST_RANKS},
+            "full_takes_senior": bool(entry.get("full_takes_senior", True)),
         }
     if not any(s["branches"][b]["enabled"] for b in SETTINGS_BRANCHES):
         s["branches"]["RP"]["enabled"] = True
@@ -31777,6 +31804,7 @@ def _apply_settings(rt: GuildRuntime, settings: dict) -> None:
     branches = d["HOST_BRANCHES"]
     for b in SETTINGS_BRANCHES:
         branches[b]["enabled"] = bool(s["branches"][b]["enabled"])
+        branches[b]["full_takes_senior"] = bool(s["branches"][b].get("full_takes_senior", True))
         for rank in HOST_RANKS:
             rid = _iid(s["branches"][b]["ranks"][rank])
             # A switched-off rank has no role: nobody is promoted to it or given it.
