@@ -30,7 +30,8 @@ scripts/_*.mjs
 scripts/_*.cjs
 scripts/_*.geojson
 scripts/_*.json
-# Database copy credentials and the provider's CA certificate
+# Database copy credentials, the provider's CA certificate and backups
+backups/
 scripts/_*.env
 scripts/_*.crt
 *.crt

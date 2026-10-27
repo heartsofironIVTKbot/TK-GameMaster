@@ -119,11 +119,18 @@ runs** (a proper, dedicated host) and **backups**.
 before buying).
 
 **Chosen (Oct 2026):** website on Render (Frankfurt), bot on Apollo,
-**DigitalOcean Managed MySQL** (Frankfurt, own database — not shared with
-IronLegion), Cloudflare in front, UptimeRobot/BetterStack for alerts. Both
-apps connect with `MYSQL_SSL_CA` (DigitalOcean's CA certificate) so the
-connection is encrypted and the server is checked. Data is copied with
-`scripts/copy_database.py` (skips IronLegion's tables, compares row counts).
+**Aiven for MySQL, Free plan** (own database — not shared with IronLegion;
+the data is ~20 MB of the 1 GB limit), Cloudflare in front,
+UptimeRobot/BetterStack for alerts. Both apps connect with `MYSQL_SSL_CA`
+(Aiven's CA certificate) so the connection is encrypted and the server is
+checked. Data is copied with `scripts/copy_database.py` (skips IronLegion's
+tables, compares row counts). Backups are manual, before every major update:
+`py -3 scripts/copy_database.py --backup` (restore with `--restore FILE`).
+
+> **Reminder — before the final switch-over (step 7):** upgrade Aiven Free
+> to **Aiven Developer ($5/month)** for (a) choosing the region (Frankfurt,
+> next to Render) and (b) uptime guarantees and email support. It's a
+> one-click upgrade; connection details stay the same.
 
 ### Steps
 1. Buy a domain (if not already) and put it on Cloudflare.
