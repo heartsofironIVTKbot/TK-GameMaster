@@ -32,6 +32,7 @@ import {
 import mapCapitalsData from "@/data/mapCapitals.json";
 import { boardDisplayName, classifyRegions } from "@/data/nationCategories";
 import { reservationLookup } from "@/lib/reservationMatch";
+import { versionedMapUrl } from "@/lib/mapVersion";
 import {
   DEFAULT_SCENARIO,
   SCENARIOS,
@@ -848,7 +849,7 @@ export default function MapViewer({
 
   useEffect(() => {
     let cancelled = false;
-    fetch(geoJsonUrl)
+    fetch(versionedMapUrl(geoJsonUrl))
       .then((response) => {
         if (!response.ok) {
           throw new Error(`Failed to load map: HTTP ${response.status}`);

@@ -21,6 +21,7 @@ import {
 } from "@/components/MapViewer";
 import type { HighlightState, HoverTarget } from "@/components/nationHighlights";
 import { SCENARIOS, type ScenarioId } from "@/data/scenarioData";
+import { versionedMapUrl } from "@/lib/mapVersion";
 import type {
   NationFeatureCollection,
   NationFeatureProps,
@@ -88,7 +89,7 @@ export default function HostLockMap({
 
   useEffect(() => {
     let cancelled = false;
-    fetch(url)
+    fetch(versionedMapUrl(url))
       .then((response) => {
         if (!response.ok) throw new Error(`Failed to load map: HTTP ${response.status}`);
         return response.json() as Promise<NationFeatureCollection>;
