@@ -33,7 +33,8 @@ import mysql.connector
 
 ALWAYS_EXCLUDED = {
     "guild_config", "ironlegion_state", "verified_users", "steam_alias_history",
-    "ironlegion_guild_settings", "old_guild_settings_history",
+    "ironlegion_guild_settings", "old_guild_settings_history", "blacklist", "suspicious_users",
+    "verification_logs", "verification_tickets", "guild_authenticated_role",
 }
 BATCH = 1000
 
