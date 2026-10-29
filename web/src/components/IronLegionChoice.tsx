@@ -22,9 +22,9 @@ export default function IronLegionChoice({
       : `${IRONLEGION_RULE_LABELS.server} (${serverRequires ? "required" : "not required"})`;
   return (
     <div>
-      <p className="mb-1.5 text-[11px] font-semibold text-slate-400">🛡️ IronLegion Steam verification</p>
+      <p className="mb-1.5 text-[11px] font-semibold text-slate-400">🛡️ IronLegion Steam authentication</p>
       <Segmented<IronLegionRule>
-        ariaLabel="Require IronLegion Steam verification"
+        ariaLabel="Require IronLegion Steam authentication"
         size="sm"
         value={ironLegionRule(value)}
         onChange={(rule) => onChange(ironLegionValue(rule))}
@@ -35,7 +35,7 @@ export default function IronLegionChoice({
         ]}
       />
       <p className="mt-1.5 text-[11px] leading-relaxed text-slate-500">
-        Required: players need the verified role IronLegion gives on this server to reserve. Hosts, staff and VIPs are never locked out.
+        Required: players need the authenticated role IronLegion gives on this server to reserve. Hosts, staff and VIPs are never locked out.
       </p>
     </div>
   );

@@ -9,7 +9,7 @@ announcement post stays and links to the map.
 | Used to be in the thread | Now |
 | --- | --- |
 | The reservation list | The website map (it always was the real list) |
-| IronLegion "Verify account" prompt | When a game requires IronLegion, the announcement says where to verify, and the map shows a "Steam verification required" note above the nations with a link to the server's IronLegion verify channel. Hot-join checks it too |
+| IronLegion "Authenticate" prompt | When a game requires IronLegion, the announcement says where to authenticate, and the map shows a "Steam authentication required" note above the nations with a link to the server's IronLegion authentication channel. Hot-join checks it too |
 | Draft Pool board, "your turn" posts | The map's draft panel; captains still get a DM on their turn |
 | **Hot-Join panel** | The map: in a running game, click a free nation → **Ask to hot-join**. The host gets a DM and decides on the Games page (**Hot-join requests** card) |
 | **Crash Report panel** (+ the DM upload) | The website's **/crash** page: describe what happened, pick the zipped logs folder, send. Linked from the map and from the "game is starting" DM |
@@ -65,7 +65,7 @@ website. No new panels are posted in them.
    "🔴 In progress" in the game picker) and clicks a free nation.
 2. **🔥 Ask to hot-join as …** sends the request. Checks: the game is running,
    the nation is free and playable, the player isn't already in the game,
-   and, when the game requires it, they're verified with IronLegion (they
+   and, when the game requires it, they're authenticated with IronLegion (they
    hold the role IronLegion gives on that server).
 3. The game's host gets a Discord DM with a link to the Games page.
 4. On the Games page, **Hot-join requests** lists them (waiting ones first).

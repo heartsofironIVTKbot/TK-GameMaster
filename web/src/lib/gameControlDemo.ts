@@ -283,11 +283,11 @@ export function applyDemoAccess(payload: Record<string, unknown>, hostId: string
     const required = typeof payload.required === "boolean" ? payload.required : null;
     data.require_ironlegion = required;
     return access(
-      "🛡️ IronLegion verification",
+      "🛡️ IronLegion authentication",
       required === true
-        ? "Players need IronLegion's verified role to reserve in this game."
+        ? "Players need IronLegion's authenticated role to reserve in this game."
         : required === false
-          ? "This game doesn't require IronLegion verification."
+          ? "This game doesn't require IronLegion authentication."
           : "This game follows the server's setting.",
     );
   }

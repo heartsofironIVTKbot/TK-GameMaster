@@ -12,7 +12,7 @@ set up entirely on the website.
 | Player records across servers | **Separate per server, with alerts.** Each server keeps its own commends, warnings and bans. When someone game-banned on another server joins, that server's staff get a notice and decide. |
 | Who can add the bot | **Anyone, instantly.** |
 | Who can set it up | The **server owner** and **Discord admins** (Administrator permission). The owner can also let the roles mapped as **Host Management** edit settings. |
-| Extra features for other servers | **Hearts of Valor & Merit** (on/off). **Require IronLegion** Steam verification (on/off). Casino (the randomizer) and Fortunes of War stay TommyKay-only, and so does AI chat-log analysis. |
+| Extra features for other servers | **Hearts of Valor & Merit** (on/off). **Require IronLegion** Steam authentication (on/off). Casino (the randomizer) and Fortunes of War stay TommyKay-only, and so does AI chat-log analysis. |
 | Game modes | **Built-in modes only**: Roleplay (R56), Millennium Dawn, Novum Vexillum, Kaiserreich FFA, The Fire Rises, Historical Vanilla, TFB, Hearts of Oak, Horstorical, BFFU 2. Each server turns modes on or off and sets that mode's channels, ping role, rules and mod links. |
 | Rule numbers | **Adjustable per server**, starting from TommyKay's numbers. |
 | Bot permissions | **Only what it needs** (no Administrator). Setup runs a health check. |
@@ -191,7 +191,7 @@ mode's. Per mode:
 - **Hosting success**: average player feedback rating (out of 5 stars) that
   counts as a successful hosting (3.0).
 - **Require IronLegion** (off by default): every game needs players to hold
-  the verified role IronLegion gives on this server before they reserve.
+  the authenticated role IronLegion gives on this server before they reserve.
   Hosts, staff and VIPs never need it. A preset, the calendar's setup form
   (Access) and the Games page can switch it on or off for one game ("Server
   setting" follows this switch). The bot reads IronLegion's role through a

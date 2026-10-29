@@ -2134,10 +2134,10 @@ def _has_vip_role(member) -> bool:
 # IRONLEGION STEAM VERIFICATION (optional, per server or per game)
 # --------------------------------------------------------------------------
 # A server (Features → "Require IronLegion") or one game can require players
-# to be verified by IronLegion before they reserve. Verified = they hold the
-# verified role IronLegion gives on that server, so all of IronLegion's own
+# to be authenticated by IronLegion before they reserve. Authenticated = they hold the
+# authenticated role IronLegion gives on that server, so all of IronLegion's own
 # rules count without GameMaster knowing them. GameMaster reads only which
-# role and which verify channel that is, from IronLegion's read-only view
+# role and which authentication channel that is, from IronLegion's read-only view
 # `gamemaster_servers` (settings IRONLEGION_DB_*; optional). Without that
 # connection, or before IronLegion is set up on the server, nothing is locked.
 # If IronLegion's database can't be reached, the last row read is used and
@@ -2202,7 +2202,7 @@ async def _ironlegion_server(guild_id: int) -> Optional[dict]:
 
 
 def _ironlegion_role_of(row: Optional[dict]) -> int:
-    """The verified role to check, or 0 when IronLegion isn't usable on that server."""
+    """The authenticated role to check, or 0 when IronLegion isn't usable on that server."""
     if not row or not row.get("bot_present"):
         return 0
     return int(row.get("verified_role_id") or 0)
@@ -2224,7 +2224,7 @@ async def _tell_ironlegion_outage(guild_id: int) -> None:
         return
     try:
         await channel.send(
-            "⚠️ GameMaster can't reach IronLegion right now, so the Steam verification check is skipped "
+            "⚠️ GameMaster can't reach IronLegion right now, so the Steam authentication check is skipped "
             "and players can reserve. It's checked again every few minutes."
         )
     except discord.HTTPException:
@@ -2259,7 +2259,7 @@ async def is_user_authenticated(
 
     True when the game (or the server) doesn't require IronLegion, when the
     member bypasses (admin, host, senior management, VIP), when IronLegion
-    isn't set up on the server, or when they hold IronLegion's verified role
+    isn't set up on the server, or when they hold IronLegion's authenticated role
     there. Fails open for None / non-Member values (no roles to inspect).
     """
     if not isinstance(member, discord.Member):
@@ -2273,7 +2273,7 @@ async def is_user_authenticated(
 
 
 async def _ironlegion_announcement_line(game_switch) -> str:
-    """The announcement's note when the game requires IronLegion: where to verify.
+    """The announcement's note when the game requires IronLegion: where to authenticate.
     Empty when it doesn't, or IronLegion isn't set up on the server (nobody is locked out)."""
     required = bool(game_switch) if isinstance(game_switch, bool) else bool(SERVER_FEATURES.get("ironlegion", False))
     row = await _ironlegion_server(cur_gid()) if required else None
@@ -2281,17 +2281,17 @@ async def _ironlegion_announcement_line(game_switch) -> str:
         return ""
     channel_id = int(row.get("verify_channel_id") or 0)
     where = f" in <#{channel_id}>" if channel_id else ""
-    return f"\n**:shield: Steam verification required - press Verify{where} (IronLegion) before you reserve**"
+    return f"\n**:shield: Steam authentication required - press Authenticate{where} (IronLegion) before you reserve**"
 
 
 def ironlegion_unverified_message(guild_id: int, who: Optional[str] = None) -> str:
-    """Why a reservation was refused, pointing at the server's verify channel."""
+    """Why a reservation was refused, pointing at the server's authentication channel."""
     entry = _ironlegion_rows.get(int(guild_id or 0)) or {}
     channel_id = int((entry.get("row") or {}).get("verify_channel_id") or 0)
-    where = f"Press **Verify** in <#{channel_id}>" if channel_id else "Press **Verify** on the server's IronLegion panel"
+    where = f"Press **Authenticate** in <#{channel_id}>" if channel_id else "Press **Authenticate** on the server's IronLegion panel"
     if who:
-        return f"🔒 {who} isn't verified with IronLegion yet, and this game requires it."
-    return f"🔒 **Reservation rejected:** this game requires your Steam account to be verified with IronLegion.\n-# {where}, then try again."
+        return f"🔒 {who} isn't authenticated with IronLegion yet, and this game requires it."
+    return f"🔒 **Reservation rejected:** this game requires your Steam account to be authenticated with IronLegion.\n-# {where}, then try again."
 
 
 # ==========================================================================
@@ -22219,10 +22219,10 @@ async def _process_web_game_access(req: dict):
         required = bool(required) if isinstance(required, bool) else None
         game["require_ironlegion"] = required
         server = "requires" if SERVER_FEATURES.get("ironlegion", False) else "doesn't require"
-        title = "🛡️ IronLegion verification"
+        title = "🛡️ IronLegion authentication"
         summary = (
-            "Players need IronLegion's verified role to reserve in this game." if required is True
-            else "This game doesn't require IronLegion verification." if required is False
+            "Players need IronLegion's authenticated role to reserve in this game." if required is True
+            else "This game doesn't require IronLegion authentication." if required is False
             else f"This game follows the server's setting (the server {server} it)."
         )
         if required is not False and not _ironlegion_role_of(await _ironlegion_server(cur_gid())):

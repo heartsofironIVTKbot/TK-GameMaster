@@ -70,9 +70,9 @@ interface DirectoryFlag extends RowDataPacket {
 }
 
 /**
- * IronLegion Steam verification, when the game (or its server) requires it.
+ * IronLegion Steam authentication, when the game (or its server) requires it.
  * The bot keeps each member's `verified` flag in web_member_directory: they
- * hold the verified role IronLegion gives on that server (or never need it).
+ * hold the authenticated role IronLegion gives on that server (or never need it).
  * No row yet, or an older table: let them through, like the bot does when it
  * can't check (and the bot re-checks its own reservation paths).
  */
@@ -86,7 +86,7 @@ async function ironLegionRefusal(connection: PoolConnection, guildId: string, us
     );
     if (rows[0] && !Number(rows[0].verified)) {
       const url = ironLegionVerifyUrl(guildId, (await memberRoleIds(guildId).catch(() => null))?.ironlegion_verify_channel);
-      return `This game requires IronLegion Steam verification. Press Verify ${url ? `in ${url}` : "on the server's IronLegion panel in Discord"}; once you're verified it can take a few minutes before you can reserve here.`;
+      return `This game requires IronLegion Steam authentication. Press Authenticate ${url ? `in ${url}` : "on the server's IronLegion panel in Discord"}; once you're authenticated it can take a few minutes before you can reserve here.`;
     }
   } catch (error) {
     const code = (error as { code?: string }).code;

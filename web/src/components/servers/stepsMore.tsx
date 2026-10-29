@@ -652,12 +652,12 @@ export function FeaturesStep({ ctx }: { ctx: StepContext }) {
           description="When someone joins who is game-banned on another server that uses GameMaster, staff get a notice in the staff notices channel (or the audit log). Records stay separate: nothing changes here automatically."
         />
       </Card>
-      <Card icon="🛡️" title="IronLegion Steam verification">
+      <Card icon="🛡️" title="IronLegion Steam authentication">
         <Toggle
           checked={draft.features.ironlegion}
           onChange={(checked) => ctx.update((s) => void (s.features.ironlegion = checked))}
           label="Require IronLegion for every game"
-          description="Players need the verified role IronLegion gives on this server before they reserve (hosts, staff and VIPs never need it). Add IronLegion to the server and set it up there first; until then nobody is locked out. A preset, the calendar or the Games page can switch it on or off for one game."
+          description="Players need the authenticated role IronLegion gives on this server before they reserve (hosts, staff and VIPs never need it). Add IronLegion to the server and set it up there first; until then nobody is locked out. A preset, the calendar or the Games page can switch it on or off for one game."
         />
       </Card>
     </div>
