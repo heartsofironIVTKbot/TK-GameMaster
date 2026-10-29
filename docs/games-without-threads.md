@@ -65,7 +65,8 @@ website. No new panels are posted in them.
    "🔴 In progress" in the game picker) and clicks a free nation.
 2. **🔥 Ask to hot-join as …** sends the request. Checks: the game is running,
    the nation is free and playable, the player isn't already in the game,
-   and their Steam account is verified (LegionMaster).
+   and, when the game requires it, they're verified with IronLegion (they
+   hold the role IronLegion gives on that server).
 3. The game's host gets a Discord DM with a link to the Games page.
 4. On the Games page, **Hot-join requests** lists them (waiting ones first).
    **Approve** runs the normal late join: the nation, the Gamer Pass, a voice

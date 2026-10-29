@@ -236,7 +236,6 @@ Saving rules:
   settings (first restart after this update).
 
 Not moved to settings yet:
-- IronLegion's Authenticated role and verify channel.
 - The custom emojis and the bot designer's user id.
 - The host log webhook (`HOST_LOG_WEBHOOK_URL`). It is only used while the
   host log is still its original channel; after a change the bot posts to

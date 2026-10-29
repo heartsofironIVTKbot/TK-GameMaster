@@ -59,7 +59,7 @@ npm run dev
 
 `HOME_GUILD_ID` in the bot's `.env` is required: the server this process treats as home (Casino add-ons and AI log tools). The website's `DISCORD_GUILD_ID` must be the same id. No roles or channels are written in the code. Every server, home included, starts blank and is set up on the website. A second bot used for testing must have its **own** token and its **own** `HOME_GUILD_ID`. Do not point a test bot at the live database.
 
-IronLegion's Steam lock on reservations is off unless `IRONLEGION_AUTHENTICATED_ROLE_ID` is set on the bot.
+IronLegion's Steam lock on reservations is off unless a server turns it on and the bot has IronLegion's read-only database login (`IRONLEGION_DB_*`, see `GameMaster Bot/.env.example`). It then checks players hold the verified role IronLegion gives on that server.
 
 AI chat-log grading needs `GENAI_API_KEY`. Without that key the rest of GameMaster still runs.
 

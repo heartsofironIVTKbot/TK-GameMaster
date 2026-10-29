@@ -82,11 +82,12 @@ def _env_int(name: str, default: int) -> int:
 _PEM_BLOCK = re.compile(r"-----BEGIN CERTIFICATE-----(.*?)-----END CERTIFICATE-----", re.S)
 
 
-def _mysql_ca_options() -> dict:
+def _mysql_ca_options(env_name: str = "MYSQL_SSL_CA", file_name: str = "gamemaster-mysql-ca.pem") -> dict:
     """MYSQL_SSL_CA: the database provider's CA certificate, as a file name or
     as the PEM text itself. Panels often turn the certificate's line breaks
-    into spaces or literal \\n, so the PEM is rebuilt from its base64 body."""
-    raw = os.getenv("MYSQL_SSL_CA", "").strip().strip("'\"").strip()
+    into spaces or literal \\n, so the PEM is rebuilt from its base64 body.
+    (IRONLEGION_DB_SSL_CA does the same for IronLegion's database.)"""
+    raw = os.getenv(env_name, "").strip().strip("'\"").strip()
     if not raw:
         return {}
     candidates = [raw, os.path.join(os.path.dirname(os.path.abspath(__file__)), raw)]
@@ -102,12 +103,12 @@ def _mysql_ca_options() -> dict:
         blocks.append("-----BEGIN CERTIFICATE-----\n" + "\n".join(lines) + "\n-----END CERTIFICATE-----\n")
     if not blocks:
         print(
-            f"⚠️ MYSQL_SSL_CA has no complete certificate ({len(raw)} characters; it must run from "
+            f"⚠️ {env_name} has no complete certificate ({len(raw)} characters; it must run from "
             "-----BEGIN CERTIFICATE----- to -----END CERTIFICATE-----). The database connection is "
             "still encrypted, but the server's certificate is NOT checked."
         )
         return {"ssl_disabled": False}
-    ca_path = os.path.join(tempfile.gettempdir(), "gamemaster-mysql-ca.pem")
+    ca_path = os.path.join(tempfile.gettempdir(), file_name)
     with open(ca_path, "w", encoding="utf-8") as handle:
         handle.write("".join(blocks))
     return {"ssl_disabled": False, "ssl_ca": ca_path, "ssl_verify_cert": True}
@@ -724,8 +725,8 @@ CREATE TABLE IF NOT EXISTS web_schedule_requests (
 """
 
 # Searchable server members for the live map's host tools (the web can't read
-# Discord's member list). `verified` mirrors is_user_authenticated()'s role
-# rules (without the per-thread overrides, which the bot re-checks on apply).
+# Discord's member list). `verified` mirrors is_user_authenticated() at server
+# level (a game's own IronLegion switch is re-checked on apply).
 # `role_ids` is a JSON array of the member's role ids (highest first) for the
 # web's Discord-style profile card; `banner_hash` / `accent_color` are written
 # by the WEB at Discord login (bots can't read other users' banners) and are
@@ -2110,9 +2111,6 @@ ROLE_IDS = {
     "VALOR": 0,           # Hearts of Valor title — 25 merit points + 50 attended games
     "DISHONORED": 0,      # Dishonored title — auto-granted while any restriction is active
     "HIST_DISHONORED": 0,
-    # Steam Verification (IronLegion): the v2 "Authenticated" role the IronLegion
-    # bot grants on the home server. Unset = no Steam lock on reservations.
-    "AUTHENTICATED": _env_int("IRONLEGION_AUTHENTICATED_ROLE_ID", 0),
 }
 # Every VIP role (Server settings → Player roles). Any of them counts as VIP;
 # ROLE_IDS["VIP_ROLE_ID"] is the first, the one GameMaster gives out.
@@ -2132,167 +2130,157 @@ def _has_vip_role(member) -> bool:
     vip_ids = set(_vip_role_ids())
     return bool(vip_ids) and any(int(getattr(role, "id", 0) or 0) in vip_ids for role in getattr(member, "roles", []) or [])
 
-# The channel players are pointed to for Steam verification with LegionMaster.
-LEGION_MASTER_VERIFY_CHANNEL_ID: Optional[int] = _env_int("IRONLEGION_VERIFY_CHANNEL_ID", 0) or None
+# ==========================================================================
+# IRONLEGION STEAM VERIFICATION (optional, per server or per game)
+# --------------------------------------------------------------------------
+# A server (Features → "Require IronLegion") or one game can require players
+# to be verified by IronLegion before they reserve. Verified = they hold the
+# verified role IronLegion gives on that server, so all of IronLegion's own
+# rules count without GameMaster knowing them. GameMaster reads only which
+# role and which verify channel that is, from IronLegion's read-only view
+# `gamemaster_servers` (settings IRONLEGION_DB_*; optional). Without that
+# connection, or before IronLegion is set up on the server, nothing is locked.
+# If IronLegion's database can't be reached, the last row read is used and
+# players can still reserve; staff are told (at most once an hour).
+# ==========================================================================
+_IRONLEGION_TTL_SECONDS = 300.0
+_IRONLEGION_OUTAGE_NOTICE_SECONDS = 3600.0
+_ironlegion_rows: dict[int, dict] = {}        # guild id -> {"row": dict | None, "ts": float}
+_ironlegion_outage_told: dict[int, float] = {}
+
+
+def _ironlegion_db_config() -> Optional[dict]:
+    """The read-only connection to IronLegion's database, or None when not set."""
+    host, user = os.getenv("IRONLEGION_DB_HOST"), os.getenv("IRONLEGION_DB_USER")
+    password, database = os.getenv("IRONLEGION_DB_PASSWORD"), os.getenv("IRONLEGION_DB_NAME")
+    if not (host and user and password and database):
+        return None
+    return {
+        "host": host, "user": user, "password": password, "database": database,
+        "port": int(os.getenv("IRONLEGION_DB_PORT", "3306")),
+        "ssl_disabled": _env_bool("IRONLEGION_DB_SSL_DISABLED", False),
+        **_mysql_ca_options("IRONLEGION_DB_SSL_CA", "gamemaster-ironlegion-ca.pem"),
+        "connection_timeout": 5, "use_pure": True,
+    }
+
+
+_IRONLEGION_DB: Optional[dict] = _ironlegion_db_config()
+
+
+def _ironlegion_fetch_sync(config: dict, guild_id: int) -> Optional[dict]:
+    conn = mysql.connector.connect(**config)
+    try:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            "SELECT bot_present, verified_role_id, verify_channel_id FROM gamemaster_servers WHERE guild_id = %s",
+            (guild_id,),
+        )
+        row = cursor.fetchone()
+        cursor.close()
+        return row
+    finally:
+        conn.close()
+
+
+async def _ironlegion_server(guild_id: int) -> Optional[dict]:
+    """IronLegion's row for this server (cached), or None when there's none to use."""
+    if _IRONLEGION_DB is None or not guild_id:
+        return None
+    entry = _ironlegion_rows.get(guild_id)
+    if entry and time.time() - entry["ts"] < _IRONLEGION_TTL_SECONDS:
+        return entry["row"]
+    try:
+        row = await asyncio.to_thread(_ironlegion_fetch_sync, _IRONLEGION_DB, guild_id)
+    except Exception as e:
+        # Keep the last row (or none: no lock) and try again after the TTL.
+        _ironlegion_rows[guild_id] = {"row": entry["row"] if entry else None, "ts": time.time()}
+        _audit_log("WARN", f"IronLegion database unreachable (guild={guild_id}): {type(e).__name__}")
+        await _tell_ironlegion_outage(guild_id)
+        return entry["row"] if entry else None
+    _ironlegion_rows[guild_id] = {"row": row, "ts": time.time()}
+    return row
+
+
+def _ironlegion_role_of(row: Optional[dict]) -> int:
+    """The verified role to check, or 0 when IronLegion isn't usable on that server."""
+    if not row or not row.get("bot_present"):
+        return 0
+    return int(row.get("verified_role_id") or 0)
+
+
+def _ironlegion_role_cached(guild_id: int) -> int:
+    """Same, from the cache only (for code that can't wait on the database)."""
+    entry = _ironlegion_rows.get(int(guild_id or 0))
+    return _ironlegion_role_of(entry["row"]) if entry else 0
+
+
+async def _tell_ironlegion_outage(guild_id: int) -> None:
+    now = time.time()
+    if now - _ironlegion_outage_told.get(guild_id, 0.0) < _IRONLEGION_OUTAGE_NOTICE_SECONDS:
+        return
+    _ironlegion_outage_told[guild_id] = now
+    channel = bot.get_channel(G.HOST_MANAGEMENT_CHANNEL_ID) or bot.get_channel(G.HOST_LOG_CHANNEL_ID)
+    if channel is None:
+        return
+    try:
+        await channel.send(
+            "⚠️ GameMaster can't reach IronLegion right now, so the Steam verification check is skipped "
+            "and players can reserve. It's checked again every few minutes."
+        )
+    except discord.HTTPException:
+        pass
+
+
+def _ironlegion_required(thread_id=None) -> bool:
+    """Whether a game needs IronLegion: its own switch when it has one, else the server's."""
+    if thread_id is not None:
+        game = (_games_cache or {}).get(str(thread_id))
+        if isinstance(game, dict) and game.get("require_ironlegion") is not None:
+            return bool(game["require_ironlegion"])
+    return bool(SERVER_FEATURES.get("ironlegion", False))
+
+
+def _ironlegion_bypass(member) -> bool:
+    """Admins, hosts, senior management and VIPs are never locked out."""
+    try:
+        if member.guild_permissions.administrator:
+            return True
+    except Exception:
+        pass
+    role_ids = {role.id for role in getattr(member, "roles", []) or []}
+    return bool(role_ids.intersection(ALLOWED_HOST_ROLES) or role_ids.intersection(SENIOR_MANAGEMENT_ROLES)
+                or role_ids.intersection(_vip_role_ids()))
 
 
 async def is_user_authenticated(
     member: Optional[discord.Member], thread_id: Optional[int] = None
 ) -> bool:
-    """IronLegion v2 hard-lock — active by design (previously a disabled stub).
+    """The IronLegion Steam lock: True when this member may reserve in this game.
 
-    True when the member holds the active v2 "Authenticated" role granted by
-    IronLegion (steam_verify_bot) — ROLE_IDS["AUTHENTICATED"], set with
-    IRONLEGION_AUTHENTICATED_ROLE_ID. Without that role there is no lock.
-    Staff, hosts, senior management and VIPs always bypass so moderation and
-    hosting are never locked out. Fails open for None / non-Member values (no
-    guild roles to inspect), matching the historical call sites that pass a
-    cached (or possibly None) member.
-
-    Also honors the shared IronLegion override state: if verification is disabled
-    globally (server-wide) or for `thread_id` (via /disable_ironlegion), returns
-    True so the command is allowed regardless of the v2 role.
-
-    IronLegion's v1.0 legacy "Authenticated" role deliberately does NOT satisfy
-    this check — legacy accounts must re-verify via IronLegion to upgrade to v2.
+    True when the game (or the server) doesn't require IronLegion, when the
+    member bypasses (admin, host, senior management, VIP), when IronLegion
+    isn't set up on the server, or when they hold IronLegion's verified role
+    there. Fails open for None / non-Member values (no roles to inspect).
     """
     if not isinstance(member, discord.Member):
         return True
-    role_ids = {r.id for r in member.roles}
-    if member.guild_permissions.administrator:
+    if not _ironlegion_required(thread_id) or _ironlegion_bypass(member):
         return True
-    if role_ids.intersection(ALLOWED_HOST_ROLES):
+    role_id = _ironlegion_role_of(await _ironlegion_server(member.guild.id))
+    if not role_id:
         return True
-    if role_ids.intersection(SENIOR_MANAGEMENT_ROLES):
-        return True
-    if role_ids.intersection(_vip_role_ids()):
-        return True
-
-    # Override-aware: /disable_ironlegion (global or per-thread) lifts the lock.
-    try:
-        overrides = await _ironlegion_overrides()
-    except Exception:
-        overrides = {"global_disabled": False, "threads": set()}
-    if overrides.get("global_disabled"):
-        return True
-    if thread_id is not None:
-        try:
-            if int(thread_id) in overrides.get("threads", set()):
-                return True
-        except (TypeError, ValueError):
-            pass
-
-    authenticated_id = ROLE_IDS.get("AUTHENTICATED")
-    if not authenticated_id:
-        return True  # No IronLegion role on this server: nothing to lock.
-    return authenticated_id in role_ids
+    return role_id in {r.id for r in member.roles}
 
 
-RESERVATION_REJECTED_UNVERIFIED_MESSAGE = (
-    "🔒 **Reservation Rejected:** You must be Steam Verified via LegionMaster before reserving a game slot.\n"
-    f"-# Head to <#{LEGION_MASTER_VERIFY_CHANNEL_ID}> to verify." if LEGION_MASTER_VERIFY_CHANNEL_ID else
-    "🔒 **Reservation Rejected:** You must be Steam Verified via LegionMaster before reserving a game slot."
-)
+def ironlegion_unverified_message(guild_id: int, who: Optional[str] = None) -> str:
+    """Why a reservation was refused, pointing at the server's verify channel."""
+    entry = _ironlegion_rows.get(int(guild_id or 0)) or {}
+    channel_id = int((entry.get("row") or {}).get("verify_channel_id") or 0)
+    where = f"Press **Verify** in <#{channel_id}>" if channel_id else "Press **Verify** on the server's IronLegion panel"
+    if who:
+        return f"🔒 {who} isn't verified with IronLegion yet, and this game requires it."
+    return f"🔒 **Reservation rejected:** this game requires your Steam account to be verified with IronLegion.\n-# {where}, then try again."
 
-# Global GameMaster hard-lock (IronLegion v2) — shown when an unverified member
-# tries to run any reservation / event / economy command.
-GAMEMASTER_ACCESS_DENIED_MESSAGE = (
-    "⛔ **ACCESS DENIED**: GameMaster features are locked. "
-    "You must verify your account via IronLegion to access reservations and bot commands."
-)
-
-# IronLegion enable/disable override state, shared with steam_verify_bot.py via
-# the MySQL `ironlegion_state` table. Cached with a short TTL so the hard-lock
-# check on every command stays off the DB hot path while still picking up
-# /disable_ironlegion changes within a few seconds.
-_ironlegion_override_cache: dict = {"ts": 0.0, "global_disabled": False, "threads": set()}
-_IRONLEGION_OVERRIDE_TTL_SECONDS = 15.0
-
-
-async def _ironlegion_overrides() -> dict:
-    """Return {'global_disabled': bool, 'threads': set[int]} from the shared
-    override table, with a short in-memory TTL. Always fails open to
-    'not disabled' if the table is missing or MySQL is unreachable."""
-    now = time.time()
-    cache = _ironlegion_override_cache
-    if now - cache.get("ts", 0.0) < _IRONLEGION_OVERRIDE_TTL_SECONDS:
-        return {"global_disabled": bool(cache.get("global_disabled")), "threads": set(cache.get("threads") or set())}
-
-    def _fetch() -> dict:
-        out: dict = {"global_disabled": False, "threads": set()}
-        conn = None
-        cursor = None
-        try:
-            conn = _db_get_connection()
-            cursor = conn.cursor(dictionary=True)
-            cursor.execute("SELECT state_key, state_value FROM ironlegion_state")
-            for row in cursor.fetchall():
-                if row.get("state_value") != "disabled":
-                    continue
-                key = str(row.get("state_key") or "")
-                if key == "global":
-                    out["global_disabled"] = True
-                elif key.startswith("thread:"):
-                    try:
-                        out["threads"].add(int(key.split(":", 1)[1]))
-                    except ValueError:
-                        pass
-        except Exception:
-            pass
-        finally:
-            if cursor is not None:
-                try:
-                    cursor.close()
-                except Exception:
-                    pass
-            if conn is not None:
-                try:
-                    conn.close()
-                except Exception:
-                    pass
-        return out
-
-    try:
-        data = await asyncio.to_thread(_fetch)
-    except Exception:
-        data = {"global_disabled": False, "threads": set()}
-
-    cache["ts"] = time.time()
-    cache["global_disabled"] = data["global_disabled"]
-    cache["threads"] = data["threads"]
-    return data
-
-
-def require_ironlegion_verification():
-    """Hard-lock gate for reservation / event / economy commands.
-
-    Registered as an @app_commands.check on each gated command: it cancels
-    execution immediately (before the callback runs) and replies ephemeral
-    ACCESS DENIED when the executor lacks the v2 "Authenticated" role.
-    Staff/hosts/admins/VIPs pass via is_user_authenticated's internal bypass,
-    so moderation commands keep working for staff.
-
-    Honors the shared IronLegion override state: if verification is disabled
-    globally (server-wide) or for the current game thread (via
-    /disable_ironlegion), the check is skipped and the command is allowed.
-    """
-
-    async def predicate(interaction: discord.Interaction) -> bool:
-        channel = interaction.channel
-        thread_id = channel.id if isinstance(channel, discord.Thread) else None
-        if await is_user_authenticated(interaction.user, thread_id):
-            return True
-
-        try:
-            if interaction.response.is_done():
-                await interaction.followup.send(GAMEMASTER_ACCESS_DENIED_MESSAGE, ephemeral=True)
-            else:
-                await interaction.response.send_message(GAMEMASTER_ACCESS_DENIED_MESSAGE, ephemeral=True)
-        except Exception:
-            pass
-        return False
-
-    return app_commands.check(predicate)
 
 # ==========================================================================
 # MERIT POINTS & DISHONORED TITLE — universal systems
@@ -7601,7 +7589,7 @@ async def _commit_reservation(thread_id: str, nation: str, user_id: int):
     guild = bot.get_guild(cur_gid())
     member = guild.get_member(user_id) if guild else None
     if not await is_user_authenticated(member, thread_id):
-        return False, RESERVATION_REJECTED_UNVERIFIED_MESSAGE, None, None
+        return False, ironlegion_unverified_message(cur_gid()), None, None
 
     async with _get_reservation_lock(thread_id):
         # Serialize against full-map write_json saves so a stale bulk write cannot
@@ -12732,7 +12720,7 @@ async def _host_force_fortunes_reservation(game: dict, games_data: dict, thread_
     """Host override: assign a nation to a player, displacing any prior holders."""
     mode = game.get("mode", "")
     if not await is_user_authenticated(player, thread_id):
-        return False, None, RESERVATION_REJECTED_UNVERIFIED_MESSAGE
+        return False, None, ironlegion_unverified_message(cur_gid())
 
     reservations = game.get("reservations", {})
 
@@ -17990,7 +17978,7 @@ async def _execute_late_join(guild: discord.Guild, thread_id: str, user: discord
     game_mode = target_game.get("mode", "Historical")
 
     if not await is_user_authenticated(user, thread_id):
-        return False, RESERVATION_REJECTED_UNVERIFIED_MESSAGE
+        return False, ironlegion_unverified_message(cur_gid())
 
     reservations = target_game.get("reservations", {})
 
@@ -18693,7 +18681,6 @@ def _live_role_ids() -> dict[str, int]:
     return {
         "trusted": ROLE_IDS["HOI4_RP_TRUSTED"],       # RP Trusted only
         "verified": ROLE_IDS["HOI4_VERIFIED"],        # HOI4 (RP) Verified only
-        "authenticated": ROLE_IDS["AUTHENTICATED"],   # Authenticated V.2 (Steam)
     }
 
 
@@ -18733,7 +18720,8 @@ def _live_role_flags(member) -> dict:
     is_vip = any(_has(rid) for rid in _vip_role_ids()) or is_admin
     is_trusted = _has(live["trusted"])
     is_verified = _has(live["verified"])
-    is_authenticated = _has(live["authenticated"])
+    # IronLegion's verified role on this server (Steam verified)
+    is_authenticated = _has(_ironlegion_role_cached(getattr(getattr(member, "guild", None), "id", 0)))
 
     if is_vip:
         role_tier = _ROLE_TIER_NUM["vip"]
@@ -26608,7 +26596,7 @@ async def _process_web_draft(req: dict):
         if (ban_role and any(role.id == ban_role for role in getattr(actor, "roles", []))) or stats.get("banned"):
             return False, None, f"❌ You are banned from {mode} games."
         if not await is_user_authenticated(actor, int(key) if key.isdigit() else None):
-            return False, None, RESERVATION_REJECTED_UNVERIFIED_MESSAGE
+            return False, None, ironlegion_unverified_message(cur_gid())
         if any(str(holder) == uid for holder in (game.get("reservations") or {}).values()):
             return False, None, "⚠️ You already have a slot in this game."
         cap = int(draft.get("pool_cap") or get_draft_pool_capacity(mode))
@@ -29936,7 +29924,7 @@ async def _process_web_hotjoin(req: dict):
     if current and uid in present:
         return False, None, f"✅ You're already in this game as **{_pretty_reservation_name(current)}**."
     if not await is_user_authenticated(actor, int(key)):
-        return False, None, "🔒 Verify your Steam account with LegionMaster first — then you can join games."
+        return False, None, ironlegion_unverified_message(cur_gid())
 
     requests[uid] = {"nation": nation, "status": "pending", "ts": now, "current": current}
     game["hotjoin_requests"] = _trim_hotjoin_requests(requests)
@@ -30450,20 +30438,13 @@ WEB_REQUEST_CONFIRM = "confirm"
 
 
 def _member_role_verified(member) -> bool:
-    """is_user_authenticated()'s role rules, minus the per-thread overrides
-    (the bot re-checks the full rule when it applies a roster action)."""
-    try:
-        if member.guild_permissions.administrator:
-            return True
-    except Exception:
-        pass
-    role_ids = {role.id for role in getattr(member, "roles", [])}
-    if role_ids.intersection(ALLOWED_HOST_ROLES) or role_ids.intersection(SENIOR_MANAGEMENT_ROLES):
+    """is_user_authenticated() at server level, from the cache (a game's own
+    switch is re-checked by the bot when it applies a roster action)."""
+    if not SERVER_FEATURES.get("ironlegion", False) or _ironlegion_bypass(member):
         return True
-    if role_ids.intersection(_vip_role_ids()):
-        return True
-    authenticated = ROLE_IDS.get("AUTHENTICATED")
-    return bool(authenticated and authenticated in role_ids)
+    guild = getattr(member, "guild", None)
+    role_id = _ironlegion_role_cached(getattr(guild, "id", 0))
+    return not role_id or role_id in {role.id for role in getattr(member, "roles", [])}
 
 
 def _replace_web_member_directory_mysql(rows: list, role_rows: list) -> None:
@@ -30718,7 +30699,7 @@ async def _process_web_roster_assign(req: dict):
         return False, None, "❌ That player is no longer in the server."
     mode = game.get("mode", "")
     if not await is_user_authenticated(target, int(thread_id)):
-        return False, None, f"🔒 {target.display_name} isn't Steam verified via LegionMaster yet."
+        return False, None, ironlegion_unverified_message(cur_gid(), target.display_name)
 
     res = game.get("reservations") or {}
     if kind == "nation":
@@ -32069,7 +32050,7 @@ HOME_ONLY_COMMANDS: set[str] = set()
 # Features a server can switch off (server settings → Features).
 SERVER_FEATURES = {
     "valor_merit": True, "daily_role_check": True, "vip_auto_carry_over": True, "cross_server_ban_alerts": True,
-    "ticket_inactivity_close": True,
+    "ticket_inactivity_close": True, "ironlegion": False,
 }
 # The host log webhook (HOST_LOG_WEBHOOK_URL) posts to one fixed channel of the
 # home server — it's only used once the home server has a host log channel.
@@ -32227,7 +32208,7 @@ def _default_guild_settings(name: str = "") -> dict:
         "rules": dict(SETTINGS_RULE_DEFAULTS),
         "features": {
             "valor_merit": True, "daily_role_check": True, "vip_auto_carry_over": True,
-            "cross_server_ban_alerts": True, "ticket_inactivity_close": True,
+            "cross_server_ban_alerts": True, "ticket_inactivity_close": True, "ironlegion": False,
         },
         "addons": {"casino_panel_channel": None},
     }
@@ -32470,7 +32451,7 @@ def _new_runtime(gid: int) -> GuildRuntime:
     rt.dicts["HOST_PROMOTE_AT"] = {"Full": SETTINGS_RULE_DEFAULTS["host_full_at"], "Senior": SETTINGS_RULE_DEFAULTS["host_senior_at"]}
     rt.dicts["SERVER_FEATURES"] = {
         "valor_merit": True, "daily_role_check": True, "vip_auto_carry_over": True, "cross_server_ban_alerts": True,
-        "ticket_inactivity_close": True,
+        "ticket_inactivity_close": True, "ironlegion": False,
     }
     for name in _PER_GUILD_LISTS:
         rt.lists[name] = []
