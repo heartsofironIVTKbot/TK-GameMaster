@@ -3,10 +3,13 @@ import type { RowDataPacket } from "mysql2";
 import { HOME_GUILD_ID, isHomeGuild } from "@/lib/currentGuild";
 import { getPool } from "@/lib/db";
 import { buildLobbyDraft, type LobbyDraft } from "@/lib/draft";
+import { ironLegionRequired, ironLegionVerifyUrl, parseRequireIronLegion } from "@/lib/ironlegion";
 import { lookupMembers } from "@/lib/memberDirectory";
+import { memberRoleIds } from "@/lib/memberRoles";
 import { moderationOptions } from "@/lib/playerIndex";
 import { parsePresetData } from "@/lib/presetValidation";
 import type { DirectoryMember } from "@/lib/scheduleTypes";
+import { settingsOf } from "@/lib/serverSettings";
 import { sharedCache } from "@/lib/ttlCache";
 import type { LobbyReservation } from "@/lib/types";
 
@@ -41,6 +44,8 @@ export interface LobbyGame {
   layout_disabled_nations: string[];
   /** Draft games: teams, turn and the shared pool (no notes). */
   draft: LobbyDraft | null;
+  /** The game requires IronLegion (and IronLegion is set up there): where to verify. Null otherwise. */
+  ironlegion: { verify_url: string | null } | null;
 }
 
 export interface LobbySnapshot {
@@ -68,6 +73,7 @@ interface VersionRow extends RowDataPacket {
   lockdown: string | null;
   locked_regions: string | null;
   draft: string | null;
+  require_ironlegion: string | null;
 }
 
 function fingerprint(parts: unknown[]): string {
@@ -86,7 +92,8 @@ export function lobbyVersion(threadId: string): Promise<string> {
       `SELECT reservations_rev, status, game_started, mode, CAST(host_id AS CHAR) AS host_id, thread_name,
               CAST(JSON_EXTRACT(game_data, '$.lockdown') AS CHAR) AS lockdown,
               CAST(JSON_EXTRACT(game_data, '$.locked_regions') AS CHAR) AS locked_regions,
-              CAST(JSON_EXTRACT(game_data, '$.draft') AS CHAR) AS draft
+              CAST(JSON_EXTRACT(game_data, '$.draft') AS CHAR) AS draft,
+              CAST(JSON_EXTRACT(game_data, '$.require_ironlegion') AS CHAR) AS require_ironlegion
        FROM games WHERE thread_id = ?`,
       [threadId],
     );
@@ -94,7 +101,7 @@ export function lobbyVersion(threadId: string): Promise<string> {
     const bucket = Math.floor(Date.now() / REFRESH_BUCKET_MS);
     return fingerprint(
       row
-        ? [row.reservations_rev, row.status, row.game_started, row.mode, row.host_id, row.thread_name, row.lockdown, row.locked_regions, row.draft, bucket]
+        ? [row.reservations_rev, row.status, row.game_started, row.mode, row.host_id, row.thread_name, row.lockdown, row.locked_regions, row.draft, row.require_ironlegion, bucket]
         : ["missing", bucket],
     );
   });
@@ -127,6 +134,15 @@ interface SlotRow extends RowDataPacket {
   rerolls_used: number;
 }
 
+/** The map's Verify prompt: only when the game requires IronLegion and IronLegion is set up there. */
+async function snapshotIronLegion(gameSwitch: unknown, guildId: string): Promise<{ verify_url: string | null } | null> {
+  const server = Boolean((await settingsOf(guildId).catch(() => null))?.features.ironlegion);
+  if (!ironLegionRequired(parseRequireIronLegion(gameSwitch), server)) return null;
+  const roles = await memberRoleIds(guildId).catch(() => null);
+  if (!roles?.ironlegion_role) return null;
+  return { verify_url: ironLegionVerifyUrl(guildId, roles.ironlegion_verify_channel) };
+}
+
 interface PlayerRow extends RowDataPacket {
   discord_id: string;
   ingame_nickname: string | null;
@@ -141,6 +157,7 @@ function parseGameData(raw: unknown): {
   layout_disabled_nations?: unknown;
   is_draft?: unknown;
   draft?: unknown;
+  require_ironlegion?: unknown;
 } {
   if (typeof raw === "string") {
     try {
@@ -230,6 +247,7 @@ async function buildSnapshot(threadId: string): Promise<LobbySnapshot> {
   const gameRow = gameRows[0] ?? null;
   const gameData = parseGameData(gameRow?.game_data);
   const draft = gameRow && gameData.is_draft ? await snapshotDraft(gameData, gameRow.mode, guildId) : null;
+  const ironlegion = gameRow ? await snapshotIronLegion(gameData.require_ironlegion, guildId) : null;
   return {
     game: gameRow
       ? {
@@ -254,6 +272,7 @@ async function buildSnapshot(threadId: string): Promise<LobbySnapshot> {
             ? gameData.layout_disabled_nations.map(String)
             : [],
           draft,
+          ironlegion,
         }
       : null,
     reservations,

@@ -676,6 +676,7 @@ function parseLobby(raw: unknown): LobbyReply | null {
       nation_layout?: LobbyGameLock["nation_layout"];
       layout_disabled_nations?: string[];
       draft?: LobbyGameLock["draft"];
+      ironlegion?: LobbyGameLock["ironlegion"];
     } | null;
   };
   if (result.unchanged && result.version) return { unchanged: true, version: result.version };
@@ -695,6 +696,7 @@ function parseLobby(raw: unknown): LobbyReply | null {
             ? game.layout_disabled_nations
             : [],
           draft: game.draft ?? null,
+          ironlegion: game.ironlegion ?? null,
         }
       : null,
   };

@@ -2272,6 +2272,18 @@ async def is_user_authenticated(
     return role_id in {r.id for r in member.roles}
 
 
+async def _ironlegion_announcement_line(game_switch) -> str:
+    """The announcement's note when the game requires IronLegion: where to verify.
+    Empty when it doesn't, or IronLegion isn't set up on the server (nobody is locked out)."""
+    required = bool(game_switch) if isinstance(game_switch, bool) else bool(SERVER_FEATURES.get("ironlegion", False))
+    row = await _ironlegion_server(cur_gid()) if required else None
+    if not _ironlegion_role_of(row):
+        return ""
+    channel_id = int(row.get("verify_channel_id") or 0)
+    where = f" in <#{channel_id}>" if channel_id else ""
+    return f"\n**:shield: Steam verification required - press Verify{where} (IronLegion) before you reserve**"
+
+
 def ironlegion_unverified_message(guild_id: int, who: Optional[str] = None) -> str:
     """Why a reservation was refused, pointing at the server's verify channel."""
     entry = _ironlegion_rows.get(int(guild_id or 0)) or {}
@@ -26095,6 +26107,7 @@ async def _check_scheduled_announcements_for_guild():
                 f"**:clock4: <t:{game_timestamp}:F> (<t:{game_timestamp}:R>)**\n"
                 f"**:video_game: Host - {host.mention}**\n"
                 f"**:pencil: {reserve_label} - __MAP_LINK__**"
+                + await _ironlegion_announcement_line(item.get("require_ironlegion"))
             )
             # No reservation thread any more: the game is saved under the
             # announcement post's id, and players reserve on the website.
@@ -30535,7 +30548,12 @@ async def _web_member_directory_loop_for_guild():
         # An empty member cache (still chunking) would wipe the directory.
         if guild is None or not guild.members:
             return
-        await _ironlegion_server(guild.id)  # fresh IronLegion role for `verified`
+        # fresh IronLegion role for `verified`, and for the website when it changed
+        il_row = await _ironlegion_server(guild.id)
+        il_role = _ironlegion_role_of(il_row)
+        il_now = (il_role, int((il_row or {}).get("verify_channel_id") or 0) if il_role else 0)
+        if _ironlegion_published.get(guild.id) != il_now:
+            await _publish_member_role_ids()
         rows = []
         for member in guild.members:
             if member.bot:
@@ -33192,9 +33210,16 @@ async def guild_settings_loop():
             await asyncio.sleep(0.5)
 
 
+_ironlegion_published: dict[int, tuple] = {}   # guild id -> (role, verify channel) last published
+
+
 async def _publish_member_role_ids() -> None:
     """The role ids the website reads (web_member_roles) for the current server."""
     guild = bot.get_guild(cur_gid())
+    ironlegion = await _ironlegion_server(cur_gid())
+    il_role = _ironlegion_role_of(ironlegion)
+    il_channel = int((ironlegion or {}).get("verify_channel_id") or 0) if il_role else 0
+    _ironlegion_published[cur_gid()] = (il_role, il_channel)
 
     def publish(cfg):
         cfg[_WEB_MEMBER_ROLES_KEY] = {
@@ -33211,6 +33236,10 @@ async def _publish_member_role_ids() -> None:
                 for branch, cfg_b in HOST_BRANCHES.items()
             },
             "guild_name": guild.name if guild else None,
+            # IronLegion's verified role and verify channel here (the map's
+            # Verify prompt); None while IronLegion isn't set up.
+            "ironlegion_role": str(il_role) if il_role else None,
+            "ironlegion_verify_channel": str(il_channel) if il_channel else None,
         }
     try:
         await _bot_config_mutate(publish)

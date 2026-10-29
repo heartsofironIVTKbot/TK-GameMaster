@@ -181,6 +181,8 @@ export function demoLobbyState(threadId: string) {
       locked_regions: lobby.lockedRegions,
       nation_layout: lobby.layout ?? null,
       layout_disabled_nations: lobby.hidden ?? [],
+      // The open preview lobby shows the map's IronLegion prompt (no real server to link to).
+      ironlegion: threadId === DEMO_LOBBY_ID ? { verify_url: null } : null,
     },
     reservations: Object.entries(lobby.reservations).map(([slotKey, userId]) => {
       const entry = memberById(userId);

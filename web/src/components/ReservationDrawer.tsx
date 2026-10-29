@@ -761,6 +761,18 @@ export default function ReservationDrawer({
       <div className="roster-scroll flex-1 overflow-y-auto px-2 pb-3">
         {/* Draft games: the shared pool, teams and whose pick it is. */}
         {draftPanel && <div className="-mx-2 pt-3">{draftPanel}</div>}
+        {gameLock?.ironlegion && (
+          <div className="mt-3 rounded-lg border border-sky-400/30 bg-sky-500/10 px-3 py-2 text-[11px] leading-relaxed text-sky-100">
+            🛡️ <b>Steam verification required.</b> This game needs IronLegion&apos;s verified role to reserve.{" "}
+            {gameLock.ironlegion.verify_url ? (
+              <a href={gameLock.ironlegion.verify_url} target="_blank" rel="noopener noreferrer" className="font-semibold text-sky-300 underline underline-offset-2 hover:text-sky-200">
+                Verify in Discord ↗
+              </a>
+            ) : (
+              <>Press Verify on the server&apos;s IronLegion panel in Discord.</>
+            )}
+          </div>
+        )}
         {sections.map((section, sectionIndex) => (
           <div key={`${section.title}-${sectionIndex}`}>
             <h3 className="px-1.5 pb-1 pt-3 text-[11px] font-black uppercase tracking-widest text-amber-300/90">

@@ -22,6 +22,10 @@ export const ironLegionValue = (rule: IronLegionRule): boolean | null => (rule =
 /** A stored value: a boolean, or null (anything else) for the server's setting. */
 export const parseRequireIronLegion = (raw: unknown): boolean | null => (typeof raw === "boolean" ? raw : null);
 
+/** Where to press Verify: the server's IronLegion verify channel in Discord. */
+export const ironLegionVerifyUrl = (guildId: string, channelId: string | null | undefined): string | null =>
+  channelId ? `https://discord.com/channels/${guildId}/${channelId}` : null;
+
 /** Whether a game requires it: its own switch, else the server's. */
 export const ironLegionRequired = (game: boolean | null | undefined, server: boolean): boolean =>
   typeof game === "boolean" ? game : server;

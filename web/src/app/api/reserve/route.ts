@@ -10,7 +10,7 @@ import { liveHub } from "@/lib/live/hub";
 import { recordAudit } from "@/lib/auditLog";
 import { lobbySnapshot, lobbyVersion, versionOf } from "@/lib/lobbySnapshot";
 import { memberRoleIds } from "@/lib/memberRoles";
-import { ironLegionRequired, parseRequireIronLegion } from "@/lib/ironlegion";
+import { ironLegionRequired, ironLegionVerifyUrl, parseRequireIronLegion } from "@/lib/ironlegion";
 import { settingsOf } from "@/lib/serverSettings";
 import { categoryOfMode } from "@/lib/scheduleOptions";
 import { isSchedulerDemo } from "@/lib/scheduleStore";
@@ -85,7 +85,8 @@ async function ironLegionRefusal(connection: PoolConnection, guildId: string, us
       [guildId, userId],
     );
     if (rows[0] && !Number(rows[0].verified)) {
-      return "This game requires IronLegion Steam verification. Press Verify on the server's IronLegion panel in Discord; once you're verified it can take a few minutes before you can reserve here.";
+      const url = ironLegionVerifyUrl(guildId, (await memberRoleIds(guildId).catch(() => null))?.ironlegion_verify_channel);
+      return `This game requires IronLegion Steam verification. Press Verify ${url ? `in ${url}` : "on the server's IronLegion panel in Discord"}; once you're verified it can take a few minutes before you can reserve here.`;
     }
   } catch (error) {
     const code = (error as { code?: string }).code;

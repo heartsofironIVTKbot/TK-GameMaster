@@ -9,7 +9,7 @@ announcement post stays and links to the map.
 | Used to be in the thread | Now |
 | --- | --- |
 | The reservation list | The website map (it always was the real list) |
-| IronLegion "Verify account" prompt | Not shown anywhere for now — to add with the IronLegion integration (the map could show the verify link). Hot-join still checks Steam verification |
+| IronLegion "Verify account" prompt | When a game requires IronLegion, the announcement says where to verify, and the map shows a "Steam verification required" note above the nations with a link to the server's IronLegion verify channel. Hot-join checks it too |
 | Draft Pool board, "your turn" posts | The map's draft panel; captains still get a DM on their turn |
 | **Hot-Join panel** | The map: in a running game, click a free nation → **Ask to hot-join**. The host gets a DM and decides on the Games page (**Hot-join requests** card) |
 | **Crash Report panel** (+ the DM upload) | The website's **/crash** page: describe what happened, pick the zipped logs folder, send. Linked from the map and from the "game is starting" DM |

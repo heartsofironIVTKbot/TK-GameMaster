@@ -97,6 +97,8 @@ export interface LobbyGameLock {
   hidden_nations?: string[];
   /** Draft games: teams, whose turn, and the shared sign-up pool. */
   draft?: LobbyDraft | null;
+  /** The game requires IronLegion Steam verification: where to verify (null url = the server's panel). */
+  ironlegion?: { verify_url: string | null } | null;
 }
 
 /** Roster row state: how a nation relates to the active lobby. */
