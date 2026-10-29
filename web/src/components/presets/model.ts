@@ -34,6 +34,8 @@ export interface MakerState {
   activeTier: number;
   majorLevel: LockLevel;
   minorLevel: LockLevel;
+  /** Require IronLegion in games made from it; null = the server's setting. */
+  ironlegion: boolean | null;
   locks: LockGroupForm[];
   activeLockId: string;
   rules: ResourceEntry[] | null;
@@ -52,6 +54,7 @@ export function emptyMaker(mode: string): MakerState {
     activeTier: 0,
     majorLevel: "Trusted",
     minorLevel: "All Users",
+    ironlegion: null,
     locks: [lock],
     activeLockId: lock.id,
     rules: null,
@@ -68,6 +71,7 @@ export function makerFromInput(input: PresetInput): MakerState {
   state.activeGroupId = state.layout?.[0]?.id ?? null;
   state.majorLevel = input.data.major_lock_level;
   state.minorLevel = input.data.minor_lock_level;
+  state.ironlegion = input.data.require_ironlegion ?? null;
   if (input.data.nation_locks.length > 0) {
     state.locks = input.data.nation_locks.map((group, index) => ({
       ...newLockGroup(index, group.label),
@@ -101,6 +105,7 @@ export function makerToInput(state: MakerState): PresetInput {
       minor_lock_level: state.minorLevel,
       rules: state.rules,
       mods: state.mods,
+      require_ironlegion: state.ironlegion,
     },
   };
 }

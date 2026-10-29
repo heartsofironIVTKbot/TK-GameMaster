@@ -1,3 +1,4 @@
+import { parseRequireIronLegion } from "@/lib/ironlegion";
 import {
   PRESET_LIMITS,
   newGroupId,
@@ -153,6 +154,7 @@ export function validatePresetInput(raw: unknown, modeNations: string[] | null):
     minor_lock_level: data.minor_lock_level,
     rules: rules.value,
     mods: mods.value,
+    require_ironlegion: parseRequireIronLegion(data.require_ironlegion),
   };
   return { ok: true, value: { mode, name, description, shared: input.shared === true, data: value } };
 }
@@ -179,5 +181,6 @@ export function parsePresetData(raw: unknown): PresetData {
     minor_lock_level: isLockLevel(data.minor_lock_level) ? data.minor_lock_level : "All Users",
     rules: rules.ok ? rules.value : null,
     mods: mods.ok ? mods.value : null,
+    require_ironlegion: parseRequireIronLegion(data.require_ironlegion),
   };
 }

@@ -10,6 +10,7 @@ import {
 import { formatDurationMinutes, formatInZone, formatRelative } from "@/lib/timeEngine";
 import { Segmented, SectionCard, Slider, Toggle } from "../ui";
 import type { DerivedSetup, SetupForm, UnlockForm } from "./model";
+import IronLegionChoice from "@/components/IronLegionChoice";
 
 /**
  * Who may reserve major / minor nations, and when access widens
@@ -68,6 +69,9 @@ export default function AccessTab({
           onUnlock={(patch) => setUnlock(scope, patch)}
         />
       ))}
+      <SectionCard icon="🛡️" title="IronLegion" subtitle="Whether players need IronLegion's verified role to reserve in this game.">
+        <IronLegionChoice value={form.ironlegion} onChange={(ironlegion) => update({ ironlegion })} />
+      </SectionCard>
     </div>
   );
 }

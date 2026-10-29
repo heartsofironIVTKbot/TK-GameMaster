@@ -6,6 +6,7 @@ import { SubmitButton } from "@/components/database/ActionPanel";
 import { GLASS, Segmented, Spinner, Toggle } from "@/components/schedule/ui";
 import { BotText } from "./labels";
 import { useBotRequest, type BotRequestState } from "./useBotRequest";
+import IronLegionChoice from "@/components/IronLegionChoice";
 
 /**
  * Who may reserve in this game (formerly /lock, /unlock, /lockdown,
@@ -57,6 +58,12 @@ export default function AccessCard({ game, onChanged }: { game: GameControl; onC
             description="Players can't reserve on the website map. Your host tools still work."
           />
           <NationLocks game={game} disabled={disabled} onLock={(nation) => send({ op: "nation_lock", nation })} onUnlock={(nation) => send({ op: "nation_unlock", nation })} />
+          <IronLegionChoice
+            value={game.access.require_ironlegion}
+            serverRequires={game.access.server_requires_ironlegion}
+            disabled={disabled}
+            onChange={(required) => send({ op: "ironlegion", required })}
+          />
         </div>
       </div>
 

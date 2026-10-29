@@ -279,6 +279,18 @@ export function applyDemoAccess(payload: Record<string, unknown>, hostId: string
       ? access("🔒 Lockdown on", "Players can't reserve on the website. Host tools still work.")
       : access("🔓 Lockdown off", "Public reservations are open again.");
   }
+  if (op === "ironlegion") {
+    const required = typeof payload.required === "boolean" ? payload.required : null;
+    data.require_ironlegion = required;
+    return access(
+      "🛡️ IronLegion verification",
+      required === true
+        ? "Players need IronLegion's verified role to reserve in this game."
+        : required === false
+          ? "This game doesn't require IronLegion verification."
+          : "This game follows the server's setting.",
+    );
+  }
   if (op === "nation_lock" || op === "nation_unlock") {
     const asked = String(payload.nation ?? "").trim();
     const locked = Array.isArray(data.locked_regions) ? data.locked_regions.map(String) : [];

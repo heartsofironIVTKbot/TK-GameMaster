@@ -88,6 +88,8 @@ export interface SetupForm {
   /** The preset loaded into the form (its settings are copied in). */
   presetId: string | null;
   presetName: string | null;
+  /** Require IronLegion for this game; null = the server's setting. */
+  ironlegion: boolean | null;
   /** A preset's own nation groups; null = the mode's standard groups. */
   layout: PresetGroup[] | null;
   /** Rules / mods to post; null = the mode's standard list. */
@@ -180,6 +182,7 @@ export function initialForm(date: string): SetupForm {
     handoverTo: null,
     presetId: null,
     presetName: null,
+    ironlegion: null,
     layout: null,
     rules: null,
     mods: null,
@@ -211,6 +214,7 @@ export function applyPreset(form: SetupForm, preset: GamePreset): SetupForm {
     activeGroupId: lockGroups[0].id,
     presetId: preset.own_server ? preset.preset_id : null,
     presetName: preset.name,
+    ironlegion: data.require_ironlegion ?? null,
     layout: data.layout ? structuredClone(data.layout) : null,
     rules: data.rules ? data.rules.map((entry) => ({ ...entry })) : null,
     mods: data.mods ? data.mods.map((entry) => ({ ...entry })) : null,
@@ -288,6 +292,7 @@ export function formFromSettings(settings: SlotSettings, timeZone: string): Setu
   }
   form.presetId = settings.preset_id;
   form.presetName = settings.preset_name;
+  form.ironlegion = typeof settings.require_ironlegion === "boolean" ? settings.require_ironlegion : null;
   form.layout = settings.nation_layout;
   form.rules = settings.rules;
   form.mods = settings.mods;
@@ -407,6 +412,7 @@ export function deriveSetup(form: SetupForm, context: SetupContext): DerivedSetu
       })),
     preset_id: form.presetId,
     preset_name: form.presetName,
+    require_ironlegion: form.ironlegion,
     nation_layout: form.layout,
     rules: form.rules,
     mods: form.mods,

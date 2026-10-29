@@ -22,6 +22,8 @@ import type { GameMessageRecipient } from "@/lib/messageTypes";
 import { moderationOptions } from "@/lib/playerIndex";
 import type { ResourceEntry } from "@/lib/presetTypes";
 import { parsePresetData } from "@/lib/presetValidation";
+import { parseRequireIronLegion } from "@/lib/ironlegion";
+import { settingsOf } from "@/lib/serverSettings";
 import { prettySlot } from "@/lib/playerProfile";
 import { isSchedulerDemo, listInFlightLifecycle, type InFlightLifecycle } from "@/lib/scheduleStore";
 import type { DirectoryMember, HostProfile } from "@/lib/scheduleTypes";
@@ -162,7 +164,7 @@ export async function getGameControl(gameId: string, viewer: HostProfile): Promi
   const lastReminder = reminderHistory[reminderHistory.length - 1] ?? null;
   const messageHistory = (Array.isArray(data.message_history) ? data.message_history.map(obj) : []).slice(-5).reverse();
   const draftRaw = obj(data.draft);
-  const chatLog = await chatLogMeta(keysOf(raw)).catch(() => null);
+  const [chatLog, serverSettings] = await Promise.all([chatLogMeta(keysOf(raw)).catch(() => null), settingsOf(viewer.guild_id)]);
   const hotJoins = parseHotJoin(data.hotjoin_requests).slice(0, 15);
   const aiRaw = obj(data.ai_analysis);
   const aiPlayers = Array.isArray(aiRaw.players) ? aiRaw.players.map(obj) : [];
@@ -253,6 +255,8 @@ export async function getGameControl(gameId: string, viewer: HostProfile): Promi
       minor_level: level(data.minor_lock_level),
       lockdown: Boolean(data.lockdown),
       locked_nations: Array.isArray(data.locked_regions) ? data.locked_regions.map(String).filter((name) => !hidden.has(name)) : [],
+      require_ironlegion: parseRequireIronLegion(data.require_ironlegion),
+      server_requires_ironlegion: Boolean(serverSettings?.features.ironlegion),
     },
     nations: modeNations,
     preset:

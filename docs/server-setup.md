@@ -12,7 +12,7 @@ set up entirely on the website.
 | Player records across servers | **Separate per server, with alerts.** Each server keeps its own commends, warnings and bans. When someone game-banned on another server joins, that server's staff get a notice and decide. |
 | Who can add the bot | **Anyone, instantly.** |
 | Who can set it up | The **server owner** and **Discord admins** (Administrator permission). The owner can also let the roles mapped as **Host Management** edit settings. |
-| Extra features for other servers | **Hearts of Valor & Merit** (on/off). **IronLegion Steam verification** later. Casino (the randomizer) and Fortunes of War stay TommyKay-only, and so does AI chat-log analysis. |
+| Extra features for other servers | **Hearts of Valor & Merit** (on/off). **Require IronLegion** Steam verification (on/off). Casino (the randomizer) and Fortunes of War stay TommyKay-only, and so does AI chat-log analysis. |
 | Game modes | **Built-in modes only**: Roleplay (R56), Millennium Dawn, Novum Vexillum, Kaiserreich FFA, The Fire Rises, Historical Vanilla, TFB, Hearts of Oak, Horstorical, BFFU 2. Each server turns modes on or off and sets that mode's channels, ping role, rules and mod links. |
 | Rule numbers | **Adjustable per server**, starting from TommyKay's numbers. |
 | Bot permissions | **Only what it needs** (no Administrator). Setup runs a health check. |
@@ -29,10 +29,10 @@ set up entirely on the website.
    that finished setup. Records are split by server, the website has a server
    switcher, and cross-server ban alerts are on. See
    [Stage 2: how servers are kept apart](#stage-2-how-servers-are-kept-apart).
-3. **Owner dashboard and polish (done, except IronLegion).** A dashboard for
+3. **Owner dashboard and polish (done).** A dashboard for
    each set-up server, live health checks with fix-it buttons, and a public
    status page. See [Stage 3](#stage-3-dashboard-health-and-status).
-   IronLegion integration comes later.
+   IronLegion: see "Require IronLegion" below.
 
 ## How adding the bot works (Stage 1)
 
@@ -190,7 +190,14 @@ mode's. Per mode:
   changes automatically.
 - **Hosting success**: average player feedback rating (out of 5 stars) that
   counts as a successful hosting (3.0).
-- *Coming later:* IronLegion Steam verification.
+- **Require IronLegion** (off by default): every game needs players to hold
+  the verified role IronLegion gives on this server before they reserve.
+  Hosts, staff and VIPs never need it. A preset, the calendar's setup form
+  (Access) and the Games page can switch it on or off for one game ("Server
+  setting" follows this switch). The bot reads IronLegion's role through a
+  read-only login (`IRONLEGION_DB_*`); without that login, or before IronLegion
+  is set up on the server, nobody is locked out. Reservations on the map check
+  it too, from the bot's member directory (refreshed every 10 minutes).
 
 ### 9. Tickets
 - **Ticket Support roles** (verification tickets only) and **Developer

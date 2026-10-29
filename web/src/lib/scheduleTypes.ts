@@ -222,6 +222,8 @@ export interface SlotSettings {
   nation_locks: NationLockGroupPayload[];
   preset_id: string | null;
   preset_name: string | null;
+  /** The game requires IronLegion (true / false); null or missing = the server's setting. */
+  require_ironlegion?: boolean | null;
   /** A preset's own nation groups (playable ones), null = standard. */
   nation_layout: PresetGroup[] | null;
   rules: ResourceEntry[] | null;
@@ -278,6 +280,8 @@ export interface SchedulePayload {
   /** The preset it was set up from (copied in — later preset edits don't change the game). */
   preset_id: string | null;
   preset_name: string | null;
+  /** The game requires IronLegion (true / false); null = the server's setting. */
+  require_ironlegion: boolean | null;
   /** Custom nation groups; nations outside the turned-on groups aren't playable. null = standard. */
   nation_layout: PresetGroup[] | null;
   /** Rules / mods posted at the announcement; null = the mode's standard list. */

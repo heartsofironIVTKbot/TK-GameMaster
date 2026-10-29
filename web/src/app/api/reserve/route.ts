@@ -10,6 +10,8 @@ import { liveHub } from "@/lib/live/hub";
 import { recordAudit } from "@/lib/auditLog";
 import { lobbySnapshot, lobbyVersion, versionOf } from "@/lib/lobbySnapshot";
 import { memberRoleIds } from "@/lib/memberRoles";
+import { ironLegionRequired, parseRequireIronLegion } from "@/lib/ironlegion";
+import { settingsOf } from "@/lib/serverSettings";
 import { categoryOfMode } from "@/lib/scheduleOptions";
 import { isSchedulerDemo } from "@/lib/scheduleStore";
 import tagToSlotJson from "@/lib/tag_to_slot.json";
@@ -63,6 +65,35 @@ interface UserRow extends RowDataPacket {
   banned: number | boolean;
 }
 
+interface DirectoryFlag extends RowDataPacket {
+  verified: number | boolean;
+}
+
+/**
+ * IronLegion Steam verification, when the game (or its server) requires it.
+ * The bot keeps each member's `verified` flag in web_member_directory: they
+ * hold the verified role IronLegion gives on that server (or never need it).
+ * No row yet, or an older table: let them through, like the bot does when it
+ * can't check (and the bot re-checks its own reservation paths).
+ */
+async function ironLegionRefusal(connection: PoolConnection, guildId: string, userId: string, game: GameDataDocument): Promise<string | null> {
+  const server = Boolean((await settingsOf(guildId))?.features.ironlegion);
+  if (!ironLegionRequired(parseRequireIronLegion(game.require_ironlegion), server)) return null;
+  try {
+    const [rows] = await connection.query<DirectoryFlag[]>(
+      "SELECT verified FROM web_member_directory WHERE guild_id = ? AND user_id = CAST(? AS UNSIGNED)",
+      [guildId, userId],
+    );
+    if (rows[0] && !Number(rows[0].verified)) {
+      return "This game requires IronLegion Steam verification. Press Verify on the server's IronLegion panel in Discord; once you're verified it can take a few minutes before you can reserve here.";
+    }
+  } catch (error) {
+    const code = (error as { code?: string }).code;
+    if (code !== "ER_NO_SUCH_TABLE" && code !== "ER_BAD_FIELD_ERROR") throw error;
+  }
+  return null;
+}
+
 interface SlotRow extends RowDataPacket {
   slot_key: string;
   user_id: string | number;
@@ -70,6 +101,8 @@ interface SlotRow extends RowDataPacket {
 
 interface GameDataDocument {
   lockdown?: unknown;
+  /** The game's own IronLegion switch (lib/ironlegion.ts). */
+  require_ironlegion?: unknown;
   capacity?: unknown;
   locked_regions?: unknown;
   layout_disabled_nations?: unknown;
@@ -294,6 +327,12 @@ export async function POST(request: NextRequest) {
           : "Your HOI4 account must be verified (RP Verified) before reserving",
         403,
       );
+    }
+
+    const ironLegion = await ironLegionRefusal(connection, gameGuild, session.discord_id, gameData);
+    if (ironLegion) {
+      await connection.rollback();
+      return jsonError(ironLegion, 403);
     }
 
     // Lock the reservation rows and validate the slot.

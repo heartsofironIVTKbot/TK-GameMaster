@@ -177,6 +177,8 @@ export interface ServerSettings {
     cross_server_ban_alerts: boolean;
     /** Ping after 24 h without messages in a ticket, close it as unresolved after 48 h. */
     ticket_inactivity_close: boolean;
+    /** Every game requires IronLegion Steam verification unless the game says otherwise (lib/ironlegion.ts). */
+    ironlegion: boolean;
   };
   /** TommyKay only (CASINO_GUILD_IDS): the casino panel channel. */
   addons: { casino_panel_channel: string | null };
@@ -381,6 +383,7 @@ export function defaultSettings(name = ""): ServerSettings {
       vip_auto_carry_over: true,
       cross_server_ban_alerts: true,
       ticket_inactivity_close: true,
+      ironlegion: false,
     },
     addons: { casino_panel_channel: null },
   };
@@ -490,7 +493,7 @@ export function normalizeSettings(raw: unknown, name = ""): ServerSettings {
     s.rules[field.key] = Math.min(field.max, Math.max(field.min, rounded));
   }
   const features = obj(source.features);
-  for (const key of ["valor_merit", "daily_role_check", "vip_auto_carry_over", "cross_server_ban_alerts", "ticket_inactivity_close"] as const) {
+  for (const key of ["valor_merit", "daily_role_check", "vip_auto_carry_over", "cross_server_ban_alerts", "ticket_inactivity_close", "ironlegion"] as const) {
     if (key in features) s.features[key] = Boolean(features[key]);
   }
   const addons = obj(source.addons);

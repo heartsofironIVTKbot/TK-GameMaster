@@ -1,5 +1,6 @@
 "use client";
 
+import IronLegionChoice from "@/components/IronLegionChoice";
 import { useMemo } from "react";
 import { newLockGroup, type LockGroupForm } from "@/components/schedule/setup/model";
 import { SectionCard, Segmented, Slider, Toggle } from "@/components/schedule/ui";
@@ -74,6 +75,9 @@ export default function LocksTab({
           onChange={(minorLevel) => update({ minorLevel })}
           options={levelOptions}
         />
+        <div className="mt-4">
+          <IronLegionChoice value={state.ironlegion} onChange={(ironlegion) => update({ ironlegion })} disabled={disabled} />
+        </div>
       </SectionCard>
 
       <SectionCard

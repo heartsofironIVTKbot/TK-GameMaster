@@ -162,9 +162,13 @@ export interface GameAccess {
   lockdown: boolean;
   /** Nations nobody can reserve. */
   locked_nations: string[];
+  /** The game's own IronLegion switch; null = the server's setting. */
+  require_ironlegion: boolean | null;
+  /** The server's setting (what null means). */
+  server_requires_ironlegion: boolean;
 }
 
-export type GameAccessOp = "levels" | "lockdown" | "nation_lock" | "nation_unlock" | "clear";
+export type GameAccessOp = "levels" | "lockdown" | "nation_lock" | "nation_unlock" | "clear" | "ironlegion";
 
 /** POST /api/schedule/requests {action: "game_access"} (bot: _process_web_game_access). */
 export interface GameAccessPayload {
@@ -174,6 +178,8 @@ export interface GameAccessPayload {
   minor_level?: AccessLevel;
   enabled?: boolean;
   nation?: string;
+  /** op "ironlegion": true / false, or null for the server's setting. */
+  required?: boolean | null;
 }
 
 /** Request payloads (POST /api/schedule/requests). */

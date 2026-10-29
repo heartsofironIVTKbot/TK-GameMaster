@@ -63,6 +63,8 @@ export interface PresetData {
   /** null = the mode's standard rulesets / mods. */
   rules: ResourceEntry[] | null;
   mods: ResourceEntry[] | null;
+  /** Games made from it require IronLegion (true / false); null or missing = the server's setting. */
+  require_ironlegion?: boolean | null;
 }
 
 /** What the Presets page saves. */

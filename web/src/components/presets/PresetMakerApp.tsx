@@ -255,6 +255,7 @@ export default function PresetMakerApp({
       shared: now.shared,
       majorLevel: now.majorLevel,
       minorLevel: now.minorLevel,
+      ironlegion: now.ironlegion,
     }));
     setMapNations([]);
     setHovered(null);

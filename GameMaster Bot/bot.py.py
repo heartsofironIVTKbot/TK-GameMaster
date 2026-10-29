@@ -725,8 +725,8 @@ CREATE TABLE IF NOT EXISTS web_schedule_requests (
 """
 
 # Searchable server members for the live map's host tools (the web can't read
-# Discord's member list). `verified` mirrors is_user_authenticated() at server
-# level (a game's own IronLegion switch is re-checked on apply).
+# Discord's member list). `verified` = passes the IronLegion check when a game
+# requires it (holds IronLegion's role here, bypasses, or IronLegion isn't set up).
 # `role_ids` is a JSON array of the member's role ids (highest first) for the
 # web's Discord-style profile card; `banner_hash` / `accent_color` are written
 # by the WEB at Discord login (bots can't read other users' banners) and are
@@ -22202,6 +22202,19 @@ async def _process_web_game_access(req: dict):
             "Players can't reserve on the website. Host tools still work."
             if enabled else "Public reservations are open again."
         )
+    elif op == "ironlegion":
+        required = payload.get("required")
+        required = bool(required) if isinstance(required, bool) else None
+        game["require_ironlegion"] = required
+        server = "requires" if SERVER_FEATURES.get("ironlegion", False) else "doesn't require"
+        title = "🛡️ IronLegion verification"
+        summary = (
+            "Players need IronLegion's verified role to reserve in this game." if required is True
+            else "This game doesn't require IronLegion verification." if required is False
+            else f"This game follows the server's setting (the server {server} it)."
+        )
+        if required is not False and not _ironlegion_role_of(await _ironlegion_server(cur_gid())):
+            notes.append("IronLegion isn't set up on this server (or GameMaster can't read it yet), so nobody is locked out for now.")
     elif op in ("nation_lock", "nation_unlock"):
         nation = str(payload.get("nation") or "").strip()
         locked = [str(n) for n in (game.get("locked_regions") or [])]
@@ -26116,6 +26129,7 @@ async def _check_scheduled_announcements_for_guild():
                 "nation_lock_releases": _nation_lock_releases_from_slot(item),
                 "preset_id": item.get("preset_id"),
                 "preset_name": item.get("preset_name"),
+                "require_ironlegion": item.get("require_ironlegion"),
                 "nation_layout": nation_layout,
                 "layout_disabled_nations": not_playable,
                 "managed_mods": mod_entries,
@@ -28529,6 +28543,9 @@ async def _build_web_schedule_fields(payload: dict, keep_day: tuple | None = Non
     if not re.fullmatch(r"[0-9a-f]{32}", preset_id):
         preset_id = None
     preset_name = (str(payload.get("preset_name") or "").strip()[:60] or None) if preset_id else None
+    # Require IronLegion for this game: True / False, or None = the server's setting.
+    require_ironlegion = payload.get("require_ironlegion")
+    require_ironlegion = bool(require_ironlegion) if isinstance(require_ironlegion, bool) else None
 
     # Draft game: teams map nation groups to captains (see _process_web_draft).
     draft_fields, err = _web_parse_draft(payload.get("draft"), mode, add_on, nation_layout)
@@ -28557,6 +28574,7 @@ async def _build_web_schedule_fields(payload: dict, keep_day: tuple | None = Non
         "nation_locks": nation_locks,
         "preset_id": preset_id,
         "preset_name": preset_name,
+        "require_ironlegion": require_ironlegion,
         "nation_layout": nation_layout,
         "layout_disabled_nations": not_playable,
         "rules": rules,
@@ -30438,9 +30456,9 @@ WEB_REQUEST_CONFIRM = "confirm"
 
 
 def _member_role_verified(member) -> bool:
-    """is_user_authenticated() at server level, from the cache (a game's own
-    switch is re-checked by the bot when it applies a roster action)."""
-    if not SERVER_FEATURES.get("ironlegion", False) or _ironlegion_bypass(member):
+    """Whether the member passes the IronLegion check when a game requires it
+    (from the cache; the website uses it for reservations on the map)."""
+    if _ironlegion_bypass(member):
         return True
     guild = getattr(member, "guild", None)
     role_id = _ironlegion_role_cached(getattr(guild, "id", 0))
@@ -30517,6 +30535,7 @@ async def _web_member_directory_loop_for_guild():
         # An empty member cache (still chunking) would wipe the directory.
         if guild is None or not guild.members:
             return
+        await _ironlegion_server(guild.id)  # fresh IronLegion role for `verified`
         rows = []
         for member in guild.members:
             if member.bot:

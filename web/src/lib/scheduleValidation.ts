@@ -1,3 +1,4 @@
+import { parseRequireIronLegion } from "@/lib/ironlegion";
 import {
   ADD_ON_VALUES,
   LOCK_LEVEL_RANK,
@@ -331,6 +332,7 @@ export function validateSchedulePayload(raw: unknown, nowSec: number): Validatio
       nation_locks: nationLocks,
       preset_id: presetId,
       preset_name: presetName,
+      require_ironlegion: parseRequireIronLegion(input.require_ironlegion),
       nation_layout: layout.value,
       rules: rules.value,
       mods: mods.value,

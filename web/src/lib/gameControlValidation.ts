@@ -87,6 +87,8 @@ export function validateGameAccess(raw: unknown): Result<GameAccessPayload> {
     }
     case "clear":
       return { ok: true, value: { thread_id: threadId, op: "clear" } };
+    case "ironlegion":
+      return { ok: true, value: { thread_id: threadId, op: "ironlegion", required: typeof body.required === "boolean" ? body.required : null } };
     default:
       return { ok: false, error: "Unknown access change." };
   }
