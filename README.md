@@ -63,7 +63,7 @@ IronLegion's Steam lock on reservations is off unless a server turns it on and t
 
 AI chat-log grading needs `GENAI_API_KEY`. Without that key the rest of GameMaster still runs.
 
-Tests: from `web/`, `node --test tests/` (ticket access, Require IronLegion). The IronLegion lock in the bot: `python "GameMaster Bot/tests/ironlegion_lock.py"` from the repo root with the bot's packages installed (no database needed).
+Tests: from `web/`, `node --test` (ticket access, Require IronLegion). The IronLegion lock in the bot: `python "GameMaster Bot/tests/ironlegion_lock.py"` from the repo root with the bot's packages installed (no database needed).
 
 ## What is not in this repository
 
