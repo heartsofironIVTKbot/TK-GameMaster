@@ -59,7 +59,7 @@ export default function LocksTab({
   return (
     <div className="space-y-4">
       <SectionCard icon="🔐" title="Who can reserve" subtitle="The game starts with these access levels (hosts can change them on the Games page).">
-        <p className="mb-1.5 text-[11px] font-semibold text-slate-400">👑 Major nations</p>
+        <p className="mb-1.5 text-[11px] font-semibold text-ink-400">👑 Major nations</p>
         <Segmented<LockLevel>
           ariaLabel="Who can reserve major nations"
           size="sm"
@@ -67,7 +67,7 @@ export default function LocksTab({
           onChange={(majorLevel) => update({ majorLevel })}
           options={levelOptions}
         />
-        <p className="mb-1.5 mt-3 text-[11px] font-semibold text-slate-400">🏳️ Minor nations</p>
+        <p className="mb-1.5 mt-3 text-[11px] font-semibold text-ink-400">🏳️ Minor nations</p>
         <Segmented<LockLevel>
           ariaLabel="Who can reserve minor nations"
           size="sm"
@@ -108,8 +108,8 @@ export default function LocksTab({
               >
                 <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: isActive ? "#ff5266" : "#3cc4ff" }} />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-semibold text-slate-100">{group.label || "Locked nations"}</span>
-                  <span className="block text-[11px] text-slate-400">
+                  <span className="block truncate text-sm font-semibold text-ink-100">{group.label || "Locked nations"}</span>
+                  <span className="block text-[11px] text-ink-400">
                     {group.nations.length} nation{group.nations.length === 1 ? "" : "s"} ·{" "}
                     {group.releaseEnabled ? `unlocks ${formatDurationMinutes(group.releaseHoursBefore * 60)} before` : "locked all game"}
                   </span>
@@ -124,7 +124,7 @@ export default function LocksTab({
                     const next = rest.length > 0 ? rest : [newLockGroup(0)];
                     update({ locks: next, activeLockId: state.activeLockId === group.id ? next[0].id : state.activeLockId });
                   }}
-                  className="rounded-md px-1.5 text-slate-500 hover:text-rose-300 disabled:opacity-30"
+                  className="rounded-md px-1.5 text-ink-500 hover:text-rose-300 disabled:opacity-30"
                   aria-label={`Delete ${group.label}`}
                 >
                   ✕
@@ -140,7 +140,7 @@ export default function LocksTab({
             const group = newLockGroup(state.locks.length);
             update({ locks: [...state.locks, group], activeLockId: group.id });
           }}
-          className="mt-2 w-full rounded-xl border border-dashed border-white/15 py-2 text-xs font-semibold text-slate-400 transition hover:border-amber-300/40 hover:text-amber-200 disabled:opacity-40"
+          className="mt-2 w-full rounded-xl border border-dashed border-white/15 py-2 text-xs font-semibold text-ink-400 transition hover:border-brand-300/40 hover:text-brand-200 disabled:opacity-40"
         >
           ＋ New lock group (e.g. &quot;Axis majors until 12h before&quot;)
         </button>
@@ -152,7 +152,7 @@ export default function LocksTab({
           maxLength={40}
           disabled={disabled}
           onChange={(event) => patchLock(active.id, { label: event.target.value })}
-          className="w-full rounded-lg border border-white/10 bg-slate-950/70 px-3 py-2 text-sm font-semibold text-slate-100 focus:border-amber-300/50 focus:outline-none"
+          className="w-full rounded-lg border border-white/10 bg-ink-950/70 px-3 py-2 text-sm font-semibold text-ink-100 focus:border-brand-300/50 focus:outline-none"
           aria-label="Lock group name"
         />
         <div className="mt-3">
@@ -164,10 +164,10 @@ export default function LocksTab({
             description={active.releaseEnabled ? undefined : "Off: these nations stay locked until a host unlocks them on the Games page."}
           />
           {active.releaseEnabled && (
-            <div className="gm-fade-up mt-3 rounded-xl border border-white/10 bg-slate-950/50 p-3">
+            <div className="gm-fade-up mt-3 rounded-xl border border-white/10 bg-ink-950/50 p-3">
               <div className="flex items-baseline justify-between">
-                <span className="text-[11px] font-semibold text-slate-400">Before the game</span>
-                <span className="text-sm font-black text-amber-200">{formatDurationMinutes(active.releaseHoursBefore * 60)}</span>
+                <span className="text-[11px] font-semibold text-ink-400">Before the game</span>
+                <span className="text-sm font-black text-brand-200">{formatDurationMinutes(active.releaseHoursBefore * 60)}</span>
               </div>
               <Slider
                 min={1}
@@ -198,16 +198,16 @@ export default function LocksTab({
             onPick={toggle}
           />
           {hidden.size > 0 && (
-            <p className="mt-2 text-[11px] text-slate-500">
+            <p className="mt-2 text-[11px] text-ink-500">
               {hidden.size} not-playable nation{hidden.size === 1 ? " is" : "s are"} locked for good and not listed here.
             </p>
           )}
         </div>
 
         <div className="mt-4">
-          <p className="mb-1.5 text-[11px] font-semibold text-slate-400">In this group ({active.nations.length})</p>
+          <p className="mb-1.5 text-[11px] font-semibold text-ink-400">In this group ({active.nations.length})</p>
           {active.nations.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-white/10 px-3 py-4 text-center text-xs text-slate-500">
+            <p className="rounded-xl border border-dashed border-white/10 px-3 py-4 text-center text-xs text-ink-500">
               Click a nation on the map to lock it.
             </p>
           ) : (

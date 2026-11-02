@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import SiteHeader from "@/components/site/SiteHeader";
 import ServerSwitcher from "@/components/ServerSwitcher";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type {
@@ -14,7 +14,7 @@ import type {
 import { PORTFOLIO_MODES } from "@/lib/moderationTypes";
 import type { HostProfile } from "@/lib/scheduleTypes";
 import { formatRelative } from "@/lib/timeEngine";
-import { GLASS, HostAvatar, Spinner } from "@/components/schedule/ui";
+import { GLASS, Spinner } from "@/components/schedule/ui";
 import Avatar from "./Avatar";
 import PlayerRecord from "./PlayerRecord";
 import RoleCheckCard from "./RoleCheckCard";
@@ -206,62 +206,15 @@ export default function DatabaseApp({ host }: { host: HostProfile }) {
   };
 
   return (
-    <div className="gm-backdrop min-h-screen w-full text-slate-100">
-      <header className="sticky top-0 z-[1100] border-b border-white/10 bg-slate-950/60 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-[1700px] flex-wrap items-center gap-3 px-4 py-3 sm:px-6">
-          <Link href="/" className="flex items-center gap-2.5" title="Back to the map">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-amber-300 to-orange-600 text-lg shadow-lg shadow-amber-500/30">
-              🗂️
-            </span>
-            <span className="leading-tight">
-              <span className="block text-sm font-black tracking-tight text-white">Database</span>
-              <span className="block text-[11px] font-semibold text-slate-400">GameMaster · User records</span>
-            </span>
-          </Link>
+    <div className="gm-backdrop min-h-screen w-full text-ink-100">
+      <SiteHeader page="database" icon="🗂️" title="Database" subtitle="GameMaster · User records" gradient="from-brand-300 to-orange-600">
           {host.demo && (
             <span className="rounded-full border border-fuchsia-400/40 bg-fuchsia-500/15 px-3 py-1 text-[11px] font-bold text-fuchsia-200">
               PREVIEW MODE · sample data
             </span>
           )}
           <ServerSwitcher host={host} />
-          <nav className="ml-auto flex items-center gap-2">
-            <Link
-              href="/"
-              className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-slate-300 hover:border-amber-300/40 hover:text-white"
-            >
-              🗺️ Map
-            </Link>
-            <Link
-              href="/schedule"
-              className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-slate-300 hover:border-amber-300/40 hover:text-white"
-            >
-              🗓️ Calendar
-            </Link>
-            <Link
-              href="/games"
-              className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-slate-300 hover:border-amber-300/40 hover:text-white"
-            >
-              🎮 Games
-            </Link>
-            <Link
-              href="/presets"
-              className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-slate-300 hover:border-amber-300/40 hover:text-white"
-            >
-              🧩 Presets
-            </Link>
-            <Link
-              href="/attendance"
-              className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-slate-300 hover:border-amber-300/40 hover:text-white"
-            >
-              🎯 Attendance
-            </Link>
-            <div className="hidden items-center gap-2 pl-1 sm:flex">
-              <HostAvatar host={host} />
-              <span className="text-xs font-semibold text-slate-300">{host.display_name || host.username}</span>
-            </div>
-          </nav>
-        </div>
-      </header>
+      </SiteHeader>
 
       <div className="mx-auto grid max-w-[1700px] gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[370px_minmax(0,1fr)]">
         {/* Search + results */}
@@ -294,10 +247,10 @@ export default function DatabaseApp({ host }: { host: HostProfile }) {
               }}
               placeholder="Search name, @handle or Discord ID"
               aria-label="Search users"
-              className="w-full rounded-xl border border-white/10 bg-slate-950/70 py-2.5 pl-9 pr-10 text-sm text-white placeholder:text-slate-500 focus:border-amber-300/60 focus:outline-none"
+              className="w-full rounded-xl border border-white/10 bg-ink-950/70 py-2.5 pl-9 pr-10 text-sm text-white placeholder:text-ink-500 focus:border-brand-300/60 focus:outline-none"
             />
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-500">🔎</span>
-            <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded border border-white/15 px-1.5 text-[10px] font-bold text-slate-500">
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-ink-500">🔎</span>
+            <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded border border-white/15 px-1.5 text-[10px] font-bold text-ink-500">
               /
             </kbd>
           </div>
@@ -316,20 +269,20 @@ export default function DatabaseApp({ host }: { host: HostProfile }) {
                   }}
                   className={`rounded-lg border px-2 py-1 text-[11px] font-bold transition ${
                     active
-                      ? "border-amber-300 bg-amber-400 text-slate-950"
-                      : "border-white/10 bg-white/[0.03] text-slate-300 hover:border-white/25 hover:text-white"
+                      ? "border-brand-300 bg-brand-400 text-ink-950"
+                      : "border-white/10 bg-white/[0.03] text-ink-300 hover:border-white/25 hover:text-white"
                   }`}
                 >
                   {option.label}
-                  {count !== undefined && <span className={active ? "ml-1 opacity-70" : "ml-1 text-slate-500"}>{count}</span>}
+                  {count !== undefined && <span className={active ? "ml-1 opacity-70" : "ml-1 text-ink-500"}>{count}</span>}
                 </button>
               );
             })}
           </div>
 
-          <div className="mt-3 flex items-center justify-between gap-2 text-[11px] text-slate-400">
+          <div className="mt-3 flex items-center justify-between gap-2 text-[11px] text-ink-400">
             <span className="flex items-center gap-1.5">
-              {loading && <Spinner className="h-3 w-3 text-amber-300" />}
+              {loading && <Spinner className="h-3 w-3 text-brand-300" />}
               {data
                 ? `${data.total} user${data.total === 1 ? "" : "s"}${debouncedQuery ? " found" : " with history"}`
                 : "Loading…"}
@@ -342,7 +295,7 @@ export default function DatabaseApp({ host }: { host: HostProfile }) {
                   setSort(event.target.value as PlayerSort);
                   resetPaging();
                 }}
-                className="rounded-md border border-white/10 bg-slate-900/80 px-1.5 py-1 text-[11px] font-semibold text-slate-200 [color-scheme:dark] focus:outline-none"
+                className="rounded-md border border-white/10 bg-ink-900/80 px-1.5 py-1 text-[11px] font-semibold text-ink-200 [color-scheme:dark] focus:outline-none"
               >
                 {SORTS.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -358,7 +311,7 @@ export default function DatabaseApp({ host }: { host: HostProfile }) {
               <p className="rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-100">{result.error}</p>
             )}
             {data && players.length === 0 && !loading && (
-              <p className="px-2 py-8 text-center text-xs text-slate-500">No users match.</p>
+              <p className="px-2 py-8 text-center text-xs text-ink-500">No users match.</p>
             )}
             <ul className={`space-y-1 transition-opacity ${loading && data ? "opacity-60" : ""}`}>
               {players.map((player, index) => (
@@ -374,7 +327,7 @@ export default function DatabaseApp({ host }: { host: HostProfile }) {
           </div>
 
           {data && data.total > data.page_size && (
-            <div className="mt-2 flex items-center justify-between border-t border-white/10 pt-2 text-[11px] text-slate-400">
+            <div className="mt-2 flex items-center justify-between border-t border-white/10 pt-2 text-[11px] text-ink-400">
               <button
                 type="button"
                 disabled={data.page === 0}
@@ -443,7 +396,7 @@ function PlayerRow({
         aria-current={active ? "true" : undefined}
         className={`flex w-full items-center gap-2.5 rounded-xl border px-2.5 py-2 text-left transition ${
           active
-            ? "border-amber-300/70 bg-amber-400/10"
+            ? "border-brand-300/70 bg-brand-400/10"
             : focused
               ? "border-white/25 bg-white/[0.06]"
               : "border-transparent hover:border-white/10 hover:bg-white/[0.04]"
@@ -458,14 +411,14 @@ function PlayerRow({
             {player.dishonored.length > 0 && <span title={`Dishonored: ${player.dishonored.join(", ")}`}>⚖️</span>}
             {banned.length > 0 && <span title={`Game banned: ${banned.join(", ")}`}>🔴</span>}
           </span>
-          <span className="flex flex-wrap items-center gap-x-2 text-[11px] text-slate-400">
+          <span className="flex flex-wrap items-center gap-x-2 text-[11px] text-ink-400">
             {player.username && <span className="truncate">@{player.username}</span>}
-            {!player.in_server && <span className="text-slate-500">left the server</span>}
-            {!player.has_history && <span className="text-slate-500">no history yet</span>}
+            {!player.in_server && <span className="text-ink-500">left the server</span>}
+            {!player.has_history && <span className="text-ink-500">no history yet</span>}
           </span>
         </span>
-        <span className="shrink-0 text-right text-[10px] leading-tight text-slate-500">
-          <span className="block text-xs font-black text-slate-300">{player.total_games}</span>
+        <span className="shrink-0 text-right text-[10px] leading-tight text-ink-500">
+          <span className="block text-xs font-black text-ink-300">{player.total_games}</span>
           games
         </span>
       </button>
@@ -509,9 +462,9 @@ function ActivityFeed({ nonce, onOpen }: { nonce: number; onOpen: (id: string) =
     <section data-tour="database.activity" className={`rounded-3xl p-4 sm:p-6 ${GLASS}`}>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-amber-300">📜 Moderation activity</p>
+          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-brand-300">📜 Moderation activity</p>
           <h1 className="mt-1 text-2xl font-black tracking-tight text-white">Recent actions</h1>
-          <p className="mt-1 max-w-2xl text-sm text-slate-400">
+          <p className="mt-1 max-w-2xl text-sm text-ink-400">
             Every commend, Merit, warning, ban and Dishonored from the web and the bot — newest first. Pick a user on the
             left to open their record and moderate them.
           </p>
@@ -519,7 +472,7 @@ function ActivityFeed({ nonce, onOpen }: { nonce: number; onOpen: (id: string) =
         <button
           type="button"
           onClick={() => setTick((value) => value + 1)}
-          className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-slate-300 hover:border-amber-300/40 hover:text-white"
+          className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-ink-300 hover:border-brand-300/40 hover:text-white"
         >
           {state?.key !== key && <Spinner className="h-3 w-3" />}↻ Refresh
         </button>
@@ -531,12 +484,12 @@ function ActivityFeed({ nonce, onOpen }: { nonce: number; onOpen: (id: string) =
         <p className="mt-4 rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">{state.error}</p>
       )}
       {!items && !state?.error && (
-        <div className="mt-6 flex items-center gap-2 text-sm text-slate-400">
-          <Spinner className="h-4 w-4 text-amber-300" /> Loading…
+        <div className="mt-6 flex items-center gap-2 text-sm text-ink-400">
+          <Spinner className="h-4 w-4 text-brand-300" /> Loading…
         </div>
       )}
       {items && items.length === 0 && (
-        <p className="mt-6 text-sm text-slate-500">
+        <p className="mt-6 text-sm text-ink-500">
           No actions logged yet. They appear here once the bot records them (run /backfill_portfolios once for older history).
         </p>
       )}
@@ -546,20 +499,20 @@ function ActivityFeed({ nonce, onOpen }: { nonce: number; onOpen: (id: string) =
             <li key={`${item.created_at}-${item.target_id}-${item.action}-${index}`} className="flex gap-3 py-2.5">
               <span className="mt-0.5 w-6 shrink-0 text-center text-base">{ACTION_ICON[item.action] ?? "•"}</span>
               <div className="min-w-0 flex-1 text-sm">
-                <p className="text-slate-200">
+                <p className="text-ink-200">
                   <button
                     type="button"
                     onClick={() => onOpen(item.target_id)}
-                    className="font-bold text-white underline-offset-2 hover:text-amber-200 hover:underline"
+                    className="font-bold text-white underline-offset-2 hover:text-brand-200 hover:underline"
                   >
                     {item.target_name}
                   </button>{" "}
-                  <span className="text-slate-400">—</span> {item.label}
-                  {item.amount !== null && item.amount > 1 && <span className="text-slate-400"> ×{item.amount}</span>}
-                  {item.mode && <span className="text-slate-400"> · {item.mode}</span>}
+                  <span className="text-ink-400">—</span> {item.label}
+                  {item.amount !== null && item.amount > 1 && <span className="text-ink-400"> ×{item.amount}</span>}
+                  {item.mode && <span className="text-ink-400"> · {item.mode}</span>}
                 </p>
-                {item.reason && <p className="mt-0.5 line-clamp-2 text-xs text-slate-400">“{item.reason}”</p>}
-                <p className="mt-0.5 text-[11px] text-slate-500">
+                {item.reason && <p className="mt-0.5 line-clamp-2 text-xs text-ink-400">“{item.reason}”</p>}
+                <p className="mt-0.5 text-[11px] text-ink-500">
                   {item.automatic ? "🤖 Automatic" : item.issued_by ? `by ${item.issued_by}` : "by staff"} ·{" "}
                   <span title={new Date(item.created_at * 1000).toLocaleString()}>{formatRelative(item.created_at * 1000, now)}</span>
                   {item.log_url && (
@@ -597,7 +550,7 @@ function RuleCards() {
           <p className="text-sm font-black text-white">
             {card.icon} {card.title}
           </p>
-          <p className="mt-1 text-[11px] leading-snug text-slate-400">{card.text}</p>
+          <p className="mt-1 text-[11px] leading-snug text-ink-400">{card.text}</p>
         </div>
       ))}
     </div>

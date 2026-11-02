@@ -100,8 +100,8 @@ export default function GameControlPanel({
         {state?.error ? (
           <p className="rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">{state.error}</p>
         ) : (
-          <div className="flex items-center gap-2 text-sm text-slate-400">
-            <Spinner className="h-4 w-4 text-amber-300" /> Loading the game…
+          <div className="flex items-center gap-2 text-sm text-ink-400">
+            <Spinner className="h-4 w-4 text-brand-300" /> Loading the game…
           </div>
         )}
       </section>
@@ -135,7 +135,7 @@ export default function GameControlPanel({
             <button
               type="button"
               onClick={onBack}
-              className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs font-bold text-slate-300 hover:text-white lg:hidden"
+              className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs font-bold text-ink-300 hover:text-white lg:hidden"
             >
               ← Games
             </button>
@@ -144,16 +144,16 @@ export default function GameControlPanel({
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="min-w-0 break-words text-2xl font-black tracking-tight text-white">{game.name}</h1>
               <PhaseBadge phase={game.phase} size="md" />
-              {state?.key !== key && <Spinner className="h-3.5 w-3.5 text-slate-400" />}
+              {state?.key !== key && <Spinner className="h-3.5 w-3.5 text-ink-400" />}
             </div>
-            <p className="mt-1 text-sm text-slate-400">
-              {game.mode} · hosted by <span className="font-semibold text-slate-200">{game.host_name ?? "unknown"}</span>
-              {game.mine && <span className="ml-1.5 rounded bg-amber-400/20 px-1.5 text-xs font-bold text-amber-200">You</span>} ·{" "}
+            <p className="mt-1 text-sm text-ink-400">
+              {game.mode} · hosted by <span className="font-semibold text-ink-200">{game.host_name ?? "unknown"}</span>
+              {game.mine && <span className="ml-1.5 rounded bg-brand-400/20 px-1.5 text-xs font-bold text-brand-200">You</span>} ·{" "}
               {game.logging_mode} logging
               {game.add_on && <> · add-on: {game.add_on}</>}
             </p>
             {game.scheduled_at && (
-              <p className="mt-0.5 text-xs text-slate-500">
+              <p className="mt-0.5 text-xs text-ink-500">
                 Scheduled {dateTime(game.scheduled_at)} ({formatRelative(game.scheduled_at * 1000, now)})
               </p>
             )}
@@ -176,7 +176,7 @@ export default function GameControlPanel({
                 href={game.discord_url}
                 target="_blank"
                 rel="noreferrer"
-                className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-slate-300 hover:border-indigo-300/50 hover:text-white"
+                className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-ink-300 hover:border-indigo-300/50 hover:text-white"
               >
                 {game.has_thread ? "Discord thread ↗" : "Discord post ↗"}
               </a>
@@ -184,7 +184,7 @@ export default function GameControlPanel({
             {(started || game.samples_done > 0) && (
               <Link
                 href={`/attendance?game=${game.id}`}
-                className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-slate-300 hover:border-emerald-300/50 hover:text-white"
+                className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-ink-300 hover:border-emerald-300/50 hover:text-white"
               >
                 🎯 Attendance
               </Link>
@@ -192,22 +192,22 @@ export default function GameControlPanel({
             <button
               type="button"
               onClick={refresh}
-              className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-slate-300 hover:border-amber-300/40 hover:text-white"
+              className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-ink-300 hover:border-brand-300/40 hover:text-white"
             >
               ↻ Refresh
             </button>
           </div>
         </div>
         {state?.error && (
-          <p className="mt-3 rounded-lg border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">{state.error}</p>
+          <p className="mt-3 rounded-lg border border-brand-400/30 bg-brand-500/10 px-3 py-2 text-xs text-brand-100">{state.error}</p>
         )}
         {!game.can_manage && (
-          <p className="mt-3 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-slate-400">
+          <p className="mt-3 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-ink-400">
             Only {game.host_name ?? "the game's host"} or Host Management can start, end or cancel this game. You can follow it here.
           </p>
         )}
         {otherHostWorking && (
-          <p className="mt-3 flex items-center gap-2 rounded-lg border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
+          <p className="mt-3 flex items-center gap-2 rounded-lg border border-brand-400/30 bg-brand-500/10 px-3 py-2 text-xs text-brand-100">
             <Spinner className="h-3.5 w-3.5" /> {ACTION_LABEL[inFlight.action].running} — sent by another host. This page updates when
             it&apos;s done.
           </p>
@@ -283,7 +283,7 @@ export default function GameControlPanel({
         <Notice tone="rose" title="🗑️ This game was cancelled">
           {game.cancelled_at ? `Cancelled ${dateTime(game.cancelled_at)}` : "Cancelled"}
           {game.cancelled_by ? ` by ${game.cancelled_by}` : ""}.
-          {game.cancel_reason && <span className="mt-1 block text-slate-300">“{game.cancel_reason}”</span>}
+          {game.cancel_reason && <span className="mt-1 block text-ink-300">“{game.cancel_reason}”</span>}
         </Notice>
       )}
       {/* Played games: the chat log + AI analysis (formerly the Host Control Center). */}
@@ -295,7 +295,7 @@ export default function GameControlPanel({
 
       <RosterCard game={game} />
       {host.demo && (
-        <p className="text-center text-[11px] text-slate-500">
+        <p className="text-center text-[11px] text-ink-500">
           Preview mode: the bot is simulated — starting, ending and cancelling take a few seconds and change nothing in Discord.
         </p>
       )}
@@ -305,12 +305,12 @@ export default function GameControlPanel({
 
 function Notice({ tone, title, children }: { tone: "amber" | "slate" | "rose"; title: string; children: ReactNode }) {
   const tones = {
-    amber: "border-amber-400/40 bg-amber-500/10",
+    amber: "border-brand-400/40 bg-brand-500/10",
     slate: "border-white/10 bg-white/[0.03]",
     rose: "border-rose-400/30 bg-rose-500/5",
   };
   return (
-    <section className={`rounded-3xl border p-4 text-sm text-slate-300 sm:p-6 ${tones[tone]}`}>
+    <section className={`rounded-3xl border p-4 text-sm text-ink-300 sm:p-6 ${tones[tone]}`}>
       <p className="font-black text-white">{title}</p>
       <div className="mt-1 leading-relaxed">{children}</div>
     </section>
@@ -334,7 +334,7 @@ function ProgressCard({
   const phase = !status || status.status === "pending" ? "queued" : status.status === "running" ? "running" : status.status;
   const finished = phase === "done" || phase === "error";
   const border =
-    phase === "done" ? "border-emerald-400/40 bg-emerald-500/10" : phase === "error" ? "border-rose-400/40 bg-rose-500/10" : "border-amber-400/40 bg-amber-500/10";
+    phase === "done" ? "border-emerald-400/40 bg-emerald-500/10" : phase === "error" ? "border-rose-400/40 bg-rose-500/10" : "border-brand-400/40 bg-brand-500/10";
   return (
     <section className={`gm-fade-up rounded-3xl border p-4 sm:p-6 ${border}`} aria-live="polite">
       <div className="flex items-start gap-3">
@@ -344,7 +344,7 @@ function ProgressCard({
             {phase === "done" ? (life?.title ?? label.done) : phase === "error" ? `${label.running} failed` : `${label.running}…`}
           </p>
           {phase === "queued" && (
-            <p className="mt-1 text-sm text-slate-300">
+            <p className="mt-1 text-sm text-ink-300">
               Waiting for the bot to pick it up{waitedSec > 3 ? ` (${waitedSec}s)` : ""}…
               {waitedSec > 45 && " It checks every few seconds — if this takes much longer, the bot may be offline."}
             </p>
@@ -357,7 +357,7 @@ function ProgressCard({
           )}
         </div>
         {finished && (
-          <button type="button" onClick={onDismiss} className="text-slate-300 opacity-70 hover:opacity-100" aria-label="Dismiss">
+          <button type="button" onClick={onDismiss} className="text-ink-300 opacity-70 hover:opacity-100" aria-label="Dismiss">
             ✕
           </button>
         )}
@@ -367,8 +367,8 @@ function ProgressCard({
           {steps.map((step, index) => {
             const current = phase === "running" && index === steps.length - 1;
             return (
-              <li key={`${step.ts}-${index}`} className="flex items-start gap-2 text-slate-200">
-                <span className="mt-0.5 w-4 shrink-0 text-center text-xs">{current ? <Spinner className="h-3.5 w-3.5 text-amber-300" /> : "✓"}</span>
+              <li key={`${step.ts}-${index}`} className="flex items-start gap-2 text-ink-200">
+                <span className="mt-0.5 w-4 shrink-0 text-center text-xs">{current ? <Spinner className="h-3.5 w-3.5 text-brand-300" /> : "✓"}</span>
                 <span className="min-w-0 flex-1">
                   <BotText text={step.text} />
                 </span>
@@ -413,7 +413,7 @@ function LiveCard({
           <Stat label="Samples" value={`${game.samples_done}/5`} hint={game.interval_minutes ? `every ${game.interval_minutes} min` : undefined} />
           <Stat label="Present so far" value={String(game.present)} hint="Seen in 2+ samples" />
         </div>
-        <p className="mt-3 text-xs text-slate-400">
+        <p className="mt-3 text-xs text-ink-400">
           Follow who&apos;s in voice, fix mistakes and see the full log on the{" "}
           <Link href={`/attendance?game=${game.id}`} className="font-bold text-emerald-300 hover:underline">
             Attendance page
@@ -422,9 +422,9 @@ function LiveCard({
         </p>
       </div>
       <div className="space-y-2">
-        <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">{ending ? "Finish ending" : "End the game"}</p>
+        <p className="text-[11px] font-black uppercase tracking-[0.18em] text-ink-400">{ending ? "Finish ending" : "End the game"}</p>
         {ending && (
-          <p className="text-[11px] leading-snug text-amber-100">
+          <p className="text-[11px] leading-snug text-brand-100">
             The last end didn&apos;t finish (the bot may have restarted). Ending again picks up where it stopped.
           </p>
         )}
@@ -444,7 +444,7 @@ function LiveCard({
         {canEnd ? (
           <SubmitButton label={ending ? "🏁 Finish ending the game" : "🏁 End game"} danger busy={busy} disabled={busy} onConfirm={onEnd} />
         ) : (
-          <p className="text-[11px] text-slate-500">Only the game&apos;s host or Host Management can end it.</p>
+          <p className="text-[11px] text-ink-500">Only the game&apos;s host or Host Management can end it.</p>
         )}
       </div>
     </section>
@@ -454,9 +454,9 @@ function LiveCard({
 function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
-      <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">{label}</p>
+      <p className="text-[10px] font-black uppercase tracking-wider text-ink-500">{label}</p>
       <p className="mt-0.5 text-xl font-black text-white">{value}</p>
-      {hint && <p className="text-[10px] text-slate-500">{hint}</p>}
+      {hint && <p className="text-[10px] text-ink-500">{hint}</p>}
     </div>
   );
 }
@@ -484,9 +484,9 @@ function CancelCard({ game, busy, onCancel }: { game: GameControl; busy: boolean
       <div className="flex items-start gap-3">
         <div className="flex-1">
           <p className="text-[11px] font-black uppercase tracking-[0.18em] text-rose-300">Cancel the game</p>
-          <p className="mt-1 text-sm text-slate-300">No penalties for anyone — use it when the game can&apos;t happen.</p>
+          <p className="mt-1 text-sm text-ink-300">No penalties for anyone — use it when the game can&apos;t happen.</p>
         </div>
-        <button type="button" onClick={() => setOpen(false)} className="text-slate-400 hover:text-white" aria-label="Close">
+        <button type="button" onClick={() => setOpen(false)} className="text-ink-400 hover:text-white" aria-label="Close">
           ✕
         </button>
       </div>
@@ -525,11 +525,11 @@ function RosterCard({ game }: { game: GameControl }) {
   return (
     <section data-tour="games.roster" className={`rounded-3xl p-4 sm:p-6 ${GLASS}`}>
       <div className="flex items-baseline justify-between gap-2">
-        <p className="text-[11px] font-black uppercase tracking-[0.18em] text-amber-300">Reserved players</p>
-        <p className="text-xs text-slate-400">{game.players} player(s)</p>
+        <p className="text-[11px] font-black uppercase tracking-[0.18em] text-brand-300">Reserved players</p>
+        <p className="text-xs text-ink-400">{game.players} player(s)</p>
       </div>
       {game.roster.length === 0 ? (
-        <p className="mt-4 text-sm text-slate-500">Nobody has reserved a nation yet.</p>
+        <p className="mt-4 text-sm text-ink-500">Nobody has reserved a nation yet.</p>
       ) : (
         <ul className="mt-3 grid gap-1.5 sm:grid-cols-2 xl:grid-cols-3">
           {game.roster.map((player) => (
@@ -537,11 +537,11 @@ function RosterCard({ game }: { game: GameControl }) {
               <Avatar url={player.avatar_url} name={player.name} size={30} />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-bold text-white">{player.name}</span>
-                <span className="block truncate text-[11px] text-slate-400">{player.slot}</span>
+                <span className="block truncate text-[11px] text-ink-400">{player.slot}</span>
               </span>
               {started && (
                 <span
-                  className={`shrink-0 text-[10px] font-black uppercase ${player.confirmed ? "text-emerald-300" : "text-slate-500"}`}
+                  className={`shrink-0 text-[10px] font-black uppercase ${player.confirmed ? "text-emerald-300" : "text-ink-500"}`}
                   title={player.confirmed ? "Answered Yes to the participation DM" : "Hasn't confirmed yet"}
                 >
                   {player.confirmed ? "✓ Yes" : "No reply"}

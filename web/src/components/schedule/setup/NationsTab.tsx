@@ -160,7 +160,7 @@ export default function NationsTab({
               <span
                 key={group.id}
                 className={`rounded-md px-2 py-0.5 text-[11px] font-semibold ${
-                  group.enabled ? "bg-white/5 text-slate-200" : "bg-rose-500/10 text-rose-200 line-through"
+                  group.enabled ? "bg-white/5 text-ink-200" : "bg-rose-500/10 text-rose-200 line-through"
                 }`}
               >
                 {group.name} ({group.tiers.reduce((sum, tier) => sum + tier.nations.length, 0)})
@@ -168,7 +168,7 @@ export default function NationsTab({
             ))}
           </div>
           {notPlayable.length > 0 && (
-            <p className="mt-2 text-[11px] text-slate-400" title={notPlayable.join(", ")}>
+            <p className="mt-2 text-[11px] text-ink-400" title={notPlayable.join(", ")}>
               🚫 {notPlayable.length} nation{notPlayable.length === 1 ? " isn't" : "s aren't"} playable in this game —
               hidden from the list and the map, and locked for good (no need to lock them here).
             </p>
@@ -211,8 +211,8 @@ export default function NationsTab({
                   title={isActive ? "Editing — red on the map" : "Blue on the map"}
                 />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-semibold text-slate-100">{group.label}</span>
-                  <span className="block text-[11px] text-slate-400">
+                  <span className="block truncate text-sm font-semibold text-ink-100">{group.label}</span>
+                  <span className="block text-[11px] text-ink-400">
                     {group.nations.length} nation{group.nations.length === 1 ? "" : "s"} ·{" "}
                     {group.releaseEnabled
                       ? `unlocks ${formatDurationMinutes(group.releaseHoursBefore * 60)} before`
@@ -226,7 +226,7 @@ export default function NationsTab({
                     event.stopPropagation();
                     removeGroup(group.id);
                   }}
-                  className="rounded-md px-1.5 text-slate-500 hover:text-rose-300"
+                  className="rounded-md px-1.5 text-ink-500 hover:text-rose-300"
                   aria-label={`Delete ${group.label}`}
                   title="Delete group"
                 >
@@ -240,7 +240,7 @@ export default function NationsTab({
           type="button"
           onClick={addGroup}
           disabled={form.lockGroups.length >= MAX_LOCK_GROUPS}
-          className="mt-2 w-full rounded-xl border border-dashed border-white/15 py-2 text-xs font-semibold text-slate-400 transition hover:border-amber-300/40 hover:text-amber-200 disabled:opacity-40"
+          className="mt-2 w-full rounded-xl border border-dashed border-white/15 py-2 text-xs font-semibold text-ink-400 transition hover:border-brand-300/40 hover:text-brand-200 disabled:opacity-40"
         >
           ＋ New lock group (e.g. &quot;Axis majors until 12h before&quot;)
         </button>
@@ -251,7 +251,7 @@ export default function NationsTab({
           value={active.label}
           maxLength={40}
           onChange={(event) => updateGroup(active.id, { label: event.target.value })}
-          className="w-full rounded-lg border border-white/10 bg-slate-950/70 px-3 py-2 text-sm font-semibold text-slate-100 focus:border-amber-300/50 focus:outline-none"
+          className="w-full rounded-lg border border-white/10 bg-ink-950/70 px-3 py-2 text-sm font-semibold text-ink-100 focus:border-brand-300/50 focus:outline-none"
           aria-label="Group name"
         />
         <div className="mt-3">
@@ -266,10 +266,10 @@ export default function NationsTab({
             }
           />
           {active.releaseEnabled && (
-            <div className="gm-fade-up mt-3 rounded-xl border border-white/10 bg-slate-950/50 p-3">
+            <div className="gm-fade-up mt-3 rounded-xl border border-white/10 bg-ink-950/50 p-3">
               <div className="flex items-baseline justify-between">
-                <span className="text-[11px] font-semibold text-slate-400">Before the game</span>
-                <span className="text-sm font-black text-amber-200">
+                <span className="text-[11px] font-semibold text-ink-400">Before the game</span>
+                <span className="text-sm font-black text-brand-200">
                   {formatDurationMinutes(active.releaseHoursBefore * 60)}
                 </span>
               </div>
@@ -283,9 +283,9 @@ export default function NationsTab({
                   (hours) => ({ value: hours, label: `${hours}h` }),
                 )}
               />
-              <p className="mt-1 text-xs text-slate-300">
+              <p className="mt-1 text-xs text-ink-300">
                 🔓 Unlocks <b className="text-white">{formatInZone(releaseSec * 1000, timeZone)}</b>{" "}
-                <span className="text-slate-500">
+                <span className="text-ink-500">
                   · {releaseSec <= nowSec ? "right after the announcement" : formatRelative(releaseSec * 1000)}
                 </span>
               </p>
@@ -295,7 +295,7 @@ export default function NationsTab({
 
         {quickSets.length > 0 && (
           <div className="mt-4">
-            <p className="mb-1.5 text-[11px] font-semibold text-slate-400">Quick picks — toggle a whole group of nations</p>
+            <p className="mb-1.5 text-[11px] font-semibold text-ink-400">Quick picks — toggle a whole group of nations</p>
             <div className="flex flex-wrap gap-1.5">
               {quickSets.map((set) => {
                 const inActive = set.slots.filter((slot) => active.nations.includes(slot)).length;
@@ -310,7 +310,7 @@ export default function NationsTab({
                         ? "border-rose-400/70 bg-rose-500/25 text-rose-100"
                         : state === "some"
                           ? "border-rose-400/40 bg-rose-500/10 text-rose-200"
-                          : "border-white/10 bg-white/[0.04] text-slate-300 hover:border-white/30"
+                          : "border-white/10 bg-white/[0.04] text-ink-300 hover:border-white/30"
                     }`}
                     title={state === "all" ? "Click to unlock all" : "Click to lock all"}
                   >
@@ -331,7 +331,7 @@ export default function NationsTab({
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="🔎 Find a nation…"
-              className="w-full rounded-lg border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-amber-300/50 focus:outline-none"
+              className="w-full rounded-lg border border-white/10 bg-ink-950/70 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:border-brand-300/50 focus:outline-none"
             />
             {results.length > 0 && (
               <ul className="roster-scroll mt-2 max-h-56 space-y-1 overflow-y-auto">
@@ -354,7 +354,7 @@ export default function NationsTab({
               </ul>
             )}
             {query.trim() && results.length === 0 && (
-              <p className="mt-2 text-xs text-slate-500">No nation matches “{query}”.</p>
+              <p className="mt-2 text-xs text-ink-500">No nation matches “{query}”.</p>
             )}
           </div>
         ) : (
@@ -372,7 +372,7 @@ export default function NationsTab({
               maxLength={128}
               onChange={(event) => setManualName(event.target.value)}
               placeholder="Nation name exactly as on the bot's list"
-              className="flex-1 rounded-lg border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-amber-300/50 focus:outline-none"
+              className="flex-1 rounded-lg border border-white/10 bg-ink-950/70 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:border-brand-300/50 focus:outline-none"
             />
             <button type="submit" className="rounded-lg bg-rose-500 px-3 text-sm font-bold text-white hover:bg-rose-400">
               Lock
@@ -382,19 +382,19 @@ export default function NationsTab({
 
         <div className="mt-4">
           <div className="mb-1.5 flex items-center justify-between">
-            <p className="text-[11px] font-semibold text-slate-400">In this group ({active.nations.length})</p>
+            <p className="text-[11px] font-semibold text-ink-400">In this group ({active.nations.length})</p>
             {active.nations.length > 0 && (
               <button
                 type="button"
                 onClick={() => updateGroup(active.id, { nations: [] })}
-                className="text-[11px] font-semibold text-slate-500 hover:text-rose-300"
+                className="text-[11px] font-semibold text-ink-500 hover:text-rose-300"
               >
                 Clear
               </button>
             )}
           </div>
           {active.nations.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-white/10 px-3 py-4 text-center text-xs text-slate-500">
+            <p className="rounded-xl border border-dashed border-white/10 px-3 py-4 text-center text-xs text-ink-500">
               {scenarioId ? "Click a nation on the map to lock it." : "Add nations by name above."}
             </p>
           ) : (
@@ -457,21 +457,21 @@ function NationRow({
       <img
         src={data.flagUrl || `/assets/flags/${nation.tag}.png`}
         alt=""
-        className="h-4 w-6 shrink-0 rounded-[2px] border border-slate-700 object-cover"
+        className="h-4 w-6 shrink-0 rounded-[2px] border border-ink-700 object-cover"
         onError={(event) => {
           event.currentTarget.src = placeholderFlag(nation.tag);
         }}
       />
-      <button type="button" onClick={onFocus} className="min-w-0 flex-1 truncate text-left text-xs font-semibold text-slate-200 hover:text-white">
+      <button type="button" onClick={onFocus} className="min-w-0 flex-1 truncate text-left text-xs font-semibold text-ink-200 hover:text-white">
         {boardDisplayName(scenarioId, nation.tag, nation.name)}
-        <span className="ml-1.5 text-[10px] font-normal text-slate-500">{nation.region}</span>
+        <span className="ml-1.5 text-[10px] font-normal text-ink-500">{nation.region}</span>
       </button>
       {owner && !inActive && <span className="truncate text-[10px] text-sky-300">in {owner.label}</span>}
       <button
         type="button"
         onClick={onToggle}
         className={`shrink-0 rounded-md px-2 py-0.5 text-[11px] font-bold transition ${
-          inActive ? "bg-rose-500/25 text-rose-100 hover:bg-rose-500/40" : "bg-white/5 text-slate-300 hover:bg-rose-500/25 hover:text-rose-100"
+          inActive ? "bg-rose-500/25 text-rose-100 hover:bg-rose-500/40" : "bg-white/5 text-ink-300 hover:bg-rose-500/25 hover:text-rose-100"
         }`}
       >
         {inActive ? "Unlock" : owner ? "Move here" : "Lock"}

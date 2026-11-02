@@ -83,17 +83,17 @@ export default function TimeZonePicker({
           setNow(Date.now());
           setOpen((current) => !current);
         }}
-        className="flex items-center gap-2 rounded-xl border border-white/10 bg-slate-900/70 px-3 py-2 text-left text-xs font-semibold text-slate-200 transition hover:border-amber-300/40"
+        className="flex items-center gap-2 rounded-xl border border-white/10 bg-ink-900/70 px-3 py-2 text-left text-xs font-semibold text-ink-200 transition hover:border-brand-300/40"
         title="Times on this page are shown in this time zone"
       >
         <span aria-hidden>🌐</span>
         <span className="max-w-[160px] truncate">{zoneCity(value)}</span>
-        <span className="text-slate-500">{formatOffset(offsetMinutes(now, value))}</span>
-        <span className="text-slate-500">▾</span>
+        <span className="text-ink-500">{formatOffset(offsetMinutes(now, value))}</span>
+        <span className="text-ink-500">▾</span>
       </button>
       {open && (
         <div
-          className={`gm-fade-up absolute z-[1300] mt-2 w-72 overflow-hidden rounded-2xl border border-white/10 bg-slate-900/95 shadow-2xl backdrop-blur-xl ${
+          className={`gm-fade-up absolute z-[1300] mt-2 w-72 overflow-hidden rounded-2xl border border-white/10 bg-ink-900/95 shadow-2xl backdrop-blur-xl ${
             align === "right" ? "right-0" : "left-0"
           }`}
         >
@@ -103,7 +103,7 @@ export default function TimeZonePicker({
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search city or zone…"
-              className="w-full rounded-lg border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-amber-300/50 focus:outline-none"
+              className="w-full rounded-lg border border-white/10 bg-ink-950/70 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:border-brand-300/50 focus:outline-none"
             />
             {deviceZone !== value && (
               <button
@@ -112,7 +112,7 @@ export default function TimeZonePicker({
                   onChange(deviceZone);
                   setOpen(false);
                 }}
-                className="mt-2 w-full rounded-lg bg-amber-400/10 px-3 py-1.5 text-left text-xs font-semibold text-amber-200 hover:bg-amber-400/20"
+                className="mt-2 w-full rounded-lg bg-brand-400/10 px-3 py-1.5 text-left text-xs font-semibold text-brand-200 hover:bg-brand-400/20"
               >
                 ↺ Use my device zone ({zoneCity(deviceZone)})
               </button>
@@ -129,16 +129,16 @@ export default function TimeZonePicker({
                     setQuery("");
                   }}
                   className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-1.5 text-left text-xs transition ${
-                    zone === value ? "bg-amber-400/15 text-amber-100" : "text-slate-300 hover:bg-white/5"
+                    zone === value ? "bg-brand-400/15 text-brand-100" : "text-ink-300 hover:bg-white/5"
                   }`}
                 >
                   <span className="truncate">{zone.replace(/_/g, " ")}</span>
-                  <span className="shrink-0 text-slate-500">{formatOffset(offsetMinutes(now, zone))}</span>
+                  <span className="shrink-0 text-ink-500">{formatOffset(offsetMinutes(now, zone))}</span>
                 </button>
               </li>
             ))}
             {filtered.length === 0 && (
-              <li className="px-3 py-4 text-center text-xs text-slate-500">No matching zone</li>
+              <li className="px-3 py-4 text-center text-xs text-ink-500">No matching zone</li>
             )}
           </ul>
         </div>

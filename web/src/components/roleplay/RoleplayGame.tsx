@@ -61,21 +61,21 @@ export default function RoleplayGame() {
   const game = state?.id === id ? state.game : null;
 
   return (
-    <div className="gm-backdrop min-h-screen w-full text-slate-100">
+    <div className="gm-backdrop min-h-screen w-full text-ink-100">
       <RpHeader>
-        <Link href="/roleplay" className="rounded-lg px-2 py-1 text-xs font-bold text-slate-400 hover:text-white">
+        <Link href="/roleplay" className="rounded-lg px-2 py-1 text-xs font-bold text-ink-400 hover:text-white">
           ← All games
         </Link>
       </RpHeader>
       <main className="mx-auto max-w-[1300px] space-y-6 px-4 py-6 sm:px-6">
         {!state || state.id !== id ? (
-          <div className="flex items-center gap-2 px-2 py-10 text-sm text-slate-400">
+          <div className="flex items-center gap-2 px-2 py-10 text-sm text-ink-400">
             <Spinner className="h-4 w-4 text-fuchsia-300" /> Loading the game…
           </div>
         ) : !game ? (
           <div className={`rounded-3xl p-10 text-center ${GLASS}`}>
             <p className="text-4xl">📜</p>
-            <p className="mt-3 text-sm font-semibold text-slate-200">{state.error}</p>
+            <p className="mt-3 text-sm font-semibold text-ink-200">{state.error}</p>
             <Link href="/roleplay" className="mt-4 inline-block text-xs font-bold text-fuchsia-300 hover:text-fuchsia-200">
               ← Back to the archive
             </Link>
@@ -94,19 +94,19 @@ function GameView({ game }: { game: RpGameDetail }) {
 
   return (
     <>
-      <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-violet-950/60 via-slate-900/70 to-fuchsia-950/40 p-6 shadow-2xl sm:p-8">
+      <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-violet-950/60 via-ink-900/70 to-fuchsia-950/40 p-6 shadow-2xl sm:p-8">
         <div className="pointer-events-none absolute -left-20 -top-28 h-72 w-72 rounded-full bg-violet-500/10 blur-3xl" aria-hidden />
         <div className="flex flex-wrap items-center gap-2">
           <ModeBadge mode={card.mode} />
-          <span className="text-xs font-semibold text-slate-400">{playedOn(card.ts)}</span>
+          <span className="text-xs font-semibold text-ink-400">{playedOn(card.ts)}</span>
         </div>
         <h1 className="mt-3 text-2xl font-black tracking-tight text-white sm:text-3xl">{card.name}</h1>
         <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
           <ServerChip name={card.server_name} icon={card.server_icon_url} />
-          {card.host_name && <span className="text-xs text-slate-400">hosted by {card.host_name}</span>}
+          {card.host_name && <span className="text-xs text-ink-400">hosted by {card.host_name}</span>}
         </div>
         {card.summary && (
-          <blockquote className="mt-5 max-w-3xl border-l-4 border-fuchsia-300/60 pl-4 text-base italic leading-relaxed text-slate-200" data-tour="rp.story">
+          <blockquote className="mt-5 max-w-3xl border-l-4 border-fuchsia-300/60 pl-4 text-base italic leading-relaxed text-ink-200" data-tour="rp.story">
             {card.summary}
           </blockquote>
         )}
@@ -119,7 +119,7 @@ function GameView({ game }: { game: RpGameDetail }) {
       </section>
 
       <section data-tour="rp.players">
-        <h2 className="px-1 text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">The players</h2>
+        <h2 className="px-1 text-[11px] font-black uppercase tracking-[0.2em] text-ink-400">The players</h2>
         <div className="mt-3 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {game.players.map((player) => (
             <PlayerCard
@@ -136,7 +136,7 @@ function GameView({ game }: { game: RpGameDetail }) {
 
       <LogView game={game} focusTag={focusTag} onFocusTag={setFocusTag} />
 
-      <p className="px-1 pb-6 text-[11px] leading-relaxed text-slate-500">
+      <p className="px-1 pb-6 text-[11px] leading-relaxed text-ink-500">
         Graded {playedOn(game.graded_at)}. The AI scores how good the roleplay is; the bot counts the in-character words and
         applies the server&apos;s rules; the host gives the rewards.
       </p>
@@ -146,7 +146,7 @@ function GameView({ game }: { game: RpGameDetail }) {
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <span className="rounded-xl border border-white/10 bg-slate-950/50 px-3 py-1.5 text-slate-400">
+    <span className="rounded-xl border border-white/10 bg-ink-950/50 px-3 py-1.5 text-ink-400">
       <b className="text-sm text-white">{value}</b> {label}
     </span>
   );
@@ -162,7 +162,7 @@ function PlayerCard({ player, onRead }: { player: RpPlayer; onRead: () => void }
         <Avatar url={player.avatar_url} name={player.name} size={40} />
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-black text-white">{player.name}</p>
-          <p className="flex items-center gap-1.5 truncate text-xs text-slate-400">
+          <p className="flex items-center gap-1.5 truncate text-xs text-ink-400">
             <Flag tag={player.tag} className="h-3.5 w-5" />
             {player.nation}
             {player.role === "COOP" ? " · Co-op" : ""}
@@ -175,11 +175,11 @@ function PlayerCard({ player, onRead }: { player: RpPlayer; onRead: () => void }
         </span>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-3 text-[11px] text-slate-400">
+      <div className="mt-4 grid grid-cols-2 gap-3 text-[11px] text-ink-400">
         <div>
           <p className="flex justify-between">
             <span>In character</span>
-            <b className="text-slate-200">{words(player.ic_words)}</b>
+            <b className="text-ink-200">{words(player.ic_words)}</b>
           </p>
           <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-white/5">
             <div className="h-full rounded-full bg-gradient-to-r from-sky-400 to-violet-400" style={{ width: `${share}%` }} />
@@ -188,21 +188,21 @@ function PlayerCard({ player, onRead }: { player: RpPlayer; onRead: () => void }
         <div>
           <p className="flex justify-between">
             <span>Creativity</span>
-            <b className="text-slate-200">{player.creativity}/10</b>
+            <b className="text-ink-200">{player.creativity}/10</b>
           </p>
           <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-white/5">
-            <div className="h-full rounded-full bg-gradient-to-r from-amber-300 to-fuchsia-400" style={{ width: `${player.creativity * 10}%` }} />
+            <div className="h-full rounded-full bg-gradient-to-r from-brand-300 to-fuchsia-400" style={{ width: `${player.creativity * 10}%` }} />
           </div>
         </div>
       </div>
 
-      {player.summary && <p className="mt-3 text-xs leading-relaxed text-slate-300">{player.summary}</p>}
-      {player.why && <p className="mt-1 text-[11px] text-slate-500">{player.why}</p>}
+      {player.summary && <p className="mt-3 text-xs leading-relaxed text-ink-300">{player.summary}</p>}
+      {player.why && <p className="mt-1 text-[11px] text-ink-500">{player.why}</p>}
 
       {shown.length > 0 && (
         <div className="mt-3 space-y-2">
           {shown.map((line) => (
-            <blockquote key={line} className="border-l-2 border-fuchsia-300/40 pl-3 text-xs italic leading-relaxed text-slate-200">
+            <blockquote key={line} className="border-l-2 border-fuchsia-300/40 pl-3 text-xs italic leading-relaxed text-ink-200">
               “{line}”
             </blockquote>
           ))}
@@ -210,7 +210,7 @@ function PlayerCard({ player, onRead }: { player: RpPlayer; onRead: () => void }
       )}
       <div className="mt-auto flex items-center gap-3 pt-4">
         {player.snippets.length > 1 && (
-          <button type="button" onClick={() => setMore((value) => !value)} className="text-[11px] font-bold text-slate-400 hover:text-white">
+          <button type="button" onClick={() => setMore((value) => !value)} className="text-[11px] font-bold text-ink-400 hover:text-white">
             {more ? "Fewer quotes" : `${player.snippets.length - 1} more quote${player.snippets.length > 2 ? "s" : ""}`}
           </button>
         )}
@@ -259,17 +259,17 @@ function LogView({ game, focusTag, onFocusTag }: { game: RpGameDetail; focusTag:
 
   return (
     <section id="rp-log" className={`scroll-mt-20 rounded-3xl ${GLASS}`} data-tour="rp.log">
-      <div className="sticky top-[61px] z-10 rounded-t-3xl border-b border-white/10 bg-slate-950/85 px-4 py-3 backdrop-blur-xl sm:px-5">
+      <div className="sticky top-[61px] z-10 rounded-t-3xl border-b border-white/10 bg-ink-950/85 px-4 py-3 backdrop-blur-xl sm:px-5">
         <div className="flex flex-wrap items-center gap-2">
-          <h2 className="mr-2 text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">The roleplay</h2>
+          <h2 className="mr-2 text-[11px] font-black uppercase tracking-[0.2em] text-ink-400">The roleplay</h2>
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value.slice(0, 80))}
             placeholder="🔎 Search the log"
             aria-label="Search the log"
-            className="min-w-[180px] flex-1 rounded-lg border border-white/10 bg-slate-900/80 px-3 py-1.5 text-xs text-white placeholder:text-slate-500 focus:border-fuchsia-300/50 focus:outline-none"
+            className="min-w-[180px] flex-1 rounded-lg border border-white/10 bg-ink-900/80 px-3 py-1.5 text-xs text-white placeholder:text-ink-500 focus:border-fuchsia-300/50 focus:outline-none"
           />
-          <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-slate-300">
+          <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-ink-300">
             <input type="checkbox" checked={hideOoc} onChange={(event) => setHideOoc(event.target.checked)} className="h-3.5 w-3.5 accent-fuchsia-400" />
             Hide out-of-character
           </label>
@@ -283,7 +283,7 @@ function LogView({ game, focusTag, onFocusTag }: { game: RpGameDetail; focusTag:
               <NationChip key={nation.tag} active={focusTag === nation.tag} onClick={() => onFocusTag(focusTag === nation.tag ? null : nation.tag)}>
                 <Flag tag={nation.tag} className="h-3 w-[18px]" />
                 {nation.name}
-                <span className="text-slate-500">{nation.count}</span>
+                <span className="text-ink-500">{nation.count}</span>
               </NationChip>
             ))}
           </div>
@@ -292,9 +292,9 @@ function LogView({ game, focusTag, onFocusTag }: { game: RpGameDetail; focusTag:
 
       <div className="px-2 py-3 sm:px-4">
         {game.lines.length === 0 ? (
-          <p className="px-2 py-8 text-center text-sm text-slate-500">The log for this game isn&apos;t on the website.</p>
+          <p className="px-2 py-8 text-center text-sm text-ink-500">The log for this game isn&apos;t on the website.</p>
         ) : shown.length === 0 ? (
-          <p className="px-2 py-8 text-center text-sm text-slate-500">No lines match.</p>
+          <p className="px-2 py-8 text-center text-sm text-ink-500">No lines match.</p>
         ) : (
           <ol className="font-[450]">
             {shown.slice(0, limit).map((line, index) => (
@@ -302,7 +302,7 @@ function LogView({ game, focusTag, onFocusTag }: { game: RpGameDetail; focusTag:
             ))}
           </ol>
         )}
-        <div className="flex flex-wrap items-center justify-between gap-2 px-2 pt-3 text-[11px] text-slate-500">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-2 pt-3 text-[11px] text-ink-500">
           <span>
             Showing {Math.min(limit, shown.length).toLocaleString()} of {shown.length.toLocaleString()} lines
             {game.truncated ? " (the log is very long; only its start is on the website)" : ""}
@@ -311,7 +311,7 @@ function LogView({ game, focusTag, onFocusTag }: { game: RpGameDetail; focusTag:
             <button
               type="button"
               onClick={() => setLimit((value) => value + PAGE_LINES)}
-              className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-slate-200 hover:border-fuchsia-300/40"
+              className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-ink-200 hover:border-fuchsia-300/40"
             >
               Show {Math.min(PAGE_LINES, shown.length - limit)} more
             </button>
@@ -329,7 +329,7 @@ function NationChip({ active, onClick, children }: { active: boolean; onClick: (
       onClick={onClick}
       aria-pressed={active}
       className={`flex shrink-0 items-center gap-1.5 rounded-lg border px-2 py-1 text-[11px] font-semibold transition ${
-        active ? "border-fuchsia-300/70 bg-fuchsia-400/15 text-fuchsia-100" : "border-white/10 bg-white/[0.03] text-slate-300 hover:border-white/25"
+        active ? "border-fuchsia-300/70 bg-fuchsia-400/15 text-fuchsia-100" : "border-white/10 bg-white/[0.03] text-ink-300 hover:border-white/25"
       }`}
     >
       {children}
@@ -360,9 +360,9 @@ function LogLine({
       )}
       <li
         id={`L${line.n}`}
-        className={`group flex gap-3 rounded-lg px-2 py-1 hover:bg-white/[0.03] ${line.ooc ? "text-[11px] text-slate-500" : "text-[13px] leading-relaxed text-slate-200"}`}
+        className={`group flex gap-3 rounded-lg px-2 py-1 hover:bg-white/[0.03] ${line.ooc ? "text-[11px] text-ink-500" : "text-[13px] leading-relaxed text-ink-200"}`}
       >
-        <span className="w-10 shrink-0 select-none pt-0.5 text-right text-[10px] tabular-nums text-slate-600">{line.n}</span>
+        <span className="w-10 shrink-0 select-none pt-0.5 text-right text-[10px] tabular-nums text-ink-600">{line.n}</span>
         {line.tag ? (
           <span className="flex w-36 shrink-0 items-start gap-1.5 truncate pt-0.5 sm:w-44">
             <Flag tag={line.tag} className="mt-0.5 h-3 w-[18px]" />

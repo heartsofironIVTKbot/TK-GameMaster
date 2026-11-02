@@ -103,20 +103,20 @@ export default function PlayerRecord({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs font-bold text-slate-300 hover:text-white lg:hidden"
+            className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs font-bold text-ink-300 hover:text-white lg:hidden"
           >
             ← Users
           </button>
           <Avatar url={avatarUrl} name={name} size={64} dim={!inServer} />
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-300">🗂️ User record</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-brand-300">🗂️ User record</p>
             <h1 className="truncate text-2xl font-black tracking-tight text-white">{name}</h1>
-            <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-slate-400">
+            <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-ink-400">
               {username && <span>@{username}</span>}
-              <span className="font-mono text-[11px] text-slate-500">{playerId}</span>
+              <span className="font-mono text-[11px] text-ink-500">{playerId}</span>
               <CopyButton text={playerId} label="Copy ID" />
               {!inServer && (
-                <span className="rounded-full border border-slate-500/40 bg-slate-700/40 px-2 py-0.5 text-[10px] font-bold text-slate-300">
+                <span className="rounded-full border border-ink-500/40 bg-ink-700/40 px-2 py-0.5 text-[10px] font-bold text-ink-300">
                   Left the server
                 </span>
               )}
@@ -130,7 +130,7 @@ export default function PlayerRecord({
           <button
             type="button"
             onClick={onClose}
-            className="hidden rounded-lg px-2.5 py-1.5 text-sm text-slate-400 hover:bg-white/5 hover:text-white lg:block"
+            className="hidden rounded-lg px-2.5 py-1.5 text-sm text-ink-400 hover:bg-white/5 hover:text-white lg:block"
             aria-label="Close record"
             title="Back to the activity feed"
           >
@@ -142,7 +142,7 @@ export default function PlayerRecord({
             {roles.map((role) => (
               <span
                 key={role.id}
-                className="flex items-center gap-1 rounded-md border border-white/10 bg-slate-950/50 px-1.5 py-0.5 text-[11px] font-semibold text-slate-200"
+                className="flex items-center gap-1 rounded-md border border-white/10 bg-ink-950/50 px-1.5 py-0.5 text-[11px] font-semibold text-ink-200"
               >
                 <span className="h-2 w-2 rounded-full" style={{ background: role.color ?? "#99aab5" }} />
                 {role.icon_emoji && <span>{role.icon_emoji}</span>}
@@ -157,10 +157,10 @@ export default function PlayerRecord({
         <div className="min-w-0 space-y-4">
           <section className={`min-w-0 space-y-4 rounded-3xl p-4 sm:p-5 ${GLASS}`}>
             <div className="flex items-center justify-between">
-              <h2 className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">📊 Portfolio</h2>
+              <h2 className="text-[11px] font-black uppercase tracking-[0.18em] text-ink-400">📊 Portfolio</h2>
               {refreshing && data && (
-                <span className="flex items-center gap-1.5 text-[11px] text-slate-400">
-                  <Spinner className="h-3 w-3 text-amber-300" /> Updating…
+                <span className="flex items-center gap-1.5 text-[11px] text-ink-400">
+                  <Spinner className="h-3 w-3 text-brand-300" /> Updating…
                 </span>
               )}
             </div>
@@ -168,8 +168,8 @@ export default function PlayerRecord({
               <p className="rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">{portfolio.error}</p>
             )}
             {!data && !portfolio?.error && (
-              <div className="flex items-center gap-2 text-sm text-slate-400">
-                <Spinner className="h-4 w-4 text-amber-300" /> Loading the record…
+              <div className="flex items-center gap-2 text-sm text-ink-400">
+                <Spinner className="h-4 w-4 text-brand-300" /> Loading the record…
               </div>
             )}
             {data && <PortfolioBody portfolio={data} />}
@@ -219,7 +219,7 @@ export default function PlayerRecord({
                 />
               </>
             ) : (
-              <div className={`rounded-2xl p-4 text-sm text-slate-400 ${GLASS}`}>Actions unlock once the record loads.</div>
+              <div className={`rounded-2xl p-4 text-sm text-ink-400 ${GLASS}`}>Actions unlock once the record loads.</div>
             )}
           </div>
         </div>

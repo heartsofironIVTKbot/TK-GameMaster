@@ -34,7 +34,7 @@ export default function AccessCard({ game, onChanged }: { game: GameControl; onC
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <div>
           <p className="text-[11px] font-black uppercase tracking-[0.18em] text-sky-300">Reservation access</p>
-          <p className="mt-1 text-sm text-slate-400">
+          <p className="mt-1 text-sm text-ink-400">
             Who may reserve in this game. {started && "Reservations are closed once the game starts — these apply if it's reopened."}
           </p>
         </div>
@@ -69,8 +69,8 @@ export default function AccessCard({ game, onChanged }: { game: GameControl; onC
 
       {game.phase === "announced" && editable && (
         <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-white/5 pt-4">
-          <p className="min-w-0 flex-1 text-[11px] text-slate-400">
-            <b className="text-slate-200">Clear the list</b> — removes all {game.players} player(s) from their nations. Only before the
+          <p className="min-w-0 flex-1 text-[11px] text-ink-400">
+            <b className="text-ink-200">Clear the list</b> — removes all {game.players} player(s) from their nations. Only before the
             game starts.
           </p>
           <div className="w-full sm:w-64">
@@ -87,7 +87,7 @@ export default function AccessCard({ game, onChanged }: { game: GameControl; onC
 
       <RequestResult state={request.state} onDismiss={request.reset} />
       {!game.can_manage && (
-        <p className="mt-3 text-[11px] text-slate-500">Only the game&apos;s host or Host Management can change who may reserve.</p>
+        <p className="mt-3 text-[11px] text-ink-500">Only the game&apos;s host or Host Management can change who may reserve.</p>
       )}
     </section>
   );
@@ -111,18 +111,18 @@ function LevelsForm({
   return (
     <div className="space-y-3">
       <div>
-        <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400">Majors</p>
+        <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-ink-400">Majors</p>
         <Segmented<AccessLevel> ariaLabel="Who may reserve Majors" size="sm" value={draftMajor} onChange={setDraftMajor} options={options} />
       </div>
       <div>
-        <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400">Minors</p>
+        <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-ink-400">Minors</p>
         <Segmented<AccessLevel> ariaLabel="Who may reserve Minors" size="sm" value={draftMinor} onChange={setDraftMinor} options={options} />
       </div>
       <button
         type="button"
         disabled={disabled || !changed}
         onClick={() => onSave(draftMajor, draftMinor)}
-        className="rounded-lg bg-sky-400 px-3 py-1.5 text-xs font-black text-slate-950 transition hover:bg-sky-300 disabled:cursor-not-allowed disabled:opacity-40"
+        className="rounded-lg bg-sky-400 px-3 py-1.5 text-xs font-black text-ink-950 transition hover:bg-sky-300 disabled:cursor-not-allowed disabled:opacity-40"
       >
         Save access levels
       </button>
@@ -150,9 +150,9 @@ function NationLocks({
   const valid = !game.nations || known.some((name) => name.toLowerCase() === nation.trim().toLowerCase());
   return (
     <div>
-      <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400">Locked nations</p>
+      <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-ink-400">Locked nations</p>
       {locked.length === 0 ? (
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-ink-500">
           {game.preset?.not_playable.length ? "None — every playable nation can be reserved." : "None — every nation can be reserved."}
         </p>
       ) : (
@@ -190,7 +190,7 @@ function NationLocks({
           placeholder="Lock a nation…"
           aria-label="Nation to lock"
           disabled={disabled}
-          className="min-w-0 flex-1 rounded-lg border border-white/10 bg-slate-900/80 px-3 py-1.5 text-xs text-slate-100 placeholder:text-slate-500 focus:border-sky-300/50 focus:outline-none"
+          className="min-w-0 flex-1 rounded-lg border border-white/10 bg-ink-900/80 px-3 py-1.5 text-xs text-ink-100 placeholder:text-ink-500 focus:border-sky-300/50 focus:outline-none"
         />
         <datalist id={listId}>
           {suggestions.map((name) => (
@@ -200,12 +200,12 @@ function NationLocks({
         <button
           type="submit"
           disabled={disabled || !nation.trim() || !valid}
-          className="rounded-lg border border-white/10 bg-white/5 px-3 text-xs font-bold text-slate-200 hover:border-sky-300/50 disabled:opacity-40"
+          className="rounded-lg border border-white/10 bg-white/5 px-3 text-xs font-bold text-ink-200 hover:border-sky-300/50 disabled:opacity-40"
         >
           🔒 Lock
         </button>
       </form>
-      {nation.trim() && !valid && <p className="mt-1 text-[11px] text-amber-200">Not a nation in {game.mode}.</p>}
+      {nation.trim() && !valid && <p className="mt-1 text-[11px] text-brand-200">Not a nation in {game.mode}.</p>}
     </div>
   );
 }
@@ -217,7 +217,7 @@ export function RequestResult({ state, onDismiss }: { state: BotRequestState; on
     const progress = state.phase === "waiting" ? state.status?.result?.message : undefined;
     const sending = progress && "state" in progress ? progress : null;
     return (
-      <p className="mt-4 flex items-center gap-2 text-xs text-slate-400">
+      <p className="mt-4 flex items-center gap-2 text-xs text-ink-400">
         <Spinner className="h-3.5 w-3.5 text-sky-300" />{" "}
         {state.phase === "sending"
           ? "Sending…"

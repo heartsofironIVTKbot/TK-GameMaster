@@ -13,7 +13,7 @@ import { LoginPrompt, STATUS_STYLE, TicketsShell, when } from "./TicketsShell";
  */
 
 const INPUT =
-  "rounded-lg border border-white/10 bg-slate-950/60 px-3 py-1.5 text-xs text-slate-100 placeholder:text-slate-500 focus:border-amber-300/50 focus:outline-none";
+  "rounded-lg border border-white/10 bg-ink-950/60 px-3 py-1.5 text-xs text-ink-100 placeholder:text-ink-500 focus:border-brand-300/50 focus:outline-none";
 
 interface State {
   key: string;
@@ -116,29 +116,29 @@ export default function TicketsApp() {
           <p className="mb-2 rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-100">{current.error}</p>
         )}
         {!current && (
-          <div className="flex items-center gap-2 px-2 py-6 text-xs text-slate-400">
-            <Spinner className="h-3.5 w-3.5 text-amber-300" /> Loading…
+          <div className="flex items-center gap-2 px-2 py-6 text-xs text-ink-400">
+            <Spinner className="h-3.5 w-3.5 text-brand-300" /> Loading…
           </div>
         )}
         {current && !current.error && current.tickets.length === 0 && (
-          <p className="px-2 py-8 text-center text-xs text-slate-500">
+          <p className="px-2 py-8 text-center text-xs text-ink-500">
             {key ? "No tickets match these filters." : "No closed tickets to show yet. Tickets appear here once they're closed."}
           </p>
         )}
         {current && current.tickets.length > 0 && (
-          <ul className="overflow-hidden rounded-2xl border border-white/5 bg-slate-950/30">
+          <ul className="overflow-hidden rounded-2xl border border-white/5 bg-ink-950/30">
             {current.tickets.map((ticket) => (
               <li key={ticket.id} className="border-b border-white/5 last:border-b-0">
                 <Link href={`/tickets/${ticket.id}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2.5 hover:bg-white/[0.03]">
-                  <span className="font-mono text-xs text-slate-500">#{String(ticket.number).padStart(4, "0")}</span>
-                  <span className="text-sm font-semibold text-slate-100">{ticket.kind_label}</span>
-                  <span className="text-xs text-slate-400">
+                  <span className="font-mono text-xs text-ink-500">#{String(ticket.number).padStart(4, "0")}</span>
+                  <span className="text-sm font-semibold text-ink-100">{ticket.kind_label}</span>
+                  <span className="text-xs text-ink-400">
                     by {ticket.mine ? "you" : (ticket.opener_name ?? ticket.opener_id)}
                   </span>
                   <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold ${STATUS_STYLE[ticket.status] ?? ""}`}>
                     {ticket.status}
                   </span>
-                  <span className="ml-auto text-[11px] text-slate-500">
+                  <span className="ml-auto text-[11px] text-ink-500">
                     closed {when(ticket.closed_at, true)}
                     {ticket.guild_name ? ` · ${ticket.guild_name}` : ""} · {ticket.message_count} messages
                   </span>
@@ -153,14 +153,14 @@ export default function TicketsApp() {
               type="button"
               onClick={loadMore}
               disabled={loadingMore}
-              className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold text-slate-200 hover:border-amber-300/40 hover:text-white disabled:opacity-60"
+              className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold text-ink-200 hover:border-brand-300/40 hover:text-white disabled:opacity-60"
             >
               {loadingMore && <Spinner className="h-3 w-3" />}Load more
             </button>
           </div>
         )}
       </section>
-      <p className="px-2 text-[11px] text-slate-500">
+      <p className="px-2 text-[11px] text-ink-500">
         Only tickets closed since this page went live are here. Older ones are in the Discord transcript channels. If a
         message shows as &ldquo;text not available&rdquo;, the bot couldn&apos;t read it in Discord.
       </p>

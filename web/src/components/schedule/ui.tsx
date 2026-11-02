@@ -6,7 +6,7 @@ import type { HostProfile } from "@/lib/scheduleTypes";
 /** Small shared controls for the host calendar + game setup pages. */
 
 export const GLASS =
-  "border border-white/10 bg-slate-900/60 shadow-2xl shadow-black/40 backdrop-blur-xl";
+  "border border-white/10 bg-ink-900/60 shadow-2xl shadow-black/40 backdrop-blur-xl";
 
 export interface SegmentOption<T extends string> {
   value: T;
@@ -32,7 +32,7 @@ export function Segmented<T extends string>({
     <div
       role="radiogroup"
       aria-label={ariaLabel}
-      className="flex w-full rounded-xl border border-white/10 bg-slate-950/60 p-1"
+      className="flex w-full rounded-xl border border-white/10 bg-ink-950/60 p-1"
     >
       {options.map((option) => {
         const active = option.value === value;
@@ -49,8 +49,8 @@ export function Segmented<T extends string>({
               size === "sm" ? "px-2 py-1.5 text-xs" : "px-3 py-2 text-sm"
             } ${
               active
-                ? "bg-amber-400 text-slate-950 shadow-lg shadow-amber-500/20"
-                : "text-slate-300 hover:bg-white/5 hover:text-white"
+                ? "bg-brand-400 text-ink-950 shadow-lg shadow-brand-500/20"
+                : "text-ink-300 hover:bg-white/5 hover:text-white"
             } disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent`}
           >
             {option.label}
@@ -85,7 +85,7 @@ export function Toggle({
         disabled={disabled}
         onClick={() => onChange(!checked)}
         className={`relative mt-0.5 h-6 w-11 shrink-0 rounded-full border transition-colors ${
-          checked ? "border-amber-300/60 bg-amber-400" : "border-white/15 bg-slate-700/70"
+          checked ? "border-brand-300/60 bg-brand-400" : "border-white/15 bg-ink-700/70"
         }`}
       >
         <span
@@ -95,8 +95,8 @@ export function Toggle({
         />
       </button>
       <span className="min-w-0">
-        <span className="block text-sm font-semibold text-slate-100">{label}</span>
-        {description && <span className="mt-0.5 block text-xs text-slate-400">{description}</span>}
+        <span className="block text-sm font-semibold text-ink-100">{label}</span>
+        {description && <span className="mt-0.5 block text-xs text-ink-400">{description}</span>}
       </span>
     </label>
   );
@@ -137,14 +137,14 @@ export function Slider({
         style={{ ["--fill" as string]: `${fill}%` }}
       />
       {marks.length > 0 && (
-        <div className="relative mt-1 h-4 text-[10px] font-semibold text-slate-500">
+        <div className="relative mt-1 h-4 text-[10px] font-semibold text-ink-500">
           {marks.map((mark) => (
             <button
               key={mark.value}
               type="button"
               disabled={disabled}
               onClick={() => onChange(mark.value)}
-              className="absolute -translate-x-1/2 rounded px-1 hover:text-amber-300"
+              className="absolute -translate-x-1/2 rounded px-1 hover:text-brand-300"
               style={{ left: `${((mark.value - min) / (max - min)) * 100}%` }}
             >
               {mark.label}
@@ -170,7 +170,7 @@ export function CopyButton({ text, label = "Copy" }: { text: string; label?: str
           })
           .catch(() => {});
       }}
-      className="rounded-md border border-white/10 bg-white/5 px-2 py-1 text-[11px] font-semibold text-slate-300 transition hover:border-amber-300/50 hover:text-amber-200"
+      className="rounded-md border border-white/10 bg-white/5 px-2 py-1 text-[11px] font-semibold text-ink-300 transition hover:border-brand-300/50 hover:text-brand-200"
     >
       {copied ? "Copied ✓" : label}
     </button>
@@ -191,13 +191,13 @@ export function SectionCard({
   right?: ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+    <section className="rounded-2xl border border-white/10 bg-ink-950/40 p-4">
       <div className="mb-3 flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-2.5">
           {icon && <span className="mt-0.5 text-lg leading-none">{icon}</span>}
           <div className="min-w-0">
-            <h3 className="text-sm font-bold tracking-wide text-slate-100">{title}</h3>
-            {subtitle && <p className="mt-0.5 text-xs text-slate-400">{subtitle}</p>}
+            <h3 className="text-sm font-bold tracking-wide text-ink-100">{title}</h3>
+            {subtitle && <p className="mt-0.5 text-xs text-ink-400">{subtitle}</p>}
           </div>
         </div>
         {right}
@@ -227,14 +227,14 @@ export function HostAvatar({ host, size = 32 }: { host: HostProfile; size?: numb
         alt=""
         width={size}
         height={size}
-        className="rounded-full ring-2 ring-amber-400/40"
+        className="rounded-full ring-2 ring-brand-400/40"
       />
     );
   }
   return (
     <span
       style={{ width: size, height: size }}
-      className="flex items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-orange-600 text-xs font-black text-slate-950 ring-2 ring-amber-400/40"
+      className="flex items-center justify-center rounded-full bg-gradient-to-br from-brand-400 to-orange-600 text-xs font-black text-ink-950 ring-2 ring-brand-400/40"
     >
       {name.charAt(0).toUpperCase()}
     </span>

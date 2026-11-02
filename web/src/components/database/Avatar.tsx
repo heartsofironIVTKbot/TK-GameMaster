@@ -2,7 +2,7 @@
 export default function Avatar({ url, name, size, dim }: { url: string | null; name: string; size: number; dim?: boolean }) {
   return (
     <span
-      className={`flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-800 text-sm font-black text-slate-300 ${
+      className={`flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-ink-800 text-sm font-black text-ink-300 ${
         dim ? "opacity-50 grayscale" : ""
       }`}
       style={{ width: size, height: size }}

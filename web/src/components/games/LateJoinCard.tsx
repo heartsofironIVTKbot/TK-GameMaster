@@ -91,20 +91,20 @@ export default function LateJoinCard({ game, onChanged }: { game: GameControl; o
   return (
     <section data-tour="games.lateJoin" className={`rounded-3xl p-4 sm:p-6 ${GLASS}`}>
       <p className="text-[11px] font-black uppercase tracking-[0.18em] text-violet-300">Late join</p>
-      <p className="mt-1 text-sm text-slate-400">
+      <p className="mt-1 text-sm text-ink-400">
         Add a player to the running game. They get the nation, the Gamer Pass and a voice channel, and show as a late join on the
         Attendance page.
       </p>
 
       <div className="mt-4 grid gap-5 lg:grid-cols-2">
         <div>
-          <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400">Player</p>
+          <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-ink-400">Player</p>
           {player ? (
             <div className="flex items-center gap-2.5 rounded-xl border border-violet-300/40 bg-violet-400/10 px-2.5 py-2">
               <Avatar url={player.avatar_url} name={memberName(player)} size={30} />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-bold text-white">{memberName(player)}</span>
-                {player.username && <span className="block truncate text-[11px] text-slate-400">@{player.username}</span>}
+                {player.username && <span className="block truncate text-[11px] text-ink-400">@{player.username}</span>}
               </span>
               <button
                 type="button"
@@ -112,7 +112,7 @@ export default function LateJoinCard({ game, onChanged }: { game: GameControl; o
                   setPlayer(null);
                   request.reset();
                 }}
-                className="rounded-md px-2 py-1 text-xs font-bold text-slate-300 hover:bg-white/10 hover:text-white"
+                className="rounded-md px-2 py-1 text-xs font-bold text-ink-300 hover:bg-white/10 hover:text-white"
               >
                 Change
               </button>
@@ -124,16 +124,16 @@ export default function LateJoinCard({ game, onChanged }: { game: GameControl; o
                 onChange={(event) => setQuery(event.target.value.slice(0, 64))}
                 placeholder="Search name, @handle or Discord ID"
                 aria-label="Search for the player"
-                className="w-full rounded-lg border border-white/10 bg-slate-900/80 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-violet-300/50 focus:outline-none"
+                className="w-full rounded-lg border border-white/10 bg-ink-900/80 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:border-violet-300/50 focus:outline-none"
               />
               <ul className="mt-1.5 max-h-56 space-y-1 overflow-y-auto">
                 {searching && (
-                  <li className="flex items-center gap-2 px-2 py-1.5 text-xs text-slate-400">
+                  <li className="flex items-center gap-2 px-2 py-1.5 text-xs text-ink-400">
                     <Spinner className="h-3 w-3" /> Searching…
                   </li>
                 )}
                 {!searching && needle.length >= 2 && shown.length === 0 && (
-                  <li className="px-2 py-1.5 text-xs text-slate-500">No members match.</li>
+                  <li className="px-2 py-1.5 text-xs text-ink-500">No members match.</li>
                 )}
                 {shown.map((member) => (
                   <li key={member.discord_id}>
@@ -149,7 +149,7 @@ export default function LateJoinCard({ game, onChanged }: { game: GameControl; o
                       <Avatar url={member.avatar_url} name={memberName(member)} size={26} />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-semibold text-white">{memberName(member)}</span>
-                        <span className="block truncate text-[11px] text-slate-500">
+                        <span className="block truncate text-[11px] text-ink-500">
                           {member.username ? `@${member.username}` : member.discord_id}
                           {!member.verified && " · not verified"}
                         </span>
@@ -164,7 +164,7 @@ export default function LateJoinCard({ game, onChanged }: { game: GameControl; o
 
         <div className="space-y-3">
           <div>
-            <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400">Slot</p>
+            <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-ink-400">Slot</p>
             <Segmented<SlotKind>
               ariaLabel="Slot type"
               size="sm"
@@ -184,15 +184,15 @@ export default function LateJoinCard({ game, onChanged }: { game: GameControl; o
                 list={listId}
                 placeholder="Free nation…"
                 aria-label="Nation"
-                className="w-full rounded-lg border border-white/10 bg-slate-900/80 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-violet-300/50 focus:outline-none"
+                className="w-full rounded-lg border border-white/10 bg-ink-900/80 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:border-violet-300/50 focus:outline-none"
               />
               <datalist id={listId}>
                 {free.map((name) => (
                   <option key={name} value={name} />
                 ))}
               </datalist>
-              {nation.trim() && !nationOk && <p className="mt-1 text-[11px] text-amber-200">Not a nation in {game.mode}.</p>}
-              {taken && <p className="mt-1 text-[11px] text-amber-200">Taken — remove that player first.</p>}
+              {nation.trim() && !nationOk && <p className="mt-1 text-[11px] text-brand-200">Not a nation in {game.mode}.</p>}
+              {taken && <p className="mt-1 text-[11px] text-brand-200">Taken — remove that player first.</p>}
             </div>
           ) : (
             <input
@@ -200,14 +200,14 @@ export default function LateJoinCard({ game, onChanged }: { game: GameControl; o
               onChange={(event) => setFillerName(event.target.value.slice(0, 40))}
               placeholder="Filler name"
               aria-label="Filler name"
-              className="w-full rounded-lg border border-white/10 bg-slate-900/80 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-violet-300/50 focus:outline-none"
+              className="w-full rounded-lg border border-white/10 bg-ink-900/80 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:border-violet-300/50 focus:outline-none"
             />
           )}
           <button
             type="button"
             disabled={!player || !slotOk || request.busy}
             onClick={() => send(false)}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-violet-400 px-4 py-2.5 text-sm font-black text-slate-950 transition hover:bg-violet-300 disabled:cursor-not-allowed disabled:opacity-40"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-violet-400 px-4 py-2.5 text-sm font-black text-ink-950 transition hover:bg-violet-300 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {request.busy && <Spinner className="h-4 w-4" />}➕ Add {player ? memberName(player) : "player"} as {slotLabel}
           </button>
@@ -215,7 +215,7 @@ export default function LateJoinCard({ game, onChanged }: { game: GameControl; o
       </div>
 
       {request.state.phase === "confirm" && (
-        <div className="mt-4 rounded-xl border border-amber-400/40 bg-amber-500/10 px-3 py-2.5 text-xs text-amber-50">
+        <div className="mt-4 rounded-xl border border-brand-400/40 bg-brand-500/10 px-3 py-2.5 text-xs text-brand-50">
           <p className="font-black">The bot found something to check first:</p>
           <ul className="mt-1 space-y-0.5">
             {(request.state.status.result?.warnings ?? []).map((warning) => (
@@ -223,7 +223,7 @@ export default function LateJoinCard({ game, onChanged }: { game: GameControl; o
             ))}
           </ul>
           <div className="mt-2 flex gap-2">
-            <button type="button" onClick={() => send(true)} className="rounded-md bg-amber-400 px-3 py-1 font-black text-slate-950 hover:bg-amber-300">
+            <button type="button" onClick={() => send(true)} className="rounded-md bg-brand-400 px-3 py-1 font-black text-ink-950 hover:bg-brand-300">
               Add anyway
             </button>
             <button type="button" onClick={request.reset} className="rounded-md border border-white/20 px-3 py-1 font-bold text-white hover:bg-white/10">
@@ -255,7 +255,7 @@ export default function LateJoinCard({ game, onChanged }: { game: GameControl; o
         </div>
       )}
       {(request.state.phase === "sending" || request.state.phase === "waiting") && (
-        <p className="mt-4 flex items-center gap-2 text-xs text-slate-400">
+        <p className="mt-4 flex items-center gap-2 text-xs text-ink-400">
           <Spinner className="h-3.5 w-3.5 text-violet-300" /> The bot is adding them (pass, voice channel, DM)…
         </p>
       )}

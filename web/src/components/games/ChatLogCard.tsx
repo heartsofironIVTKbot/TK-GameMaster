@@ -26,11 +26,11 @@ function size(bytes: number): string {
 
 function verdict(player: AiPlayerResult): { text: string; tone: string } {
   if (player.reward.commends) return { text: `⭐ ${player.reward.commends} commend${player.reward.commends > 1 ? "s" : ""}`, tone: "border-emerald-400/40 bg-emerald-500/15 text-emerald-100" };
-  if (player.reward.merit) return { text: `🎖️ ${player.reward.merit} Merit`, tone: "border-amber-400/40 bg-amber-500/15 text-amber-100" };
+  if (player.reward.merit) return { text: `🎖️ ${player.reward.merit} Merit`, tone: "border-brand-400/40 bg-brand-500/15 text-brand-100" };
   if (player.status === "toxic") return { text: "Toxic", tone: "border-rose-400/40 bg-rose-500/15 text-rose-100" };
-  if (player.status === "no_rp") return { text: "0 RP", tone: "border-white/10 bg-white/5 text-slate-300" };
-  if (player.status === "ungraded") return { text: "Not graded", tone: "border-white/10 bg-white/5 text-slate-300" };
-  return { text: "No reward", tone: "border-white/10 bg-white/5 text-slate-300" };
+  if (player.status === "no_rp") return { text: "0 RP", tone: "border-white/10 bg-white/5 text-ink-300" };
+  if (player.status === "ungraded") return { text: "Not graded", tone: "border-white/10 bg-white/5 text-ink-300" };
+  return { text: "No reward", tone: "border-white/10 bg-white/5 text-ink-300" };
 }
 
 function GiveButton({ game, player, onChanged }: { game: GameControl; player: AiPlayerResult; onChanged: () => void }) {
@@ -65,7 +65,7 @@ function GiveButton({ game, player, onChanged }: { game: GameControl; player: Ai
             },
           })
         }
-        className="flex items-center gap-1.5 rounded-lg bg-emerald-400 px-2.5 py-1 text-[11px] font-black text-slate-950 hover:bg-emerald-300 disabled:opacity-40"
+        className="flex items-center gap-1.5 rounded-lg bg-emerald-400 px-2.5 py-1 text-[11px] font-black text-ink-950 hover:bg-emerald-300 disabled:opacity-40"
       >
         {request.busy && <Spinner className="h-3 w-3" />}
         Give {amount} {kind === "commend" ? `commend${amount > 1 ? "s" : ""}` : "Merit"}
@@ -80,14 +80,14 @@ function PlayerRow({ game, player, onChanged }: { game: GameControl; player: AiP
   const label = verdict(player);
   const name = player.name ?? (player.user_id ? `#${player.user_id}` : "Unreserved");
   return (
-    <li className="bg-slate-950/40 px-3 py-2.5">
+    <li className="bg-ink-950/40 px-3 py-2.5">
       <div className="flex flex-wrap items-center gap-2.5">
         <Avatar url={player.avatar_url} name={name} size={28} />
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-xs font-bold text-slate-100">
-            {name} <span className="font-normal text-slate-400">· {player.nation}{player.role === "COOP" ? " (Co-op)" : ""}</span>
+          <span className="block truncate text-xs font-bold text-ink-100">
+            {name} <span className="font-normal text-ink-400">· {player.nation}{player.role === "COOP" ? " (Co-op)" : ""}</span>
           </span>
-          <span className="block text-[11px] text-slate-500">
+          <span className="block text-[11px] text-ink-500">
             {player.meaningful_words.toLocaleString()} in-character words of {player.words.toLocaleString()} · creativity {player.creativity}/10 ·
             toxicity {player.toxicity}/10{player.left_early ? " · left early" : ""}
           </span>
@@ -95,9 +95,9 @@ function PlayerRow({ game, player, onChanged }: { game: GameControl; player: AiP
         <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-bold ${label.tone}`}>{label.text}</span>
         <GiveButton game={game} player={player} onChanged={onChanged} />
       </div>
-      <p className="mt-1.5 text-[11px] text-slate-300">
+      <p className="mt-1.5 text-[11px] text-ink-300">
         {player.reward.why}
-        {player.summary ? <span className="text-slate-400"> {player.summary}</span> : null}
+        {player.summary ? <span className="text-ink-400"> {player.summary}</span> : null}
       </p>
       {player.snippets.length > 0 && (
         <button type="button" onClick={() => setOpen((value) => !value)} className="mt-1 text-[11px] font-bold text-sky-300 hover:text-sky-200">
@@ -107,7 +107,7 @@ function PlayerRow({ game, player, onChanged }: { game: GameControl; player: AiP
       {open && (
         <ul className="mt-1.5 space-y-1">
           {player.snippets.map((line) => (
-            <li key={line} className="border-l-2 border-white/15 pl-2 text-[11px] italic text-slate-300">
+            <li key={line} className="border-l-2 border-white/15 pl-2 text-[11px] italic text-ink-300">
               {line}
             </li>
           ))}
@@ -179,7 +179,7 @@ function LogFiles({ game, busy, onChanged }: { game: GameControl; busy: boolean;
       }`}
     >
       {files.length === 0 ? (
-        <p className="text-slate-400">
+        <p className="text-ink-400">
           No chat log yet.{game.can_manage ? " Add the .txt file, or several if the game was rehosted or saved in parts." : ""}
         </p>
       ) : (
@@ -189,7 +189,7 @@ function LogFiles({ game, busy, onChanged }: { game: GameControl; busy: boolean;
               <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-sky-400/15 text-[10px] font-black text-sky-200">
                 {index + 1}
               </span>
-              <span className="min-w-0 flex-1 truncate text-slate-200">
+              <span className="min-w-0 flex-1 truncate text-ink-200">
                 📄 <b>{file.filename}</b> · {size(file.bytes)} · {dateTime(file.uploaded_at)}
                 {file.uploaded_by_name ? ` by ${file.uploaded_by_name}` : ""}
               </span>
@@ -199,7 +199,7 @@ function LogFiles({ game, busy, onChanged }: { game: GameControl; busy: boolean;
                     type="button"
                     disabled={disabled || index === 0}
                     onClick={() => move(file.file_id, "up")}
-                    className="rounded-md border border-white/10 px-1.5 py-0.5 text-slate-300 hover:text-white disabled:opacity-30"
+                    className="rounded-md border border-white/10 px-1.5 py-0.5 text-ink-300 hover:text-white disabled:opacity-30"
                     aria-label={`Move ${file.filename} earlier`}
                     title="Earlier in the game"
                   >
@@ -209,7 +209,7 @@ function LogFiles({ game, busy, onChanged }: { game: GameControl; busy: boolean;
                     type="button"
                     disabled={disabled || index === files.length - 1}
                     onClick={() => move(file.file_id, "down")}
-                    className="rounded-md border border-white/10 px-1.5 py-0.5 text-slate-300 hover:text-white disabled:opacity-30"
+                    className="rounded-md border border-white/10 px-1.5 py-0.5 text-ink-300 hover:text-white disabled:opacity-30"
                     aria-label={`Move ${file.filename} later`}
                     title="Later in the game"
                   >
@@ -247,11 +247,11 @@ function LogFiles({ game, busy, onChanged }: { game: GameControl; busy: boolean;
             type="button"
             disabled={disabled || files.length >= CHAT_LOG_MAX_FILES}
             onClick={() => fileRef.current?.click()}
-            className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs font-bold text-slate-200 hover:border-sky-300/40 hover:text-white disabled:opacity-50"
+            className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs font-bold text-ink-200 hover:border-sky-300/40 hover:text-white disabled:opacity-50"
           >
             {working ? <Spinner className="h-3 w-3 text-sky-300" /> : "📁"} {files.length ? "Add more files" : "Add .txt files"}
           </button>
-          <span className="text-[11px] text-slate-500">
+          <span className="text-[11px] text-ink-500">
             or drop them here · {files.length}/{CHAT_LOG_MAX_FILES} files · {size(total)} of {CHAT_LOG_MAX_BYTES / 1024 / 1024} MB
           </span>
         </div>
@@ -292,7 +292,7 @@ export default function ChatLogCard({ game, onChanged }: { game: GameControl; on
           </Link>
         )}
       </div>
-      <p className="mt-1 text-sm text-slate-300">
+      <p className="mt-1 text-sm text-ink-300">
         Upload the game&apos;s HOI4 chat log (.txt), in several files if it was rehosted. The AI grades everyone&apos;s roleplay with
         strict rules, the roleplay goes on the public roleplay page, and players are told. Nothing is given until you click{" "}
         <b>Give</b>.
@@ -306,13 +306,13 @@ export default function ChatLogCard({ game, onChanged }: { game: GameControl; on
             type="button"
             disabled={game.chat_logs.length === 0 || analysis.busy}
             onClick={() => void analysis.submit({ action: "game_log_analysis", payload: { thread_id: game.id } })}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-sky-400 px-4 py-2.5 text-sm font-black text-slate-950 hover:bg-sky-300 disabled:cursor-not-allowed disabled:opacity-40"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-sky-400 px-4 py-2.5 text-sm font-black text-ink-950 hover:bg-sky-300 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {analysis.busy && <Spinner className="h-4 w-4" />}
             {analysis.busy ? "The AI is reading the log…" : result ? "🤖 Run the AI analysis again" : "🤖 Run the AI analysis"}
           </button>
         )}
-        {analysis.busy && <p className="text-center text-[11px] text-slate-400">Long logs can take a minute or two.</p>}
+        {analysis.busy && <p className="text-center text-[11px] text-ink-400">Long logs can take a minute or two.</p>}
         {analysis.state.phase === "error" && (
           <p className="rounded-xl border border-rose-400/40 bg-rose-500/10 px-3 py-2 text-xs text-rose-100">{analysis.state.message.replace(/^❌\s*/, "")}</p>
         )}
@@ -329,14 +329,14 @@ export default function ChatLogCard({ game, onChanged }: { game: GameControl; on
           </div>
         )}
         {staleLog && (
-          <p className="text-[11px] text-amber-300">The log files changed after this analysis. Run it again to grade them.</p>
+          <p className="text-[11px] text-brand-300">The log files changed after this analysis. Run it again to grade them.</p>
         )}
 
-        <button type="button" onClick={() => setShowRules((value) => !value)} className="text-[11px] font-bold text-slate-400 hover:text-white">
+        <button type="button" onClick={() => setShowRules((value) => !value)} className="text-[11px] font-bold text-ink-400 hover:text-white">
           {showRules ? "Hide the rules" : "How the AI grades (strict rules)"}
         </button>
         {showRules && (
-          <ul className="space-y-1 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-[11px] text-slate-300">
+          <ul className="space-y-1 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-[11px] text-ink-300">
             {rulesSummary(result?.rules ?? DEFAULT_AI_RULES, result?.merit_enabled ?? true).map((line) => (
               <li key={line}>• {line}</li>
             ))}
@@ -345,13 +345,13 @@ export default function ChatLogCard({ game, onChanged }: { game: GameControl; on
         )}
 
         {result?.game_summary && (
-          <p className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs italic leading-relaxed text-slate-300">
+          <p className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs italic leading-relaxed text-ink-300">
             📜 {result.game_summary}
           </p>
         )}
         {result && (
           <div>
-            <p className="mb-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
+            <p className="mb-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-ink-400">
               Results · {rewarded.length} of {players.length} recommended · graded {dateTime(result.at)}
               {result.by_name ? ` (run by ${result.by_name})` : ""}
             </p>

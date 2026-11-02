@@ -1483,7 +1483,7 @@ export default function MapViewer({
         {/* Live: how many people have this game's map open right now. */}
         {live.connected && live.viewers !== null && live.viewers > 1 && (
           <div
-            className="pointer-events-none absolute bottom-4 z-[900] flex items-center gap-1.5 rounded-full border border-white/10 bg-slate-950/75 px-3 py-1 text-xs font-semibold text-slate-200 shadow-lg backdrop-blur-md transition-[right]"
+            className="pointer-events-none absolute bottom-4 z-[900] flex items-center gap-1.5 rounded-full border border-white/10 bg-ink-950/75 px-3 py-1 text-xs font-semibold text-ink-200 shadow-lg backdrop-blur-md transition-[right]"
             style={{ right: selected ? (drawerMinimized ? 64 : 396) : 16 }}
           >
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" aria-hidden />
@@ -1493,7 +1493,7 @@ export default function MapViewer({
 
         {/* Hovered nation's name — the same pill as the game setup map. */}
         {hoverName && (
-          <div className="pointer-events-none absolute left-1/2 top-[124px] z-[950] -translate-x-1/2 rounded-full border border-white/15 bg-slate-950/80 px-4 py-1.5 text-xs font-bold text-slate-100 shadow-xl backdrop-blur-md">
+          <div className="pointer-events-none absolute left-1/2 top-[124px] z-[950] -translate-x-1/2 rounded-full border border-white/15 bg-ink-950/80 px-4 py-1.5 text-xs font-bold text-ink-100 shadow-xl backdrop-blur-md">
             {hoverName}
           </div>
         )}
@@ -1547,14 +1547,14 @@ export default function MapViewer({
         {showReserveHint && (
           <div
             data-tour="map.reserveHint"
-            className="absolute bottom-6 left-1/2 z-[900] flex -translate-x-1/2 items-center gap-3 rounded-2xl border border-amber-300/30 bg-slate-950/85 py-2 pl-4 pr-2 shadow-2xl backdrop-blur-md"
+            className="absolute bottom-6 left-1/2 z-[900] flex w-max max-w-[calc(100vw-1.5rem)] -translate-x-1/2 items-center gap-3 rounded-2xl border border-brand-300/30 bg-ink-950/85 py-2 pl-4 pr-2 shadow-2xl backdrop-blur-md"
           >
-            <span className="text-sm font-bold text-amber-100">👆 Click a nation on the map to reserve it</span>
+            <span className="text-xs font-bold text-brand-100 sm:text-sm">👆 Click a nation on the map to reserve it</span>
             {tutorial && (
               <button
                 type="button"
                 onClick={() => tutorial.start("map-player")}
-                className="rounded-xl bg-amber-400 px-3 py-1.5 text-xs font-black text-slate-950 transition hover:bg-amber-300"
+                className="shrink-0 whitespace-nowrap rounded-xl bg-brand-400 px-3 py-1.5 text-xs font-black text-ink-950 transition hover:bg-brand-300"
               >
                 Show me how
               </button>
@@ -1563,15 +1563,15 @@ export default function MapViewer({
         )}
         {/* Draft games: nations are handed out by the captains — no direct reserving. */}
         {selected && selectionKind && lobbyLock?.draft && !gameRunning && (
-          <div data-tour="map.draftJoin" className="absolute bottom-6 left-1/2 z-[900] flex -translate-x-1/2 flex-col items-center gap-2">
-            <p className="rounded-xl border border-amber-300/30 bg-slate-950/80 px-4 py-2 text-center text-xs font-semibold text-amber-100 shadow-xl backdrop-blur-md">
+          <div data-tour="map.draftJoin" className="absolute bottom-6 left-1/2 z-[1010] flex -translate-x-1/2 flex-col items-center gap-2">
+            <p className="rounded-xl border border-brand-300/30 bg-ink-950/80 px-4 py-2 text-center text-xs font-semibold text-brand-100 shadow-xl backdrop-blur-md">
               🎯 Draft game — the team captains place players on nations.
             </p>
             {lobbyLock.draft.phase === "ENLISTING" && onJoinDraft && (
               <button
                 type="button"
                 onClick={onJoinDraft}
-                className="reserve-cta-glow rounded-xl bg-amber-400 px-8 py-3 text-base font-black uppercase tracking-wider text-slate-950 shadow-2xl transition-transform hover:scale-105"
+                className="reserve-cta-glow rounded-xl bg-brand-400 px-8 py-3 text-base font-black uppercase tracking-wider text-ink-950 shadow-2xl transition-transform hover:scale-105"
               >
                 Join the draft
               </button>
@@ -1579,12 +1579,12 @@ export default function MapViewer({
           </div>
         )}
         {selected && selectionKind && !lobbyLock?.draft && !gameRunning && (
-          <div data-tour="map.reserve" className="absolute bottom-6 left-1/2 z-[900] flex -translate-x-1/2 flex-col items-center gap-2">
+          <div data-tour="map.reserve" className="absolute bottom-6 left-1/2 z-[1010] flex -translate-x-1/2 flex-col items-center gap-2">
             {selectionKind === "pending" &&
               (authUser ? (
                 <button
                   type="button"
-                  className="reserve-cta-glow rounded-xl bg-amber-400 px-10 py-3.5 text-lg font-black uppercase tracking-wider text-slate-950 shadow-2xl transition-transform hover:scale-105 disabled:opacity-60"
+                  className="reserve-cta-glow rounded-xl bg-brand-400 px-10 py-3.5 text-lg font-black uppercase tracking-wider text-ink-950 shadow-2xl transition-transform hover:scale-105 disabled:opacity-60"
                   disabled={!selectedThread || reserving}
                   onClick={handleReserve}
                 >
@@ -1593,7 +1593,7 @@ export default function MapViewer({
               ) : (
                 <a
                   href="/api/auth/login"
-                  className="reserve-cta-glow rounded-xl bg-amber-400 px-10 py-3.5 text-lg font-black uppercase tracking-wider text-slate-950 shadow-2xl transition-transform hover:scale-105"
+                  className="reserve-cta-glow rounded-xl bg-brand-400 px-10 py-3.5 text-lg font-black uppercase tracking-wider text-ink-950 shadow-2xl transition-transform hover:scale-105"
                 >
                   Login &amp; Reserve
                 </a>
@@ -1629,7 +1629,7 @@ export default function MapViewer({
             )}
             {reserveMessage && (
               <p
-                className={`rounded-md bg-slate-950/70 px-3 py-1.5 text-xs ${
+                className={`rounded-md bg-ink-950/70 px-3 py-1.5 text-xs ${
                   reserveMessage.kind === "success"
                     ? "text-emerald-400"
                     : "text-red-400"

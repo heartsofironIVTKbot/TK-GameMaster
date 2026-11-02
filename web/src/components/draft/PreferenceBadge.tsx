@@ -2,7 +2,7 @@ import { DRAFT_CHOICES, draftChoiceOf } from "@/lib/draft";
 
 const TONES = {
   major: "bg-violet-500/20 text-violet-100",
-  minor: "bg-slate-600/40 text-slate-200",
+  minor: "bg-ink-600/40 text-ink-200",
   coop: "bg-sky-500/20 text-sky-100",
   filler: "bg-emerald-500/15 text-emerald-100",
 } as const;

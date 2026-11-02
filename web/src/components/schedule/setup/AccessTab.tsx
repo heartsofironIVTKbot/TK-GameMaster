@@ -108,7 +108,7 @@ function ScopeCard({
       title={name}
       subtitle={scope === "major" ? "Germany, USA, Soviet Union… (default Trusted+)" : "Everyone else (default Everyone)"}
     >
-      <p className="mb-1.5 text-[11px] font-semibold text-slate-400">Who can reserve at first</p>
+      <p className="mb-1.5 text-[11px] font-semibold text-ink-400">Who can reserve at first</p>
       <Segmented
         ariaLabel={`${name} starting access`}
         value={level}
@@ -130,9 +130,9 @@ function ScopeCard({
             }
           />
           {unlock.enabled && !widest && (
-            <div className="gm-fade-up mt-3 space-y-3 rounded-xl border border-white/10 bg-slate-950/50 p-3">
+            <div className="gm-fade-up mt-3 space-y-3 rounded-xl border border-white/10 bg-ink-950/50 p-3">
               <div>
-                <p className="mb-1.5 text-[11px] font-semibold text-slate-400">Open to</p>
+                <p className="mb-1.5 text-[11px] font-semibold text-ink-400">Open to</p>
                 <Segmented
                   size="sm"
                   ariaLabel={`${name} unlock target`}
@@ -147,8 +147,8 @@ function ScopeCard({
               </div>
               <div>
                 <div className="flex items-baseline justify-between">
-                  <span className="text-[11px] font-semibold text-slate-400">Before the game</span>
-                  <span className="text-sm font-black text-amber-200">
+                  <span className="text-[11px] font-semibold text-ink-400">Before the game</span>
+                  <span className="text-sm font-black text-brand-200">
                     {formatDurationMinutes(unlock.hoursBefore * 60)}
                   </span>
                 </div>
@@ -163,13 +163,13 @@ function ScopeCard({
                   )}
                 />
               </div>
-              <p className="text-xs text-slate-300">
+              <p className="text-xs text-ink-300">
                 🔓 {lockLevelLabel(level)} → <b className="text-white">{lockLevelLabel(unlock.target)}</b> at{" "}
                 <b className="text-white">{formatInZone(unlockSec * 1000, timeZone)}</b>
                 {unlockSec <= nowSec ? (
-                  <span className="text-amber-300"> — already passed, applies as soon as the game is announced</span>
+                  <span className="text-brand-300"> — already passed, applies as soon as the game is announced</span>
                 ) : (
-                  <span className="text-slate-500"> · {formatRelative(unlockSec * 1000)}</span>
+                  <span className="text-ink-500"> · {formatRelative(unlockSec * 1000)}</span>
                 )}
               </p>
             </div>

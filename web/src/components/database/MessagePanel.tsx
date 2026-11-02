@@ -70,17 +70,17 @@ export default function MessagePanel({
   const entries = history?.entries ?? null;
 
   return (
-    <section data-tour="database.message" className="rounded-2xl border border-amber-300/20 bg-slate-950/70 p-4 shadow-xl shadow-black/30">
+    <section data-tour="database.message" className="rounded-2xl border border-brand-300/20 bg-ink-950/70 p-4 shadow-xl shadow-black/30">
       <div className="mb-1 flex items-center justify-between gap-2">
-        <h2 className="text-[11px] font-black uppercase tracking-[0.18em] text-amber-300">✉️ Send a message</h2>
-        {entries && entries.length > 0 && <span className="text-[11px] text-slate-500">{entries.length} sent before</span>}
+        <h2 className="text-[11px] font-black uppercase tracking-[0.18em] text-brand-300">✉️ Send a message</h2>
+        {entries && entries.length > 0 && <span className="text-[11px] text-ink-500">{entries.length} sent before</span>}
       </div>
-      <p className="mb-3 text-[11px] text-slate-500">
+      <p className="mb-3 text-[11px] text-ink-500">
         The bot DMs it to {playerName}. Every message goes to the audit log, so other hosts can see who sent it.
       </p>
 
       {isSelf ? (
-        <p className="text-[11px] text-slate-500">You can&apos;t message yourself.</p>
+        <p className="text-[11px] text-ink-500">You can&apos;t message yourself.</p>
       ) : (
         <div className="space-y-3">
           <div>
@@ -91,35 +91,35 @@ export default function MessagePanel({
               disabled={busy}
               placeholder={`Write to ${playerName}…`}
               aria-label={`Message to ${playerName}`}
-              className="w-full resize-y rounded-lg border border-white/10 bg-slate-900/80 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-amber-300/50 focus:outline-none disabled:opacity-60"
+              className="w-full resize-y rounded-lg border border-white/10 bg-ink-900/80 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:border-brand-300/50 focus:outline-none disabled:opacity-60"
             />
-            <p className={`text-right text-[10px] ${text.length > HOST_MESSAGE_MAX_LEN - 100 ? "text-amber-300" : "text-slate-500"}`}>
+            <p className={`text-right text-[10px] ${text.length > HOST_MESSAGE_MAX_LEN - 100 ? "text-brand-300" : "text-ink-500"}`}>
               {text.length} / {HOST_MESSAGE_MAX_LEN}
             </p>
           </div>
 
-          <label className="flex cursor-pointer items-start gap-2 text-xs text-slate-300">
+          <label className="flex cursor-pointer items-start gap-2 text-xs text-ink-300">
             <input
               type="checkbox"
               checked={signed}
               onChange={(event) => setSigned(event.target.checked)}
-              className="mt-0.5 h-4 w-4 accent-amber-400"
+              className="mt-0.5 h-4 w-4 accent-brand-400"
             />
             <span>
-              <span className="font-bold text-slate-100">Sign it with my name</span>
-              <span className="block text-[11px] text-slate-500">Off: they see it as from &ldquo;a Game Host&rdquo;.</span>
+              <span className="font-bold text-ink-100">Sign it with my name</span>
+              <span className="block text-[11px] text-ink-500">Off: they see it as from &ldquo;a Game Host&rdquo;.</span>
             </span>
           </label>
 
           {trimmed && (
             <div className="rounded-lg border border-white/10 bg-[#2b2d31] p-3">
-              <p className="mb-1.5 text-[10px] font-black uppercase tracking-wider text-slate-400">What they&apos;ll see</p>
-              <div className="border-l-4 border-amber-400 pl-3">
+              <p className="mb-1.5 text-[10px] font-black uppercase tracking-wider text-ink-400">What they&apos;ll see</p>
+              <div className="border-l-4 border-brand-400 pl-3">
                 <p className="text-sm font-bold text-white">
                   📩 {signed ? `Message from ${viewerName} (Game Host)` : "Message from a Game Host"}
                 </p>
-                <p className="mt-1 max-h-40 overflow-y-auto whitespace-pre-wrap break-words text-xs text-slate-200">{trimmed}</p>
-                <p className="mt-1.5 text-[10px] text-slate-500">This message was sent via the Game Master bot.</p>
+                <p className="mt-1 max-h-40 overflow-y-auto whitespace-pre-wrap break-words text-xs text-ink-200">{trimmed}</p>
+                <p className="mt-1.5 text-[10px] text-ink-500">This message was sent via the Game Master bot.</p>
               </div>
             </div>
           )}
@@ -136,25 +136,25 @@ export default function MessagePanel({
       )}
 
       <div className="mt-4 border-t border-white/10 pt-3">
-        <p className="mb-2 text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Earlier messages</p>
+        <p className="mb-2 text-[10px] font-black uppercase tracking-[0.18em] text-ink-400">Earlier messages</p>
         {history === null ? (
-          <p className="flex items-center gap-2 text-[11px] text-slate-500">
+          <p className="flex items-center gap-2 text-[11px] text-ink-500">
             <Spinner className="h-3 w-3" /> Loading…
           </p>
         ) : history.error && !entries ? (
           <p className="text-[11px] text-rose-300">{history.error}</p>
         ) : !entries || entries.length === 0 ? (
-          <p className="text-[11px] text-slate-500">No host has messaged them from the website yet.</p>
+          <p className="text-[11px] text-ink-500">No host has messaged them from the website yet.</p>
         ) : (
           <ul className="max-h-72 space-y-2 overflow-y-auto pr-1">
             {entries.map((entry) => (
               <li key={entry.id} className="rounded-lg border border-white/5 bg-white/[0.03] px-2.5 py-2">
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px]">
-                  <span className="font-bold text-slate-200">{entry.sender_name}</span>
-                  <span className="text-slate-500">{when(entry.created_at)}</span>
+                  <span className="font-bold text-ink-200">{entry.sender_name}</span>
+                  <span className="text-ink-500">{when(entry.created_at)}</span>
                   <span
                     className={`rounded px-1.5 py-px text-[10px] font-bold ${
-                      entry.signed ? "bg-sky-500/15 text-sky-200" : "bg-white/10 text-slate-300"
+                      entry.signed ? "bg-sky-500/15 text-sky-200" : "bg-white/10 text-ink-300"
                     }`}
                   >
                     {entry.signed ? "Signed" : "Anonymous"}
@@ -163,7 +163,7 @@ export default function MessagePanel({
                     <span className="rounded bg-rose-500/15 px-1.5 py-px text-[10px] font-bold text-rose-200">Not delivered — DMs closed</span>
                   )}
                 </div>
-                <p className="mt-1 line-clamp-4 whitespace-pre-wrap break-words text-xs text-slate-300">{entry.message}</p>
+                <p className="mt-1 line-clamp-4 whitespace-pre-wrap break-words text-xs text-ink-300">{entry.message}</p>
               </li>
             ))}
           </ul>

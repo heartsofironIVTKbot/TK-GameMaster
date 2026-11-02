@@ -154,7 +154,7 @@ export default function HostToolsPanel({
         maxHeight: `calc(100vh - ${(position?.top ?? 0) + PANEL_GAP}px)`,
         visibility: position ? "visible" : "hidden",
       }}
-      className="fixed z-[960] flex flex-col overflow-hidden rounded-2xl border border-amber-400/30 bg-slate-950/85 shadow-2xl shadow-black/50 backdrop-blur-xl"
+      className="fixed z-[960] flex flex-col overflow-hidden rounded-2xl border border-brand-400/30 bg-ink-950/85 shadow-2xl shadow-black/50 backdrop-blur-xl"
     >
       <header
         onPointerDown={startDrag}
@@ -163,13 +163,13 @@ export default function HostToolsPanel({
       >
         <span className="text-lg">🛠️</span>
         <div className="min-w-0 flex-1 leading-tight">
-          <p className="text-xs font-black uppercase tracking-wider text-amber-300">Host Tool</p>
-          <p className="truncate text-[11px] text-slate-400">{lobbyName}{demo ? " · preview" : ""}</p>
+          <p className="text-xs font-black uppercase tracking-wider text-brand-300">Host Tool</p>
+          <p className="truncate text-[11px] text-ink-400">{lobbyName}{demo ? " · preview" : ""}</p>
         </div>
         <button
           type="button"
           onClick={() => setCollapsed((current) => !current)}
-          className="rounded-md px-2 py-1 text-xs text-slate-400 hover:text-white"
+          className="rounded-md px-2 py-1 text-xs text-ink-400 hover:text-white"
           aria-label={collapsed ? "Expand Host Tool" : "Collapse Host Tool"}
         >
           {collapsed ? "▾" : "▴"}
@@ -177,7 +177,7 @@ export default function HostToolsPanel({
         <button
           type="button"
           onClick={onClose}
-          className="rounded-md px-2 py-1 text-xs text-slate-400 hover:text-rose-300"
+          className="rounded-md px-2 py-1 text-xs text-ink-400 hover:text-rose-300"
           aria-label="Turn off Host Tool"
           title="Turn off Host Tool"
         >
@@ -192,7 +192,7 @@ export default function HostToolsPanel({
               value={selectedThread}
               onChange={(event) => onSelectThread(event.target.value)}
               aria-label="Game to manage"
-              className="w-full rounded-lg border border-white/10 bg-slate-900/80 px-3 py-2 text-xs font-semibold text-slate-100 [color-scheme:dark] focus:border-amber-300/50 focus:outline-none"
+              className="w-full rounded-lg border border-white/10 bg-ink-900/80 px-3 py-2 text-xs font-semibold text-ink-100 [color-scheme:dark] focus:border-brand-300/50 focus:outline-none"
             >
               {games.map((game) => (
                 <option key={game.thread_id} value={game.thread_id}>
@@ -220,17 +220,17 @@ export default function HostToolsPanel({
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="🔎 Find a player (name, nickname or ID)"
-              className="w-full rounded-lg border border-white/10 bg-slate-900/80 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-amber-300/50 focus:outline-none"
+              className="w-full rounded-lg border border-white/10 bg-ink-900/80 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:border-brand-300/50 focus:outline-none"
             />
-            <p className="mt-1 text-[10px] text-slate-500">
+            <p className="mt-1 text-[10px] text-ink-500">
               Drag a player onto a nation — or click them, then click the nation.
             </p>
           </div>
 
-          {searchable && searching && <p className="text-xs text-slate-400">Searching…</p>}
+          {searchable && searching && <p className="text-xs text-ink-400">Searching…</p>}
           {searchable && searchError && <p className="text-xs text-rose-300">{searchError}</p>}
           {searchable && !searching && results.length === 0 && !searchError && (
-            <p className="text-xs text-slate-500">No members match “{needle}”.</p>
+            <p className="text-xs text-ink-500">No members match “{needle}”.</p>
           )}
           {searchable && results.length > 0 && (
             <ul className="space-y-1">
@@ -247,17 +247,17 @@ export default function HostToolsPanel({
                       className={`flex w-full cursor-grab items-center gap-2 rounded-lg border px-2 py-1.5 text-left transition active:cursor-grabbing ${
                         held
                           ? "border-yellow-300/70 bg-yellow-300/15"
-                          : "border-white/5 bg-white/[0.03] hover:border-amber-300/40 hover:bg-white/[0.06]"
+                          : "border-white/5 bg-white/[0.03] hover:border-brand-300/40 hover:bg-white/[0.06]"
                       }`}
                       title="Drag onto a nation, or click to pick up"
                     >
                       <Avatar url={member.avatar_url} name={player.name} />
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-xs font-bold text-slate-100">
+                        <span className="block truncate text-xs font-bold text-ink-100">
                           {player.name}
-                          {member.is_vip && <span className="ml-1 text-amber-300" title="VIP">★</span>}
+                          {member.is_vip && <span className="ml-1 text-brand-300" title="VIP">★</span>}
                         </span>
-                        <span className="block truncate text-[10px] text-slate-500">
+                        <span className="block truncate text-[10px] text-ink-500">
                           {member.username ? `@${member.username}` : member.discord_id}
                           {player.from_slot && <span className="text-sky-300"> · on {slotLabel(player.from_slot)}</span>}
                         </span>
@@ -314,8 +314,8 @@ export default function HostToolsPanel({
           >
             <span className="text-base">{notify ? "🔔" : "🔕"}</span>
             <span className="min-w-0 flex-1 leading-tight">
-              <span className="block text-xs font-bold text-slate-100">Notify players</span>
-              <span className="block text-[10px] text-slate-400">
+              <span className="block text-xs font-bold text-ink-100">Notify players</span>
+              <span className="block text-[10px] text-ink-400">
                 {notify
                   ? "Players get a DM when you add, move, swap or remove them."
                   : "Off: players aren't told about your changes."}
@@ -324,7 +324,7 @@ export default function HostToolsPanel({
             {/* Same switch as the settings toggles (components/schedule/ui.tsx). */}
             <span
               className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${
-                notify ? "border-amber-300/60 bg-amber-400" : "border-white/15 bg-slate-700/70"
+                notify ? "border-brand-300/60 bg-brand-400" : "border-white/15 bg-ink-700/70"
               }`}
             >
               <span
@@ -337,7 +337,7 @@ export default function HostToolsPanel({
 
           {actions.length > 0 && (
             <div>
-              <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Activity</p>
+              <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.16em] text-ink-500">Activity</p>
               <ul className="space-y-1.5">
                 {actions.map((action) => (
                   <li
@@ -346,10 +346,10 @@ export default function HostToolsPanel({
                       action.state === "error"
                         ? "border-rose-400/30 bg-rose-500/10 text-rose-100"
                         : action.state === "confirm"
-                          ? "border-amber-300/40 bg-amber-400/10 text-amber-100"
+                          ? "border-brand-300/40 bg-brand-400/10 text-brand-100"
                           : action.state === "done"
                             ? "border-emerald-400/20 bg-emerald-500/5 text-emerald-100"
-                            : "border-white/10 bg-white/[0.03] text-slate-200"
+                            : "border-white/10 bg-white/[0.03] text-ink-200"
                     }`}
                   >
                     <div className="flex items-start gap-2">
@@ -377,14 +377,14 @@ export default function HostToolsPanel({
                         <button
                           type="button"
                           onClick={() => onConfirm(action)}
-                          className="rounded-md bg-amber-400 px-2.5 py-1 text-[11px] font-black text-slate-950 hover:bg-amber-300"
+                          className="rounded-md bg-brand-400 px-2.5 py-1 text-[11px] font-black text-ink-950 hover:bg-brand-300"
                         >
                           Add anyway
                         </button>
                         <button
                           type="button"
                           onClick={() => onDismiss(action.id)}
-                          className="rounded-md border border-white/15 px-2.5 py-1 text-[11px] text-slate-200"
+                          className="rounded-md border border-white/15 px-2.5 py-1 text-[11px] text-ink-200"
                         >
                           Cancel
                         </button>
@@ -486,7 +486,7 @@ export function Avatar({ url, name, size = 26 }: { url: string | null; name: str
   return (
     <span
       style={{ width: size, height: size }}
-      className="flex shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-slate-600 to-slate-800 text-[11px] font-black text-slate-200"
+      className="flex shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-ink-600 to-ink-800 text-[11px] font-black text-ink-200"
     >
       {name.charAt(0).toUpperCase()}
     </span>

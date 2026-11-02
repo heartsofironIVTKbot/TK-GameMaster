@@ -1,5 +1,6 @@
 "use client";
 
+import { MenuButton } from "@/components/site/SiteMenu";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -33,7 +34,7 @@ import { usePresetDefaults } from "./usePresetDefaults";
 const HostLockMap = dynamic(() => import("@/components/schedule/HostLockMap"), {
   ssr: false,
   loading: () => (
-    <div className="flex h-full w-full items-center justify-center bg-[#16283b] text-sm text-slate-400">Loading map…</div>
+    <div className="flex h-full w-full items-center justify-center bg-[#16283b] text-sm text-ink-400">Loading map…</div>
   ),
 });
 
@@ -323,17 +324,17 @@ export default function PresetMakerApp({
 
   if (load.state !== "ready") {
     return (
-      <main className="gm-backdrop flex min-h-screen w-full items-center justify-center p-4 text-slate-100">
+      <main className="gm-backdrop flex min-h-screen w-full items-center justify-center p-4 text-ink-100">
         {load.state === "loading" ? (
-          <p className="flex items-center gap-3 text-sm font-semibold text-slate-300">
-            <Spinner className="h-5 w-5 text-amber-400" /> Loading the preset…
+          <p className="flex items-center gap-3 text-sm font-semibold text-ink-300">
+            <Spinner className="h-5 w-5 text-brand-400" /> Loading the preset…
           </p>
         ) : (
           <div className={`gm-fade-up w-full max-w-md rounded-3xl p-8 text-center ${GLASS}`}>
             <div className="text-5xl">🧩</div>
             <h1 className="mt-4 text-xl font-black text-white">Can&apos;t open this preset</h1>
-            <p className="mt-2 text-sm text-slate-400">{load.message}</p>
-            <Link href="/presets" className="mt-6 inline-block rounded-xl bg-amber-400 px-5 py-2.5 text-sm font-black text-slate-950">
+            <p className="mt-2 text-sm text-ink-400">{load.message}</p>
+            <Link href="/presets" className="mt-6 inline-block rounded-xl bg-brand-400 px-5 py-2.5 text-sm font-black text-ink-950">
               Back to presets
             </Link>
           </div>
@@ -360,7 +361,7 @@ export default function PresetMakerApp({
   })();
 
   return (
-    <div className="relative h-screen w-screen overflow-hidden bg-[#0b1322] text-slate-100">
+    <div className="relative h-screen w-screen overflow-hidden bg-[#0b1322] text-ink-100">
       <div className="absolute inset-0 z-0">
         {scenarioId ? (
           <HostLockMap
@@ -377,20 +378,20 @@ export default function PresetMakerApp({
         )}
       </div>
 
-      <header className="absolute inset-x-0 top-0 z-[1000] border-b border-white/10 bg-slate-950/55 backdrop-blur-md">
+      <header className="absolute inset-x-0 top-0 z-[1000] border-b border-white/10 bg-ink-950/55 backdrop-blur-md">
         <div className="flex h-16 items-center gap-3 px-3 sm:px-5">
           <Link
             href="/presets"
-            className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-slate-200 transition hover:border-amber-300/40"
+            className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-ink-200 transition hover:border-brand-300/40"
           >
             ← Presets
           </Link>
           <div className="min-w-0 leading-tight">
             <p className="truncate text-sm font-black text-white">
               {savedId ? (readOnly ? "View preset" : "Edit preset") : "New preset"} · {state.name.trim() || "Unnamed"}
-              {dirty && <span className="ml-2 text-[11px] font-bold text-amber-300">● unsaved</span>}
+              {dirty && <span className="ml-2 text-[11px] font-bold text-brand-300">● unsaved</span>}
             </p>
-            <p className="truncate text-[11px] font-semibold text-slate-400">
+            <p className="truncate text-[11px] font-semibold text-ink-400">
               <span className={category?.text}>
                 {category?.emoji} {mode?.label ?? state.mode}
               </span>
@@ -402,33 +403,36 @@ export default function PresetMakerApp({
               PREVIEW MODE
             </span>
           )}
-          <div className="ml-auto hidden items-center gap-2 sm:flex">
-            <HostAvatar host={host} />
+          <div className="ml-auto flex items-center gap-2">
+            <span className="hidden sm:block">
+              <HostAvatar host={host} />
+            </span>
+            <MenuButton current="presets" label={false} />
           </div>
         </div>
       </header>
 
       {scenarioId && hovered && (
-        <div className="pointer-events-none absolute left-1/2 top-20 z-[950] -translate-x-1/2 rounded-full border border-white/15 bg-slate-950/80 px-4 py-1.5 text-xs font-semibold text-slate-100 shadow-xl backdrop-blur-md lg:left-[calc(50%-240px)]">
+        <div className="pointer-events-none absolute left-1/2 top-20 z-[950] -translate-x-1/2 rounded-full border border-white/15 bg-ink-950/80 px-4 py-1.5 text-xs font-semibold text-ink-100 shadow-xl backdrop-blur-md lg:left-[calc(50%-240px)]">
           {hoveredBot ?? (hovered.slot_key || hovered.name)}
-          {hoverStatus && <span className="ml-2 text-slate-400">{hoverStatus}</span>}
+          {hoverStatus && <span className="ml-2 text-ink-400">{hoverStatus}</span>}
         </div>
       )}
 
       {scenarioId && (
-        <div className="absolute bottom-4 left-4 z-[950] rounded-2xl border border-white/10 bg-slate-950/75 px-3.5 py-2.5 text-[11px] font-semibold text-slate-300 shadow-xl backdrop-blur-md">
+        <div className="absolute bottom-4 left-4 z-[950] rounded-2xl border border-white/10 bg-ink-950/75 px-3.5 py-2.5 text-[11px] font-semibold text-ink-300 shadow-xl backdrop-blur-md">
           {tab === "locks" ? (
             <>
               <Legend color="#ff5266" label={`Editing: ${activeLock.label || "Locked nations"} (${activeLock.nations.length})`} />
               <Legend color="#3cc4ff" label="Other lock groups" />
-              <p className="mt-1 text-slate-500">Click a nation to lock / unlock it</p>
+              <p className="mt-1 text-ink-500">Click a nation to lock / unlock it</p>
             </>
           ) : state.layout && tab === "groups" && activeGroup ? (
             <>
               <Legend color="#ff5266" label={`Editing: ${activeGroup.name || "Unnamed"}`} />
               <Legend color="#3cc4ff" label="Other playable groups" />
               <Legend color="#374151" label={`Not playable (${hiddenList.length})`} />
-              <p className="mt-1 text-slate-500">Click a nation to put it in / take it out</p>
+              <p className="mt-1 text-ink-500">Click a nation to put it in / take it out</p>
             </>
           ) : state.layout ? (
             <>
@@ -455,13 +459,13 @@ export default function PresetMakerApp({
                 type="button"
                 onClick={() => setTab(entry.id)}
                 className={`relative flex flex-1 flex-col items-center gap-0.5 rounded-xl px-1 py-1.5 text-[10px] font-bold uppercase tracking-wide transition ${
-                  active ? "bg-amber-400 text-slate-950" : "text-slate-400 hover:bg-white/5 hover:text-white"
+                  active ? "bg-brand-400 text-ink-950" : "text-ink-400 hover:bg-white/5 hover:text-white"
                 }`}
               >
                 <span className="text-base leading-none">{entry.icon}</span>
                 <span className="hidden sm:block">{entry.label}</span>
                 {entry.id !== "save" && issueTabs.has(entry.id) && (
-                  <span className="absolute right-1.5 top-1 h-2 w-2 rounded-full bg-rose-500 ring-2 ring-slate-900" />
+                  <span className="absolute right-1.5 top-1 h-2 w-2 rounded-full bg-rose-500 ring-2 ring-ink-900" />
                 )}
               </button>
             );
@@ -469,7 +473,7 @@ export default function PresetMakerApp({
           <button
             type="button"
             onClick={() => setDrawerOpen(false)}
-            className="ml-1 rounded-lg px-2 py-1 text-slate-500 hover:text-white"
+            className="ml-1 rounded-lg px-2 py-1 text-ink-500 hover:text-white"
             aria-label="Hide panel"
             title="Hide panel to see the map"
           >
@@ -490,7 +494,7 @@ export default function PresetMakerApp({
                 type="button"
                 onClick={() => void copyToOurs()}
                 disabled={copying}
-                className="mt-2 flex items-center gap-2 rounded-lg bg-sky-400 px-3 py-1.5 text-xs font-black text-slate-950 hover:bg-sky-300 disabled:opacity-60"
+                className="mt-2 flex items-center gap-2 rounded-lg bg-sky-400 px-3 py-1.5 text-xs font-black text-ink-950 hover:bg-sky-300 disabled:opacity-60"
               >
                 {copying && <Spinner className="h-3 w-3" />}
                 {preset.own_server ? "Duplicate to edit" : "Copy to our server"}
@@ -501,7 +505,7 @@ export default function PresetMakerApp({
             <p className="mb-3 rounded-2xl border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-100">{defaultsError}</p>
           )}
           {defaults && !defaults.ready && (
-            <p className="mb-3 rounded-2xl border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
+            <p className="mb-3 rounded-2xl border border-brand-400/30 bg-brand-500/10 px-3 py-2 text-xs text-brand-100">
               The bot hasn&apos;t published its nation lists yet — restart the bot with the latest code, then reload.
             </p>
           )}
@@ -517,8 +521,8 @@ export default function PresetMakerApp({
             />
           )}
           {tab !== "basics" && !defaults && !defaultsError && (
-            <p className="flex items-center gap-2 text-xs text-slate-400">
-              <Spinner className="h-3.5 w-3.5 text-amber-300" /> Loading the mode&apos;s nations…
+            <p className="flex items-center gap-2 text-xs text-ink-400">
+              <Spinner className="h-3.5 w-3.5 text-brand-300" /> Loading the mode&apos;s nations…
             </p>
           )}
           {tab === "groups" && defaults && (
@@ -568,13 +572,13 @@ export default function PresetMakerApp({
           )}
         </div>
 
-        <footer className="border-t border-white/10 bg-slate-950/40 p-3">
+        <footer className="border-t border-white/10 bg-ink-950/40 p-3">
           {saveError && (
             <p className="mb-2 rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-1.5 text-xs text-rose-100">{saveError}</p>
           )}
           <div className="flex items-center gap-2">
             {readOnly ? (
-              <span className="flex-1 text-xs font-semibold text-slate-400">Read-only</span>
+              <span className="flex-1 text-xs font-semibold text-ink-400">Read-only</span>
             ) : issues.length > 0 ? (
               <button
                 type="button"
@@ -593,7 +597,7 @@ export default function PresetMakerApp({
               <button
                 type="button"
                 onClick={() => setTab(MAKER_TABS[tabIndex + 1].id)}
-                className="rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-xs font-bold text-slate-200 hover:border-white/25"
+                className="rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-xs font-bold text-ink-200 hover:border-white/25"
               >
                 Next ›
               </button>
@@ -605,8 +609,8 @@ export default function PresetMakerApp({
                 disabled={saving || (!dirty && savedId !== null)}
                 className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-black transition ${
                   issues.length === 0 && (dirty || !savedId)
-                    ? "reserve-cta-glow bg-amber-400 text-slate-950 hover:bg-amber-300"
-                    : "bg-slate-700 text-slate-400"
+                    ? "reserve-cta-glow bg-brand-400 text-ink-950 hover:bg-brand-300"
+                    : "bg-ink-700 text-ink-400"
                 }`}
               >
                 {saving && <Spinner className="h-3.5 w-3.5" />}
@@ -621,14 +625,14 @@ export default function PresetMakerApp({
         <button
           type="button"
           onClick={() => setDrawerOpen(true)}
-          className="absolute right-3 top-[76px] z-[1000] rounded-2xl bg-amber-400 px-4 py-3 text-sm font-black text-slate-950 shadow-xl shadow-amber-500/30"
+          className="absolute right-3 top-[76px] z-[1000] rounded-2xl bg-brand-400 px-4 py-3 text-sm font-black text-ink-950 shadow-xl shadow-brand-500/30"
         >
           ◂ Preset
         </button>
       )}
 
       {toast && (
-        <div className="gm-fade-up absolute bottom-6 left-1/2 z-[1500] -translate-x-1/2 rounded-full border border-white/15 bg-slate-900/90 px-4 py-2 text-xs font-semibold text-slate-100 shadow-xl backdrop-blur-md">
+        <div className="gm-fade-up absolute bottom-6 left-1/2 z-[1500] -translate-x-1/2 rounded-full border border-white/15 bg-ink-900/90 px-4 py-2 text-xs font-semibold text-ink-100 shadow-xl backdrop-blur-md">
           {toast}
         </div>
       )}

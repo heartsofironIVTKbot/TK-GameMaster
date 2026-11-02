@@ -49,17 +49,17 @@ export default function HelpButton() {
     <div
       ref={rootRef}
       data-tour="help.button"
-      className={`fixed z-[5900] transition-[left] ${top ? "top-24" : "bottom-4"} ${right ? "right-4" : "left-4"} ${activeTourId ? "pointer-events-none" : ""}`}
+      className={`fixed z-[5900] transition-[left] ${top ? "top-24" : "bottom-4"} ${right ? "right-4" : "left-4"} ${besidePanel ? "sm:left-[416px]" : ""} ${activeTourId ? "pointer-events-none" : ""}`}
       // In development, Next.js puts its own badge in the bottom-right corner.
-      style={besidePanel ? { left: 416 } : right && process.env.NODE_ENV === "development" ? { right: 68 } : undefined}
+      style={right && process.env.NODE_ENV === "development" ? { right: 68 } : undefined}
     >
       {open && (
         <div
-          className={`gm-tour-card absolute ${top ? "top-14" : "bottom-14"} w-[300px] max-w-[calc(100vw-2rem)] rounded-2xl border border-white/10 bg-slate-900/95 p-4 text-slate-300 shadow-2xl shadow-black/60 backdrop-blur-xl ${
+          className={`gm-tour-card absolute ${top ? "top-14" : "bottom-14"} w-[300px] max-w-[calc(100vw-2rem)] rounded-2xl border border-white/10 bg-ink-900/95 p-4 text-ink-300 shadow-2xl shadow-black/60 backdrop-blur-xl ${
             right ? "right-0" : "left-0"
           }`}
         >
-          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-amber-300/90">🎓 Tutorials</p>
+          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-300/90">🎓 Tutorials</p>
 
           <label className="mt-3 flex cursor-pointer items-start gap-3">
             <button
@@ -68,7 +68,7 @@ export default function HelpButton() {
               aria-checked={progress.autoStart}
               onClick={() => actions.setAutoStart(!progress.autoStart)}
               className={`relative mt-0.5 h-5 w-9 shrink-0 rounded-full transition ${
-                progress.autoStart ? "bg-amber-400" : "bg-slate-700"
+                progress.autoStart ? "bg-brand-400" : "bg-ink-700"
               }`}
             >
               <span
@@ -79,7 +79,7 @@ export default function HelpButton() {
             </button>
             <span className="text-sm leading-snug">
               <span className="font-bold text-white">Show tutorials automatically</span>
-              <span className="block text-xs text-slate-400">
+              <span className="block text-xs text-ink-400">
                 {progress.autoStart
                   ? "A tour starts the first time you open a page."
                   : "Off. You can still start any tour below."}
@@ -88,8 +88,8 @@ export default function HelpButton() {
           </label>
 
           <div className="mt-4 space-y-1.5">
-            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">On this page</p>
-            {pageTours.length === 0 && <p className="text-xs text-slate-500">No tour for this page.</p>}
+            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-ink-500">On this page</p>
+            {pageTours.length === 0 && <p className="text-xs text-ink-500">No tour for this page.</p>}
             {pageTours.map((tour) => {
               const seen = hasSeen(progress, tour);
               return (
@@ -100,16 +100,16 @@ export default function HelpButton() {
                     setOpen(false);
                     actions.start(tour.id);
                   }}
-                  className="flex w-full items-start gap-2.5 rounded-xl border border-white/5 bg-white/[0.03] px-3 py-2 text-left transition hover:border-amber-300/40 hover:bg-amber-400/5"
+                  className="flex w-full items-start gap-2.5 rounded-xl border border-white/5 bg-white/[0.03] px-3 py-2 text-left transition hover:border-brand-300/40 hover:bg-brand-400/5"
                 >
-                  <span className={`mt-0.5 text-sm ${seen ? "text-emerald-400" : "text-amber-300"}`} aria-hidden>
+                  <span className={`mt-0.5 text-sm ${seen ? "text-emerald-400" : "text-brand-300"}`} aria-hidden>
                     {seen ? "✓" : "▶"}
                   </span>
                   <span className="min-w-0">
                     <span className="block text-sm font-bold text-white">{tour.title}</span>
-                    <span className="block text-xs leading-snug text-slate-400">{tour.summary}</span>
+                    <span className="block text-xs leading-snug text-ink-400">{tour.summary}</span>
                   </span>
-                  <span className="ml-auto shrink-0 self-center text-[11px] font-bold text-amber-300">
+                  <span className="ml-auto shrink-0 self-center text-[11px] font-bold text-brand-300">
                     {seen ? "Replay" : "Start"}
                   </span>
                 </button>
@@ -129,7 +129,7 @@ export default function HelpButton() {
               setOpen(false);
             }}
             onBlur={() => setResetArmed(false)}
-            className="mt-4 w-full rounded-lg px-2 py-1.5 text-center text-[11px] font-semibold text-slate-500 transition hover:text-slate-200"
+            className="mt-4 w-full rounded-lg px-2 py-1.5 text-center text-[11px] font-semibold text-ink-500 transition hover:text-ink-200"
           >
             {resetArmed ? "Click again: every tour shows again" : "Reset all tutorials"}
           </button>
@@ -147,13 +147,13 @@ export default function HelpButton() {
         title="Tutorials and help"
         className={`flex h-11 items-center gap-2 rounded-full border pl-1.5 pr-4 text-sm font-black shadow-xl shadow-black/40 backdrop-blur-md transition hover:scale-105 ${
           open
-            ? "border-amber-300 bg-amber-400 text-slate-950"
-            : "border-white/15 bg-slate-900/85 text-slate-100 hover:border-amber-300/60"
+            ? "border-brand-300 bg-brand-400 text-ink-950"
+            : "border-white/15 bg-ink-900/85 text-ink-100 hover:border-brand-300/60"
         }`}
       >
         <span
           className={`flex h-8 w-8 items-center justify-center rounded-full text-base ${
-            open ? "bg-slate-950/15" : "bg-amber-400 text-slate-950"
+            open ? "bg-ink-950/15" : "bg-brand-400 text-ink-950"
           }`}
           aria-hidden
         >

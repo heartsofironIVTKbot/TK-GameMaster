@@ -108,11 +108,11 @@ export function useAuditFeed(query: string, refreshMs = 15_000) {
 }
 
 function DetailValue({ value }: { value: unknown }) {
-  if (value == null || value === "") return <span className="text-slate-500">—</span>;
+  if (value == null || value === "") return <span className="text-ink-500">—</span>;
   if (typeof value === "object") {
-    return <span className="break-all font-mono text-[11px] text-slate-300">{JSON.stringify(value)}</span>;
+    return <span className="break-all font-mono text-[11px] text-ink-300">{JSON.stringify(value)}</span>;
   }
-  return <span className="break-words text-slate-200">{String(value)}</span>;
+  return <span className="break-words text-ink-200">{String(value)}</span>;
 }
 
 function AuditRow({
@@ -133,7 +133,7 @@ function AuditRow({
       <span className="inline-flex items-center gap-1">
         <a
           href={`/database?player=${id}`}
-          className="font-semibold text-amber-200 hover:underline"
+          className="font-semibold text-brand-200 hover:underline"
           title={`Open ${name ?? id}'s record`}
           onClick={(click) => click.stopPropagation()}
         >
@@ -146,13 +146,13 @@ function AuditRow({
               click.stopPropagation();
               onPerson(id);
             }}
-            className="rounded px-1 text-[10px] text-slate-500 hover:bg-white/5 hover:text-white"
+            className="rounded px-1 text-[10px] text-ink-500 hover:bg-white/5 hover:text-white"
             title={`Only show actions by or on ${name ?? id}`}
           >
             filter
           </button>
         )}
-        <span className="text-slate-600">({role})</span>
+        <span className="text-ink-600">({role})</span>
       </span>
     ) : null;
 
@@ -168,8 +168,8 @@ function AuditRow({
           {CATEGORY_ICON[event.category] ?? "•"}
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block text-sm text-slate-100">{event.summary}</span>
-          <span className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-slate-500">
+          <span className="block text-sm text-ink-100">{event.summary}</span>
+          <span className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-ink-500">
             <span title={formatInZone(event.created_at * 1000, zone, { dateStyle: "full", timeStyle: "medium" })}>
               {formatInZone(event.created_at * 1000, zone, {
                 day: "numeric",
@@ -186,7 +186,7 @@ function AuditRow({
             <span>{SOURCE_LABEL[event.source] ?? event.source}</span>
           </span>
         </span>
-        <span className="mt-0.5 text-xs text-slate-500">{open ? "▾" : "▸"}</span>
+        <span className="mt-0.5 text-xs text-ink-500">{open ? "▾" : "▸"}</span>
       </button>
       {open && (
         <div className="space-y-1.5 px-3 pb-3 pl-11 text-xs">
@@ -200,10 +200,10 @@ function AuditRow({
             )}
           </div>
           {details.length > 0 && (
-            <dl className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-3 gap-y-1 rounded-lg border border-white/5 bg-slate-950/40 p-2">
+            <dl className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-3 gap-y-1 rounded-lg border border-white/5 bg-ink-950/40 p-2">
               {details.map(([key, value]) => (
                 <div key={key} className="contents">
-                  <dt className="text-slate-500">{key}</dt>
+                  <dt className="text-ink-500">{key}</dt>
                   <dd>
                     <DetailValue value={value} />
                   </dd>
@@ -240,15 +240,15 @@ export default function AuditList({
         <p className="mb-2 rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-100">{feed.error}</p>
       )}
       {loading && (
-        <div className="flex items-center gap-2 px-2 py-6 text-xs text-slate-400">
-          <Spinner className="h-3.5 w-3.5 text-amber-300" /> Loading…
+        <div className="flex items-center gap-2 px-2 py-6 text-xs text-ink-400">
+          <Spinner className="h-3.5 w-3.5 text-brand-300" /> Loading…
         </div>
       )}
       {feed && feed.events.length === 0 && !feed.error && (
-        <p className="px-2 py-8 text-center text-xs text-slate-500">{empty}</p>
+        <p className="px-2 py-8 text-center text-xs text-ink-500">{empty}</p>
       )}
       {feed && feed.events.length > 0 && (
-        <ul className="overflow-hidden rounded-2xl border border-white/5 bg-slate-950/30">
+        <ul className="overflow-hidden rounded-2xl border border-white/5 bg-ink-950/30">
           {feed.events.map((event) => (
             <AuditRow key={event.id} event={event} zone={zone} now={now} onPerson={onPerson} />
           ))}
@@ -260,7 +260,7 @@ export default function AuditList({
             type="button"
             onClick={loadMore}
             disabled={loadingMore}
-            className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold text-slate-200 hover:border-amber-300/40 hover:text-white disabled:opacity-60"
+            className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold text-ink-200 hover:border-brand-300/40 hover:text-white disabled:opacity-60"
           >
             {loadingMore && <Spinner className="h-3 w-3" />}Load more
           </button>

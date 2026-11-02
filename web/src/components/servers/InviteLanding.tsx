@@ -1,3 +1,4 @@
+import SiteHeader from "@/components/site/SiteHeader";
 import Link from "next/link";
 import { REQUIRED_PERMISSIONS, inviteUrl } from "@/lib/serverSettingsTypes";
 
@@ -23,20 +24,14 @@ const STAGES = [
 
 export default function InviteLanding() {
   return (
-    <div className="gm-backdrop min-h-screen w-full px-4 pb-16 text-slate-100 sm:px-6">
-      <div className="mx-auto flex max-w-5xl items-center justify-between py-5">
-        <Link href="/" className="text-sm font-black text-white">
-          🎖️ GameMaster
-        </Link>
-        <Link href="/servers" className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-slate-300 hover:text-white">
-          Your servers
-        </Link>
-      </div>
+    <div className="gm-backdrop min-h-screen w-full pb-16 text-ink-100">
+      <SiteHeader page="invite" icon="🎖️" title="GameMaster" subtitle="Hearts of Iron IV multiplayer" />
+      <div className="px-4 sm:px-6">
 
       <section className="mx-auto max-w-3xl pt-8 text-center sm:pt-14">
-        <p className="text-[11px] font-black uppercase tracking-[0.25em] text-amber-300">Hearts of Iron IV multiplayer</p>
+        <p className="text-[11px] font-black uppercase tracking-[0.25em] text-brand-300">Hearts of Iron IV multiplayer</p>
         <h1 className="mt-3 text-3xl font-black leading-tight text-white sm:text-5xl">Run your HOI4 games from one website</h1>
-        <p className="mx-auto mt-4 max-w-2xl text-sm text-slate-300 sm:text-base">
+        <p className="mx-auto mt-4 max-w-2xl text-sm text-ink-300 sm:text-base">
           GameMaster handles scheduling, reservations, attendance, moderation and host teams for HOI4 multiplayer communities. Add it to
           your Discord server and set it up in a few minutes.
         </p>
@@ -47,7 +42,7 @@ export default function InviteLanding() {
           >
             Add to Discord
           </a>
-          <Link href="/servers" className="rounded-xl border border-white/15 bg-white/5 px-7 py-3.5 text-sm font-bold text-slate-100 hover:border-amber-300/40">
+          <Link href="/servers" className="rounded-xl border border-white/15 bg-white/5 px-7 py-3.5 text-sm font-bold text-ink-100 hover:border-brand-300/40">
             Set up a server I already added
           </Link>
         </div>
@@ -55,27 +50,27 @@ export default function InviteLanding() {
 
       <section className="mx-auto mt-14 grid max-w-5xl gap-3 sm:grid-cols-3">
         {STAGES.map((stage) => (
-          <div key={stage.n} className="rounded-2xl border border-white/10 bg-slate-900/60 p-4">
-            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-400 text-sm font-black text-slate-950">{stage.n}</span>
+          <div key={stage.n} className="rounded-2xl border border-white/10 bg-ink-900/60 p-4">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-400 text-sm font-black text-ink-950">{stage.n}</span>
             <p className="mt-2 font-black text-white">{stage.title}</p>
-            <p className="mt-1 text-xs text-slate-400">{stage.text}</p>
+            <p className="mt-1 text-xs text-ink-400">{stage.text}</p>
           </div>
         ))}
       </section>
 
       <section className="mx-auto mt-10 grid max-w-5xl gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {FEATURES.map((feature) => (
-          <div key={feature.title} className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+          <div key={feature.title} className="rounded-2xl border border-white/10 bg-ink-950/40 p-4">
             <p className="text-2xl">{feature.icon}</p>
             <p className="mt-1 font-black text-white">{feature.title}</p>
-            <p className="mt-1 text-xs leading-relaxed text-slate-400">{feature.text}</p>
+            <p className="mt-1 text-xs leading-relaxed text-ink-400">{feature.text}</p>
           </div>
         ))}
       </section>
 
-      <section className="mx-auto mt-10 max-w-5xl rounded-3xl border border-white/10 bg-slate-900/60 p-5">
+      <section className="mx-auto mt-10 max-w-5xl rounded-3xl border border-white/10 bg-ink-900/60 p-5">
         <h2 className="text-lg font-black text-white">What GameMaster asks for</h2>
-        <p className="mt-1 text-xs text-slate-400">
+        <p className="mt-1 text-xs text-ink-400">
           Only the permissions it uses, never Administrator. Setup shows anything missing and how to fix it.
         </p>
         <ul className="mt-4 grid gap-2 sm:grid-cols-2">
@@ -83,18 +78,19 @@ export default function InviteLanding() {
             <li key={perm.bit} className="flex items-start gap-2 text-xs">
               <span className="text-emerald-400">✓</span>
               <span>
-                <span className="font-bold text-slate-200">{perm.name}</span>
-                <span className="block text-slate-500">{perm.why}</span>
+                <span className="font-bold text-ink-200">{perm.name}</span>
+                <span className="block text-ink-500">{perm.why}</span>
               </span>
             </li>
           ))}
         </ul>
       </section>
 
-      <p className="mx-auto mt-8 max-w-3xl text-center text-[11px] text-slate-500">
+      <p className="mx-auto mt-8 max-w-3xl text-center text-[11px] text-ink-500">
         Each server keeps its own player records. Only the server&apos;s owner, its admins, and Host Management the owner allows can change
         its settings. Every change is logged.
       </p>
+      </div>
     </div>
   );
 }

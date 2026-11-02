@@ -188,7 +188,7 @@ export default function EventLog({ events, now }: { events: AttendanceEvent[]; n
       <div className="flex flex-wrap items-center gap-2">
         <div className="mr-auto">
           <p className="text-[11px] font-black uppercase tracking-[0.18em] text-emerald-300">Audit log</p>
-          <p className="mt-0.5 text-xs text-slate-400">Everything that happened to this game&apos;s attendance, and who did it.</p>
+          <p className="mt-0.5 text-xs text-ink-400">Everything that happened to this game&apos;s attendance, and who did it.</p>
         </div>
         <div className="flex flex-wrap gap-1">
           {GROUPS.map((option) => (
@@ -198,8 +198,8 @@ export default function EventLog({ events, now }: { events: AttendanceEvent[]; n
               onClick={() => setGroup(option.value)}
               className={`rounded-lg border px-2 py-1 text-[11px] font-bold transition ${
                 option.value === group
-                  ? "border-emerald-300 bg-emerald-400 text-slate-950"
-                  : "border-white/10 bg-white/[0.03] text-slate-300 hover:border-white/25 hover:text-white"
+                  ? "border-emerald-300 bg-emerald-400 text-ink-950"
+                  : "border-white/10 bg-white/[0.03] text-ink-300 hover:border-white/25 hover:text-white"
               }`}
             >
               {option.label}
@@ -208,7 +208,7 @@ export default function EventLog({ events, now }: { events: AttendanceEvent[]; n
         </div>
       </div>
       {shown.length === 0 ? (
-        <p className="mt-5 text-xs text-slate-500">
+        <p className="mt-5 text-xs text-ink-500">
           {events.length === 0
             ? "Nothing logged yet. Games started before this update have no audit log."
             : "Nothing of this kind yet."}
@@ -220,10 +220,10 @@ export default function EventLog({ events, now }: { events: AttendanceEvent[]; n
             return (
               <li key={event.id} className="flex gap-3 py-2.5">
                 <span className="mt-0.5 w-6 shrink-0 text-center text-base">{ICON[event.kind] ?? "•"}</span>
-                <div className="min-w-0 flex-1 text-sm text-slate-300">
+                <div className="min-w-0 flex-1 text-sm text-ink-300">
                   <p>{text}</p>
-                  {quote && <p className="mt-0.5 line-clamp-2 text-xs text-slate-400">“{quote}”</p>}
-                  <p className="mt-0.5 text-[11px] text-slate-500">
+                  {quote && <p className="mt-0.5 line-clamp-2 text-xs text-ink-400">“{quote}”</p>}
+                  <p className="mt-0.5 text-[11px] text-ink-500">
                     {event.actor_name
                       ? `by ${event.actor_name}`
                       : event.kind.startsWith("participation_")

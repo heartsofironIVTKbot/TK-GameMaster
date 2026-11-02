@@ -40,8 +40,8 @@ export default function SaveTab({
       onClick={() => onGoTo(tab)}
       className="flex w-full items-start gap-3 rounded-lg px-2 py-1.5 text-left hover:bg-white/5"
     >
-      <span className="w-24 shrink-0 text-[11px] font-semibold text-slate-500">{label}</span>
-      <span className="min-w-0 flex-1 text-xs text-slate-200">{value}</span>
+      <span className="w-24 shrink-0 text-[11px] font-semibold text-ink-500">{label}</span>
+      <span className="min-w-0 flex-1 text-xs text-ink-200">{value}</span>
     </button>
   );
 
@@ -112,7 +112,7 @@ export default function SaveTab({
           >
             Schedule a game with this preset →
           </Link>
-          <p className="mt-2 text-[11px] text-slate-500">
+          <p className="mt-2 text-[11px] text-ink-500">
             Games copy the preset when they&apos;re scheduled — changing the preset later doesn&apos;t change games already on the
             calendar.
           </p>

@@ -32,8 +32,9 @@ import {
   weekdayIndex,
 } from "@/lib/timeEngine";
 import TimeZonePicker, { useHostTimeZone } from "./TimeZonePicker";
-import { GLASS, HostAvatar, Spinner } from "./ui";
+import { GLASS, Spinner } from "./ui";
 import { submitScheduleRequest, useRequestPoller } from "./useRequestPoller";
+import SiteHeader from "@/components/site/SiteHeader";
 import { useTutorialFacts } from "@/components/tutorial/TutorialProvider";
 
 /**
@@ -259,83 +260,30 @@ export default function CalendarApp({ host }: { host: HostProfile }) {
   const syncAge = lastSync ? Math.max(0, Math.round((nowMs - lastSync) / 1000)) : null;
 
   return (
-    <div className="gm-backdrop min-h-screen w-full text-slate-100">
+    <div className="gm-backdrop min-h-screen w-full text-ink-100">
       {/* Header */}
-      <header className="sticky top-0 z-[1100] border-b border-white/10 bg-slate-950/60 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-[1600px] flex-wrap items-center gap-3 px-4 py-3 sm:px-6">
-          <Link href="/" className="flex items-center gap-2.5" title="Back to the map">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-amber-300 to-orange-600 text-lg shadow-lg shadow-amber-500/30">
-              🗓️
-            </span>
-            <span className="leading-tight">
-              <span className="block text-sm font-black tracking-tight text-white">Host Calendar</span>
-              <span className="block text-[11px] font-semibold text-slate-400">GameMaster · Calendar</span>
-            </span>
-          </Link>
-
-          <span
-            className="ml-1 flex items-center gap-2 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-[11px] font-bold text-emerald-200"
-            title="The calendar refreshes automatically"
-          >
-            <span className="relative flex h-2 w-2">
-              <span className="gm-live-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
-            </span>
-            LIVE
-            {syncAge !== null && <span className="font-medium text-emerald-300/70">· {syncAge}s ago</span>}
+      <SiteHeader page="calendar" icon="🗓️" title="Host Calendar" subtitle="GameMaster · Calendar" gradient="from-brand-300 to-orange-600">
+        <span
+          className="flex items-center gap-2 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-[11px] font-bold text-emerald-200"
+          title="The calendar refreshes automatically"
+        >
+          <span className="relative flex h-2 w-2">
+            <span className="gm-live-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
           </span>
-          {host.demo && (
-            <span className="rounded-full border border-fuchsia-400/40 bg-fuchsia-500/15 px-3 py-1 text-[11px] font-bold text-fuchsia-200">
-              PREVIEW MODE · sample data
-            </span>
-          )}
-          <ServerSwitcher host={host} />
-
-          <div className="ml-auto flex flex-wrap items-center gap-3">
-            <Link
-              href="/games"
-              data-tour="calendar.nav"
-              className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-slate-300 hover:border-amber-300/40 hover:text-white"
-              title="Start, end and cancel games"
-            >
-              🎮 Games
-            </Link>
-            <Link
-              href="/presets"
-              data-tour="calendar.nav"
-              className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-slate-300 hover:border-amber-300/40 hover:text-white"
-              title="Game mode presets — nation groups, locks, rules and mods"
-            >
-              🧩 Presets
-            </Link>
-            <Link
-              href="/database"
-              data-tour="calendar.nav"
-              className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-slate-300 hover:border-amber-300/40 hover:text-white"
-              title="Search players and manage commends, warnings, bans and Dishonored"
-            >
-              🗂️ Database
-            </Link>
-            <Link
-              href="/attendance"
-              data-tour="calendar.nav"
-              className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-slate-300 hover:border-amber-300/40 hover:text-white"
-              title="Live attendance for started games"
-            >
-              🎯 Attendance
-            </Link>
-            <span data-tour="calendar.timezone" className="inline-flex">
-              <TimeZonePicker value={timeZone} onChange={setTimeZone} />
-            </span>
-            <div className="hidden items-center gap-2 sm:flex">
-              <HostAvatar host={host} />
-              <span className="text-xs font-semibold text-slate-300">
-                {host.display_name || host.username}
-              </span>
-            </div>
-          </div>
-        </div>
-      </header>
+          LIVE
+          {syncAge !== null && <span className="font-medium text-emerald-300/70">· {syncAge}s ago</span>}
+        </span>
+        {host.demo && (
+          <span className="rounded-full border border-fuchsia-400/40 bg-fuchsia-500/15 px-3 py-1 text-[11px] font-bold text-fuchsia-200">
+            PREVIEW MODE · sample data
+          </span>
+        )}
+        <ServerSwitcher host={host} />
+        <span data-tour="calendar.timezone" className="inline-flex">
+          <TimeZonePicker value={timeZone} onChange={setTimeZone} />
+        </span>
+      </SiteHeader>
 
       <div className="mx-auto grid max-w-[1600px] gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[minmax(0,1fr)_380px]">
         {/* Month grid */}
@@ -344,7 +292,7 @@ export default function CalendarApp({ host }: { host: HostProfile }) {
             <button
               type="button"
               onClick={() => setMonth((current) => shiftMonth(current, -1))}
-              className="h-9 w-9 rounded-xl border border-white/10 bg-white/5 text-slate-300 transition hover:border-amber-300/40 hover:text-white"
+              className="h-9 w-9 rounded-xl border border-white/10 bg-white/5 text-ink-300 transition hover:border-brand-300/40 hover:text-white"
               aria-label="Previous month"
             >
               ‹
@@ -355,7 +303,7 @@ export default function CalendarApp({ host }: { host: HostProfile }) {
             <button
               type="button"
               onClick={() => setMonth((current) => shiftMonth(current, 1))}
-              className="h-9 w-9 rounded-xl border border-white/10 bg-white/5 text-slate-300 transition hover:border-amber-300/40 hover:text-white"
+              className="h-9 w-9 rounded-xl border border-white/10 bg-white/5 text-ink-300 transition hover:border-brand-300/40 hover:text-white"
               aria-label="Next month"
             >
               ›
@@ -366,7 +314,7 @@ export default function CalendarApp({ host }: { host: HostProfile }) {
                 setMonth(today.slice(0, 7));
                 selectDate(today);
               }}
-              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-slate-200 transition hover:border-amber-300/40"
+              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-ink-200 transition hover:border-brand-300/40"
             >
               Today
             </button>
@@ -379,7 +327,7 @@ export default function CalendarApp({ host }: { host: HostProfile }) {
             </div>
           )}
 
-          <div className="grid grid-cols-7 gap-1.5 text-center text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500 sm:gap-2">
+          <div className="grid grid-cols-7 gap-1.5 text-center text-[10px] font-bold uppercase tracking-[0.18em] text-ink-500 sm:gap-2">
             {DAY_NAMES.map((day) => (
               <div key={day} className="pb-1">
                 <span className="hidden sm:inline">{day.slice(0, 3)}</span>
@@ -406,7 +354,7 @@ export default function CalendarApp({ host }: { host: HostProfile }) {
               />
             ))}
           </div>
-          <p className="mt-4 text-center text-[11px] text-slate-500">
+          <p className="mt-4 text-center text-[11px] text-ink-500">
             Bookable until {formatDateLong(lastBookableDate(today))} · all times in{" "}
             {timeZone.replace(/_/g, " ")}
           </p>
@@ -449,7 +397,7 @@ export default function CalendarApp({ host }: { host: HostProfile }) {
 
 function Legend() {
   return (
-    <div className="ml-auto hidden flex-wrap items-center gap-3 text-[11px] font-semibold text-slate-400 md:flex">
+    <div className="ml-auto hidden flex-wrap items-center gap-3 text-[11px] font-semibold text-ink-400 md:flex">
       {(Object.keys(CATEGORY_META) as (keyof typeof CATEGORY_META)[]).map((category) => (
         <span key={category} className="flex items-center gap-1.5">
           <span className={`h-2 w-2 rounded-full ${CATEGORY_META[category].dot}`} />
@@ -457,7 +405,7 @@ function Legend() {
         </span>
       ))}
       <span className="flex items-center gap-1.5">
-        <span className="h-2.5 w-2.5 rounded-sm ring-2 ring-amber-400" />
+        <span className="h-2.5 w-2.5 rounded-sm ring-2 ring-brand-400" />
         Yours
       </span>
       <span className="flex items-center gap-1.5">
@@ -515,28 +463,28 @@ function DayCell({
       }}
       style={{ animationDelay: `${Math.min(index, 41) * 8}ms` }}
       className={`gm-fade-up group relative flex min-h-[64px] cursor-pointer flex-col rounded-xl border p-1.5 text-left transition-all sm:min-h-[118px] sm:p-2 ${
-        lock ? "gm-hatch border-slate-600/50" : "bg-slate-900/40"
+        lock ? "gm-hatch border-ink-600/50" : "bg-ink-900/40"
       } ${
         selected
-          ? "border-amber-300/80 shadow-[0_0_0_1px_rgba(252,211,77,0.5),0_0_24px_rgba(251,191,36,0.18)]"
-          : "border-white/[0.07] hover:border-white/25 hover:bg-slate-800/50"
+          ? "border-brand-300/80 shadow-[0_0_0_1px_rgba(252,211,77,0.5),0_0_24px_rgba(251,191,36,0.18)]"
+          : "border-white/[0.07] hover:border-white/25 hover:bg-ink-800/50"
       } ${inMonth ? "" : "opacity-40"} ${past && inMonth ? "opacity-60" : ""}`}
     >
       <div className="flex items-center justify-between gap-1">
         <span
           className={`flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-xs font-bold ${
-            isToday ? "bg-amber-400 text-slate-950" : "text-slate-300"
+            isToday ? "bg-brand-400 text-ink-950" : "text-ink-300"
           }`}
         >
           {Number(date.slice(8))}
         </span>
         {dayPending ? (
           <span title="Waiting for the bot to update this day lock">
-            <Spinner className="h-3 w-3 text-slate-300" />
+            <Spinner className="h-3 w-3 text-ink-300" />
           </span>
         ) : lock ? (
           <span
-            className="hidden rounded-md bg-slate-950/70 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-300 sm:inline"
+            className="hidden rounded-md bg-ink-950/70 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-ink-300 sm:inline"
             title={lock.reason ? `Locked by staff: ${lock.reason}` : "Locked by staff"}
           >
             🔒<span className="ml-1 hidden xl:inline">Locked</span>
@@ -546,7 +494,7 @@ function DayCell({
             <Link
               href={`/schedule/new?date=${date}`}
               onClick={(event) => event.stopPropagation()}
-              className="hidden h-6 w-6 items-center justify-center rounded-lg bg-amber-400/90 text-sm font-black text-slate-950 opacity-0 shadow-lg shadow-amber-500/30 transition group-hover:opacity-100 sm:flex"
+              className="hidden h-6 w-6 items-center justify-center rounded-lg bg-brand-400/90 text-sm font-black text-ink-950 opacity-0 shadow-lg shadow-brand-500/30 transition group-hover:opacity-100 sm:flex"
               title="Set up a game on this day"
               aria-label={`Set up a game on ${formatDateLong(date)}`}
             >
@@ -572,7 +520,7 @@ function DayCell({
             <span
               key={slot.slot_id}
               className={`block min-w-0 rounded-md border px-1.5 py-0.5 leading-tight ${meta.chip} ${
-                slot.mine ? "ring-1 ring-amber-300/80" : ""
+                slot.mine ? "ring-1 ring-brand-300/80" : ""
               } ${slot.status === "cancelled" ? "line-through opacity-60" : ""}`}
               title={`${modeLabel(slot.mode)} · ${slot.host_username ? `@${slot.host_username}` : "host"}`}
             >
@@ -588,7 +536,7 @@ function DayCell({
         {pending.map((request) => (
           <span
             key={request.request_id}
-            className="block min-w-0 rounded-md border border-dashed border-amber-300/60 bg-amber-400/10 px-1.5 py-0.5 leading-tight text-amber-100"
+            className="block min-w-0 rounded-md border border-dashed border-brand-300/60 bg-brand-400/10 px-1.5 py-0.5 leading-tight text-brand-100"
             title="Waiting for the bot to add this game"
           >
             <span className="flex items-center gap-1 text-[11px] font-bold">
@@ -600,7 +548,7 @@ function DayCell({
             </span>
           </span>
         ))}
-        {more > 0 && <span className="px-1 text-[10px] font-bold text-slate-400">+{more} more</span>}
+        {more > 0 && <span className="px-1 text-[10px] font-bold text-ink-400">+{more} more</span>}
         {loading && inMonth && <span className="h-3 w-3/4 animate-pulse rounded bg-white/5" />}
       </div>
     </div>
@@ -610,17 +558,17 @@ function DayCell({
 function StatusLine({ date, today, lock }: { date: string; today: string; lock: CalendarDayLock | null }) {
   if (lock) {
     return (
-      <div className="gm-hatch rounded-xl border border-slate-500/40 px-3 py-2 text-xs font-semibold text-slate-200">
+      <div className="gm-hatch rounded-xl border border-ink-500/40 px-3 py-2 text-xs font-semibold text-ink-200">
         🔒 Locked by staff{lock.reason ? ` — ${lock.reason}` : ""}. No games can be scheduled or announced.
       </div>
     );
   }
   if (date < today) {
-    return <p className="text-xs text-slate-500">This day has passed.</p>;
+    return <p className="text-xs text-ink-500">This day has passed.</p>;
   }
   if (!isBookableDate(date, today)) {
     return (
-      <p className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-slate-400">
+      <p className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-ink-400">
         Booking for this week opens later — hosts can book this week and next week (plus the week
         after from Friday).
       </p>
@@ -659,7 +607,7 @@ function DayPanel({
     <div data-tour="calendar.dayPanel" className={`gm-slide-in rounded-3xl p-5 ${GLASS}`}>
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-amber-300/80">
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-300/80">
             {date === today ? "Today" : formatRelativeDay(date, today)}
           </p>
           <h2 className="mt-1 text-xl font-black tracking-tight text-white">{formatDateLong(date)}</h2>
@@ -667,7 +615,7 @@ function DayPanel({
         <button
           type="button"
           onClick={onClose}
-          className="rounded-lg border border-white/10 px-2 py-1 text-xs text-slate-400 hover:text-white"
+          className="rounded-lg border border-white/10 px-2 py-1 text-xs text-ink-400 hover:text-white"
           aria-label="Close day"
         >
           ✕
@@ -688,27 +636,27 @@ function DayPanel({
         <Link
           href={`/schedule/new?date=${date}`}
           data-tour="calendar.newGame"
-          className="reserve-cta-glow mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-amber-400 px-5 py-3.5 text-sm font-black uppercase tracking-wider text-slate-950 transition hover:scale-[1.02]"
+          className="reserve-cta-glow mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-brand-400 px-5 py-3.5 text-sm font-black uppercase tracking-wider text-ink-950 transition hover:scale-[1.02]"
         >
           ＋ Set up a game this day
         </Link>
       )}
 
       <div className="mt-5 space-y-2.5">
-        <h3 className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+        <h3 className="text-xs font-bold uppercase tracking-[0.18em] text-ink-500">
           {slots.length + pending.length === 0 ? "No games yet" : `Games (${slots.length + pending.length})`}
         </h3>
         {pending.map((request) => (
           <div
             key={request.request_id}
-            className="flex items-center gap-3 rounded-2xl border border-dashed border-amber-300/50 bg-amber-400/5 p-3 text-sm"
+            className="flex items-center gap-3 rounded-2xl border border-dashed border-brand-300/50 bg-brand-400/5 p-3 text-sm"
           >
-            <Spinner className="h-4 w-4 text-amber-300" />
+            <Spinner className="h-4 w-4 text-brand-300" />
             <div className="min-w-0">
-              <p className="truncate font-semibold text-amber-100">
+              <p className="truncate font-semibold text-brand-100">
                 {request.preview ? modeLabel(request.preview.mode) : "New game"}
               </p>
-              <p className="text-xs text-amber-200/70">Waiting for the bot to add it to the board…</p>
+              <p className="text-xs text-brand-200/70">Waiting for the bot to add it to the board…</p>
             </div>
           </div>
         ))}
@@ -769,10 +717,10 @@ function DayLockControl({
   };
 
   return (
-    <div className="mt-3 rounded-2xl border border-white/10 bg-slate-950/40 p-3">
-      <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Staff</p>
+    <div className="mt-3 rounded-2xl border border-white/10 bg-ink-950/40 p-3">
+      <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-ink-500">Staff</p>
       {waiting ? (
-        <p className="flex items-center gap-2 text-xs font-semibold text-slate-300">
+        <p className="flex items-center gap-2 text-xs font-semibold text-ink-300">
           <Spinner className="h-3 w-3" /> Updating the day lock…
         </p>
       ) : lock ? (
@@ -791,31 +739,31 @@ function DayLockControl({
             autoFocus
             onChange={(event) => setReason(event.target.value)}
             placeholder="Reason (optional, shown on the board)"
-            className="w-full rounded-lg border border-white/10 bg-slate-950/70 px-3 py-2 text-xs text-slate-100 placeholder:text-slate-500 focus:border-amber-300/50 focus:outline-none"
+            className="w-full rounded-lg border border-white/10 bg-ink-950/70 px-3 py-2 text-xs text-ink-100 placeholder:text-ink-500 focus:border-brand-300/50 focus:outline-none"
           />
           <div className="flex gap-2">
             <button
               type="button"
               onClick={() => void send("lock_day")}
-              className="flex-1 rounded-xl bg-slate-200 px-3 py-2 text-xs font-black text-slate-950 hover:bg-white"
+              className="flex-1 rounded-xl bg-ink-200 px-3 py-2 text-xs font-black text-ink-950 hover:bg-white"
             >
               🔒 Lock day
             </button>
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="rounded-xl border border-white/10 px-3 py-2 text-xs text-slate-300"
+              className="rounded-xl border border-white/10 px-3 py-2 text-xs text-ink-300"
             >
               Cancel
             </button>
           </div>
-          <p className="text-[11px] text-slate-500">Games already booked that day stay on the board.</p>
+          <p className="text-[11px] text-ink-500">Games already booked that day stay on the board.</p>
         </div>
       ) : (
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-slate-200 hover:border-white/25"
+          className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-ink-200 hover:border-white/25"
         >
           🔒 Lock this day…
         </button>
@@ -869,8 +817,8 @@ function GameRow({
 
   return (
     <div
-      className={`rounded-2xl border bg-slate-950/50 p-3.5 transition ${
-        slot.mine ? "border-amber-300/40" : "border-white/10"
+      className={`rounded-2xl border bg-ink-950/50 p-3.5 transition ${
+        slot.mine ? "border-brand-300/40" : "border-white/10"
       } ${status?.status === "done" ? "opacity-40" : ""}`}
     >
       <div className="flex items-start gap-3">
@@ -882,12 +830,12 @@ function GameRow({
             <p className="text-lg font-black tabular-nums text-white">
               {timeInZone(slot.game_timestamp * 1000, timeZone)}
             </p>
-            <p className="text-[11px] text-slate-500">{formatRelative(slot.game_timestamp * 1000)}</p>
+            <p className="text-[11px] text-ink-500">{formatRelative(slot.game_timestamp * 1000)}</p>
           </div>
-          <p className="truncate text-sm font-semibold text-slate-100">{modeLabel(slot.mode)}</p>
-          <p className="mt-0.5 truncate text-xs text-slate-400">
+          <p className="truncate text-sm font-semibold text-ink-100">{modeLabel(slot.mode)}</p>
+          <p className="mt-0.5 truncate text-xs text-ink-400">
             Host {slot.host_username ? `@${slot.host_username}` : "unknown"}
-            {slot.mine && <span className="ml-1.5 rounded bg-amber-400/20 px-1.5 py-px font-bold text-amber-200">You</span>}
+            {slot.mine && <span className="ml-1.5 rounded bg-brand-400/20 px-1.5 py-px font-bold text-brand-200">You</span>}
           </p>
         </div>
       </div>
@@ -906,7 +854,7 @@ function GameRow({
         {slot.thread_id && slot.status !== "cancelled" && (
           <Link
             href={`/games?game=${slot.thread_id}`}
-            className="ml-auto rounded-md border border-amber-300/40 bg-amber-400/10 px-2 py-0.5 font-bold text-amber-100 hover:bg-amber-400/20"
+            className="ml-auto rounded-md border border-brand-300/40 bg-brand-400/10 px-2 py-0.5 font-bold text-brand-100 hover:bg-brand-400/20"
             title="Start, end or cancel this game"
           >
             🎮 Game controls
@@ -917,12 +865,12 @@ function GameRow({
       {canEdit && status?.status !== "done" && (
         <div className="mt-3 border-t border-white/5 pt-3">
           {cancelling ? (
-            <p className="flex items-center gap-2 text-xs font-semibold text-amber-200">
+            <p className="flex items-center gap-2 text-xs font-semibold text-brand-200">
               <Spinner className="h-3 w-3" /> Removing from the board…
             </p>
           ) : confirming ? (
             <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-300">Remove this game from the board?</span>
+              <span className="text-xs text-ink-300">Remove this game from the board?</span>
               <button
                 type="button"
                 onClick={async () => {
@@ -939,7 +887,7 @@ function GameRow({
               <button
                 type="button"
                 onClick={() => setConfirming(false)}
-                className="rounded-lg border border-white/10 px-3 py-1 text-xs text-slate-300"
+                className="rounded-lg border border-white/10 px-3 py-1 text-xs text-ink-300"
               >
                 Keep
               </button>
@@ -948,7 +896,7 @@ function GameRow({
             <div className="flex items-center gap-2">
               <Link
                 href={`/schedule/edit?slot=${slot.slot_id}`}
-                className="rounded-lg border border-amber-300/40 bg-amber-400/10 px-3 py-1 text-xs font-bold text-amber-100 hover:bg-amber-400/20"
+                className="rounded-lg border border-brand-300/40 bg-brand-400/10 px-3 py-1 text-xs font-bold text-brand-100 hover:bg-brand-400/20"
                 title={slot.announced ? "Move the day / time or hand it to another host" : "Change any setting"}
               >
                 ✎ {slot.announced ? "Edit time / host" : "Edit"}
@@ -991,9 +939,9 @@ function OverviewPanel({
   const failed = (data?.requests ?? []).filter((request) => request.status === "error");
   return (
     <div data-tour="calendar.overview" className={`gm-fade-up rounded-3xl p-5 ${GLASS}`}>
-      <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-amber-300/80">Your schedule</p>
+      <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-300/80">Your schedule</p>
       <h2 className="mt-1 text-xl font-black tracking-tight text-white">Upcoming games</h2>
-      <p className="mt-1 text-xs text-slate-400">Pick a day on the calendar to see its games or set up a new one.</p>
+      <p className="mt-1 text-xs text-ink-400">Pick a day on the calendar to see its games or set up a new one.</p>
 
       <div className="mt-4 space-y-2">
         {!data && <div className="h-16 animate-pulse rounded-2xl bg-white/5" />}
@@ -1001,7 +949,7 @@ function OverviewPanel({
           <button
             type="button"
             onClick={() => onPick(today)}
-            className="w-full rounded-2xl border border-dashed border-white/15 p-5 text-center text-sm text-slate-400 transition hover:border-amber-300/40 hover:text-amber-200"
+            className="w-full rounded-2xl border border-dashed border-white/15 p-5 text-center text-sm text-ink-400 transition hover:border-brand-300/40 hover:text-brand-200"
           >
             You have no upcoming games — pick a day to schedule one.
           </button>
@@ -1014,18 +962,18 @@ function OverviewPanel({
               key={slot.slot_id}
               type="button"
               onClick={() => onPick(date)}
-              className="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-slate-950/50 p-3 text-left transition hover:border-amber-300/40"
+              className="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-ink-950/50 p-3 text-left transition hover:border-brand-300/40"
             >
               <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border text-lg ${meta.chip}`}>
                 {meta.emoji}
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-semibold text-white">{modeLabel(slot.mode)}</span>
-                <span className="block text-xs text-slate-400">
+                <span className="block text-xs text-ink-400">
                   {formatInZone(slot.game_timestamp * 1000, timeZone)} · {formatRelative(slot.game_timestamp * 1000)}
                 </span>
               </span>
-              <span className="text-slate-500">›</span>
+              <span className="text-ink-500">›</span>
             </button>
           );
         })}

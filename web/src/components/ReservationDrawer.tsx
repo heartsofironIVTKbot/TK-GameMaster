@@ -56,7 +56,8 @@ import type {
  */
 
 interface ReservationDrawerProps {
-  open: boolean;
+  /** null: open on wide screens, collapsed on phones (first visit). */
+  open: boolean | null;
   onToggle: () => void;
   /** One entry per nation on the active map (with computed region). */
   nations: RosterNation[];
@@ -125,8 +126,8 @@ const STATUS_META: Record<
   },
   locked: {
     badge: "Locked",
-    badgeClass: "border-slate-500/70 bg-slate-600/30 text-slate-300",
-    boxClass: "border-slate-600/60 bg-slate-800/40 hover:bg-slate-700/50",
+    badgeClass: "border-ink-500/70 bg-ink-600/30 text-ink-300",
+    boxClass: "border-ink-600/60 bg-ink-800/40 hover:bg-ink-700/50",
   },
 };
 
@@ -472,21 +473,23 @@ export default function ReservationDrawer({
   // Reserved players become draggable chips only with the full Host Tool.
   const manageTools = hostTools?.manage ? hostTools : null;
 
-  // Collapsed: a slim toggle tab on the left edge.
-  if (!open) {
-    return (
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-label="Open reservation roaster"
-        data-tour="map.roster"
-        className="absolute left-0 top-1/2 z-[950] -translate-y-1/2 rounded-r-lg border border-l-0 border-slate-700 bg-slate-900/90 px-1.5 py-4 text-[10px] font-black uppercase tracking-widest text-slate-300 shadow-lg backdrop-blur-md transition-colors hover:bg-slate-800"
-        style={{ writingMode: "vertical-rl" }}
-      >
-        Roaster ▸
-      </button>
-    );
-  }
+  // Collapsed: a slim toggle tab on the left edge. `open` null = the first
+  // visit: open on wide screens, collapsed on phones (CSS decides).
+  const tab = (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-label="Open reservation roaster"
+      data-tour="map.roster"
+      className={`absolute left-0 top-1/2 z-[950] -translate-y-1/2 rounded-r-lg border border-l-0 border-ink-700 bg-ink-900/90 px-1.5 py-4 text-[10px] font-black uppercase tracking-widest text-ink-300 shadow-lg backdrop-blur-md transition-colors hover:bg-ink-800 ${
+        open === null ? "sm:hidden" : ""
+      }`}
+      style={{ writingMode: "vertical-rl" }}
+    >
+      Roaster ▸
+    </button>
+  );
+  if (open === false) return tab;
 
   const renderRow = (row: RosterRow) => {
     const { nation, reservation, status } = row;
@@ -578,12 +581,12 @@ export default function ReservationDrawer({
         >
           {/* Flag */}
           {isFiller ? (
-            <div className="h-5 w-8 shrink-0 rounded-[3px] border border-slate-600 bg-slate-700/60" />
+            <div className="h-5 w-8 shrink-0 rounded-[3px] border border-ink-600 bg-ink-700/60" />
           ) : (
             <img
               src={data?.flagUrl || `/assets/flags/${nation.tag}.png`}
               alt=""
-              className="h-5 w-8 shrink-0 rounded-[3px] border border-slate-700 object-cover"
+              className="h-5 w-8 shrink-0 rounded-[3px] border border-ink-700 object-cover"
               onError={(event) => {
                 event.currentTarget.src = placeholderFlag(nation.tag);
               }}
@@ -592,7 +595,7 @@ export default function ReservationDrawer({
 
           {/* Nation name (simplified: no Kingdom/Republic prefixes) */}
           <span
-            className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-100"
+            className="min-w-0 flex-1 truncate text-sm font-semibold text-ink-100"
             title={isFiller ? nation.name : boardDisplayName(scenarioId, nation.tag, nation.name)}
           >
             {isFiller
@@ -638,7 +641,7 @@ export default function ReservationDrawer({
                   event.stopPropagation();
                   setPopoverKey((current) => (current === tagKey ? null : tagKey));
                 }}
-                className="min-w-0 max-w-full truncate rounded bg-slate-950/80 px-2 py-0.5 text-[11px] font-bold text-slate-200 transition-colors hover:bg-slate-800 hover:text-white"
+                className="min-w-0 max-w-full truncate rounded bg-ink-950/80 px-2 py-0.5 text-[11px] font-bold text-ink-200 transition-colors hover:bg-ink-800 hover:text-white"
               >
                 {isSelf || status === "pending" ? `${tag} (You)` : `@${tag}`}
               </button>
@@ -709,23 +712,27 @@ export default function ReservationDrawer({
   };
 
   return (
+    <>
+    {open === null && tab}
     <aside
       aria-label="Reservation roaster"
       data-tour="map.roster"
-      className="absolute bottom-0 left-0 top-20 z-[950] flex w-[400px] flex-col border-r border-slate-800 bg-slate-950/70 shadow-2xl backdrop-blur-md"
+      className={`absolute bottom-0 left-0 top-20 z-[950] w-full flex-col border-r border-ink-800 bg-ink-950/90 shadow-2xl backdrop-blur-md sm:w-[400px] sm:bg-ink-950/70 ${
+        open === null ? "hidden sm:flex" : "flex"
+      }`}
     >
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
+      <div className="flex items-center justify-between border-b border-ink-800 px-4 py-3">
         <div>
-          <h2 className="text-base font-black uppercase tracking-wide text-slate-100">
+          <h2 className="text-base font-black uppercase tracking-wide text-ink-100">
             Reservation Roaster
           </h2>
-          <p className="mt-0.5 text-[11px] leading-snug text-slate-400">
+          <p className="mt-0.5 text-[11px] leading-snug text-ink-400">
             Majors {stats.majorsClaimed}/{stats.majorsTotal} · Minors{" "}
             {stats.minorsClaimed}/{stats.minorsTotal} · Total{" "}
             {stats.totalClaimed}/{stats.totalNations}
             {(stats.coopCount > 0 || stats.fillerCount > 0) && (
-              <span className="text-slate-500">
+              <span className="text-ink-500">
                 {" "}
                 + Co-Op {stats.coopCount} · Fillers {stats.fillerCount}
               </span>
@@ -737,14 +744,14 @@ export default function ReservationDrawer({
           onClick={onToggle}
           aria-label="Collapse reservation roaster"
           title="Collapse roaster"
-          className="rounded-md border border-slate-700 bg-slate-800/80 px-2 py-1 text-xs text-slate-300 transition-colors hover:border-slate-500 hover:text-white"
+          className="rounded-md border border-ink-700 bg-ink-800/80 px-2 py-1 text-xs text-ink-300 transition-colors hover:border-ink-500 hover:text-white"
         >
           ◀
         </button>
       </div>
 
       {/* Legend */}
-      <div className="flex flex-wrap gap-x-3 gap-y-1 border-b border-slate-800/70 px-4 py-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+      <div className="flex flex-wrap gap-x-3 gap-y-1 border-b border-ink-800/70 px-4 py-2 text-[10px] font-semibold uppercase tracking-wide text-ink-500">
         <span className="flex items-center gap-1">
           <span className="h-2 w-2 rounded-full bg-emerald-400" /> Open
         </span>
@@ -755,7 +762,7 @@ export default function ReservationDrawer({
           <span className="h-2 w-2 rounded-full bg-rose-400" /> Taken
         </span>
         <span className="flex items-center gap-1">
-          <span className="h-2 w-2 rounded-full bg-slate-500" /> Locked
+          <span className="h-2 w-2 rounded-full bg-ink-500" /> Locked
         </span>
       </div>
 
@@ -777,7 +784,7 @@ export default function ReservationDrawer({
         )}
         {sections.map((section, sectionIndex) => (
           <div key={`${section.title}-${sectionIndex}`}>
-            <h3 className="px-1.5 pb-1 pt-3 text-[11px] font-black uppercase tracking-widest text-amber-300/90">
+            <h3 className="px-1.5 pb-1 pt-3 text-[11px] font-black uppercase tracking-widest text-brand-300/90">
               {section.title}
             </h3>
             <div className="flex flex-col gap-1.5">
@@ -788,7 +795,7 @@ export default function ReservationDrawer({
 
         {fillerRows.length > 0 && (
           <div>
-            <h3 className="px-1.5 pb-1 pt-3 text-[11px] font-black uppercase tracking-widest text-amber-300/90">
+            <h3 className="px-1.5 pb-1 pt-3 text-[11px] font-black uppercase tracking-widest text-brand-300/90">
               Fillers
             </h3>
             <div className="flex flex-col gap-1.5">{fillerRows.map(renderRow)}</div>
@@ -797,7 +804,7 @@ export default function ReservationDrawer({
 
         {lockedRows.length > 0 && (
           <div>
-            <h3 className="px-1.5 pb-1 pt-3 text-[11px] font-black uppercase tracking-widest text-slate-500">
+            <h3 className="px-1.5 pb-1 pt-3 text-[11px] font-black uppercase tracking-widest text-ink-500">
               Locked Nations
             </h3>
             <div className="flex flex-col gap-1.5">{lockedRows.map(renderRow)}</div>
@@ -805,6 +812,7 @@ export default function ReservationDrawer({
         )}
       </div>
     </aside>
+    </>
   );
 }
 
@@ -822,7 +830,7 @@ function HostPlayerTag({
 }) {
   const player = playerFromReservation(reservation);
   return (
-    <span className="flex min-w-0 max-w-full items-center overflow-hidden rounded bg-slate-950/80">
+    <span className="flex min-w-0 max-w-full items-center overflow-hidden rounded bg-ink-950/80">
       <button
         type="button"
         draggable
@@ -836,7 +844,7 @@ function HostPlayerTag({
         }}
         title="Drag to another nation or the bin — or click to pick up"
         className={`min-w-0 cursor-grab truncate px-2 py-0.5 text-[11px] font-bold transition-colors active:cursor-grabbing ${
-          held ? "bg-yellow-300/25 text-yellow-100" : "text-slate-200 hover:bg-slate-800 hover:text-white"
+          held ? "bg-yellow-300/25 text-yellow-100" : "text-ink-200 hover:bg-ink-800 hover:text-white"
         }`}
       >
         ⠿ {label}
@@ -849,7 +857,7 @@ function HostPlayerTag({
         }}
         aria-label={`Remove ${label}`}
         title="Remove from the game"
-        className="shrink-0 px-1.5 py-0.5 text-[11px] text-slate-500 hover:bg-rose-500/20 hover:text-rose-200"
+        className="shrink-0 px-1.5 py-0.5 text-[11px] text-ink-500 hover:bg-rose-500/20 hover:text-rose-200"
       >
         ✕
       </button>

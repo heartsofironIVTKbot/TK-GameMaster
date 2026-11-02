@@ -47,23 +47,23 @@ export default function AnnounceTab({
                 onClick={() => update({ announceMode: mode.value })}
                 className={`rounded-xl border p-3 text-left transition ${
                   active
-                    ? "border-amber-300/80 bg-amber-400/15"
+                    ? "border-brand-300/80 bg-brand-400/15"
                     : "border-white/10 bg-white/[0.03] hover:border-white/25"
                 }`}
               >
                 <span className="text-lg">{mode.icon}</span>
-                <span className={`mt-1 block text-sm font-bold ${active ? "text-amber-100" : "text-slate-100"}`}>{mode.title}</span>
-                <span className="mt-0.5 block text-[11px] leading-snug text-slate-400">{mode.text}</span>
+                <span className={`mt-1 block text-sm font-bold ${active ? "text-brand-100" : "text-ink-100"}`}>{mode.title}</span>
+                <span className="mt-0.5 block text-[11px] leading-snug text-ink-400">{mode.text}</span>
               </button>
             );
           })}
         </div>
 
         {form.announceMode === "before" && (
-          <div className="mt-4 rounded-xl border border-white/10 bg-slate-950/50 p-3">
+          <div className="mt-4 rounded-xl border border-white/10 bg-ink-950/50 p-3">
             <div className="flex items-baseline justify-between">
-              <span className="text-xs font-semibold text-slate-400">Hours before the game</span>
-              <span className="text-lg font-black text-amber-200">
+              <span className="text-xs font-semibold text-ink-400">Hours before the game</span>
+              <span className="text-lg font-black text-brand-200">
                 {formatDurationMinutes(form.announceHoursBefore * 60)}
               </span>
             </div>
@@ -89,7 +89,7 @@ export default function AnnounceTab({
               onChange={(event) => {
                 if (isIsoDate(event.target.value)) update({ announceDate: event.target.value });
               }}
-              className="flex-1 rounded-lg border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 [color-scheme:dark] focus:border-amber-300/50 focus:outline-none"
+              className="flex-1 rounded-lg border border-white/10 bg-ink-950/70 px-3 py-2 text-sm text-ink-100 [color-scheme:dark] focus:border-brand-300/50 focus:outline-none"
               aria-label="Announcement date"
             />
             <input
@@ -98,13 +98,13 @@ export default function AnnounceTab({
               onChange={(event) => {
                 if (isHHMM(event.target.value)) update({ announceTime: event.target.value });
               }}
-              className="w-32 rounded-lg border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 [color-scheme:dark] focus:border-amber-300/50 focus:outline-none"
+              className="w-32 rounded-lg border border-white/10 bg-ink-950/70 px-3 py-2 text-sm text-ink-100 [color-scheme:dark] focus:border-brand-300/50 focus:outline-none"
               aria-label="Announcement time"
             />
           </div>
         )}
 
-        <p className="mt-3 text-xs text-slate-300">
+        <p className="mt-3 text-xs text-ink-300">
           {derived.announceSec === null ? (
             <>Pick when the bot should announce the game.</>
           ) : form.announceMode === "now" ? (
@@ -155,7 +155,7 @@ function DiscordPreview({
     <SectionCard icon="👀" title="Preview" subtitle="Roughly what players will see in Discord">
       <div className="rounded-xl bg-[#313338] p-3 font-sans text-[13px] leading-relaxed text-[#dbdee1]">
         <div className="flex items-center gap-2">
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-orange-600 text-sm">🤖</span>
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-brand-400 to-orange-600 text-sm">🤖</span>
           <span className="font-semibold text-white">GameMaster</span>
           <span className="rounded bg-[#5865F2] px-1 text-[10px] font-bold text-white">APP</span>
         </div>

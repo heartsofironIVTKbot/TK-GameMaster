@@ -70,19 +70,19 @@ export default function DraftSection({
             return (
               <div key={index} className={`rounded-2xl border p-3 ${TEAM_TONES[index]}`}>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-black uppercase tracking-wider text-slate-300">Team {index + 1}</span>
+                  <span className="text-xs font-black uppercase tracking-wider text-ink-300">Team {index + 1}</span>
                   <input
                     value={team.name}
                     maxLength={30}
                     onChange={(event) => setTeam(index, { name: event.target.value })}
                     placeholder={index === 0 ? "e.g. Allies" : "e.g. Axis"}
-                    className={`min-w-0 flex-1 rounded-lg border bg-slate-950/70 px-2.5 py-1.5 text-sm font-bold text-slate-100 focus:outline-none ${
-                      team.name.trim() ? "border-white/10 focus:border-amber-300/50" : "border-rose-400/60"
+                    className={`min-w-0 flex-1 rounded-lg border bg-ink-950/70 px-2.5 py-1.5 text-sm font-bold text-ink-100 focus:outline-none ${
+                      team.name.trim() ? "border-white/10 focus:border-brand-300/50" : "border-rose-400/60"
                     }`}
                     aria-label={`Team ${index + 1} name`}
                   />
                 </div>
-                <p className="mb-1 mt-3 text-[11px] font-semibold text-slate-400">Captain</p>
+                <p className="mb-1 mt-3 text-[11px] font-semibold text-ink-400">Captain</p>
                 <CaptainPicker
                   captainId={team.captainId}
                   captainName={team.captainName}
@@ -94,7 +94,7 @@ export default function DraftSection({
                     })
                   }
                 />
-                <p className="mb-1.5 mt-3 text-[11px] font-semibold text-slate-400">Nation groups — click to add / remove</p>
+                <p className="mb-1.5 mt-3 text-[11px] font-semibold text-ink-400">Nation groups — click to add / remove</p>
                 <div className="flex flex-wrap gap-1.5">
                   {groups.map((group) => {
                     const mine = team.groups.includes(group);
@@ -108,8 +108,8 @@ export default function DraftSection({
                           mine
                             ? CHIP_TONES[index]
                             : theirs
-                              ? "border-white/5 bg-white/[0.02] text-slate-500 line-through hover:text-slate-300"
-                              : "border-white/10 bg-white/[0.04] text-slate-300 hover:border-white/30"
+                              ? "border-white/5 bg-white/[0.02] text-ink-500 line-through hover:text-ink-300"
+                              : "border-white/10 bg-white/[0.04] text-ink-300 hover:border-white/30"
                         }`}
                         title={theirs ? `In ${draft.teams[1 - index].name || "the other team"} — click to move here` : undefined}
                       >
@@ -123,8 +123,8 @@ export default function DraftSection({
           })}
 
           {unassigned.length > 0 && (
-            <p className="text-[11px] text-slate-400">
-              In no team: <b className="text-slate-200">{unassigned.join(", ")}</b> — captains can&apos;t pick these nations, but you
+            <p className="text-[11px] text-ink-400">
+              In no team: <b className="text-ink-200">{unassigned.join(", ")}</b> — captains can&apos;t pick these nations, but you
               can place players there yourself.
             </p>
           )}
@@ -140,7 +140,7 @@ export default function DraftSection({
           )}
 
           <div>
-            <p className="mb-1.5 text-[11px] font-semibold text-slate-400">Pick order</p>
+            <p className="mb-1.5 text-[11px] font-semibold text-ink-400">Pick order</p>
             <Segmented<"coin" | "0" | "1">
               ariaLabel="Pick order"
               size="sm"
@@ -154,7 +154,7 @@ export default function DraftSection({
                 { value: "1", label: `${draft.teams[1].name || "Team 2"} first` },
               ]}
             />
-            <p className="mt-1 text-[11px] text-slate-500">
+            <p className="mt-1 text-[11px] text-ink-500">
               {draft.coinFlip
                 ? "The winner of the coin toss opens with 3 picks, then the captains alternate one by one."
                 : "That team picks first, then the captains alternate one by one."}
@@ -203,9 +203,9 @@ export function CaptainPicker({
 
   if (captainId) {
     return (
-      <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-slate-950/50 px-2.5 py-1.5">
-        <span className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-100">🎖️ {captainName ?? `#${captainId}`}</span>
-        <button type="button" onClick={() => onPick(null)} className="text-[11px] font-bold text-slate-400 hover:text-white">
+      <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-ink-950/50 px-2.5 py-1.5">
+        <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink-100">🎖️ {captainName ?? `#${captainId}`}</span>
+        <button type="button" onClick={() => onPick(null)} className="text-[11px] font-bold text-ink-400 hover:text-white">
           Change
         </button>
       </div>
@@ -219,17 +219,17 @@ export function CaptainPicker({
         value={query}
         onChange={(event) => setQuery(event.target.value)}
         placeholder="🔎 Search a member (name, @handle or ID)…"
-        className="w-full rounded-lg border border-rose-400/40 bg-slate-950/70 px-2.5 py-1.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-amber-300/50 focus:outline-none"
+        className="w-full rounded-lg border border-rose-400/40 bg-ink-950/70 px-2.5 py-1.5 text-sm text-ink-100 placeholder:text-ink-500 focus:border-brand-300/50 focus:outline-none"
         aria-label="Captain"
       />
       {needle.length >= 2 && !shown && (
-        <p className="mt-1 flex items-center gap-1.5 text-[11px] text-slate-500">
+        <p className="mt-1 flex items-center gap-1.5 text-[11px] text-ink-500">
           <Spinner className="h-3 w-3" /> Searching…
         </p>
       )}
       {shown && (
         <ul className="roster-scroll mt-1 max-h-40 space-y-1 overflow-y-auto">
-          {shown.length === 0 && <li className="text-[11px] text-slate-500">Nobody matches “{needle}”.</li>}
+          {shown.length === 0 && <li className="text-[11px] text-ink-500">Nobody matches “{needle}”.</li>}
           {shown.slice(0, 12).map((member) => (
             <li key={member.discord_id}>
               <button
@@ -241,9 +241,9 @@ export function CaptainPicker({
                 }}
                 className="flex w-full items-center gap-2 rounded-lg border border-white/5 bg-white/[0.03] px-2.5 py-1 text-left text-xs hover:border-white/25 disabled:opacity-40"
               >
-                <span className="min-w-0 flex-1 truncate font-semibold text-slate-100">{member.display_name || member.username}</span>
-                {member.username && <span className="truncate text-[10px] text-slate-500">@{member.username}</span>}
-                {member.discord_id === otherCaptainId && <span className="text-[10px] text-slate-500">other captain</span>}
+                <span className="min-w-0 flex-1 truncate font-semibold text-ink-100">{member.display_name || member.username}</span>
+                {member.username && <span className="truncate text-[10px] text-ink-500">@{member.username}</span>}
+                {member.discord_id === otherCaptainId && <span className="text-[10px] text-ink-500">other captain</span>}
               </button>
             </li>
           ))}

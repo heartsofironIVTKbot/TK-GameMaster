@@ -79,7 +79,7 @@ function RoleMenu({
   );
   return (
     <div
-      className={`absolute left-0 z-30 w-72 min-w-full max-w-[85vw] rounded-xl border border-white/15 bg-slate-900 p-2 shadow-2xl shadow-black/60 ${menuPlacement(up)}`}
+      className={`absolute left-0 z-30 w-72 min-w-full max-w-[85vw] rounded-xl border border-white/15 bg-ink-900 p-2 shadow-2xl shadow-black/60 ${menuPlacement(up)}`}
     >
       <input
         autoFocus
@@ -90,7 +90,7 @@ function RoleMenu({
         className={`${inputClass} mb-1.5 py-1.5 text-xs`}
       />
       <ul role="listbox" className="roster-scroll max-h-64 space-y-0.5 overflow-y-auto">
-        {roles.length === 0 && <li className="px-2 py-3 text-center text-xs text-slate-500">No roles match.</li>}
+        {roles.length === 0 && <li className="px-2 py-3 text-center text-xs text-ink-500">No roles match.</li>}
         {roles.map((role) => {
           const problem = roleProblem(role, purpose, botTop, canPingAll);
           const active = role.id === selected;
@@ -103,17 +103,17 @@ function RoleMenu({
                 disabled={problem?.block}
                 onClick={() => pick(role.id)}
                 className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs transition disabled:cursor-not-allowed disabled:opacity-40 ${
-                  active ? "bg-amber-400/15 text-amber-100" : "text-slate-200 hover:bg-white/5"
+                  active ? "bg-brand-400/15 text-brand-100" : "text-ink-200 hover:bg-white/5"
                 }`}
               >
                 <RoleDot role={role} />
                 <span className="min-w-0 flex-1 truncate font-semibold">{role.name}</span>
                 {problem && (
-                  <span className={`shrink-0 rounded px-1 text-[10px] font-bold ${problem.block ? "text-slate-500" : "bg-amber-400/15 text-amber-300"}`}>
+                  <span className={`shrink-0 rounded px-1 text-[10px] font-bold ${problem.block ? "text-ink-500" : "bg-brand-400/15 text-brand-300"}`}>
                     {problem.text}
                   </span>
                 )}
-                <span className="shrink-0 text-[10px] text-slate-500">{role.members}</span>
+                <span className="shrink-0 text-[10px] text-ink-500">{role.members}</span>
               </button>
             </li>
           );
@@ -125,7 +125,7 @@ function RoleMenu({
             <button
               type="button"
               onClick={() => setCreating(true)}
-              className="flex-1 rounded-lg px-2 py-1.5 text-left text-xs font-bold text-amber-300 hover:bg-amber-400/10"
+              className="flex-1 rounded-lg px-2 py-1.5 text-left text-xs font-bold text-brand-300 hover:bg-brand-400/10"
             >
               ＋ Create a new role…
             </button>
@@ -136,7 +136,7 @@ function RoleMenu({
                   onPick(null);
                   onClose();
                 }}
-                className="rounded-lg px-2 py-1.5 text-xs font-bold text-slate-400 hover:bg-white/5 hover:text-white"
+                className="rounded-lg px-2 py-1.5 text-xs font-bold text-ink-400 hover:bg-white/5 hover:text-white"
               >
                 Clear
               </button>
@@ -160,8 +160,8 @@ function RoleMenu({
                 className="h-8 w-9 shrink-0 cursor-pointer rounded border border-white/10 bg-transparent"
               />
             </div>
-            <label className="flex items-center gap-2 text-[11px] text-slate-300">
-              <input type="checkbox" checked={mentionable} onChange={(event) => setMentionable(event.target.checked)} className="accent-amber-400" />
+            <label className="flex items-center gap-2 text-[11px] text-ink-300">
+              <input type="checkbox" checked={mentionable} onChange={(event) => setMentionable(event.target.checked)} className="accent-brand-400" />
               Anyone can @mention it
             </label>
             {creator.state.phase === "error" && <p className="text-[11px] font-semibold text-rose-300">{creator.state.message}</p>}
@@ -170,16 +170,16 @@ function RoleMenu({
                 type="button"
                 disabled={!name.trim() || creator.state.phase === "working"}
                 onClick={() => void creator.create({ op: "create_role", name: name.trim(), color, mentionable })}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-amber-400 px-2 py-1.5 text-xs font-black text-slate-950 hover:bg-amber-300 disabled:opacity-40"
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-brand-400 px-2 py-1.5 text-xs font-black text-ink-950 hover:bg-brand-300 disabled:opacity-40"
               >
                 {creator.state.phase === "working" && <Spinner className="h-3 w-3" />}
                 {creator.state.phase === "working" ? "GameMaster is creating it…" : "Create role"}
               </button>
-              <button type="button" onClick={() => setCreating(false)} className="rounded-lg px-2 text-xs font-bold text-slate-400 hover:text-white">
+              <button type="button" onClick={() => setCreating(false)} className="rounded-lg px-2 text-xs font-bold text-ink-400 hover:text-white">
                 Cancel
               </button>
             </div>
-            <p className="text-[10px] text-slate-500">New roles go right under GameMaster&apos;s own role, so it can hand them out.</p>
+            <p className="text-[10px] text-ink-500">New roles go right under GameMaster&apos;s own role, so it can hand them out.</p>
           </div>
         )}
       </div>
@@ -219,20 +219,20 @@ export function RolePicker({
           setOpen((current) => !current);
         }}
         className={`flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition disabled:opacity-50 ${
-          open ? "border-amber-300/60 bg-slate-950" : "border-white/10 bg-slate-950/70 hover:border-white/25"
+          open ? "border-brand-300/60 bg-ink-950" : "border-white/10 bg-ink-950/70 hover:border-white/25"
         }`}
       >
         {role ? (
           <>
             <RoleDot role={role} />
-            <span className="min-w-0 flex-1 truncate font-semibold text-slate-100">{role.name}</span>
+            <span className="min-w-0 flex-1 truncate font-semibold text-ink-100">{role.name}</span>
           </>
         ) : value ? (
           <span className="flex-1 text-rose-300">Deleted role (#{value})</span>
         ) : (
-          <span className="flex-1 text-slate-500">Choose a role…</span>
+          <span className="flex-1 text-ink-500">Choose a role…</span>
         )}
-        <span className="text-[10px] text-slate-500">▾</span>
+        <span className="text-[10px] text-ink-500">▾</span>
       </button>
       {open && <RoleMenu ctx={ctx} purpose={purpose} selected={value} suggestedName={suggestedName} up={up} onPick={onChange} onClose={close} />}
     </div>
@@ -260,19 +260,19 @@ export function RoleMultiPicker({
   const ref = useDismiss(open, close);
   return (
     <div ref={ref} className="relative">
-      <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-white/10 bg-slate-950/70 p-1.5">
-        {value.length === 0 && <span className="px-1.5 text-sm text-slate-500">None yet</span>}
+      <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-white/10 bg-ink-950/70 p-1.5">
+        {value.length === 0 && <span className="px-1.5 text-sm text-ink-500">None yet</span>}
         {value.map((id) => {
           const role = roleById(ctx.snapshot, id);
           return (
-            <span key={id} className="flex items-center gap-1.5 rounded-md border border-white/10 bg-white/5 py-0.5 pl-2 pr-1 text-xs font-semibold text-slate-100">
+            <span key={id} className="flex items-center gap-1.5 rounded-md border border-white/10 bg-white/5 py-0.5 pl-2 pr-1 text-xs font-semibold text-ink-100">
               {role ? <RoleDot role={role} /> : null}
               <span className={role ? "" : "text-rose-300"}>{role?.name ?? `Deleted (#${id})`}</span>
               <button
                 type="button"
                 aria-label={`Remove ${role?.name ?? id}`}
                 onClick={() => onChange(value.filter((entry) => entry !== id))}
-                className="rounded px-1 text-slate-400 hover:bg-white/10 hover:text-white"
+                className="rounded px-1 text-ink-400 hover:bg-white/10 hover:text-white"
               >
                 ×
               </button>
@@ -288,7 +288,7 @@ export function RoleMultiPicker({
             setUp(opensUp(ref.current));
             setOpen((current) => !current);
           }}
-          className="rounded-md px-2 py-0.5 text-xs font-bold text-amber-300 hover:bg-amber-400/10 disabled:opacity-40"
+          className="rounded-md px-2 py-0.5 text-xs font-bold text-brand-300 hover:bg-brand-400/10 disabled:opacity-40"
         >
           ＋ Add role
         </button>
@@ -338,15 +338,15 @@ export function ChannelMultiPicker({
             return (
               <span
                 key={id}
-                className="flex items-center gap-1.5 rounded-md border border-white/10 bg-white/5 py-0.5 pl-2 pr-1 text-xs font-semibold text-slate-100"
+                className="flex items-center gap-1.5 rounded-md border border-white/10 bg-white/5 py-0.5 pl-2 pr-1 text-xs font-semibold text-ink-100"
               >
-                <span className="text-slate-400">{channel ? (CHANNEL_ICON[channel.type] ?? "#") : "#"}</span>
+                <span className="text-ink-400">{channel ? (CHANNEL_ICON[channel.type] ?? "#") : "#"}</span>
                 <span className={channel ? "" : "text-rose-300"}>{channel?.name ?? `Deleted (#${id})`}</span>
                 <button
                   type="button"
                   aria-label={`Remove ${channel?.name ?? id}`}
                   onClick={() => onChange(value.filter((entry) => entry !== id))}
-                  className="rounded px-1 text-slate-400 hover:bg-white/10 hover:text-white"
+                  className="rounded px-1 text-ink-400 hover:bg-white/10 hover:text-white"
                 >
                   ×
                 </button>
@@ -441,24 +441,24 @@ export function ChannelPicker({
           setOpen((current) => !current);
         }}
         className={`flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition disabled:opacity-50 ${
-          open ? "border-amber-300/60 bg-slate-950" : "border-white/10 bg-slate-950/70 hover:border-white/25"
+          open ? "border-brand-300/60 bg-ink-950" : "border-white/10 bg-ink-950/70 hover:border-white/25"
         }`}
       >
         {channel ? (
           <>
-            <span className="w-4 shrink-0 text-center text-slate-400">{icon(channel)}</span>
-            <span className="min-w-0 flex-1 truncate font-semibold text-slate-100">{channel.name}</span>
+            <span className="w-4 shrink-0 text-center text-ink-400">{icon(channel)}</span>
+            <span className="min-w-0 flex-1 truncate font-semibold text-ink-100">{channel.name}</span>
           </>
         ) : value ? (
           <span className="flex-1 text-rose-300">Deleted channel (#{value})</span>
         ) : (
-          <span className="flex-1 text-slate-500">{kind === "category" ? "Choose a category…" : "Choose a channel…"}</span>
+          <span className="flex-1 text-ink-500">{kind === "category" ? "Choose a category…" : "Choose a channel…"}</span>
         )}
-        <span className="text-[10px] text-slate-500">▾</span>
+        <span className="text-[10px] text-ink-500">▾</span>
       </button>
       {open && (
         <div
-          className={`absolute left-0 z-30 w-72 min-w-full max-w-[85vw] rounded-xl border border-white/15 bg-slate-900 p-2 shadow-2xl shadow-black/60 ${menuPlacement(up)}`}
+          className={`absolute left-0 z-30 w-72 min-w-full max-w-[85vw] rounded-xl border border-white/15 bg-ink-900 p-2 shadow-2xl shadow-black/60 ${menuPlacement(up)}`}
         >
           <input
             autoFocus
@@ -469,10 +469,10 @@ export function ChannelPicker({
             className={`${inputClass} mb-1.5 py-1.5 text-xs`}
           />
           <div role="listbox" className="roster-scroll max-h-64 space-y-1 overflow-y-auto">
-            {groups.length === 0 && <p className="px-2 py-3 text-center text-xs text-slate-500">Nothing matches.</p>}
+            {groups.length === 0 && <p className="px-2 py-3 text-center text-xs text-ink-500">Nothing matches.</p>}
             {groups.map((group) => (
               <div key={group.id || "none"}>
-                {group.name && <p className="px-2 pb-0.5 pt-1 text-[10px] font-black uppercase tracking-wider text-slate-500">{group.name}</p>}
+                {group.name && <p className="px-2 pb-0.5 pt-1 text-[10px] font-black uppercase tracking-wider text-ink-500">{group.name}</p>}
                 {group.items.map((entry) => {
                   const problem = channelProblem(entry, kind);
                   const active = entry.id === value;
@@ -484,12 +484,12 @@ export function ChannelPicker({
                       aria-selected={active}
                       onClick={() => pick(entry.id)}
                       className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs transition ${
-                        active ? "bg-amber-400/15 text-amber-100" : "text-slate-200 hover:bg-white/5"
+                        active ? "bg-brand-400/15 text-brand-100" : "text-ink-200 hover:bg-white/5"
                       }`}
                     >
-                      <span className="w-4 shrink-0 text-center text-slate-400">{icon(entry)}</span>
+                      <span className="w-4 shrink-0 text-center text-ink-400">{icon(entry)}</span>
                       <span className="min-w-0 flex-1 truncate font-semibold">{entry.name}</span>
-                      {problem && <span className="shrink-0 rounded bg-amber-400/15 px-1 text-[10px] font-bold text-amber-300">{problem}</span>}
+                      {problem && <span className="shrink-0 rounded bg-brand-400/15 px-1 text-[10px] font-bold text-brand-300">{problem}</span>}
                     </button>
                   );
                 })}
@@ -502,7 +502,7 @@ export function ChannelPicker({
                 <button
                   type="button"
                   onClick={() => setCreating(true)}
-                  className="flex-1 rounded-lg px-2 py-1.5 text-left text-xs font-bold text-amber-300 hover:bg-amber-400/10"
+                  className="flex-1 rounded-lg px-2 py-1.5 text-left text-xs font-bold text-brand-300 hover:bg-brand-400/10"
                 >
                   ＋ Create a new {kind === "category" ? "category" : kind === "voice" ? "voice channel" : "channel"}…
                 </button>
@@ -510,7 +510,7 @@ export function ChannelPicker({
                   <button
                     type="button"
                     onClick={() => pick(null)}
-                    className="rounded-lg px-2 py-1.5 text-xs font-bold text-slate-400 hover:bg-white/5 hover:text-white"
+                    className="rounded-lg px-2 py-1.5 text-xs font-bold text-ink-400 hover:bg-white/5 hover:text-white"
                   >
                     Clear
                   </button>
@@ -533,7 +533,7 @@ export function ChannelPicker({
                         type="button"
                         onClick={() => setCreateKind(option)}
                         className={`flex-1 rounded-md border px-2 py-1 font-bold ${
-                          createKind === option ? "border-amber-300/60 bg-amber-400/15 text-amber-100" : "border-white/10 text-slate-300"
+                          createKind === option ? "border-brand-300/60 bg-brand-400/15 text-brand-100" : "border-white/10 text-ink-300"
                         }`}
                       >
                         {option === "text" ? "# Text" : "💬 Forum"}
@@ -569,12 +569,12 @@ export function ChannelPicker({
                         parent_id: parent || null,
                       })
                     }
-                    className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-amber-400 px-2 py-1.5 text-xs font-black text-slate-950 hover:bg-amber-300 disabled:opacity-40"
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-brand-400 px-2 py-1.5 text-xs font-black text-ink-950 hover:bg-brand-300 disabled:opacity-40"
                   >
                     {creator.state.phase === "working" && <Spinner className="h-3 w-3" />}
                     {creator.state.phase === "working" ? "GameMaster is creating it…" : "Create"}
                   </button>
-                  <button type="button" onClick={() => setCreating(false)} className="rounded-lg px-2 text-xs font-bold text-slate-400 hover:text-white">
+                  <button type="button" onClick={() => setCreating(false)} className="rounded-lg px-2 text-xs font-bold text-ink-400 hover:text-white">
                     Cancel
                   </button>
                 </div>

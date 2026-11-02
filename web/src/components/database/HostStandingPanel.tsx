@@ -112,10 +112,10 @@ export default function HostStandingPanel({
   onApplied: () => void;
 }) {
   return (
-    <section data-tour="database.hostStanding" className="rounded-2xl border border-sky-400/25 bg-slate-950/70 p-4 shadow-xl shadow-black/30">
+    <section data-tour="database.hostStanding" className="rounded-2xl border border-sky-400/25 bg-ink-950/70 p-4 shadow-xl shadow-black/30">
       <div className="mb-3 flex items-center justify-between gap-2">
         <h2 className="text-[11px] font-black uppercase tracking-[0.18em] text-sky-300">🎖️ Host standing</h2>
-        <span className="text-[11px] text-slate-400">Hosted {standing.hosted_games}</span>
+        <span className="text-[11px] text-ink-400">Hosted {standing.hosted_games}</span>
       </div>
       <div className="space-y-2">
         {standing.branches.map((branch) => {
@@ -123,10 +123,10 @@ export default function HostStandingPanel({
           return (
             <div key={branch.branch} className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
               <div className="flex items-center gap-2">
-                <span className="w-11 shrink-0 rounded bg-white/10 px-1.5 py-0.5 text-center text-[10px] font-black text-slate-200">
+                <span className="w-11 shrink-0 rounded bg-white/10 px-1.5 py-0.5 text-center text-[10px] font-black text-ink-200">
                   {branch.branch}
                 </span>
-                <span className={`text-sm font-bold ${branch.rank ? "text-white" : "text-slate-400"}`}>
+                <span className={`text-sm font-bold ${branch.rank ? "text-white" : "text-ink-400"}`}>
                   {branch.rank ? `${branch.rank} ${branch.branch} Host` : "Not in this branch"}
                 </span>
                 <span className={`ml-auto text-[11px] font-semibold ${status.className}`}>{status.label}</span>
@@ -154,7 +154,7 @@ export default function HostStandingPanel({
           onApplied={onApplied}
         />
       ) : (
-        <p className="mt-3 text-[11px] text-slate-500">
+        <p className="mt-3 text-[11px] text-ink-500">
           {isSelf ? "You can't rate yourself." : "Senior Hosts of that branch and Host Management give these; only Host Management takes them back."}
         </p>
       )}
@@ -164,10 +164,10 @@ export default function HostStandingPanel({
 
 function Stat({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
-    <div className="rounded-lg border border-white/5 bg-slate-950/40 px-2.5 py-1.5">
-      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{label}</p>
+    <div className="rounded-lg border border-white/5 bg-ink-950/40 px-2.5 py-1.5">
+      <p className="text-[10px] font-bold uppercase tracking-wider text-ink-400">{label}</p>
       <p className="text-base font-black text-white">{children}</p>
-      {hint && <p className="text-[10px] text-slate-500">{hint}</p>}
+      {hint && <p className="text-[10px] text-ink-500">{hint}</p>}
     </div>
   );
 }
@@ -260,7 +260,7 @@ function HostRatingForm({
               className={`rounded-lg border px-2 py-2 text-xs font-bold transition ${
                 kind === value
                   ? "border-sky-300 bg-sky-400/15 text-sky-100"
-                  : "border-white/10 bg-white/[0.03] text-slate-300 hover:border-white/25"
+                  : "border-white/10 bg-white/[0.03] text-ink-300 hover:border-white/25"
               }`}
             >
               {value === "acclamation" ? "⭐ Acclamation" : "⚠️ Violation"}

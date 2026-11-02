@@ -1,5 +1,6 @@
 "use client";
 
+import SiteHeader from "@/components/site/SiteHeader";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import Avatar from "@/components/database/Avatar";
@@ -22,8 +23,6 @@ type State =
   | { kind: "error"; message: string }
   | { kind: "ok"; data: MyProfileResponse };
 
-const NAV_LINK =
-  "rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-slate-300 hover:border-amber-300/40 hover:text-white";
 
 export default function ProfileApp() {
   const [state, setState] = useState<State>({ kind: "loading" });
@@ -53,8 +52,8 @@ export default function ProfileApp() {
     return (
       <main className="gm-backdrop flex min-h-screen w-full items-center justify-center p-4">
         {state.kind === "loading" ? (
-          <div className="flex items-center gap-3 text-slate-300">
-            <Spinner className="h-5 w-5 text-amber-400" />
+          <div className="flex items-center gap-3 text-ink-300">
+            <Spinner className="h-5 w-5 text-brand-400" />
             <span className="text-sm font-semibold">Loading your profile…</span>
           </div>
         ) : state.kind === "login" ? (
@@ -86,28 +85,8 @@ export default function ProfileApp() {
   const flagged = portfolio.game_bans.length > 0 || portfolio.dishonored.length > 0;
 
   return (
-    <div className="gm-backdrop min-h-screen w-full text-slate-100">
-      <header className="sticky top-0 z-[1100] border-b border-white/10 bg-slate-950/60 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-[1300px] flex-wrap items-center gap-3 px-4 py-3 sm:px-6">
-          <Link href="/" className="flex items-center gap-2.5" title="Back to the map">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-sky-300 to-indigo-600 text-lg shadow-lg shadow-indigo-500/30">
-              👤
-            </span>
-            <span className="leading-tight">
-              <span className="block text-sm font-black tracking-tight text-white">My profile</span>
-              <span className="block text-[11px] font-semibold text-slate-400">GameMaster · {server.name ?? "Your stats"}</span>
-            </span>
-          </Link>
-          <nav className="ml-auto flex items-center gap-2">
-            <Link href="/tickets" data-tour="profile.tickets" className={NAV_LINK} title="Read your closed tickets">
-              🎫 My tickets
-            </Link>
-            <Link href="/" className={NAV_LINK}>
-              🗺️ Map
-            </Link>
-          </nav>
-        </div>
-      </header>
+    <div className="gm-backdrop min-h-screen w-full text-ink-100">
+      <SiteHeader page="profile" icon="👤" title="My profile" subtitle={`GameMaster · ${server.name ?? "Your stats"}`} gradient="from-sky-300 to-indigo-600"></SiteHeader>
 
       <main className="mx-auto max-w-[1300px] space-y-4 px-4 py-5 sm:px-6">
         <section
@@ -124,15 +103,15 @@ export default function ProfileApp() {
             <div className="min-w-0 flex-1">
               <p className="text-[10px] font-black uppercase tracking-[0.18em] text-sky-300">👤 Player profile</p>
               <h1 className="truncate text-2xl font-black tracking-tight text-white">{name}</h1>
-              <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-slate-400">
+              <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-ink-400">
                 {username && <span>@{username}</span>}
                 {server.name && (
-                  <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-bold text-slate-300">
+                  <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-bold text-ink-300">
                     {server.name}
                   </span>
                 )}
                 {portfolio.hearts_of_valor && (
-                  <span className="rounded-full border border-amber-400/40 bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-200">
+                  <span className="rounded-full border border-brand-400/40 bg-brand-500/15 px-2 py-0.5 text-[10px] font-bold text-brand-200">
                     🎖️ Hearts of Valor
                   </span>
                 )}
@@ -144,7 +123,7 @@ export default function ProfileApp() {
               {roles.map((role) => (
                 <span
                   key={role.id}
-                  className="flex items-center gap-1 rounded-md border border-white/10 bg-slate-950/50 px-1.5 py-0.5 text-[11px] font-semibold text-slate-200"
+                  className="flex items-center gap-1 rounded-md border border-white/10 bg-ink-950/50 px-1.5 py-0.5 text-[11px] font-semibold text-ink-200"
                 >
                   <span className="h-2 w-2 rounded-full" style={{ background: role.color ?? "#99aab5" }} />
                   {role.icon_emoji && <span>{role.icon_emoji}</span>}
@@ -157,15 +136,15 @@ export default function ProfileApp() {
 
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
           <section data-tour="profile.portfolio" className={`min-w-0 space-y-4 rounded-3xl p-4 sm:p-5 ${GLASS}`}>
-            <h2 className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">📊 Portfolio</h2>
+            <h2 className="text-[11px] font-black uppercase tracking-[0.18em] text-ink-400">📊 Portfolio</h2>
             <PortfolioBody portfolio={portfolio} playerView />
           </section>
 
           <aside data-tour="profile.side" className="space-y-4">
             <AiResultsCard results={aiResults} />
             {portfolio.host && <HostingCard standing={portfolio.host} />}
-            <section className={`rounded-2xl p-4 text-sm text-slate-300 ${GLASS}`}>
-              <h2 className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">ℹ️ About your record</h2>
+            <section className={`rounded-2xl p-4 text-sm text-ink-300 ${GLASS}`}>
+              <h2 className="text-[11px] font-black uppercase tracking-[0.18em] text-ink-400">ℹ️ About your record</h2>
               <ul className="mt-2 space-y-1.5 text-[13px] leading-relaxed">
                 <li>
                   Records are kept per server{server.name ? <> — this is your record on <b>{server.name}</b></> : null}.
@@ -187,13 +166,13 @@ function AiResultsCard({ results }: { results: ProfileAiResult[] }) {
   return (
     <section className={`rounded-2xl p-4 ${GLASS}`}>
       <div className="flex items-baseline gap-2">
-        <h2 className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">🤖 AI roleplay results</h2>
+        <h2 className="text-[11px] font-black uppercase tracking-[0.18em] text-ink-400">🤖 AI roleplay results</h2>
         <Link href="/roleplay" className="ml-auto text-[11px] font-bold text-fuchsia-300 hover:text-fuchsia-200">
           🎭 Archive ↗
         </Link>
       </div>
       {results.length === 0 ? (
-        <p className="mt-2 text-xs text-slate-400">
+        <p className="mt-2 text-xs text-ink-400">
           None yet. After a game, the host uploads its chat log and the AI grades everyone&apos;s roleplay — your result shows up here.
         </p>
       ) : (
@@ -208,20 +187,20 @@ function AiResultsCard({ results }: { results: ProfileAiResult[] }) {
                   : "No reward";
             const rewarded = Boolean(result.reward.commends || result.reward.merit);
             return (
-              <li key={result.game_id} className="rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2">
+              <li key={result.game_id} className="rounded-xl border border-white/10 bg-ink-950/40 px-3 py-2">
                 <div className="flex items-center gap-2">
-                  <Link href={`/roleplay/${result.game_id}`} className="min-w-0 flex-1 truncate text-xs font-bold text-slate-100 hover:text-fuchsia-200 hover:underline" title="Read this game's roleplay">
+                  <Link href={`/roleplay/${result.game_id}`} className="min-w-0 flex-1 truncate text-xs font-bold text-ink-100 hover:text-fuchsia-200 hover:underline" title="Read this game's roleplay">
                     {result.game_name}
                   </Link>
-                  <span className={`shrink-0 text-xs font-black ${rewarded ? "text-emerald-300" : "text-slate-400"}`}>{verdict}</span>
+                  <span className={`shrink-0 text-xs font-black ${rewarded ? "text-emerald-300" : "text-ink-400"}`}>{verdict}</span>
                 </div>
-                <p className="text-[11px] text-slate-500">
+                <p className="text-[11px] text-ink-500">
                   {new Date(result.ts * 1000).toLocaleDateString(undefined, { day: "numeric", month: "short" })} · {result.nation} ·{" "}
                   {result.meaningful_words.toLocaleString()} in-character words · creativity {result.creativity}/10
                 </p>
-                <p className="mt-0.5 text-[11px] text-slate-300">{result.reward.why}</p>
+                <p className="mt-0.5 text-[11px] text-ink-300">{result.reward.why}</p>
                 {rewarded && (
-                  <p className={`mt-0.5 text-[11px] font-bold ${result.given ? "text-emerald-300" : "text-amber-300"}`}>
+                  <p className={`mt-0.5 text-[11px] font-bold ${result.given ? "text-emerald-300" : "text-brand-300"}`}>
                     {result.given ? "✓ Given by the host" : "Waiting for the host to give it"}
                   </p>
                 )}
@@ -238,15 +217,15 @@ function AiResultsCard({ results }: { results: ProfileAiResult[] }) {
 function HostingCard({ standing }: { standing: HostStanding }) {
   return (
     <section className={`rounded-2xl p-4 ${GLASS}`}>
-      <h2 className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">🎙️ Your hosting</h2>
-      <p className="mt-2 text-sm text-slate-300">
+      <h2 className="text-[11px] font-black uppercase tracking-[0.18em] text-ink-400">🎙️ Your hosting</h2>
+      <p className="mt-2 text-sm text-ink-300">
         <span className="text-2xl font-black text-white">{standing.hosted_games}</span> games hosted
       </p>
-      <div className="mt-3 overflow-hidden rounded-xl border border-slate-800">
+      <div className="mt-3 overflow-hidden rounded-xl border border-ink-800">
         {standing.branches.map((branch) => (
-          <div key={branch.branch} className="flex items-center gap-3 border-b border-slate-800 bg-slate-950/40 px-3 py-2 text-xs last:border-b-0">
-            <span className="w-12 font-black text-slate-100">{branch.branch}</span>
-            <span className="flex-1 text-slate-400">{branch.rank ? `${branch.rank} host` : "No rank"}</span>
+          <div key={branch.branch} className="flex items-center gap-3 border-b border-ink-800 bg-ink-950/40 px-3 py-2 text-xs last:border-b-0">
+            <span className="w-12 font-black text-ink-100">{branch.branch}</span>
+            <span className="flex-1 text-ink-400">{branch.rank ? `${branch.rank} host` : "No rank"}</span>
             <span className="text-emerald-300" title="Acclamations">
               👏 {branch.acclamations}
             </span>

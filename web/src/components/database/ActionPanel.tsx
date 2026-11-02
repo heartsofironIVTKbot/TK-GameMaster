@@ -262,7 +262,7 @@ export default function ActionPanel({
   if (isSelf) {
     return (
       <PanelShell>
-        <p className="text-sm text-slate-300">🪞 This is your own record — another host has to moderate you.</p>
+        <p className="text-sm text-ink-300">🪞 This is your own record — another host has to moderate you.</p>
       </PanelShell>
     );
   }
@@ -311,8 +311,8 @@ export default function ActionPanel({
                   onClick={() => setType(value)}
                   className={`rounded-lg border px-1 py-2 text-center text-[11px] font-bold transition ${
                     type === value
-                      ? "border-amber-300 bg-amber-400/15 text-amber-100"
-                      : "border-white/10 bg-white/[0.03] text-slate-300 hover:border-white/25"
+                      ? "border-brand-300 bg-brand-400/15 text-brand-100"
+                      : "border-white/10 bg-white/[0.03] text-ink-300 hover:border-white/25"
                   }`}
                 >
                   <span className="block text-base">{TYPE_LABEL[value].icon}</span>
@@ -346,8 +346,8 @@ export default function ActionPanel({
 
 function PanelShell({ children }: { children: ReactNode }) {
   return (
-    <section data-tour="database.moderate" className="rounded-2xl border border-amber-400/25 bg-slate-950/70 p-4 shadow-xl shadow-black/30">
-      <h2 className="mb-3 text-[11px] font-black uppercase tracking-[0.18em] text-amber-300">🛠️ Moderate</h2>
+    <section data-tour="database.moderate" className="rounded-2xl border border-brand-400/25 bg-ink-950/70 p-4 shadow-xl shadow-black/30">
+      <h2 className="mb-3 text-[11px] font-black uppercase tracking-[0.18em] text-brand-300">🛠️ Moderate</h2>
       {children}
     </section>
   );
@@ -356,9 +356,9 @@ function PanelShell({ children }: { children: ReactNode }) {
 export function Field({ label, children, hint }: { label: string; children: ReactNode; hint?: ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">{label}</p>
+      <p className="text-[11px] font-bold uppercase tracking-wider text-ink-400">{label}</p>
       {children}
-      {hint && <p className="text-[11px] text-slate-500">{hint}</p>}
+      {hint && <p className="text-[11px] text-ink-500">{hint}</p>}
     </div>
   );
 }
@@ -370,7 +370,7 @@ export function AmountStepper({ value, max, onChange }: { value: number; max: nu
       <button
         type="button"
         onClick={() => onChange(clamp(value - 1))}
-        className="h-9 w-9 rounded-lg border border-white/10 bg-white/5 text-lg text-slate-200 hover:border-amber-300/50"
+        className="h-9 w-9 rounded-lg border border-white/10 bg-white/5 text-lg text-ink-200 hover:border-brand-300/50"
         aria-label="Less"
       >
         −
@@ -381,13 +381,13 @@ export function AmountStepper({ value, max, onChange }: { value: number; max: nu
         max={max}
         value={value}
         onChange={(event) => onChange(clamp(Number(event.target.value) || 1))}
-        className="h-9 w-16 rounded-lg border border-white/10 bg-slate-900/80 text-center text-sm font-bold text-white [color-scheme:dark] focus:border-amber-300/50 focus:outline-none"
+        className="h-9 w-16 rounded-lg border border-white/10 bg-ink-900/80 text-center text-sm font-bold text-white [color-scheme:dark] focus:border-brand-300/50 focus:outline-none"
         aria-label="Amount"
       />
       <button
         type="button"
         onClick={() => onChange(clamp(value + 1))}
-        className="h-9 w-9 rounded-lg border border-white/10 bg-white/5 text-lg text-slate-200 hover:border-amber-300/50"
+        className="h-9 w-9 rounded-lg border border-white/10 bg-white/5 text-lg text-ink-200 hover:border-brand-300/50"
         aria-label="More"
       >
         +
@@ -414,7 +414,7 @@ export function ReasonField({
         onChange={(event) => onChange(event.target.value.slice(0, 1000))}
         rows={3}
         placeholder="What happened?"
-        className="w-full resize-y rounded-lg border border-white/10 bg-slate-900/80 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-amber-300/50 focus:outline-none"
+        className="w-full resize-y rounded-lg border border-white/10 bg-ink-900/80 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:border-brand-300/50 focus:outline-none"
       />
       {quick.length > 0 && (
         <div className="flex flex-wrap gap-1">
@@ -423,7 +423,7 @@ export function ReasonField({
               key={text}
               type="button"
               onClick={() => onChange(value.trim() ? `${value.trim()} — ${text}` : text)}
-              className="rounded-md border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] font-semibold text-slate-300 hover:border-amber-300/40 hover:text-white"
+              className="rounded-md border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] font-semibold text-ink-300 hover:border-brand-300/40 hover:text-white"
             >
               {text}
             </button>
@@ -448,7 +448,7 @@ function GameSelect({
       <select
         value={value ?? ""}
         onChange={(event) => onChange(event.target.value || null)}
-        className="w-full rounded-lg border border-white/10 bg-slate-900/80 px-3 py-2 text-sm text-slate-100 [color-scheme:dark] focus:border-amber-300/50 focus:outline-none"
+        className="w-full rounded-lg border border-white/10 bg-ink-900/80 px-3 py-2 text-sm text-ink-100 [color-scheme:dark] focus:border-brand-300/50 focus:outline-none"
       >
         <option value="">Not game related</option>
         {games.map((game) => (
@@ -511,7 +511,7 @@ export function SubmitButton({
           ? "animate-pulse bg-rose-500 text-white"
           : danger
             ? "bg-rose-500/90 text-white hover:bg-rose-500"
-            : "bg-amber-400 text-slate-950 hover:bg-amber-300"
+            : "bg-brand-400 text-ink-950 hover:bg-brand-300"
       }`}
     >
       {busy && <Spinner className="h-4 w-4" />}
@@ -528,10 +528,10 @@ export function PreviewBox({ preview }: { preview: Preview }) {
   return (
     <div
       className={`rounded-lg border px-3 py-2 text-xs ${
-        preview.danger ? "border-rose-400/40 bg-rose-500/10 text-rose-50" : "border-white/10 bg-white/[0.03] text-slate-200"
+        preview.danger ? "border-rose-400/40 bg-rose-500/10 text-rose-50" : "border-white/10 bg-white/[0.03] text-ink-200"
       }`}
     >
-      <p className="mb-1 text-[10px] font-black uppercase tracking-wider text-slate-400">What will happen</p>
+      <p className="mb-1 text-[10px] font-black uppercase tracking-wider text-ink-400">What will happen</p>
       <ul className="space-y-0.5">
         {preview.lines.map((line) => (
           <li key={line}>• {line}</li>
@@ -614,7 +614,7 @@ function StatForm({
       )}
 
       {kind === "merit" ? (
-        <p className="text-[11px] text-slate-500">Merit is one pool for every mode. 25 Merit + 50 attended games = Hearts of Valor.</p>
+        <p className="text-[11px] text-ink-500">Merit is one pool for every mode. 25 Merit + 50 attended games = Hearts of Valor.</p>
       ) : (
         <ModePicker
           value={mode}
@@ -664,7 +664,7 @@ function StatForm({
         }}
       />
       {op === "give" && kind === "ban" && (
-        <p className="text-[11px] text-slate-500">Undo lifts the ban but can&apos;t bring back the commends and Merit it reset.</p>
+        <p className="text-[11px] text-ink-500">Undo lifts the ban but can&apos;t bring back the commends and Merit it reset.</p>
       )}
     </div>
   );
@@ -741,7 +741,7 @@ function DishonorForm({
 
   return (
     <div className="space-y-3.5">
-      <p className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-slate-300">
+      <p className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-ink-300">
         ⚖️ A time-out: blocks the chosen nations for a while and leaves all stats and roles untouched.
       </p>
 
@@ -758,7 +758,7 @@ function DishonorForm({
       )}
 
       {!options && (
-        <p className="rounded-lg border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
+        <p className="rounded-lg border border-brand-400/30 bg-brand-500/10 px-3 py-2 text-xs text-brand-100">
           The bot hasn&apos;t published its nation lists yet (restart it with the latest code). You can still Dishonor from
           <b> All Majors</b>.
         </p>
@@ -777,7 +777,7 @@ function DishonorForm({
                 className={`rounded-md border px-2 py-1 text-[11px] font-semibold ${
                   majors.includes(name)
                     ? "border-rose-300 bg-rose-500/25 text-rose-50"
-                    : "border-white/10 bg-white/[0.03] text-slate-300 hover:border-white/25"
+                    : "border-white/10 bg-white/[0.03] text-ink-300 hover:border-white/25"
                 }`}
               >
                 {name}
@@ -808,7 +808,7 @@ function DishonorForm({
             value={minorQuery}
             onChange={(event) => setMinorQuery(event.target.value)}
             placeholder="🔎 Find a minor nation"
-            className="w-full rounded-lg border border-white/10 bg-slate-900/80 px-3 py-1.5 text-xs text-slate-100 placeholder:text-slate-500 focus:border-amber-300/50 focus:outline-none"
+            className="w-full rounded-lg border border-white/10 bg-ink-900/80 px-3 py-1.5 text-xs text-ink-100 placeholder:text-ink-500 focus:border-brand-300/50 focus:outline-none"
           />
           <div className="flex max-h-28 flex-wrap gap-1 overflow-y-auto">
             {minorMatches.map((name) => (
@@ -816,7 +816,7 @@ function DishonorForm({
                 key={name}
                 type="button"
                 onClick={() => setMinors((current) => [...current, name])}
-                className="rounded-md border border-white/10 bg-white/[0.03] px-2 py-0.5 text-[11px] text-slate-300 hover:border-white/25"
+                className="rounded-md border border-white/10 bg-white/[0.03] px-2 py-0.5 text-[11px] text-ink-300 hover:border-white/25"
               >
                 + {name}
               </button>
@@ -848,21 +848,21 @@ function DishonorForm({
               onClick={() => setDays(preset.days)}
               className={`rounded-md border px-2 py-0.5 text-[11px] font-bold ${
                 days === preset.days
-                  ? "border-amber-300 bg-amber-400/20 text-amber-100"
-                  : "border-white/10 text-slate-300 hover:border-white/25"
+                  ? "border-brand-300 bg-brand-400/20 text-brand-100"
+                  : "border-white/10 text-ink-300 hover:border-white/25"
               }`}
             >
               {preset.label}
             </button>
           ))}
-          <label className="ml-auto flex items-center gap-1 text-[11px] text-slate-400">
+          <label className="ml-auto flex items-center gap-1 text-[11px] text-ink-400">
             <input
               type="number"
               min={DISHONORED_MIN_DAYS}
               max={DISHONORED_MAX_DAYS}
               value={days}
               onChange={(event) => setDaysClamped(Number(event.target.value))}
-              className="h-7 w-14 rounded-md border border-white/10 bg-slate-900/80 text-center text-xs font-bold text-white [color-scheme:dark] focus:outline-none"
+              className="h-7 w-14 rounded-md border border-white/10 bg-ink-900/80 text-center text-xs font-bold text-white [color-scheme:dark] focus:outline-none"
               aria-label="Exact number of days"
             />
             days
@@ -939,7 +939,7 @@ function LiftDishonorForm({
   const entry = active.find((item) => item.category === picked) ?? active[0] ?? null;
 
   if (!entry) {
-    return <p className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-slate-300">No active Dishonored restriction to lift.</p>;
+    return <p className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-ink-300">No active Dishonored restriction to lift.</p>;
   }
   const reasonOk = reason.trim().length >= MIN_REASON_LENGTH;
 
@@ -955,7 +955,7 @@ function LiftDishonorForm({
               className={`block w-full rounded-lg border px-3 py-2 text-left text-xs ${
                 item.category === entry.category
                   ? "border-rose-300 bg-rose-500/15 text-rose-50"
-                  : "border-white/10 bg-white/[0.03] text-slate-300 hover:border-white/25"
+                  : "border-white/10 bg-white/[0.03] text-ink-300 hover:border-white/25"
               }`}
             >
               <span className="font-black">⚖️ {item.category}</span> — {restrictionText(item)}
@@ -1025,8 +1025,8 @@ export function ResultBox({
   if (state.phase === "idle") return null;
   if (state.phase === "sending" || state.phase === "waiting") {
     return (
-      <div className="mt-4 flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-xs text-slate-300">
-        <Spinner className="h-4 w-4 text-amber-300" />
+      <div className="mt-4 flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-xs text-ink-300">
+        <Spinner className="h-4 w-4 text-brand-300" />
         {state.phase === "sending" ? "Sending…" : "The bot is applying it (roles, DM, audit log)…"}
       </div>
     );

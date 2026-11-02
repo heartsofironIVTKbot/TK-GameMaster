@@ -26,7 +26,7 @@ import { Callout, Card, Rich, type StepContext } from "./shared";
 
 const LEVEL: Record<CheckLevel, { icon: string; tone: string }> = {
   ok: { icon: "✅", tone: "text-emerald-300" },
-  warning: { icon: "⚠️", tone: "text-amber-300" },
+  warning: { icon: "⚠️", tone: "text-brand-300" },
   error: { icon: "⛔", tone: "text-rose-300" },
 };
 
@@ -108,21 +108,21 @@ export function FixToolbar({ fix, setupDone, reinvite }: { fix: ReturnType<typeo
             title={action.hint}
             disabled={fix.op !== null}
             onClick={() => void fix.run(action.op)}
-            className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs font-bold text-slate-200 hover:border-amber-300/40 hover:text-white disabled:opacity-50"
+            className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs font-bold text-ink-200 hover:border-brand-300/40 hover:text-white disabled:opacity-50"
           >
-            {fix.op === action.op ? <Spinner className="h-3 w-3 text-amber-300" /> : <span>{action.icon}</span>}
+            {fix.op === action.op ? <Spinner className="h-3 w-3 text-brand-300" /> : <span>{action.icon}</span>}
             {action.label}
           </button>
         ))}
         <a
           href={reinvite}
           title="Re-add GameMaster with every permission it needs (your settings stay)."
-          className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs font-bold text-slate-200 hover:border-amber-300/40 hover:text-white"
+          className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs font-bold text-ink-200 hover:border-brand-300/40 hover:text-white"
         >
           🔑 Fix permissions
         </a>
       </div>
-      {fix.op && <p className="text-[11px] text-slate-400">Waiting for GameMaster…</p>}
+      {fix.op && <p className="text-[11px] text-ink-400">Waiting for GameMaster…</p>}
       {fix.message && <Callout tone={fix.message.tone === "ok" ? "ok" : "error"}>{fix.message.text}</Callout>}
     </div>
   );
@@ -134,7 +134,7 @@ function FixLink({ check, ctx, fix }: { check: StatusCheck; ctx: StepContext; fi
   const target = check.fix;
   if (!target) return null;
   const className =
-    "shrink-0 rounded-md border border-white/10 px-2 py-0.5 text-[11px] font-bold text-amber-200 hover:border-amber-300/50 disabled:opacity-50";
+    "shrink-0 rounded-md border border-white/10 px-2 py-0.5 text-[11px] font-bold text-brand-200 hover:border-brand-300/50 disabled:opacity-50";
   if ("op" in target) {
     const action = FIX_ACTIONS.find((entry) => entry.op === target.op);
     return (
@@ -161,11 +161,11 @@ export function LiveChecks({ checks, ctx, fix }: { checks: StatusCheck[]; ctx: S
   return (
     <ul className="divide-y divide-white/5 overflow-hidden rounded-xl border border-white/10">
       {checks.map((check) => (
-        <li key={check.id} className="flex items-start gap-2.5 bg-slate-950/40 px-3 py-2.5">
+        <li key={check.id} className="flex items-start gap-2.5 bg-ink-950/40 px-3 py-2.5">
           <span className="text-sm leading-5">{LEVEL[check.level].icon}</span>
           <div className="min-w-0 flex-1">
-            <p className={`text-xs font-bold ${check.level === "ok" ? "text-slate-100" : LEVEL[check.level].tone}`}>{check.title}</p>
-            <p className="text-[11px] text-slate-400">{check.detail}</p>
+            <p className={`text-xs font-bold ${check.level === "ok" ? "text-ink-100" : LEVEL[check.level].tone}`}>{check.title}</p>
+            <p className="text-[11px] text-ink-400">{check.detail}</p>
           </div>
           {check.level !== "ok" && <FixLink check={check} ctx={ctx} fix={fix} />}
         </li>
@@ -209,8 +209,8 @@ export function HealthLive({ ctx, reinvite }: { ctx: StepContext; reinvite: stri
       <Card icon="🩺" title="Live checks" subtitle="Is GameMaster online and working in this server right now?">
         {error && <Callout tone="error">{error}</Callout>}
         {!status && !error && (
-          <p className="flex items-center gap-2 text-xs text-slate-400">
-            <Spinner className="h-3.5 w-3.5 text-amber-300" /> Checking…
+          <p className="flex items-center gap-2 text-xs text-ink-400">
+            <Spinner className="h-3.5 w-3.5 text-brand-300" /> Checking…
           </p>
         )}
         {status && <LiveChecks checks={status.checks} ctx={ctx} fix={fix} />}
@@ -231,8 +231,8 @@ function UptimeHealthCard() {
       ) : error ? (
         <Callout tone="error">{error}</Callout>
       ) : (
-        <p className="flex items-center gap-2 text-xs text-slate-400">
-          <Spinner className="h-3.5 w-3.5 text-amber-300" /> Loading…
+        <p className="flex items-center gap-2 text-xs text-ink-400">
+          <Spinner className="h-3.5 w-3.5 text-brand-300" /> Loading…
         </p>
       )}
       <a href="/status" target="_blank" rel="noreferrer" className="text-[11px] font-bold text-sky-300 hover:text-sky-200">
@@ -246,28 +246,28 @@ function UptimeHealthCard() {
 
 function Tile({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2.5">
-      <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">{label}</p>
+    <div className="rounded-xl border border-white/10 bg-ink-950/40 px-3 py-2.5">
+      <p className="text-[10px] font-black uppercase tracking-wider text-ink-500">{label}</p>
       <p className="mt-0.5 text-2xl font-black text-white">{value}</p>
-      {hint && <p className="text-[10px] text-slate-500">{hint}</p>}
+      {hint && <p className="text-[10px] text-ink-500">{hint}</p>}
     </div>
   );
 }
 
 function GameList({ games, empty, upcoming }: { games: DashboardGame[]; empty: string; upcoming?: boolean }) {
-  if (games.length === 0) return <p className="text-xs text-slate-500">{empty}</p>;
+  if (games.length === 0) return <p className="text-xs text-ink-500">{empty}</p>;
   return (
     <ul className="divide-y divide-white/5 overflow-hidden rounded-xl border border-white/10">
       {games.map((game) => (
-        <li key={game.id} className="flex items-center gap-2 bg-slate-950/40 px-3 py-2 text-xs">
+        <li key={game.id} className="flex items-center gap-2 bg-ink-950/40 px-3 py-2 text-xs">
           <span className="min-w-0 flex-1">
-            <span className="block truncate font-bold text-slate-100">{upcoming ? modeLabel(game.mode) : game.name}</span>
-            <span className="block truncate text-[11px] text-slate-500">
+            <span className="block truncate font-bold text-ink-100">{upcoming ? modeLabel(game.mode) : game.name}</span>
+            <span className="block truncate text-[11px] text-ink-500">
               {dateTime(game.ts)} · {when(game.ts)}
               {game.host_name ? ` · ${game.host_name}` : ""}
             </span>
           </span>
-          {game.players !== null && <span className="shrink-0 text-slate-400">👥 {game.players}</span>}
+          {game.players !== null && <span className="shrink-0 text-ink-400">👥 {game.players}</span>}
           {game.url && (
             <a href={game.url} className="shrink-0 text-[11px] font-bold text-sky-300 hover:text-sky-200">
               Attendance →
@@ -304,15 +304,15 @@ function ProblemList({
       {shown.length > 0 && (
         <ul className="divide-y divide-white/5 overflow-hidden rounded-xl border border-white/10">
           {shown.map((issue, index) => (
-            <li key={`${issue.path}-${index}`} className="flex items-start gap-2.5 bg-slate-950/40 px-3 py-2.5">
+            <li key={`${issue.path}-${index}`} className="flex items-start gap-2.5 bg-ink-950/40 px-3 py-2.5">
               <span className="text-sm leading-5">{LEVEL[issue.level].icon}</span>
-              <p className={`min-w-0 flex-1 text-xs ${issue.level === "error" ? "text-rose-100" : "text-amber-100"}`}>
+              <p className={`min-w-0 flex-1 text-xs ${issue.level === "error" ? "text-rose-100" : "text-brand-100"}`}>
                 <Rich text={issue.message} />
               </p>
               {issue.path.startsWith("perm.") || issue.path === "bot" ? (
                 <a
                   href={reinvite}
-                  className="shrink-0 rounded-md border border-white/10 px-2 py-0.5 text-[11px] font-bold text-amber-200 hover:border-amber-300/50"
+                  className="shrink-0 rounded-md border border-white/10 px-2 py-0.5 text-[11px] font-bold text-brand-200 hover:border-brand-300/50"
                 >
                   Fix
                 </a>
@@ -320,7 +320,7 @@ function ProblemList({
                 <button
                   type="button"
                   onClick={() => ctx.goTo(issue.step)}
-                  className="shrink-0 rounded-md border border-white/10 px-2 py-0.5 text-[11px] font-bold text-amber-200 hover:border-amber-300/50"
+                  className="shrink-0 rounded-md border border-white/10 px-2 py-0.5 text-[11px] font-bold text-brand-200 hover:border-brand-300/50"
                 >
                   Fix
                 </button>
@@ -330,7 +330,7 @@ function ProblemList({
         </ul>
       )}
       {sorted.length > shown.length && (
-        <p className="text-[11px] text-slate-500">…and {sorted.length - shown.length} more — each step&apos;s tab shows its own.</p>
+        <p className="text-[11px] text-ink-500">…and {sorted.length - shown.length} more — each step&apos;s tab shows its own.</p>
       )}
     </div>
   );
@@ -368,8 +368,8 @@ export function DashboardPanel({ ctx, history, reinvite }: { ctx: StepContext; h
   if (error && !data) return <Callout tone="error">{error}</Callout>;
   if (!data) {
     return (
-      <p className="flex items-center gap-2 text-sm text-slate-400">
-        <Spinner className="h-4 w-4 text-amber-300" /> Loading the dashboard…
+      <p className="flex items-center gap-2 text-sm text-ink-400">
+        <Spinner className="h-4 w-4 text-brand-300" /> Loading the dashboard…
       </p>
     );
   }
@@ -384,12 +384,12 @@ export function DashboardPanel({ ctx, history, reinvite }: { ctx: StepContext; h
       <div className="grid gap-2 sm:grid-cols-3">
         <div
           className={`rounded-xl border px-3 py-2.5 ${
-            online === false ? "border-rose-400/40 bg-rose-500/10" : online ? "border-emerald-400/30 bg-emerald-500/10" : "border-white/10 bg-slate-950/40"
+            online === false ? "border-rose-400/40 bg-rose-500/10" : online ? "border-emerald-400/30 bg-emerald-500/10" : "border-white/10 bg-ink-950/40"
           }`}
         >
-          <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">GameMaster</p>
+          <p className="text-[10px] font-black uppercase tracking-wider text-ink-400">GameMaster</p>
           <p className="mt-0.5 text-lg font-black text-white">{online === null ? "No status yet" : online ? "🟢 Online" : "🔴 Offline"}</p>
-          <p className="text-[10px] text-slate-400">
+          <p className="text-[10px] text-ink-400">
             {status.last_beat ? `Last heartbeat ${when(status.last_beat)}` : "Waiting for the first heartbeat"} ·{" "}
             <Link href="/status" className="underline hover:text-white">
               status page
@@ -398,17 +398,17 @@ export function DashboardPanel({ ctx, history, reinvite }: { ctx: StepContext; h
         </div>
         <div
           className={`rounded-xl border px-3 py-2.5 ${
-            errors ? "border-rose-400/40 bg-rose-500/10" : warnings ? "border-amber-400/30 bg-amber-500/10" : "border-emerald-400/30 bg-emerald-500/10"
+            errors ? "border-rose-400/40 bg-rose-500/10" : warnings ? "border-brand-400/30 bg-brand-500/10" : "border-emerald-400/30 bg-emerald-500/10"
           }`}
         >
-          <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Problems</p>
+          <p className="text-[10px] font-black uppercase tracking-wider text-ink-400">Problems</p>
           <p className="mt-0.5 text-lg font-black text-white">{errors === 0 && warnings === 0 ? "✅ None" : `${errors} to fix · ${warnings} warnings`}</p>
-          <p className="text-[10px] text-slate-400">Settings and live checks</p>
+          <p className="text-[10px] text-ink-400">Settings and live checks</p>
         </div>
-        <div className="rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2.5">
-          <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Roles & channels</p>
+        <div className="rounded-xl border border-white/10 bg-ink-950/40 px-3 py-2.5">
+          <p className="text-[10px] font-black uppercase tracking-wider text-ink-400">Roles & channels</p>
           <p className="mt-0.5 text-lg font-black text-white">{status.snapshot_at ? `Read ${when(status.snapshot_at)}` : "Not read yet"}</p>
-          <p className="text-[10px] text-slate-400">
+          <p className="text-[10px] text-ink-400">
             {status.commands?.count != null ? `${status.commands.count} slash commands` : "Slash commands: —"}
           </p>
         </div>
@@ -432,14 +432,14 @@ export function DashboardPanel({ ctx, history, reinvite }: { ctx: StepContext; h
         </div>
         {usage.modes.length > 0 && (
           <div className="space-y-1.5">
-            <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">Busiest modes</p>
+            <p className="text-[10px] font-black uppercase tracking-wider text-ink-500">Busiest modes</p>
             {usage.modes.map((mode) => (
               <div key={mode.mode} className="flex items-center gap-2 text-xs">
-                <span className="w-36 shrink-0 truncate text-slate-300">{modeLabel(mode.mode)}</span>
+                <span className="w-36 shrink-0 truncate text-ink-300">{modeLabel(mode.mode)}</span>
                 <span className="h-2 flex-1 overflow-hidden rounded-full bg-white/5">
-                  <span className="block h-full rounded-full bg-amber-400" style={{ width: `${(mode.games / maxMode) * 100}%` }} />
+                  <span className="block h-full rounded-full bg-brand-400" style={{ width: `${(mode.games / maxMode) * 100}%` }} />
                 </span>
-                <span className="w-6 shrink-0 text-right font-bold text-slate-200">{mode.games}</span>
+                <span className="w-6 shrink-0 text-right font-bold text-ink-200">{mode.games}</span>
               </div>
             ))}
           </div>
@@ -458,33 +458,33 @@ export function DashboardPanel({ ctx, history, reinvite }: { ctx: StepContext; h
       <Card icon="👥" title="Staff activity" subtitle={`Top hosts (last ${usage.days} days), recent moderation and settings changes.`}>
         <div className="grid gap-4 xl:grid-cols-3">
           <div>
-            <p className="mb-1.5 text-[10px] font-black uppercase tracking-wider text-slate-500">Top hosts</p>
+            <p className="mb-1.5 text-[10px] font-black uppercase tracking-wider text-ink-500">Top hosts</p>
             {data.staff.top_hosts.length === 0 ? (
-              <p className="text-xs text-slate-500">No games hosted yet.</p>
+              <p className="text-xs text-ink-500">No games hosted yet.</p>
             ) : (
               <ul className="space-y-1.5">
                 {data.staff.top_hosts.map((host) => (
                   <li key={host.id} className="flex items-center gap-2 text-xs">
                     <Avatar url={host.avatar_url} name={host.name} size={22} />
-                    <span className="min-w-0 flex-1 truncate font-semibold text-slate-200">{host.name}</span>
-                    <span className="text-slate-400">{host.games} games</span>
+                    <span className="min-w-0 flex-1 truncate font-semibold text-ink-200">{host.name}</span>
+                    <span className="text-ink-400">{host.games} games</span>
                   </li>
                 ))}
               </ul>
             )}
           </div>
           <div>
-            <p className="mb-1.5 text-[10px] font-black uppercase tracking-wider text-slate-500">Recent moderation</p>
+            <p className="mb-1.5 text-[10px] font-black uppercase tracking-wider text-ink-500">Recent moderation</p>
             {data.staff.moderation.length === 0 ? (
-              <p className="text-xs text-slate-500">Nothing yet.</p>
+              <p className="text-xs text-ink-500">Nothing yet.</p>
             ) : (
               <ul className="space-y-1.5">
                 {data.staff.moderation.map((item, index) => (
                   <li key={`${item.created_at}-${index}`} className="text-xs">
-                    <span className="font-semibold text-slate-200">{item.label}</span>
-                    {item.mode ? <span className="text-slate-400"> · {item.mode}</span> : null}
-                    <span className="text-slate-400"> → {item.target_name}</span>
-                    <span className="block text-[10px] text-slate-500">
+                    <span className="font-semibold text-ink-200">{item.label}</span>
+                    {item.mode ? <span className="text-ink-400"> · {item.mode}</span> : null}
+                    <span className="text-ink-400"> → {item.target_name}</span>
+                    <span className="block text-[10px] text-ink-500">
                       {item.automatic ? "Automatic" : (item.issued_by ?? "Staff")} · {when(item.created_at)}
                     </span>
                   </li>
@@ -493,15 +493,15 @@ export function DashboardPanel({ ctx, history, reinvite }: { ctx: StepContext; h
             )}
           </div>
           <div>
-            <p className="mb-1.5 text-[10px] font-black uppercase tracking-wider text-slate-500">Settings changes</p>
+            <p className="mb-1.5 text-[10px] font-black uppercase tracking-wider text-ink-500">Settings changes</p>
             {history.length === 0 ? (
-              <p className="text-xs text-slate-500">No changes yet.</p>
+              <p className="text-xs text-ink-500">No changes yet.</p>
             ) : (
               <ul className="space-y-1.5">
                 {history.slice(0, 4).map((entry) => (
                   <li key={`${entry.version}-${entry.created_at}`} className="text-xs">
-                    <span className="text-slate-200">{entry.summary ?? "Changed settings"}</span>
-                    <span className="block text-[10px] text-slate-500">
+                    <span className="text-ink-200">{entry.summary ?? "Changed settings"}</span>
+                    <span className="block text-[10px] text-ink-500">
                       {entry.actor_name ?? "Someone"} · {when(entry.created_at)}
                     </span>
                   </li>

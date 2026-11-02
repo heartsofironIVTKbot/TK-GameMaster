@@ -38,7 +38,7 @@ export default function NationPicker({
         disabled={disabled}
         onChange={(event) => setQuery(event.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-lg border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-amber-300/50 focus:outline-none"
+        className="w-full rounded-lg border border-white/10 bg-ink-950/70 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:border-brand-300/50 focus:outline-none"
       />
       {results.length > 0 && (
         <ul className="roster-scroll mt-2 max-h-56 space-y-1 overflow-y-auto">
@@ -47,7 +47,7 @@ export default function NationPicker({
             const where = status(nation);
             return (
               <li key={nation} className="flex items-center gap-2 rounded-lg border border-white/5 bg-white/[0.03] px-2.5 py-1.5">
-                <span className="min-w-0 flex-1 truncate text-xs font-semibold text-slate-200">
+                <span className="min-w-0 flex-1 truncate text-xs font-semibold text-ink-200">
                   {majors.has(nation) && <span title="Major nation">👑 </span>}
                   {nation}
                 </span>
@@ -57,7 +57,7 @@ export default function NationPicker({
                     type="button"
                     disabled={disabled}
                     onClick={() => onPick(nation)}
-                    className="shrink-0 rounded-md bg-white/5 px-2 py-0.5 text-[11px] font-bold text-slate-200 transition hover:bg-amber-400/25 hover:text-amber-100 disabled:opacity-40"
+                    className="shrink-0 rounded-md bg-white/5 px-2 py-0.5 text-[11px] font-bold text-ink-200 transition hover:bg-brand-400/25 hover:text-brand-100 disabled:opacity-40"
                   >
                     {label}
                   </button>
@@ -68,7 +68,7 @@ export default function NationPicker({
         </ul>
       )}
       {query.trim() && results.length === 0 && (
-        <p className="mt-2 text-xs text-slate-500">No nation matches “{query}”.</p>
+        <p className="mt-2 text-xs text-ink-500">No nation matches “{query}”.</p>
       )}
     </div>
   );

@@ -25,19 +25,19 @@ export const VOICE_SHORT: Record<VoiceState, string> = {
 
 export const VOICE_DOT: Record<VoiceState, string> = {
   present: "bg-emerald-400 border-emerald-300",
-  lobby: "bg-amber-400 border-amber-300",
+  lobby: "bg-brand-400 border-brand-300",
   no_pass: "bg-orange-500 border-orange-400",
   no_voice: "bg-rose-500/80 border-rose-400",
-  unknown: "bg-slate-500 border-slate-400",
+  unknown: "bg-ink-500 border-ink-400",
   dropped: "bg-sky-400 border-sky-300",
 };
 
 export const VOICE_TEXT: Record<VoiceState, string> = {
   present: "text-emerald-300",
-  lobby: "text-amber-300",
+  lobby: "text-brand-300",
   no_pass: "text-orange-300",
   no_voice: "text-rose-300",
-  unknown: "text-slate-400",
+  unknown: "text-ink-400",
   dropped: "text-sky-300",
 };
 
@@ -45,12 +45,12 @@ export const PARTICIPATION: Record<Participation, { label: string; className: st
   confirmed: { label: "Yes", className: "text-emerald-300", title: "Answered Yes to the participation DM" },
   dropped: { label: "Excused", className: "text-sky-300", title: "Answered No and was excused (Minor in Casual logging — no warning)" },
   declined: { label: "No", className: "text-rose-300", title: "Answered No but can't drop out after the start (Major, or Strict logging)" },
-  no_reply: { label: "No reply", className: "text-slate-500", title: "Didn't answer the participation DM" },
+  no_reply: { label: "No reply", className: "text-ink-500", title: "Didn't answer the participation DM" },
 };
 
 export const PHASE: Record<AttendancePhase, { label: string; className: string; dot: string }> = {
   live: { label: "Live", className: "border-rose-400/50 bg-rose-500/15 text-rose-200", dot: "bg-rose-400 animate-pulse" },
-  ending: { label: "Finalizing", className: "border-amber-400/50 bg-amber-500/15 text-amber-200", dot: "bg-amber-400" },
+  ending: { label: "Finalizing", className: "border-brand-400/50 bg-brand-500/15 text-brand-200", dot: "bg-brand-400" },
   finalized: { label: "Finalized", className: "border-emerald-400/40 bg-emerald-500/10 text-emerald-200", dot: "bg-emerald-400" },
 };
 
@@ -63,7 +63,7 @@ export function outcomeOf(player: AttendancePlayer): { label: string; className:
         ? { label: "On track", className: "border-emerald-400/40 bg-emerald-500/10 text-emerald-200", title: "Seen in enough samples to count as present" }
         : { label: "Present", className: "border-emerald-400/40 bg-emerald-500/15 text-emerald-100", title: "Counted as attended" };
     case "at_risk":
-      return { label: "At risk", className: "border-amber-400/50 bg-amber-500/15 text-amber-100", title: "Not seen enough yet — the remaining samples can still count them" };
+      return { label: "At risk", className: "border-brand-400/50 bg-brand-500/15 text-brand-100", title: "Not seen enough yet — the remaining samples can still count them" };
     case "excused":
       return { label: "Excused", className: "border-sky-400/40 bg-sky-500/10 text-sky-100", title: "Not counted as attended, no warning" };
     default:

@@ -56,10 +56,10 @@ export const CATEGORY_META: Record<
   },
   Historical: {
     emoji: "🎖️",
-    dot: "bg-amber-400",
-    chip: "border-amber-400/40 bg-amber-500/15 text-amber-100",
-    ring: "ring-amber-400/60",
-    text: "text-amber-300",
+    dot: "bg-brand-400",
+    chip: "border-brand-400/40 bg-brand-500/15 text-brand-100",
+    ring: "ring-brand-400/60",
+    text: "text-brand-300",
   },
 };
 

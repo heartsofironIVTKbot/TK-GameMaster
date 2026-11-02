@@ -24,7 +24,7 @@ function Badge({ name, url, size = 22 }: { name: string; url: string | null; siz
     .join("");
   return (
     <span
-      className="flex shrink-0 items-center justify-center rounded-md bg-slate-700 font-black text-slate-200"
+      className="flex shrink-0 items-center justify-center rounded-md bg-ink-700 font-black text-ink-200"
       style={{ width: size, height: size, fontSize: size * 0.42 }}
     >
       {initials || "?"}
@@ -88,15 +88,15 @@ export default function ServerSwitcher({ host }: { host: HostProfile }) {
         aria-label={`Server: ${current.name}. Switch server`}
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
-        className="flex max-w-[200px] items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-xs font-bold text-slate-200 hover:border-amber-300/40 hover:text-white"
+        className="flex max-w-[200px] items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-xs font-bold text-ink-200 hover:border-brand-300/40 hover:text-white"
       >
         <Badge name={current.name} url={current.icon_url} />
         <span className="min-w-0 truncate">{current.name}</span>
-        <span className="text-[10px] text-slate-500">▾</span>
+        <span className="text-[10px] text-ink-500">▾</span>
       </button>
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-1 w-64 rounded-xl border border-white/15 bg-slate-900 p-1.5 shadow-2xl shadow-black/60">
-          <p className="px-2 pb-1 pt-0.5 text-[10px] font-black uppercase tracking-wider text-slate-500">Your servers</p>
+        <div className="absolute right-0 top-full z-50 mt-1 w-64 rounded-xl border border-white/15 bg-ink-900 p-1.5 shadow-2xl shadow-black/60">
+          <p className="px-2 pb-1 pt-0.5 text-[10px] font-black uppercase tracking-wider text-ink-500">Your servers</p>
           <ul role="listbox" aria-label="Servers">
             {servers.map((server) => (
               <li key={server.id}>
@@ -107,24 +107,24 @@ export default function ServerSwitcher({ host }: { host: HostProfile }) {
                   disabled={switching !== null}
                   onClick={() => void pick(server.id)}
                   className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs transition disabled:opacity-60 ${
-                    server.id === current.id ? "bg-amber-400/15 text-amber-100" : "text-slate-200 hover:bg-white/5"
+                    server.id === current.id ? "bg-brand-400/15 text-brand-100" : "text-ink-200 hover:bg-white/5"
                   }`}
                 >
                   <Badge name={server.name} url={server.icon_url} />
                   <span className="min-w-0 flex-1 truncate font-semibold">{server.name}</span>
                   {switching === server.id ? (
-                    <Spinner className="h-3 w-3 text-amber-300" />
+                    <Spinner className="h-3 w-3 text-brand-300" />
                   ) : server.id === current.id ? (
-                    <span className="text-amber-300">✓</span>
+                    <span className="text-brand-300">✓</span>
                   ) : server.is_staff ? (
-                    <span className="text-[10px] text-slate-500">staff</span>
+                    <span className="text-[10px] text-ink-500">staff</span>
                   ) : null}
                 </button>
               </li>
             ))}
           </ul>
           {error && <p className="px-2 py-1 text-[11px] text-rose-300">{error}</p>}
-          <Link href="/servers" className="mt-1 block rounded-lg px-2 py-1.5 text-[11px] font-bold text-slate-400 hover:bg-white/5 hover:text-white">
+          <Link href="/servers" className="mt-1 block rounded-lg px-2 py-1.5 text-[11px] font-bold text-ink-400 hover:bg-white/5 hover:text-white">
             ⚙️ Server settings & setup
           </Link>
         </div>

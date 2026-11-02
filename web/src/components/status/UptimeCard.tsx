@@ -11,9 +11,9 @@ import type { PublicStatus } from "@/lib/serverDashboardTypes";
 const REFRESH_MS = 60_000;
 
 export function barTone(percent: number | null): string {
-  if (percent === null) return "bg-slate-700/60";
+  if (percent === null) return "bg-ink-700/60";
   if (percent >= 99.5) return "bg-emerald-400";
-  if (percent >= 95) return "bg-amber-400";
+  if (percent >= 95) return "bg-brand-400";
   return "bg-rose-500";
 }
 
@@ -59,7 +59,7 @@ export function UptimeBars({ status }: { status: PublicStatus }) {
           />
         ))}
       </div>
-      <div className="mt-1.5 flex justify-between text-[10px] text-slate-500">
+      <div className="mt-1.5 flex justify-between text-[10px] text-ink-500">
         <span>30 days ago</span>
         <span>Today</span>
       </div>

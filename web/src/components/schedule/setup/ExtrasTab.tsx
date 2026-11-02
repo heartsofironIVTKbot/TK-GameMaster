@@ -52,7 +52,7 @@ export default function ExtrasTab({
                 aria-disabled={addOn.unavailable || undefined}
                 className={`rounded-xl border p-2.5 text-left transition ${
                   active
-                    ? "border-amber-300/80 bg-amber-400/15"
+                    ? "border-brand-300/80 bg-brand-400/15"
                     : addOn.unavailable
                       ? "border-white/5 bg-white/[0.02] opacity-50 hover:opacity-70"
                       : "border-white/10 bg-white/[0.03] hover:border-white/25"
@@ -60,37 +60,37 @@ export default function ExtrasTab({
               >
                 <span className="flex items-center gap-1.5">
                   <span className="text-base">{addOn.emoji}</span>
-                  <span className={`truncate text-[13px] font-bold ${active ? "text-amber-100" : "text-slate-100"}`}>{addOn.label}</span>
+                  <span className={`truncate text-[13px] font-bold ${active ? "text-brand-100" : "text-ink-100"}`}>{addOn.label}</span>
                 </span>
-                <span className="mt-0.5 block text-[11px] leading-snug text-slate-400">{addOn.description}</span>
+                <span className="mt-0.5 block text-[11px] leading-snug text-ink-400">{addOn.description}</span>
               </button>
             );
           })}
         </div>
         {unavailable && (
           <div
-            className="fixed inset-0 z-[2000] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm"
+            className="fixed inset-0 z-[2000] flex items-center justify-center bg-ink-950/70 p-4 backdrop-blur-sm"
             onClick={() => setUnavailable(null)}
           >
             <div
               role="alertdialog"
               aria-modal="true"
               aria-labelledby="addon-unavailable-title"
-              className="gm-fade-up w-full max-w-sm rounded-2xl border border-white/15 bg-slate-900 p-5 text-center shadow-2xl shadow-black/60"
+              className="gm-fade-up w-full max-w-sm rounded-2xl border border-white/15 bg-ink-900 p-5 text-center shadow-2xl shadow-black/60"
               onClick={(event) => event.stopPropagation()}
             >
               <p className="text-3xl">🚧</p>
               <h3 id="addon-unavailable-title" className="mt-2 text-base font-black text-white">
                 These modes are currently unavailable
               </h3>
-              <p className="mt-1.5 text-sm text-slate-300">
+              <p className="mt-1.5 text-sm text-ink-300">
                 {unavailable} can&apos;t be scheduled right now. It&apos;s coming back with the new Casino website.
               </p>
               <button
                 type="button"
                 autoFocus
                 onClick={() => setUnavailable(null)}
-                className="mt-4 rounded-lg bg-amber-400 px-4 py-2 text-sm font-black text-slate-950 hover:bg-amber-300"
+                className="mt-4 rounded-lg bg-brand-400 px-4 py-2 text-sm font-black text-ink-950 hover:bg-brand-300"
               >
                 OK
               </button>
@@ -99,7 +99,7 @@ export default function ExtrasTab({
         )}
         {form.addOn === "fortunes" && (
           <div className="gm-fade-up mt-3">
-            <p className="mb-1.5 text-[11px] font-semibold text-slate-400">Fortunes of War mode</p>
+            <p className="mb-1.5 text-[11px] font-semibold text-ink-400">Fortunes of War mode</p>
             <Segmented
               ariaLabel="Fortunes of War mode"
               value={form.fortunesMode}
@@ -123,17 +123,17 @@ export default function ExtrasTab({
                 type="button"
                 onClick={() => update({ loggingMode: mode.value })}
                 className={`flex w-full items-start gap-3 rounded-xl border p-3 text-left transition ${
-                  active ? "border-amber-300/80 bg-amber-400/15" : "border-white/10 bg-white/[0.03] hover:border-white/25"
+                  active ? "border-brand-300/80 bg-brand-400/15" : "border-white/10 bg-white/[0.03] hover:border-white/25"
                 }`}
               >
                 <span
                   className={`mt-0.5 h-4 w-4 shrink-0 rounded-full border-2 ${
-                    active ? "border-amber-300 bg-amber-400 shadow-[inset_0_0_0_3px_#0f172a]" : "border-slate-500"
+                    active ? "border-brand-300 bg-brand-400 shadow-[inset_0_0_0_3px_#0f172a]" : "border-ink-500"
                   }`}
                 />
                 <span>
-                  <span className="block text-sm font-bold text-slate-100">{mode.label}</span>
-                  <span className="block text-[11px] text-slate-400">{mode.description}</span>
+                  <span className="block text-sm font-bold text-ink-100">{mode.label}</span>
+                  <span className="block text-[11px] text-ink-400">{mode.description}</span>
                 </span>
               </button>
             );
@@ -156,17 +156,17 @@ export default function ExtrasTab({
               onChange={(event) =>
                 update({ checksum: event.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 4) })
               }
-              className="w-28 rounded-lg border border-white/10 bg-slate-950/70 px-3 py-2 text-center font-mono text-lg font-black tracking-[0.3em] text-amber-200 focus:border-amber-300/50 focus:outline-none"
+              className="w-28 rounded-lg border border-white/10 bg-ink-950/70 px-3 py-2 text-center font-mono text-lg font-black tracking-[0.3em] text-brand-200 focus:border-brand-300/50 focus:outline-none"
               aria-label="Reminder checksum (4 letters or digits)"
             />
             <button
               type="button"
               onClick={() => update({ checksum: randomChecksum() })}
-              className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-slate-300 hover:border-amber-300/40"
+              className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-ink-300 hover:border-brand-300/40"
             >
               🎲 New
             </button>
-            <span className="text-[11px] text-slate-500">4 letters or digits</span>
+            <span className="text-[11px] text-ink-500">4 letters or digits</span>
           </div>
         )}
       </SectionCard>

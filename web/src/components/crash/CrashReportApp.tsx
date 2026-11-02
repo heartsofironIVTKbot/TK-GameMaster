@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import SiteHeader from "@/components/site/SiteHeader";
 import { useEffect, useRef, useState } from "react";
 import { DiscordGlyph, GateMessage } from "@/components/schedule/HostGate";
 import { GLASS, Spinner } from "@/components/schedule/ui";
@@ -28,10 +28,8 @@ type Load =
   | { kind: "error"; message: string }
   | { kind: "ok"; data: CrashPageData };
 
-const NAV_LINK =
-  "rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-slate-300 hover:border-amber-300/40 hover:text-white";
 const FIELD =
-  "w-full rounded-lg border border-white/10 bg-slate-900/80 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-rose-300/50 focus:outline-none";
+  "w-full rounded-lg border border-white/10 bg-ink-900/80 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:border-rose-300/50 focus:outline-none";
 
 async function fetchPage(id: string): Promise<Load> {
   const response = await fetch(`/api/crash-reports?game=${encodeURIComponent(id)}`, { cache: "no-store" }).catch(() => null);
@@ -86,7 +84,7 @@ export default function CrashReportApp() {
     return (
       <main className="gm-backdrop flex min-h-screen w-full items-center justify-center p-4">
         {load.kind === "loading" ? (
-          <div className="flex items-center gap-3 text-slate-300">
+          <div className="flex items-center gap-3 text-ink-300">
             <Spinner className="h-5 w-5 text-rose-400" />
             <span className="text-sm font-semibold">Loading…</span>
           </div>
@@ -136,30 +134,13 @@ export default function CrashReportApp() {
   };
 
   return (
-    <div className="gm-backdrop min-h-screen w-full text-slate-100">
-      <header className="sticky top-0 z-[1100] border-b border-white/10 bg-slate-950/60 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-[900px] flex-wrap items-center gap-3 px-4 py-3 sm:px-6">
-          <Link href={game ? `/?game=${game.id}` : "/"} className="flex items-center gap-2.5" title="Back to the map">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-rose-400 to-orange-600 text-lg shadow-lg shadow-rose-500/30">
-              🚨
-            </span>
-            <span className="leading-tight">
-              <span className="block text-sm font-black tracking-tight text-white">Report a crash</span>
-              <span className="block text-[11px] font-semibold text-slate-400">GameMaster · {game?.name ?? "Crash logs"}</span>
-            </span>
-          </Link>
-          <nav className="ml-auto flex items-center gap-2">
-            <Link href={game ? `/?game=${game.id}` : "/"} className={NAV_LINK}>
-              🗺️ Map
-            </Link>
-          </nav>
-        </div>
-      </header>
+    <div className="gm-backdrop min-h-screen w-full text-ink-100">
+      <SiteHeader page="crash" icon="🚨" title="Report a crash" subtitle={`GameMaster · ${game?.name ?? "Crash logs"}`} gradient="from-rose-400 to-orange-600"></SiteHeader>
 
       <main className="mx-auto max-w-[900px] space-y-4 px-4 py-5 sm:px-6">
         {!game ? (
           <section className={`rounded-3xl p-5 ${GLASS}`}>
-            <p className="text-sm text-slate-300">That game wasn&apos;t found. Open this page from the link in your game DM, or from the map.</p>
+            <p className="text-sm text-ink-300">That game wasn&apos;t found. Open this page from the link in your game DM, or from the map.</p>
           </section>
         ) : (
           <>
@@ -167,21 +148,21 @@ export default function CrashReportApp() {
               <p className="text-[11px] font-black uppercase tracking-[0.18em] text-rose-300">{game.mode}</p>
               <h1 className="mt-0.5 text-xl font-black tracking-tight text-white">{game.name}</h1>
               {!open ? (
-                <p className="mt-3 rounded-xl border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
+                <p className="mt-3 rounded-xl border border-brand-400/30 bg-brand-500/10 px-3 py-2 text-sm text-brand-100">
                   {game.finished
                     ? "This game has ended — crash reports are no longer accepted for it."
                     : "This game hasn't started yet — come back if it crashes once you're playing."}
                 </p>
               ) : (
                 <>
-                  <p className="mt-2 text-sm text-slate-300">
+                  <p className="mt-2 text-sm text-ink-300">
                     Game crashed? Send your logs to the mod developers. Every accepted report earns Merit:{" "}
                     <b>+{CRASH_MERIT_VERIFIED}</b> if you&apos;re HOI4 Verified, <b>+{CRASH_MERIT_UNVERIFIED}</b> otherwise (one reward
                     every 6 hours).
                   </p>
-                  <ol className="mt-3 list-decimal space-y-1 pl-5 text-[13px] text-slate-300">
+                  <ol className="mt-3 list-decimal space-y-1 pl-5 text-[13px] text-ink-300">
                     <li>
-                      Open <code className="rounded bg-slate-900/80 px-1">Documents\Paradox Interactive\Hearts of Iron IV</code>.
+                      Open <code className="rounded bg-ink-900/80 px-1">Documents\Paradox Interactive\Hearts of Iron IV</code>.
                     </li>
                     <li>
                       Right-click the <b>logs</b> folder → <b>Compress to ZIP file</b> (or <b>Send to → Compressed (zipped) folder</b>).
@@ -191,7 +172,7 @@ export default function CrashReportApp() {
 
                   <div className="mt-4 space-y-3">
                     <label className="block">
-                      <span className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-slate-400">What happened right before the crash?</span>
+                      <span className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-ink-400">What happened right before the crash?</span>
                       <textarea
                         value={whatHappened}
                         onChange={(event) => setWhatHappened(event.target.value.slice(0, CRASH_TEXT_MAX))}
@@ -201,7 +182,7 @@ export default function CrashReportApp() {
                       />
                     </label>
                     <label className="block">
-                      <span className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-slate-400">Anything else? (optional)</span>
+                      <span className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-ink-400">Anything else? (optional)</span>
                       <textarea
                         value={notes}
                         onChange={(event) => setNotes(event.target.value.slice(0, CRASH_NOTES_MAX))}
@@ -210,7 +191,7 @@ export default function CrashReportApp() {
                       />
                     </label>
                     <div className="flex flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-xs">
-                      <span className="min-w-0 flex-1 text-slate-300">
+                      <span className="min-w-0 flex-1 text-ink-300">
                         {file ? (
                           <>
                             📦 <b>{file.name}</b> · {size(file.size)}
@@ -231,7 +212,7 @@ export default function CrashReportApp() {
                         type="button"
                         disabled={request.busy}
                         onClick={() => fileRef.current?.click()}
-                        className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs font-bold text-slate-200 hover:border-rose-300/40 hover:text-white disabled:opacity-50"
+                        className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs font-bold text-ink-200 hover:border-rose-300/40 hover:text-white disabled:opacity-50"
                       >
                         📁 {file ? "Pick another" : "Pick the .zip"}
                       </button>
@@ -241,7 +222,7 @@ export default function CrashReportApp() {
                       type="button"
                       disabled={!file || !whatHappened.trim() || request.busy}
                       onClick={send}
-                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-rose-400 px-4 py-2.5 text-sm font-black text-slate-950 hover:bg-rose-300 disabled:cursor-not-allowed disabled:opacity-40"
+                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-rose-400 px-4 py-2.5 text-sm font-black text-ink-950 hover:bg-rose-300 disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       {request.busy && <Spinner className="h-4 w-4" />}
                       {request.state.phase === "sending" ? "Uploading…" : request.busy ? "The bot is checking your logs…" : "🚨 Send to the developers"}
@@ -274,23 +255,23 @@ export default function CrashReportApp() {
 function MyReports({ reports }: { reports: CrashReportView[] }) {
   return (
     <section className={`rounded-2xl p-4 ${GLASS}`}>
-      <h2 className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Your reports for this game</h2>
+      <h2 className="text-[11px] font-black uppercase tracking-[0.18em] text-ink-400">Your reports for this game</h2>
       <ul className="mt-2 space-y-1.5">
         {reports.map((report) => (
-          <li key={report.id} className="rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2 text-xs">
+          <li key={report.id} className="rounded-xl border border-white/10 bg-ink-950/40 px-3 py-2 text-xs">
             <div className="flex items-center gap-2">
-              <span className="min-w-0 flex-1 truncate font-bold text-slate-100">
-                {report.filename} <span className="font-normal text-slate-500">· {size(report.bytes)}</span>
+              <span className="min-w-0 flex-1 truncate font-bold text-ink-100">
+                {report.filename} <span className="font-normal text-ink-500">· {size(report.bytes)}</span>
               </span>
               <span
                 className={`shrink-0 font-black ${
-                  report.status === "delivered" ? "text-emerald-300" : report.status === "rejected" ? "text-rose-300" : "text-amber-300"
+                  report.status === "delivered" ? "text-emerald-300" : report.status === "rejected" ? "text-rose-300" : "text-brand-300"
                 }`}
               >
                 {report.status === "delivered" ? "Delivered" : report.status === "rejected" ? "Not accepted" : "Being checked"}
               </span>
             </div>
-            <p className="mt-0.5 text-[11px] text-slate-400">
+            <p className="mt-0.5 text-[11px] text-ink-400">
               {new Date(report.created_at * 1000).toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
               {report.note ? ` · ${report.note.replace(/^❌\s*/, "")}` : ""}
             </p>

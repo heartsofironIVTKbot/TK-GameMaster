@@ -9,8 +9,8 @@ export default function PlayerHistory({ playerId }: { playerId: string }) {
   return (
     <section data-tour="database.history" className={`min-w-0 space-y-3 rounded-3xl p-4 sm:p-5 ${GLASS}`}>
       <div className="flex items-center justify-between">
-        <h2 className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">📜 History</h2>
-        <a href={`/audit?player=${playerId}`} className="text-[11px] font-bold text-amber-300 hover:underline">
+        <h2 className="text-[11px] font-black uppercase tracking-[0.18em] text-ink-400">📜 History</h2>
+        <a href={`/audit?player=${playerId}`} className="text-[11px] font-bold text-brand-300 hover:underline">
           Open in the Audit log →
         </a>
       </div>

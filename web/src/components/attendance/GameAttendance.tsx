@@ -137,7 +137,7 @@ export default function GameAttendance({
         {state?.error ? (
           <p className="rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">{state.error}</p>
         ) : (
-          <div className="flex items-center gap-2 text-sm text-slate-400">
+          <div className="flex items-center gap-2 text-sm text-ink-400">
             <Spinner className="h-4 w-4 text-emerald-300" /> Loading attendance…
           </div>
         )}
@@ -165,7 +165,7 @@ export default function GameAttendance({
             <button
               type="button"
               onClick={onBack}
-              className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs font-bold text-slate-300 hover:text-white lg:hidden"
+              className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs font-bold text-ink-300 hover:text-white lg:hidden"
             >
               ← Games
             </button>
@@ -177,15 +177,15 @@ export default function GameAttendance({
                 <span className={`h-2 w-2 rounded-full ${phase.dot}`} />
                 {phase.label}
               </span>
-              {state?.key !== key && <Spinner className="h-3.5 w-3.5 text-slate-400" />}
+              {state?.key !== key && <Spinner className="h-3.5 w-3.5 text-ink-400" />}
             </div>
-            <p className="mt-1 text-sm text-slate-400">
-              {game.mode} · hosted by <span className="font-semibold text-slate-200">{game.host_name ?? "unknown"}</span> ·{" "}
+            <p className="mt-1 text-sm text-ink-400">
+              {game.mode} · hosted by <span className="font-semibold text-ink-200">{game.host_name ?? "unknown"}</span> ·{" "}
               {game.logging_mode} logging
               {game.started_at && <> · started {dateTime(game.started_at)}</>}
             </p>
             {finalized && game.finalized_at && (
-              <p className="mt-0.5 text-xs text-slate-500">
+              <p className="mt-0.5 text-xs text-ink-500">
                 Finalized {dateTime(game.finalized_at)} {game.finalized_by ? `· ${game.finalized_by === "Automatic" ? "automatically" : `by ${game.finalized_by}`}` : ""}
                 {game.early_ended && " · game ended before all samples"}
                 {!game.confident && " · low confidence (too few samples — only host-marked absences were warned)"}
@@ -195,7 +195,7 @@ export default function GameAttendance({
           <div className="ml-auto flex gap-2 sm:ml-0">
             <Link
               href={`/games?game=${game.id}`}
-              className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-slate-300 hover:border-amber-300/40 hover:text-white"
+              className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-ink-300 hover:border-brand-300/40 hover:text-white"
               title="Start, end or cancel this game"
             >
               🎮 Game controls
@@ -203,7 +203,7 @@ export default function GameAttendance({
             <button
               type="button"
               onClick={() => exportCsv(game)}
-              className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-slate-300 hover:border-emerald-300/40 hover:text-white"
+              className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-ink-300 hover:border-emerald-300/40 hover:text-white"
               title="Download the roster with every sample as a spreadsheet (CSV)"
             >
               ⤓ Export CSV
@@ -211,7 +211,7 @@ export default function GameAttendance({
             <button
               type="button"
               onClick={refresh}
-              className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-slate-300 hover:border-emerald-300/40 hover:text-white"
+              className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-ink-300 hover:border-emerald-300/40 hover:text-white"
             >
               ↻ Refresh
             </button>
@@ -219,7 +219,7 @@ export default function GameAttendance({
         </div>
 
         {state?.error && (
-          <p className="mt-3 rounded-lg border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">{state.error}</p>
+          <p className="mt-3 rounded-lg border border-brand-400/30 bg-brand-500/10 px-3 py-2 text-xs text-brand-100">{state.error}</p>
         )}
 
         <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
@@ -240,9 +240,9 @@ export default function GameAttendance({
       <section data-tour="attendance.samples" className={`grid gap-5 rounded-3xl p-4 sm:p-6 xl:grid-cols-[minmax(0,1fr)_320px] ${GLASS}`}>
         <div className="min-w-0">
           <p className="text-[11px] font-black uppercase tracking-[0.18em] text-emerald-300">Voice samples</p>
-          <p className="mt-1 text-sm text-slate-400">
-            The bot checks voice every <b className="text-slate-200">{game.interval_minutes} min</b>. Seen in{" "}
-            <b className="text-slate-200">
+          <p className="mt-1 text-sm text-ink-400">
+            The bot checks voice every <b className="text-ink-200">{game.interval_minutes} min</b>. Seen in{" "}
+            <b className="text-ink-200">
               {game.required} of {game.sample_count}
             </b>{" "}
             samples (in a game VC with the Gamer Pass) = present. VIPs never get no-show warnings.
@@ -251,7 +251,7 @@ export default function GameAttendance({
         </div>
 
         <div className="space-y-2">
-          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Host actions</p>
+          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-ink-400">Host actions</p>
           {!finalized && (
             <ActionButton
               icon="🎧"
@@ -272,8 +272,8 @@ export default function GameAttendance({
           )}
           {game.can_edit && !finalized && (
             <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
-              <p className="mb-2 text-[11px] leading-snug text-slate-400">
-                <b className="text-slate-200">Finalize now</b> — stop sampling and give no-show warnings from the{" "}
+              <p className="mb-2 text-[11px] leading-snug text-ink-400">
+                <b className="text-ink-200">Finalize now</b> — stop sampling and give no-show warnings from the{" "}
                 {plural(game.samples_done, "sample")} taken. Use it when the game ended early.
               </p>
               <SubmitButton
@@ -284,18 +284,18 @@ export default function GameAttendance({
                 onConfirm={() => send("att_finalize")}
               />
               {game.samples_done < game.required && (
-                <p className="mt-1.5 text-[11px] text-slate-500">Needs at least {game.required} samples (or end the game on the Games page).</p>
+                <p className="mt-1.5 text-[11px] text-ink-500">Needs at least {game.required} samples (or end the game on the Games page).</p>
               )}
             </div>
           )}
           {finalized && game.can_edit && (
-            <p className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-[11px] leading-snug text-slate-400">
-              Attendance is final. Use <b className="text-slate-200">Change</b> on a player to correct it — warnings,
+            <p className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-[11px] leading-snug text-ink-400">
+              Attendance is final. Use <b className="text-ink-200">Change</b> on a player to correct it — warnings,
               attended games and bans are adjusted and the player is DMed.
             </p>
           )}
           {!game.can_edit && (
-            <p className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-[11px] leading-snug text-slate-400">
+            <p className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-[11px] leading-snug text-ink-400">
               Only {game.host_name ?? "the game's host"} or staff can change this game&apos;s attendance. You can follow it and
               run voice checks.
             </p>
@@ -309,7 +309,7 @@ export default function GameAttendance({
         <div className="flex flex-wrap items-center gap-2">
           <p className="mr-auto text-[11px] font-black uppercase tracking-[0.18em] text-emerald-300">Roster</p>
           {game.live_check && (
-            <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] text-slate-300">
+            <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] text-ink-300">
               🎧 Voice check {formatRelative(Math.min(game.live_check.ts * 1000, now), now)}
               {game.live_check.by_name ? ` by ${game.live_check.by_name}` : ""}:{" "}
               <b className="text-white">
@@ -329,12 +329,12 @@ export default function GameAttendance({
                 onClick={() => setFilter(option.value)}
                 className={`rounded-lg border px-2 py-1 text-[11px] font-bold transition ${
                   active
-                    ? "border-emerald-300 bg-emerald-400 text-slate-950"
-                    : "border-white/10 bg-white/[0.03] text-slate-300 hover:border-white/25 hover:text-white"
+                    ? "border-emerald-300 bg-emerald-400 text-ink-950"
+                    : "border-white/10 bg-white/[0.03] text-ink-300 hover:border-white/25 hover:text-white"
                 }`}
               >
                 {option.label}
-                <span className={active ? "ml-1 opacity-70" : "ml-1 text-slate-500"}>{counts[option.value]}</span>
+                <span className={active ? "ml-1 opacity-70" : "ml-1 text-ink-500"}>{counts[option.value]}</span>
               </button>
             );
           })}
@@ -343,14 +343,14 @@ export default function GameAttendance({
             onChange={(event) => setSearch(event.target.value.slice(0, 64))}
             placeholder="Find player or nation"
             aria-label="Find a player or nation"
-            className="ml-auto w-full rounded-lg border border-white/10 bg-slate-950/70 px-3 py-1.5 text-xs text-white placeholder:text-slate-500 focus:border-emerald-300/60 focus:outline-none sm:w-56"
+            className="ml-auto w-full rounded-lg border border-white/10 bg-ink-950/70 px-3 py-1.5 text-xs text-white placeholder:text-ink-500 focus:border-emerald-300/60 focus:outline-none sm:w-56"
           />
         </div>
 
         <div className="roster-scroll -mx-4 mt-3 overflow-x-auto px-4 sm:-mx-6 sm:px-6">
           <table className="w-full min-w-[900px] text-left text-sm">
             <thead>
-              <tr className="border-b border-white/10 text-[10px] font-black uppercase tracking-wider text-slate-500">
+              <tr className="border-b border-white/10 text-[10px] font-black uppercase tracking-wider text-ink-500">
                 <th className="py-2 pr-3">Player</th>
                 <th className="py-2 pr-3">Nation</th>
                 <th className="py-2 pr-3" title="Reply to the participation DM">
@@ -378,7 +378,7 @@ export default function GameAttendance({
               ))}
             </tbody>
           </table>
-          {shown.length === 0 && <p className="py-8 text-center text-xs text-slate-500">No players match.</p>}
+          {shown.length === 0 && <p className="py-8 text-center text-xs text-ink-500">No players match.</p>}
         </div>
         <Legend />
       </section>
@@ -401,7 +401,7 @@ export default function GameAttendance({
         />
       )}
       {host.demo && (
-        <p className="text-center text-[11px] text-slate-500">
+        <p className="text-center text-[11px] text-ink-500">
           Preview mode: the bot is simulated — voice checks and samples use made-up voice states.
         </p>
       )}
@@ -411,18 +411,18 @@ export default function GameAttendance({
 
 const TONES = {
   emerald: "text-emerald-300",
-  amber: "text-amber-300",
+  amber: "text-brand-300",
   rose: "text-rose-300",
   sky: "text-sky-300",
-  slate: "text-slate-200",
+  slate: "text-ink-200",
 } as const;
 
 function Stat({ label, value, tone, hint }: { label: string; value: string; tone: keyof typeof TONES; hint?: string }) {
   return (
     <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
-      <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">{label}</p>
+      <p className="text-[10px] font-black uppercase tracking-wider text-ink-500">{label}</p>
       <p className={`mt-0.5 text-2xl font-black ${TONES[tone]}`}>{value}</p>
-      {hint && <p className="text-[10px] text-slate-500">{hint}</p>}
+      {hint && <p className="text-[10px] text-ink-500">{hint}</p>}
     </div>
   );
 }
@@ -450,7 +450,7 @@ function ActionButton({
       <span className="text-lg">{icon}</span>
       <span>
         <span className="block text-sm font-black text-white">{label}</span>
-        <span className="block text-[11px] leading-snug text-slate-400">{text}</span>
+        <span className="block text-[11px] leading-snug text-ink-400">{text}</span>
       </span>
     </button>
   );
@@ -459,7 +459,7 @@ function ActionButton({
 function Countdown({ at }: { at: number }) {
   const now = useNow(1000);
   const left = Math.round(at - now / 1000);
-  if (left <= 0) return <span className="font-black text-amber-200">due now</span>;
+  if (left <= 0) return <span className="font-black text-brand-200">due now</span>;
   const minutes = Math.floor(left / 60);
   const seconds = left % 60;
   return (
@@ -482,11 +482,11 @@ function SampleTrack({ game }: { game: AttendanceGame }) {
               <p className="text-[10px] font-black uppercase tracking-wider text-emerald-300">Sample {sample.index}</p>
               <p className="mt-0.5 text-lg font-black text-white">
                 {sample.count}
-                <span className="text-xs font-semibold text-slate-400"> in voice</span>
+                <span className="text-xs font-semibold text-ink-400"> in voice</span>
               </p>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[11px] text-ink-400">
                 {clockTime(sample.ts)}
-                {sample.manual && <span className="text-amber-200"> · early{sample.by_name ? ` by ${sample.by_name}` : ""}</span>}
+                {sample.manual && <span className="text-brand-200"> · early{sample.by_name ? ` by ${sample.by_name}` : ""}</span>}
                 {sample.final_bonus && <span className="text-sky-200"> · end scan</span>}
               </p>
             </li>
@@ -494,19 +494,19 @@ function SampleTrack({ game }: { game: AttendanceGame }) {
         }
         if (isNext && game.next_sample_at) {
           return (
-            <li key={index} className="rounded-xl border border-dashed border-amber-300/50 bg-amber-400/5 px-3 py-2.5">
-              <p className="text-[10px] font-black uppercase tracking-wider text-amber-300">Sample {index + 1} · next</p>
+            <li key={index} className="rounded-xl border border-dashed border-brand-300/50 bg-brand-400/5 px-3 py-2.5">
+              <p className="text-[10px] font-black uppercase tracking-wider text-brand-300">Sample {index + 1} · next</p>
               <p className="mt-0.5 text-sm">
                 <Countdown at={game.next_sample_at} />
               </p>
-              <p className="text-[11px] text-slate-400">at {clockTime(game.next_sample_at)}</p>
+              <p className="text-[11px] text-ink-400">at {clockTime(game.next_sample_at)}</p>
             </li>
           );
         }
         const eta =
           game.next_sample_at && !finalized ? game.next_sample_at + (index - game.samples.length) * game.interval_minutes * 60 : null;
         return (
-          <li key={index} className="rounded-xl border border-dashed border-white/10 px-3 py-2.5 text-slate-500">
+          <li key={index} className="rounded-xl border border-dashed border-white/10 px-3 py-2.5 text-ink-500">
             <p className="text-[10px] font-black uppercase tracking-wider">Sample {index + 1}</p>
             <p className="mt-0.5 text-sm font-semibold">
               {finalized ? "Not taken" : game.phase === "ending" ? "Skipped" : eta ? `~${clockTime(eta)}` : "Pending"}
@@ -561,7 +561,7 @@ function RosterRow({
   const reply = PARTICIPATION[player.participation];
   const enough = player.hits >= game.required;
   return (
-    <tr className={needsReview(player) ? "bg-amber-400/[0.04]" : undefined}>
+    <tr className={needsReview(player) ? "bg-brand-400/[0.04]" : undefined}>
       <td className="py-2.5 pr-3">
         <span className="flex items-center gap-2.5">
           <Avatar url={player.avatar_url} name={player.name} size={32} />
@@ -580,23 +580,23 @@ function RosterRow({
               )}
               {player.chatlog_hint && (
                 <span
-                  className="rounded bg-amber-500/20 px-1 text-[9px] font-black uppercase text-amber-200"
+                  className="rounded bg-brand-500/20 px-1 text-[9px] font-black uppercase text-brand-200"
                   title={`The game's chat log shows the ${player.chatlog_hint.tag} tag (${player.chatlog_hint.nation}) — they may have played without being in voice`}
                 >
                   Chat log: {player.chatlog_hint.tag}
                 </span>
               )}
             </span>
-            {player.username && <span className="block truncate text-[11px] text-slate-500">@{player.username}</span>}
+            {player.username && <span className="block truncate text-[11px] text-ink-500">@{player.username}</span>}
           </span>
         </span>
       </td>
-      <td className="py-2.5 pr-3 text-slate-200">
+      <td className="py-2.5 pr-3 text-ink-200">
         {player.slots.map((slot) => (
           <span key={slot.key} className="block whitespace-nowrap">
             {slot.label}
             {slot.penalty > 1 && (
-              <span className="ml-1 text-[10px] font-bold text-slate-500" title={`A no-show here gives ${slot.penalty} warnings (Major)`}>
+              <span className="ml-1 text-[10px] font-bold text-ink-500" title={`A no-show here gives ${slot.penalty} warnings (Major)`}>
                 ×{slot.penalty}
               </span>
             )}
@@ -605,22 +605,22 @@ function RosterRow({
       </td>
       <td className={`py-2.5 pr-3 text-xs font-semibold ${reply.className}`} title={player.drop_reason ? `${reply.title}: “${player.drop_reason}”` : reply.title}>
         {reply.label}
-        {player.drop_reason && <span className="ml-1 cursor-help text-slate-500">💬</span>}
+        {player.drop_reason && <span className="ml-1 cursor-help text-ink-500">💬</span>}
       </td>
       <td className="py-2.5 pr-3">
         <SampleDots player={player} game={game} />
       </td>
-      <td className={`py-2.5 pr-3 text-xs font-black tabular-nums ${enough ? "text-emerald-300" : "text-slate-400"}`}>
+      <td className={`py-2.5 pr-3 text-xs font-black tabular-nums ${enough ? "text-emerald-300" : "text-ink-400"}`}>
         {player.hits}/{game.samples.length || game.sample_count}
       </td>
       <td className="py-2.5 pr-3 text-xs">
         {player.live ? (
           <span className={VOICE_TEXT[player.live.state]} title={VOICE_LABEL[player.live.state]}>
             {VOICE_SHORT[player.live.state]}
-            {player.live.vc && player.live.state === "no_pass" && <span className="text-slate-500"> · {player.live.vc}</span>}
+            {player.live.vc && player.live.state === "no_pass" && <span className="text-ink-500"> · {player.live.vc}</span>}
           </span>
         ) : (
-          <span className="text-slate-600">—</span>
+          <span className="text-ink-600">—</span>
         )}
       </td>
       <td className="py-2.5 pr-3">
@@ -629,7 +629,7 @@ function RosterRow({
         </span>
         {player.override && (
           <span
-            className="mt-1 block text-[10px] text-slate-400"
+            className="mt-1 block text-[10px] text-ink-400"
             title={`“${player.override.reason}”${player.override.by_name ? ` — ${player.override.by_name}` : ""}`}
           >
             ✎ set by {player.override.by_name ?? "a host"}
@@ -640,13 +640,13 @@ function RosterRow({
         {player.warnings_applied > 0 ? (
           <span className="font-black text-rose-300">+{player.warnings_applied}</span>
         ) : player.vip ? (
-          <span className="text-slate-500">VIP</span>
+          <span className="text-ink-500">VIP</span>
         ) : game.phase !== "finalized" && player.verdict === "absent" && player.penalty > 0 ? (
-          <span className="text-slate-400" title="What they'd get if they stay absent">
+          <span className="text-ink-400" title="What they'd get if they stay absent">
             +{player.penalty} if absent
           </span>
         ) : (
-          <span className="text-slate-600">—</span>
+          <span className="text-ink-600">—</span>
         )}
       </td>
       {game.can_edit && (
@@ -655,7 +655,7 @@ function RosterRow({
             type="button"
             disabled={busy}
             onClick={onEdit}
-            className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-bold text-slate-200 hover:border-emerald-300/50 hover:text-white disabled:opacity-40"
+            className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-bold text-ink-200 hover:border-emerald-300/50 hover:text-white disabled:opacity-40"
           >
             Change
           </button>
@@ -668,7 +668,7 @@ function RosterRow({
 function Legend() {
   const states: VoiceState[] = ["present", "lobby", "no_pass", "no_voice", "unknown", "dropped"];
   return (
-    <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-white/5 pt-3 text-[11px] text-slate-500">
+    <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-white/5 pt-3 text-[11px] text-ink-500">
       {states.map((state) => (
         <span key={state} className="flex items-center gap-1.5">
           <span className={`h-2.5 w-2.5 rounded-full border ${VOICE_DOT[state]}`} />
@@ -693,7 +693,7 @@ function RequestBanner({
   if (state.phase === "idle") return null;
   if (state.phase === "sending" || state.phase === "waiting") {
     return (
-      <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-xs text-slate-300">
+      <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-xs text-ink-300">
         <Spinner className="h-4 w-4 text-emerald-300" />
         {state.phase === "sending" ? "Sending…" : "The bot is on it (scanning voice / applying)…"}
       </div>

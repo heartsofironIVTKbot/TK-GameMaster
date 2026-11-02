@@ -201,7 +201,7 @@ export default function HostLockMap({
   }
   if (!current) {
     return (
-      <div className="flex h-full w-full items-center justify-center bg-[#16283b] text-sm text-slate-400">
+      <div className="flex h-full w-full items-center justify-center bg-[#16283b] text-sm text-ink-400">
         Loading map…
       </div>
     );

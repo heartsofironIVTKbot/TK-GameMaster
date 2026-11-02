@@ -47,16 +47,16 @@ export default function SubmitOverlay({
   ];
 
   return (
-    <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-ink-950/70 p-4 backdrop-blur-sm">
       <div className={`gm-fade-up w-full max-w-md rounded-3xl p-6 ${GLASS}`}>
         {state === "done" ? (
           <div className="text-center">
             <div className="text-5xl">{editing ? "✅" : "🎉"}</div>
             <h2 className="mt-3 text-2xl font-black text-white">{editing ? "Changes saved!" : "Game scheduled!"}</h2>
-            <p className="mt-1 text-sm text-slate-300">
+            <p className="mt-1 text-sm text-ink-300">
               {modeLabel} · {formatInZone(gameSec * 1000, timeZone)}
             </p>
-            <p className="mt-3 text-xs text-slate-400">
+            <p className="mt-3 text-xs text-ink-400">
               {demo
                 ? "Preview mode — nothing was sent to Discord."
                 : editing
@@ -80,15 +80,15 @@ export default function SubmitOverlay({
                       step.state === "done"
                         ? "border-emerald-400/60 bg-emerald-500/20 text-emerald-200"
                         : step.state === "active"
-                          ? "border-amber-300/60 bg-amber-400/15 text-amber-200"
+                          ? "border-brand-300/60 bg-brand-400/15 text-brand-200"
                           : step.state === "error"
                             ? "border-rose-400/60 bg-rose-500/20 text-rose-200"
-                            : "border-white/10 text-slate-600"
+                            : "border-white/10 text-ink-600"
                     }`}
                   >
                     {step.state === "done" ? "✓" : step.state === "active" ? <Spinner className="h-3.5 w-3.5" /> : step.state === "error" ? "✕" : "·"}
                   </span>
-                  <span className={step.state === "todo" ? "text-slate-500" : "text-slate-100"}>{step.label}</span>
+                  <span className={step.state === "todo" ? "text-ink-500" : "text-ink-100"}>{step.label}</span>
                 </li>
               ))}
             </ol>
@@ -98,7 +98,7 @@ export default function SubmitOverlay({
               </p>
             )}
             {state === "pending" && waitedSec >= 25 && (
-              <p className="mt-4 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-slate-300">
+              <p className="mt-4 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-ink-300">
                 The bot normally answers within a few seconds — it may be restarting. Your request is saved and will be
                 processed as soon as it&apos;s back; you can leave this page and check the calendar later.
               </p>
@@ -112,7 +112,7 @@ export default function SubmitOverlay({
               href={panelUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded-xl bg-amber-400 px-4 py-3 text-center text-sm font-black text-slate-950 hover:bg-amber-300"
+              className="rounded-xl bg-brand-400 px-4 py-3 text-center text-sm font-black text-ink-950 hover:bg-brand-300"
             >
               ⚙️ Open Host Scheduling Panel
             </a>
@@ -121,7 +121,7 @@ export default function SubmitOverlay({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl bg-amber-400 px-4 py-3 text-sm font-black text-slate-950 hover:bg-amber-300"
+              className="rounded-xl bg-brand-400 px-4 py-3 text-sm font-black text-ink-950 hover:bg-brand-300"
             >
               Fix and try again
             </button>
@@ -130,8 +130,8 @@ export default function SubmitOverlay({
               href="/schedule"
               className={`rounded-xl px-4 py-3 text-center text-sm font-bold ${
                 state === "done" && !panelUrl
-                  ? "bg-amber-400 text-slate-950 hover:bg-amber-300"
-                  : "border border-white/10 bg-white/5 text-slate-200 hover:border-white/25"
+                  ? "bg-brand-400 text-ink-950 hover:bg-brand-300"
+                  : "border border-white/10 bg-white/5 text-ink-200 hover:border-white/25"
               }`}
             >
               Back to the calendar
@@ -141,7 +141,7 @@ export default function SubmitOverlay({
             <button
               type="button"
               onClick={onScheduleAnother}
-              className="text-xs font-semibold text-slate-400 hover:text-amber-200"
+              className="text-xs font-semibold text-ink-400 hover:text-brand-200"
             >
               Schedule another game
             </button>

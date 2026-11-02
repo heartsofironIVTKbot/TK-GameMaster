@@ -399,20 +399,20 @@ export default function TutorialOverlay({
         aria-modal="false"
         aria-labelledby="gm-tour-title"
         aria-describedby="gm-tour-body"
-        className={`gm-tour-card pointer-events-auto fixed rounded-2xl border border-amber-300/25 bg-slate-900/95 p-4 text-slate-300 shadow-2xl shadow-black/60 backdrop-blur-xl ${
+        className={`gm-tour-card pointer-events-auto fixed rounded-2xl border border-brand-300/25 bg-ink-900/95 p-4 text-ink-300 shadow-2xl shadow-black/60 backdrop-blur-xl ${
           sheet ? "bottom-3 left-3 right-3" : "w-[360px]"
         } ${searching ? "invisible" : ""}`}
         style={sheet ? undefined : { top: position.top, left: position.left }}
       >
         <div className="flex items-center gap-2">
-          <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-amber-300/90">🎓 {tour.title}</span>
-          <span className="ml-auto text-[11px] font-semibold tabular-nums text-slate-500">
+          <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-300/90">🎓 {tour.title}</span>
+          <span className="ml-auto text-[11px] font-semibold tabular-nums text-ink-500">
             {number} / {total}
           </span>
           <button
             type="button"
             onClick={onClose}
-            className="-mr-1 rounded-md px-1.5 py-0.5 text-sm text-slate-500 transition hover:bg-white/5 hover:text-white"
+            className="-mr-1 rounded-md px-1.5 py-0.5 text-sm text-ink-500 transition hover:bg-white/5 hover:text-white"
             aria-label="Close the tour"
             title="Close the tour (Esc)"
           >
@@ -421,7 +421,7 @@ export default function TutorialOverlay({
         </div>
         <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/5" aria-hidden>
           <div
-            className="h-full rounded-full bg-gradient-to-r from-amber-300 to-orange-500 transition-[width] duration-300"
+            className="h-full rounded-full bg-gradient-to-r from-brand-300 to-orange-500 transition-[width] duration-300"
             style={{ width: `${(number / Math.max(1, total)) * 100}%` }}
           />
         </div>
@@ -438,7 +438,7 @@ export default function TutorialOverlay({
             className={`mt-3 flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold ${
               waitState === "done"
                 ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-200"
-                : "border-amber-300/30 bg-amber-400/10 text-amber-100"
+                : "border-brand-300/30 bg-brand-400/10 text-brand-100"
             }`}
             aria-live="polite"
           >
@@ -451,7 +451,7 @@ export default function TutorialOverlay({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg px-2 py-1.5 text-xs font-semibold text-slate-500 transition hover:text-slate-200"
+              className="rounded-lg px-2 py-1.5 text-xs font-semibold text-ink-500 transition hover:text-ink-200"
             >
               Skip tour
             </button>
@@ -461,7 +461,7 @@ export default function TutorialOverlay({
               <button
                 type="button"
                 onClick={back}
-                className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-slate-200 transition hover:border-white/20"
+                className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-ink-200 transition hover:border-white/20"
               >
                 ← Back
               </button>
@@ -470,7 +470,7 @@ export default function TutorialOverlay({
               ref={nextButton}
               type="button"
               onClick={next}
-              className="rounded-lg bg-amber-400 px-3.5 py-1.5 text-xs font-black text-slate-950 shadow-lg shadow-amber-500/20 transition hover:bg-amber-300"
+              className="rounded-lg bg-brand-400 px-3.5 py-1.5 text-xs font-black text-ink-950 shadow-lg shadow-brand-500/20 transition hover:bg-brand-300"
             >
               {last ? (tour.next ? `${tour.next.label} →` : "Finish ✓") : waitState === "waiting" ? "Skip this →" : "Next →"}
             </button>
@@ -480,7 +480,7 @@ export default function TutorialOverlay({
           <button
             type="button"
             onClick={onTurnOff}
-            className="mt-3 w-full text-center text-[11px] font-semibold text-slate-500 underline-offset-2 transition hover:text-slate-300 hover:underline"
+            className="mt-3 w-full text-center text-[11px] font-semibold text-ink-500 underline-offset-2 transition hover:text-ink-300 hover:underline"
           >
             I know my way around: turn tutorials off
           </button>

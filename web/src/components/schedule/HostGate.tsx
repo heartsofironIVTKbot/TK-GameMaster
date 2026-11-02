@@ -56,8 +56,8 @@ export default function HostGate({
     );
   } else if (!status) {
     body = (
-      <div className="flex items-center gap-3 text-slate-300">
-        <Spinner className="h-5 w-5 text-amber-400" />
+      <div className="flex items-center gap-3 text-ink-300">
+        <Spinner className="h-5 w-5 text-brand-400" />
         <span className="text-sm font-semibold">Checking your host access…</span>
       </div>
     );
@@ -107,10 +107,10 @@ export function GateMessage({
     <div className={`gm-fade-up w-full max-w-md rounded-3xl p-8 text-center ${GLASS}`}>
       <div className="text-5xl">{icon}</div>
       <h1 className="mt-4 text-2xl font-black tracking-tight text-white">{title}</h1>
-      <p className="mt-2 text-sm leading-relaxed text-slate-400">{text}</p>
+      <p className="mt-2 text-sm leading-relaxed text-ink-400">{text}</p>
       {children}
       <div className="mt-6">
-        <Link href="/" className="text-xs font-semibold text-slate-500 hover:text-amber-300">
+        <Link href="/" className="text-xs font-semibold text-ink-500 hover:text-brand-300">
           ← Back to the map
         </Link>
       </div>

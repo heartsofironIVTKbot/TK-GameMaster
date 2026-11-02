@@ -1,5 +1,6 @@
 "use client";
 
+import { MenuButton } from "@/components/site/SiteMenu";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -46,7 +47,7 @@ import { submitScheduleRequest } from "./useRequestPoller";
 const HostLockMap = dynamic(() => import("./HostLockMap"), {
   ssr: false,
   loading: () => (
-    <div className="flex h-full w-full items-center justify-center bg-[#16283b] text-sm text-slate-400">
+    <div className="flex h-full w-full items-center justify-center bg-[#16283b] text-sm text-ink-400">
       Loading map…
     </div>
   ),
@@ -387,19 +388,19 @@ export default function GameSetupApp({
 
   if (editLoad.state !== "ready") {
     return (
-      <main className="gm-backdrop flex min-h-screen w-full items-center justify-center p-4 text-slate-100">
+      <main className="gm-backdrop flex min-h-screen w-full items-center justify-center p-4 text-ink-100">
         {editLoad.state === "loading" ? (
-          <p className="flex items-center gap-3 text-sm font-semibold text-slate-300">
-            <Spinner className="h-5 w-5 text-amber-400" /> Loading the game…
+          <p className="flex items-center gap-3 text-sm font-semibold text-ink-300">
+            <Spinner className="h-5 w-5 text-brand-400" /> Loading the game…
           </p>
         ) : (
           <div className={`gm-fade-up w-full max-w-md rounded-3xl p-8 text-center ${GLASS}`}>
             <div className="text-5xl">🔒</div>
             <h1 className="mt-4 text-xl font-black text-white">Can&apos;t edit this game</h1>
-            <p className="mt-2 text-sm text-slate-400">{editLoad.message}</p>
+            <p className="mt-2 text-sm text-ink-400">{editLoad.message}</p>
             <Link
               href="/schedule"
-              className="mt-6 inline-block rounded-xl bg-amber-400 px-5 py-2.5 text-sm font-black text-slate-950"
+              className="mt-6 inline-block rounded-xl bg-brand-400 px-5 py-2.5 text-sm font-black text-ink-950"
             >
               Back to the calendar
             </Link>
@@ -410,7 +411,7 @@ export default function GameSetupApp({
   }
 
   return (
-    <div className="relative h-screen w-screen overflow-hidden bg-[#0b1322] text-slate-100">
+    <div className="relative h-screen w-screen overflow-hidden bg-[#0b1322] text-ink-100">
       {/* Map (or a backdrop for modes without one) */}
       <div className="absolute inset-0 z-0">
         {scenarioId ? (
@@ -430,7 +431,7 @@ export default function GameSetupApp({
               <p className="mt-4 text-2xl font-black text-white/80">
                 {mode ? mode.label : "Pick a game mode"}
               </p>
-              <p className="mt-2 text-sm text-slate-400">
+              <p className="mt-2 text-sm text-ink-400">
                 {mode
                   ? "This mode has no interactive map yet — nation locks can still be added by name."
                   : "Its map appears here, and you can click nations to lock them."}
@@ -441,11 +442,11 @@ export default function GameSetupApp({
       </div>
 
       {/* Top bar */}
-      <header className="absolute inset-x-0 top-0 z-[1000] border-b border-white/10 bg-slate-950/55 backdrop-blur-md">
+      <header className="absolute inset-x-0 top-0 z-[1000] border-b border-white/10 bg-ink-950/55 backdrop-blur-md">
         <div className="flex h-16 items-center gap-3 px-3 sm:px-5">
           <Link
             href="/schedule"
-            className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-slate-200 transition hover:border-amber-300/40"
+            className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-ink-200 transition hover:border-brand-300/40"
           >
             ← Calendar
           </Link>
@@ -453,7 +454,7 @@ export default function GameSetupApp({
             <p className="truncate text-sm font-black text-white">
               {editing ? "Edit game" : "New game"} · {formatDateLong(form.date)}
             </p>
-            <p className="truncate text-[11px] font-semibold text-slate-400">
+            <p className="truncate text-[11px] font-semibold text-ink-400">
               {mode ? (
                 <span className={category?.text}>
                   {category?.emoji} {mode.label}
@@ -474,15 +475,16 @@ export default function GameSetupApp({
             <span className="hidden sm:block">
               <HostAvatar host={host} />
             </span>
+            <MenuButton current="calendar" label={false} />
           </div>
         </div>
       </header>
 
       {/* Hovered nation */}
       {scenarioId && hovered && (
-        <div className="pointer-events-none absolute left-1/2 top-20 z-[950] -translate-x-1/2 rounded-full border border-white/15 bg-slate-950/80 px-4 py-1.5 text-xs font-semibold text-slate-100 shadow-xl backdrop-blur-md lg:left-[calc(50%-240px)]">
+        <div className="pointer-events-none absolute left-1/2 top-20 z-[950] -translate-x-1/2 rounded-full border border-white/15 bg-ink-950/80 px-4 py-1.5 text-xs font-semibold text-ink-100 shadow-xl backdrop-blur-md lg:left-[calc(50%-240px)]">
           {boardDisplayName(scenarioId, hovered.tag, hovered.name)}
-          <span className="ml-2 text-slate-400">
+          <span className="ml-2 text-ink-400">
             {activeGroup.nations.includes(hovered.slot_key ?? "")
               ? "click to unlock"
               : form.lockGroups.some((group) => group.nations.includes(hovered.slot_key ?? ""))
@@ -494,7 +496,7 @@ export default function GameSetupApp({
 
       {/* Map legend */}
       {scenarioId && (
-        <div className="absolute bottom-4 left-4 z-[950] rounded-2xl border border-white/10 bg-slate-950/75 px-3.5 py-2.5 text-[11px] font-semibold text-slate-300 shadow-xl backdrop-blur-md">
+        <div className="absolute bottom-4 left-4 z-[950] rounded-2xl border border-white/10 bg-ink-950/75 px-3.5 py-2.5 text-[11px] font-semibold text-ink-300 shadow-xl backdrop-blur-md">
           <p className="flex items-center gap-2">
             <span className="h-2.5 w-2.5 rounded-sm bg-[#ff5266] shadow-[0_0_8px_#ff2442]" />
             Editing: {activeGroup.label} ({activeGroup.nations.length})
@@ -505,7 +507,7 @@ export default function GameSetupApp({
               Other lock groups
             </p>
           )}
-          <p className="mt-1 text-slate-500">Click a nation to lock / unlock it</p>
+          <p className="mt-1 text-ink-500">Click a nation to lock / unlock it</p>
         </div>
       )}
 
@@ -525,13 +527,13 @@ export default function GameSetupApp({
                 data-tour={`setup.tab.${entry.id} setup.tabs`}
                 onClick={() => setTab(entry.id)}
                 className={`relative flex flex-1 flex-col items-center gap-0.5 rounded-xl px-1 py-1.5 text-[10px] font-bold uppercase tracking-wide transition ${
-                  active ? "bg-amber-400 text-slate-950" : "text-slate-400 hover:bg-white/5 hover:text-white"
+                  active ? "bg-brand-400 text-ink-950" : "text-ink-400 hover:bg-white/5 hover:text-white"
                 }`}
               >
                 <span className="text-base leading-none">{entry.icon}</span>
                 <span className="hidden sm:block">{entry.label}</span>
                 {entry.id !== "review" && issueSections.has(entry.id) && (
-                  <span className="absolute right-1.5 top-1 h-2 w-2 rounded-full bg-rose-500 ring-2 ring-slate-900" />
+                  <span className="absolute right-1.5 top-1 h-2 w-2 rounded-full bg-rose-500 ring-2 ring-ink-900" />
                 )}
               </button>
             );
@@ -539,7 +541,7 @@ export default function GameSetupApp({
           <button
             type="button"
             onClick={() => setDrawerOpen(false)}
-            className="ml-1 rounded-lg px-2 py-1 text-slate-500 hover:text-white"
+            className="ml-1 rounded-lg px-2 py-1 text-ink-500 hover:text-white"
             aria-label="Hide panel"
             title="Hide panel to see the map"
           >
@@ -612,7 +614,7 @@ export default function GameSetupApp({
           )}
         </div>
 
-        <footer data-tour="setup.footer" className="border-t border-white/10 bg-slate-950/40 p-3">
+        <footer data-tour="setup.footer" className="border-t border-white/10 bg-ink-950/40 p-3">
           {submitError && (
             <p className="mb-2 rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-1.5 text-xs text-rose-100">
               {submitError}
@@ -638,7 +640,7 @@ export default function GameSetupApp({
               <button
                 type="button"
                 onClick={() => setTab(tabs[tabIndex + 1].id)}
-                className="rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-xs font-bold text-slate-200 hover:border-white/25"
+                className="rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-xs font-bold text-ink-200 hover:border-white/25"
               >
                 Next ›
               </button>
@@ -650,8 +652,8 @@ export default function GameSetupApp({
                 disabled={submitting}
                 className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-black transition ${
                   derived.payload
-                    ? "reserve-cta-glow bg-amber-400 text-slate-950 hover:bg-amber-300"
-                    : "bg-slate-700 text-slate-400"
+                    ? "reserve-cta-glow bg-brand-400 text-ink-950 hover:bg-brand-300"
+                    : "bg-ink-700 text-ink-400"
                 }`}
               >
                 {submitting && <Spinner className="h-3.5 w-3.5" />}
@@ -666,24 +668,24 @@ export default function GameSetupApp({
         <button
           type="button"
           onClick={() => setDrawerOpen(true)}
-          className="absolute right-3 top-[76px] z-[1000] rounded-2xl bg-amber-400 px-4 py-3 text-sm font-black text-slate-950 shadow-xl shadow-amber-500/30"
+          className="absolute right-3 top-[76px] z-[1000] rounded-2xl bg-brand-400 px-4 py-3 text-sm font-black text-ink-950 shadow-xl shadow-brand-500/30"
         >
           ◂ {editing ? "Edit game" : "Game setup"}
         </button>
       )}
 
       {toast && (
-        <div className="gm-fade-up absolute bottom-6 left-1/2 z-[1500] -translate-x-1/2 rounded-full border border-white/15 bg-slate-900/90 px-4 py-2 text-xs font-semibold text-slate-100 shadow-xl backdrop-blur-md">
+        <div className="gm-fade-up absolute bottom-6 left-1/2 z-[1500] -translate-x-1/2 rounded-full border border-white/15 bg-ink-900/90 px-4 py-2 text-xs font-semibold text-ink-100 shadow-xl backdrop-blur-md">
           {toast}
         </div>
       )}
 
       {askConflict && (
-        <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-ink-950/70 p-4 backdrop-blur-sm">
           <div className={`gm-fade-up w-full max-w-sm rounded-3xl p-6 ${GLASS}`}>
             <p className="text-3xl">⚠️</p>
             <h2 className="mt-2 text-lg font-black text-white">Another host has that day</h2>
-            <p className="mt-2 text-sm text-slate-300">
+            <p className="mt-2 text-sm text-ink-300">
               {derived.conflicts
                 .map((slot) => `${slot.host_username ? `@${slot.host_username}` : "A host"} — ${modeOption(slot.mode)?.label ?? slot.mode}`)
                 .join(", ")}
@@ -693,14 +695,14 @@ export default function GameSetupApp({
               <button
                 type="button"
                 onClick={() => void send()}
-                className="flex-1 rounded-xl bg-amber-400 px-4 py-2.5 text-sm font-black text-slate-950 hover:bg-amber-300"
+                className="flex-1 rounded-xl bg-brand-400 px-4 py-2.5 text-sm font-black text-ink-950 hover:bg-brand-300"
               >
                 Continue anyway
               </button>
               <button
                 type="button"
                 onClick={() => setAskConflict(false)}
-                className="rounded-xl border border-white/10 px-4 py-2.5 text-sm font-bold text-slate-300"
+                className="rounded-xl border border-white/10 px-4 py-2.5 text-sm font-bold text-ink-300"
               >
                 Cancel
               </button>

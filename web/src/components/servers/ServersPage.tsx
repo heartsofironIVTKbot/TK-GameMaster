@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import SiteHeader from "@/components/site/SiteHeader";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type { ServersResponse } from "@/lib/serverSettingsTypes";
@@ -45,8 +45,8 @@ function ServersIndex({ cancelled }: { cancelled: boolean }) {
     body = <Gate icon="📡" title="Can't reach the website" text="Check your connection and reload the page." />;
   } else if (!state) {
     body = (
-      <div className="flex items-center justify-center gap-3 py-24 text-slate-300">
-        <Spinner className="h-5 w-5 text-amber-400" />
+      <div className="flex items-center justify-center gap-3 py-24 text-ink-300">
+        <Spinner className="h-5 w-5 text-brand-400" />
         <span className="text-sm font-semibold">Loading your servers…</span>
       </div>
     );
@@ -73,21 +73,16 @@ function ServersIndex({ cancelled }: { cancelled: boolean }) {
   }
 
   return (
-    <div className="gm-backdrop min-h-screen w-full px-4 py-6 text-slate-100 sm:px-6">
-      <div className="mx-auto mb-5 flex max-w-5xl items-center justify-between">
-        <Link href="/" className="text-sm font-black text-white">
-          🎖️ GameMaster
-        </Link>
-        <Link href="/invite" className="text-xs font-bold text-slate-400 hover:text-white">
-          What is GameMaster?
-        </Link>
-      </div>
+    <div className="gm-backdrop min-h-screen w-full text-ink-100">
+      <SiteHeader page="servers" icon="⚙️" title="Your servers" subtitle="GameMaster · set up and settings" gradient="from-ink-300 to-ink-600" />
+      <div className="px-4 py-6 sm:px-6">
       {cancelled && (
-        <p className="mx-auto mb-4 max-w-5xl rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-slate-300">
+        <p className="mx-auto mb-4 max-w-5xl rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-ink-300">
           Adding the bot was cancelled — nothing changed.
         </p>
       )}
       {body}
+      </div>
     </div>
   );
 }
@@ -97,7 +92,7 @@ function Gate({ icon, title, text, children }: { icon: string; title: string; te
     <div className={`mx-auto mt-10 max-w-lg rounded-3xl p-8 text-center ${GLASS}`}>
       <p className="text-4xl">{icon}</p>
       <h1 className="mt-3 text-xl font-black text-white">{title}</h1>
-      <p className="mt-2 text-sm text-slate-300">{text}</p>
+      <p className="mt-2 text-sm text-ink-300">{text}</p>
       {children}
     </div>
   );

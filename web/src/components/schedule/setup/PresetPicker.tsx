@@ -53,7 +53,7 @@ export default function PresetPicker({
       title="Preset"
       subtitle={`Load a saved ${modeOption(mode)?.label ?? mode} setup — nation groups, locks, rules and mods.`}
       right={
-        <Link href={`/presets/new?mode=${encodeURIComponent(mode)}`} className="text-[11px] font-bold text-amber-300 hover:text-amber-200">
+        <Link href={`/presets/new?mode=${encodeURIComponent(mode)}`} className="text-[11px] font-bold text-brand-300 hover:text-brand-200">
           ＋ New
         </Link>
       }
@@ -69,7 +69,7 @@ export default function PresetPicker({
           <button
             type="button"
             onClick={onClear}
-            className="rounded-md px-2 py-0.5 text-[11px] font-bold text-slate-300 hover:bg-white/10 hover:text-white"
+            className="rounded-md px-2 py-0.5 text-[11px] font-bold text-ink-300 hover:bg-white/10 hover:text-white"
             title="Use the mode's standard groups, rules and mods again (locks and access stay as they are)"
           >
             Remove
@@ -77,13 +77,13 @@ export default function PresetPicker({
         </div>
       )}
       {!current ? (
-        <p className="flex items-center gap-2 text-xs text-slate-400">
-          <Spinner className="h-3.5 w-3.5 text-amber-300" /> Loading presets…
+        <p className="flex items-center gap-2 text-xs text-ink-400">
+          <Spinner className="h-3.5 w-3.5 text-brand-300" /> Loading presets…
         </p>
       ) : current.error ? (
         <p className="text-xs text-rose-300">{current.error}</p>
       ) : presets.length === 0 ? (
-        <p className="text-xs text-slate-400">
+        <p className="text-xs text-ink-400">
           No presets for this mode yet —{" "}
           <Link href="/presets?view=library" className="font-semibold text-sky-300 hover:underline">
             browse the public library
@@ -97,8 +97,8 @@ export default function PresetPicker({
             return (
               <li key={preset.preset_id} className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-semibold text-slate-100">{preset.name}</span>
-                  <span className="block truncate text-[11px] text-slate-400">
+                  <span className="block truncate text-sm font-semibold text-ink-100">{preset.name}</span>
+                  <span className="block truncate text-[11px] text-ink-400">
                     {presetSummary(preset.data).join(" · ")} · by {preset.created_by_name ?? "a host"}
                   </span>
                 </span>
@@ -106,7 +106,7 @@ export default function PresetPicker({
                   type="button"
                   onClick={() => onApply(preset)}
                   className={`shrink-0 rounded-lg px-2.5 py-1 text-[11px] font-black transition ${
-                    loaded ? "bg-white/5 text-slate-400 hover:text-white" : "bg-amber-400 text-slate-950 hover:bg-amber-300"
+                    loaded ? "bg-white/5 text-ink-400 hover:text-white" : "bg-brand-400 text-ink-950 hover:bg-brand-300"
                   }`}
                   title="Replaces this form's nation locks, access, nation groups, rules and mods"
                 >

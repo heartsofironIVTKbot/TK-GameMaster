@@ -92,7 +92,7 @@ function Donut({
       style={{ width: size, height: size, background: conicGradient(segments) }}
     >
       <div
-        className="absolute flex flex-col items-center justify-center rounded-full bg-slate-900"
+        className="absolute flex flex-col items-center justify-center rounded-full bg-ink-900"
         style={{
           top: thickness,
           right: thickness,
@@ -101,7 +101,7 @@ function Donut({
         }}
       >
         {children ??
-          (total === 0 ? <span className="text-xs text-slate-500">—</span> : null)}
+          (total === 0 ? <span className="text-xs text-ink-500">—</span> : null)}
       </div>
     </div>
   );
@@ -123,10 +123,10 @@ function LeaderPortrait({ scenario }: { scenario: CountryScenarioData }) {
   const failed = failedSource === source;
   if (!source || failed) {
     return (
-      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-md border border-slate-700 bg-slate-800">
+      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-md border border-ink-700 bg-ink-800">
         <svg
           viewBox="0 0 24 24"
-          className="h-8 w-8 text-slate-500"
+          className="h-8 w-8 text-ink-500"
           fill="currentColor"
           aria-hidden="true"
         >
@@ -139,7 +139,7 @@ function LeaderPortrait({ scenario }: { scenario: CountryScenarioData }) {
     <img
       src={source}
       alt={scenario.leader.name}
-      className="h-16 w-16 shrink-0 rounded-md border border-slate-700 object-cover"
+      className="h-16 w-16 shrink-0 rounded-md border border-ink-700 object-cover"
       onError={() => setFailedSource(source)}
     />
   );
@@ -166,7 +166,7 @@ function SpiritIcon({ spirit, className }: { spirit: NationalSpirit; className?:
   const [failedSource, setFailedSource] = useState<string | null>(null);
   const failed = failedSource === spirit.iconUrl;
   if (!spirit.iconUrl || failed) {
-    return <ShieldIcon className={className ?? "h-4 w-4 text-slate-400"} />;
+    return <ShieldIcon className={className ?? "h-4 w-4 text-ink-400"} />;
   }
   return (
     <img
@@ -233,7 +233,7 @@ function formatSpiritEffect(effect: NationalSpiritEffect): {
 /** Text colour for one formatted effect (null = neutral, uncoulored). */
 function effectColor(positive: boolean | null, yellow: boolean): string {
   if (yellow) return "text-yellow-300";
-  if (positive === null) return "text-slate-200";
+  if (positive === null) return "text-ink-200";
   return positive ? "text-emerald-400" : "text-red-400";
 }
 
@@ -249,10 +249,10 @@ function SpiritDetailCard({ spirit }: { spirit: NationalSpirit | null }) {
   );
   const traits = spirit.traits ?? [];
   return (
-    <div className="mt-2 rounded-lg border border-amber-400/25 bg-slate-950/90 p-3 shadow-xl">
+    <div className="mt-2 rounded-lg border border-brand-400/25 bg-ink-950/90 p-3 shadow-xl">
       <div className="flex items-center gap-2.5">
         <SpiritIcon spirit={spirit} className="h-8 w-8 rounded-sm object-cover" />
-        <p className="text-sm font-semibold leading-snug text-amber-300">
+        <p className="text-sm font-semibold leading-snug text-brand-300">
           {spirit.name}
         </p>
       </div>
@@ -265,7 +265,7 @@ function SpiritDetailCard({ spirit }: { spirit: NationalSpirit | null }) {
                 key={effect.key}
                 className="flex items-baseline justify-between gap-3 text-xs"
               >
-                <span className="text-slate-300">{formatted.label}</span>
+                <span className="text-ink-300">{formatted.label}</span>
                 <span
                   className={`font-mono font-semibold tabular-nums ${effectColor(
                     formatted.positive,
@@ -281,7 +281,7 @@ function SpiritDetailCard({ spirit }: { spirit: NationalSpirit | null }) {
       )}
       {traits.map((trait) => (
         <div key={trait.id} className="mt-2.5">
-          <p className="text-xs font-bold uppercase tracking-wide text-slate-200">
+          <p className="text-xs font-bold uppercase tracking-wide text-ink-200">
             {trait.name}
           </p>
           <ul className="mt-1 space-y-1">
@@ -299,7 +299,7 @@ function SpiritDetailCard({ spirit }: { spirit: NationalSpirit | null }) {
                     key={effect.key}
                     className="flex items-baseline justify-between gap-3 text-xs"
                   >
-                    <span className="text-slate-300">{formatted.label}</span>
+                    <span className="text-ink-300">{formatted.label}</span>
                     <span
                       className={`font-mono font-semibold tabular-nums ${effectColor(
                         formatted.positive,
@@ -315,7 +315,7 @@ function SpiritDetailCard({ spirit }: { spirit: NationalSpirit | null }) {
         </div>
       ))}
       {spirit.description && (
-        <p className="mt-2.5 text-xs leading-relaxed text-slate-400">
+        <p className="mt-2.5 text-xs leading-relaxed text-ink-400">
           {spirit.description}
         </p>
       )}
@@ -336,19 +336,19 @@ function StatBar({
 }) {
   const clamped = Math.max(0, Math.min(100, Math.round(value)));
   return (
-    <div className="rounded-lg border border-slate-800 bg-slate-950/60 px-2.5 py-2">
+    <div className="rounded-lg border border-ink-800 bg-ink-950/60 px-2.5 py-2">
       <div className="flex items-center justify-between gap-1 text-xs">
-        <span className="font-medium text-slate-300">
+        <span className="font-medium text-ink-300">
           <span aria-hidden="true" className="mr-1">
             {icon}
           </span>
           {label}
         </span>
-        <span className="font-mono font-semibold tabular-nums text-slate-100">
+        <span className="font-mono font-semibold tabular-nums text-ink-100">
           {clamped}%
         </span>
       </div>
-      <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
+      <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-ink-800">
         <div
           className={`h-full rounded-full ${barClass}`}
           style={{ width: `${clamped}%` }}
@@ -406,12 +406,12 @@ export default function CountryDetailsDrawer({
 
   if (minimized) {
     return (
-      <aside className="country-drawer absolute right-0 top-20 z-[1000] flex w-12 flex-col items-center gap-3 border-l border-slate-800 bg-slate-900/95 py-3 text-slate-100 shadow-2xl backdrop-blur-md">
+      <aside className="country-drawer absolute right-0 top-20 z-[1000] flex w-12 flex-col items-center gap-3 border-l border-ink-800 bg-ink-900/95 py-3 text-ink-100 shadow-2xl backdrop-blur-md">
         <button
           type="button"
           aria-label="Expand country details"
           title="Expand country details"
-          className="rounded-md border border-slate-700 bg-slate-800/80 px-2 py-2 text-sm text-slate-300 transition-colors hover:border-slate-500 hover:text-white"
+          className="rounded-md border border-ink-700 bg-ink-800/80 px-2 py-2 text-sm text-ink-300 transition-colors hover:border-ink-500 hover:text-white"
           onClick={onToggleMinimized}
         >
           ◀
@@ -419,12 +419,12 @@ export default function CountryDetailsDrawer({
         <img
           src={scenario.flagUrl || `/assets/flags/${scenario.tag}.png`}
           alt={`${scenario.name} flag`}
-          className="h-6 w-9 rounded-sm border border-slate-700 object-cover"
+          className="h-6 w-9 rounded-sm border border-ink-700 object-cover"
           onError={(event) => {
             event.currentTarget.src = placeholderFlag(scenario.tag);
           }}
         />
-        <span className="text-[9px] font-semibold uppercase tracking-wide text-slate-400 [writing-mode:vertical-rl]">
+        <span className="text-[9px] font-semibold uppercase tracking-wide text-ink-400 [writing-mode:vertical-rl]">
           {scenario.name}
         </span>
       </aside>
@@ -432,15 +432,15 @@ export default function CountryDetailsDrawer({
   }
 
   return (
-    <aside data-tour="map.details" className="country-drawer absolute bottom-0 right-0 top-20 z-[1000] flex w-[380px] flex-col border-l border-slate-800 bg-slate-900/95 text-slate-100 shadow-2xl backdrop-blur-md">
+    <aside data-tour="map.details" className="country-drawer absolute bottom-0 right-0 top-20 z-[1000] flex w-full flex-col pb-24 sm:w-[380px] sm:pb-0 border-l border-ink-800 bg-ink-900/95 text-ink-100 shadow-2xl backdrop-blur-md">
       {/* Header: flag + name + Major/Minor badge. The selection chip and
           the minimize/close controls live in the top bar (TopBar.tsx). */}
-      <div className="border-b border-slate-800 p-4">
+      <div className="border-b border-ink-800 p-4">
         <div className="flex items-center gap-3">
           <img
             src={scenario.flagUrl || `/assets/flags/${scenario.tag}.png`}
             alt={`${scenario.name} flag`}
-            className="h-9 w-14 shrink-0 rounded-sm border border-slate-700 object-cover"
+            className="h-9 w-14 shrink-0 rounded-sm border border-ink-700 object-cover"
             onError={(event) => {
               event.currentTarget.src = placeholderFlag(scenario.tag);
             }}
@@ -452,8 +452,8 @@ export default function CountryDetailsDrawer({
             <span
               className={`mt-0.5 inline-block rounded-full border px-2 py-px text-[10px] font-semibold uppercase tracking-wide ${
                 isMajor
-                  ? "border-amber-400/40 bg-amber-400/10 text-amber-300"
-                  : "border-slate-600 bg-slate-800/70 text-slate-400"
+                  ? "border-brand-400/40 bg-brand-400/10 text-brand-300"
+                  : "border-ink-600 bg-ink-800/70 text-ink-400"
               }`}
             >
               {isMajor ? "Major Power" : "Minor Nation"}
@@ -465,17 +465,17 @@ export default function CountryDetailsDrawer({
       {/* Body */}
       <div className="flex-1 space-y-5 overflow-y-auto p-4">
         {/* Leader & ideology */}
-        <section className="rounded-lg border border-slate-800 bg-slate-950/40 p-3">
+        <section className="rounded-lg border border-ink-800 bg-ink-950/40 p-3">
           <div className="flex items-center gap-3">
             <LeaderPortrait scenario={scenario} />
             <div className="min-w-0 flex-1">
-              <p className="text-[11px] uppercase tracking-wide text-slate-400">
+              <p className="text-[11px] uppercase tracking-wide text-ink-400">
                 Leader
               </p>
               <p className="truncate text-sm font-semibold">
                 {scenario.leader.name}
               </p>
-              <p className="mt-0.5 text-xs text-slate-400">
+              <p className="mt-0.5 text-xs text-ink-400">
                 {scenario.ideology.name}
               </p>
             </div>
@@ -483,7 +483,7 @@ export default function CountryDetailsDrawer({
               <span className="text-sm font-bold leading-none">
                 {scenario.ideology.rulingPartyShare}%
               </span>
-              <span className="text-[9px] uppercase tracking-wide text-slate-400">
+              <span className="text-[9px] uppercase tracking-wide text-ink-400">
                 Ruling
               </span>
             </Donut>
@@ -501,28 +501,28 @@ export default function CountryDetailsDrawer({
               icon="⚔️"
               label="War Support"
               value={scenario.warSupport}
-              barClass="bg-amber-400"
+              barClass="bg-brand-400"
             />
           </div>
         </section>
 
         {/* National spirits */}
         <section>
-          <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+          <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-ink-400">
             National Spirits
           </h3>
           {scenario.nationalSpirits.length === 0 ? (
-            <p className="text-xs text-slate-500">No national spirits.</p>
+            <p className="text-xs text-ink-500">No national spirits.</p>
           ) : (
             <>
               <div className="flex flex-wrap gap-2">
                 {scenario.nationalSpirits.map((spirit) => (
                   <div
                     key={spirit.id}
-                    className={`h-12 w-12 cursor-help overflow-hidden rounded-md border bg-slate-800/80 shadow-sm transition-colors ${
+                    className={`h-12 w-12 cursor-help overflow-hidden rounded-md border bg-ink-800/80 shadow-sm transition-colors ${
                       hoveredSpiritId === spirit.id
-                        ? "border-amber-400/80"
-                        : "border-slate-700"
+                        ? "border-brand-400/80"
+                        : "border-ink-700"
                     }`}
                     onMouseEnter={() => setHoveredSpiritId(spirit.id)}
                     onMouseLeave={() =>
@@ -550,7 +550,7 @@ export default function CountryDetailsDrawer({
 
         {/* Industrial capacity */}
         <section>
-          <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+          <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-ink-400">
             Industrial Capacity
           </h3>
           <div className="grid grid-cols-3 gap-2">
@@ -559,7 +559,7 @@ export default function CountryDetailsDrawer({
                 [
                   "Civilian",
                   scenario.industry.civilianFactories,
-                  "border-amber-800/70 bg-amber-950/50",
+                  "border-brand-800/70 bg-brand-950/50",
                 ],
                 [
                   "Military",
@@ -578,7 +578,7 @@ export default function CountryDetailsDrawer({
                 className={`rounded-lg border p-2.5 text-center ${tone}`}
               >
                 <p className="text-xl font-bold tabular-nums">{value}</p>
-                <p className="mt-0.5 text-[10px] uppercase tracking-wide text-slate-400">
+                <p className="mt-0.5 text-[10px] uppercase tracking-wide text-ink-400">
                   {label}
                 </p>
               </div>
@@ -588,12 +588,12 @@ export default function CountryDetailsDrawer({
 
         {/* Resources */}
         <section>
-          <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+          <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-ink-400">
             Resources
           </h3>
           <div className="flex items-center gap-4">
             <Donut segments={resourceSegments} size={112} thickness={16}>
-              <span className="text-[10px] uppercase tracking-wide text-slate-400">
+              <span className="text-[10px] uppercase tracking-wide text-ink-400">
                 Total
               </span>
               <span className="text-lg font-bold tabular-nums">
@@ -606,14 +606,14 @@ export default function CountryDetailsDrawer({
                   key={meta.key}
                   className="flex items-center justify-between text-xs"
                 >
-                  <span className="flex items-center gap-2 text-slate-300">
+                  <span className="flex items-center gap-2 text-ink-300">
                     <span
                       className="inline-block h-2.5 w-2.5 rounded-full"
                       style={{ background: meta.color }}
                     />
                     {meta.label}
                   </span>
-                  <span className="font-mono tabular-nums text-slate-200">
+                  <span className="font-mono tabular-nums text-ink-200">
                     {scenario.resources[meta.key]}
                   </span>
                 </li>
@@ -624,7 +624,7 @@ export default function CountryDetailsDrawer({
 
         {/* Armed forces */}
         <section>
-          <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+          <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-ink-400">
             Armed Forces
           </h3>
           <div className="grid grid-cols-3 gap-2">
@@ -675,18 +675,18 @@ export default function CountryDetailsDrawer({
 
       {/* Bottom bar: lobby picker only. The reserve / unreserve actions live
           in the glowing bottom-center button rendered by MapViewer. */}
-      <div data-tour="map.gamePicker" className="border-t border-slate-800 p-4">
+      <div data-tour="map.gamePicker" className="border-t border-ink-800 p-4">
         {authUser ? (
           <>
             <label
               htmlFor="game-select"
-              className="mb-1 block text-xs text-slate-400"
+              className="mb-1 block text-xs text-ink-400"
             >
               Game lobby
             </label>
             <select
               id="game-select"
-              className="w-full rounded border border-slate-700 bg-slate-800 px-2 py-1.5 text-sm text-slate-100"
+              className="w-full rounded border border-ink-700 bg-ink-800 px-2 py-1.5 text-sm text-ink-100"
               value={selectedThread}
               onChange={(event) => onSelectThread(event.target.value)}
               disabled={games.length === 0}
@@ -710,7 +710,7 @@ export default function CountryDetailsDrawer({
             )}
           </>
         ) : (
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-ink-400">
             Login with Discord to reserve a nation.
           </p>
         )}

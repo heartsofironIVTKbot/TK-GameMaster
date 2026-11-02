@@ -150,16 +150,12 @@ const MAP_PLAYER: Tour = {
       body: "**Rules** opens the rules for this game. **Mods** lists the mods to subscribe to before it starts.",
     },
     {
-      target: "map.profile",
+      target: "site.menu",
       placement: "bottom",
-      title: "Your profile",
-      body: "Your games, attendance, commends, warnings and roles, all in one place.",
-    },
-    {
-      target: "map.roleplay",
-      placement: "bottom",
-      title: "The roleplay archive",
-      body: "Every graded game's story and everyone's roleplay, from every server. Search it for a player, a nation or a line.",
+      title: "Everything else is in the menu",
+      body:
+        "**☰ Menu** is on every page. **My profile**: your games, attendance, commends and roles. " +
+        "**Roleplay archive**: every graded game's story and everyone's roleplay, searchable. Your tickets, too.",
     },
     {
       target: "help.button",
@@ -255,7 +251,7 @@ const MAP_HOST: Tour = {
   auto: "visit",
   after: ["map-player"],
   priority: 5,
-  anchor: "map.hostLinks",
+  anchor: "map.hostTool",
   next: { tour: "calendar", href: "/schedule", label: "Open the Calendar" },
   steps: [
     {
@@ -268,13 +264,13 @@ const MAP_HOST: Tour = {
         "**4. End it** on the Games page.",
     },
     {
-      target: "map.hostLinks",
+      target: "site.menu",
       placement: "bottom",
       title: "Your host pages",
       body:
-        "**Schedule**: the calendar. **Database**: player records, commends, warnings, bans. " +
-        "**Games**: start, end and manage games. **Attendance**: who showed up. " +
-        "**Servers**: server setup. **Tickets**: closed tickets.",
+        "They're in **☰ Menu**, on every page. **Calendar**: schedule games. **Games**: start, end and manage games. " +
+        "**Attendance**: who showed up. **Database**: player records, commends, warnings, bans. " +
+        "**Presets**: saved game setups. Server setup and the audit log are there too.",
     },
     {
       target: "map.hostTool",
@@ -431,12 +427,12 @@ const CALENDAR: Tour = {
       body: "The calendar shows times in this zone. Players see the announcement in their own time.",
     },
     {
-      target: "calendar.nav",
+      target: "site.menu",
       placement: "bottom",
       title: "The other host pages",
       body:
-        "**Games**: start, end and manage games. **Presets**: saved setups for a game mode. " +
-        "**Database**: player records. **Attendance**: who showed up.",
+        "**☰ Menu** (top right, on every page) has them all. **Games**: start, end and manage games. " +
+        "**Presets**: saved setups for a game mode. **Database**: player records. **Attendance**: who showed up.",
     },
   ],
 };
@@ -958,10 +954,10 @@ const PROFILE: Tour = {
         "Think something's wrong? Open a ticket on the server.",
     },
     {
-      target: "profile.tickets",
+      target: "site.menu",
       placement: "bottom",
-      title: "Your tickets",
-      body: "Read the tickets you opened, after they're closed.",
+      title: "Your tickets and everything else",
+      body: "**☰ Menu** has every page: your tickets (to read after they're closed), the roleplay archive, the map and more.",
     },
   ],
 };

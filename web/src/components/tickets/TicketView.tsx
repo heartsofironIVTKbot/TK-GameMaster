@@ -26,7 +26,7 @@ function plain(text: string, names: Map<string, string>): string {
     .replace(/\*\*|__/g, "");
 }
 
-const COLORS = ["bg-sky-500", "bg-emerald-500", "bg-amber-500", "bg-rose-500", "bg-violet-500", "bg-teal-500"];
+const COLORS = ["bg-sky-500", "bg-emerald-500", "bg-brand-500", "bg-rose-500", "bg-violet-500", "bg-teal-500"];
 function colorOf(id: string): string {
   let sum = 0;
   for (const char of id) sum = (sum + char.charCodeAt(0)) % 997;
@@ -46,7 +46,7 @@ function FileChip({ ticketId, file }: { ticketId: string; file: TicketFile }) {
   if (!file.kept) {
     return (
       <span
-        className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-slate-950/40 px-3 py-1.5 text-xs text-slate-500"
+        className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-ink-950/40 px-3 py-1.5 text-xs text-ink-500"
         title="Too big to keep (over 8 MB), the download failed, or it's older than 180 days"
       >
         📎 {file.filename} · {sizeLabel(file.bytes)} · file not kept
@@ -56,7 +56,7 @@ function FileChip({ ticketId, file }: { ticketId: string; file: TicketFile }) {
   return (
     <a
       href={url}
-      className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-slate-950/40 px-3 py-1.5 text-xs text-sky-200 hover:border-sky-300/40"
+      className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-ink-950/40 px-3 py-1.5 text-xs text-sky-200 hover:border-sky-300/40"
     >
       📎 {file.filename} · {sizeLabel(file.bytes)} ⬇
     </a>
@@ -78,23 +78,23 @@ function Message({ ticketId, message, names }: { ticketId: string; message: Tick
         <p className="flex flex-wrap items-baseline gap-2">
           <span className="text-sm font-bold text-white">{message.author_name}</span>
           {message.is_bot && <span className="rounded bg-indigo-500 px-1 text-[9px] font-black text-white">BOT</span>}
-          <span className="text-[11px] text-slate-500">{when(message.created_at, true)}</span>
+          <span className="text-[11px] text-ink-500">{when(message.created_at, true)}</span>
         </p>
         {message.content ? (
-          <p className="whitespace-pre-wrap break-words text-sm text-slate-200">{plain(message.content, names)}</p>
+          <p className="whitespace-pre-wrap break-words text-sm text-ink-200">{plain(message.content, names)}</p>
         ) : message.embeds.length === 0 && message.files.length === 0 ? (
-          <p className="text-sm italic text-slate-500">[message text not available]</p>
+          <p className="text-sm italic text-ink-500">[message text not available]</p>
         ) : null}
         {message.embeds.map((embed, index) => (
-          <div key={index} className="max-w-xl rounded-lg border-l-4 border-indigo-400 bg-slate-950/50 px-3 py-2">
+          <div key={index} className="max-w-xl rounded-lg border-l-4 border-indigo-400 bg-ink-950/50 px-3 py-2">
             {embed.title && <p className="text-sm font-bold text-white">{plain(embed.title, names)}</p>}
             {embed.description && (
-              <p className="mt-0.5 whitespace-pre-wrap text-xs text-slate-300">{plain(embed.description, names)}</p>
+              <p className="mt-0.5 whitespace-pre-wrap text-xs text-ink-300">{plain(embed.description, names)}</p>
             )}
             {embed.fields.map((field, fieldIndex) => (
               <div key={fieldIndex} className="mt-1.5">
-                <p className="text-[11px] font-bold text-slate-200">{plain(field.name, names)}</p>
-                <p className="whitespace-pre-wrap text-xs text-slate-300">{plain(field.value, names)}</p>
+                <p className="text-[11px] font-bold text-ink-200">{plain(field.name, names)}</p>
+                <p className="whitespace-pre-wrap text-xs text-ink-300">{plain(field.value, names)}</p>
               </div>
             ))}
           </div>
@@ -147,14 +147,14 @@ export default function TicketView() {
     <TicketsShell subtitle={ticket ? ticket.channel_name : "GameMaster · Closed ticket"}>
       {state?.anonymous && <LoginPrompt next={`/tickets/${ticketId}`} />}
       {!state && (
-        <div className="flex items-center gap-2 px-2 py-6 text-xs text-slate-400">
-          <Spinner className="h-3.5 w-3.5 text-amber-300" /> Loading the ticket…
+        <div className="flex items-center gap-2 px-2 py-6 text-xs text-ink-400">
+          <Spinner className="h-3.5 w-3.5 text-brand-300" /> Loading the ticket…
         </div>
       )}
       {state?.error && (
         <div className={`rounded-3xl p-6 text-center ${GLASS}`}>
-          <p className="text-sm text-slate-300">{state.error}</p>
-          <Link href="/tickets" className="mt-3 inline-block text-xs font-bold text-amber-300 hover:underline">
+          <p className="text-sm text-ink-300">{state.error}</p>
+          <Link href="/tickets" className="mt-3 inline-block text-xs font-bold text-brand-300 hover:underline">
             ← All tickets
           </Link>
         </div>
@@ -162,45 +162,45 @@ export default function TicketView() {
       {ticket && detail && (
         <>
           <section className={`space-y-2 rounded-3xl p-4 sm:p-5 ${GLASS}`}>
-            <Link href="/tickets" className="text-[11px] font-bold text-slate-400 hover:text-white">
+            <Link href="/tickets" className="text-[11px] font-bold text-ink-400 hover:text-white">
               ← All tickets
             </Link>
             <div className="flex flex-wrap items-center gap-3">
               <h1 className="text-xl font-black text-white">
-                {ticket.kind_label} <span className="font-mono text-base text-slate-500">#{String(ticket.number).padStart(4, "0")}</span>
+                {ticket.kind_label} <span className="font-mono text-base text-ink-500">#{String(ticket.number).padStart(4, "0")}</span>
               </h1>
               <span className={`rounded-full border px-2 py-0.5 text-[11px] font-bold ${STATUS_STYLE[ticket.status] ?? ""}`}>
                 {ticket.status}
               </span>
             </div>
-            <dl className="grid gap-x-6 gap-y-1 text-xs text-slate-400 sm:grid-cols-2">
+            <dl className="grid gap-x-6 gap-y-1 text-xs text-ink-400 sm:grid-cols-2">
               <div>
-                <dt className="inline text-slate-500">Opened by </dt>
-                <dd className="inline text-slate-200">{ticket.mine ? "you" : (ticket.opener_name ?? ticket.opener_id)}</dd>
+                <dt className="inline text-ink-500">Opened by </dt>
+                <dd className="inline text-ink-200">{ticket.mine ? "you" : (ticket.opener_name ?? ticket.opener_id)}</dd>
                 <dd className="inline"> · {when(ticket.opened_at, true)}</dd>
               </div>
               <div>
-                <dt className="inline text-slate-500">Closed by </dt>
-                <dd className="inline text-slate-200">{ticket.closed_by_name ?? "—"}</dd>
+                <dt className="inline text-ink-500">Closed by </dt>
+                <dd className="inline text-ink-200">{ticket.closed_by_name ?? "—"}</dd>
                 <dd className="inline"> · {when(ticket.closed_at, true)}</dd>
               </div>
               {ticket.close_reason && (
                 <div className="sm:col-span-2">
-                  <dt className="inline text-slate-500">Why </dt>
-                  <dd className="inline text-slate-200">{ticket.close_reason}</dd>
+                  <dt className="inline text-ink-500">Why </dt>
+                  <dd className="inline text-ink-200">{ticket.close_reason}</dd>
                 </div>
               )}
               {ticket.guild_name && (
                 <div>
-                  <dt className="inline text-slate-500">Server </dt>
-                  <dd className="inline text-slate-200">{ticket.guild_name}</dd>
+                  <dt className="inline text-ink-500">Server </dt>
+                  <dd className="inline text-ink-200">{ticket.guild_name}</dd>
                 </div>
               )}
             </dl>
           </section>
           <section className={`rounded-3xl p-2 sm:p-3 ${GLASS}`}>
             {detail.messages.length === 0 ? (
-              <p className="px-2 py-8 text-center text-xs text-slate-500">No messages were saved for this ticket.</p>
+              <p className="px-2 py-8 text-center text-xs text-ink-500">No messages were saved for this ticket.</p>
             ) : (
               <ul className="divide-y divide-white/5">
                 {detail.messages.map((message) => (

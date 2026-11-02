@@ -33,16 +33,16 @@ export default function RemindersCard({ game, now, onChanged }: { game: GameCont
     <section data-tour="games.reminders" className={`rounded-3xl p-4 sm:p-6 ${GLASS}`}>
       <div className="flex flex-wrap items-start gap-4">
         <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-amber-300">Reminders</p>
-          <p className="mt-1 text-sm text-slate-300">{status}</p>
+          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-brand-300">Reminders</p>
+          <p className="mt-1 text-sm text-ink-300">{status}</p>
           {kind === "early" && (
-            <p className="mt-1 text-[11px] text-slate-500">
+            <p className="mt-1 text-[11px] text-ink-500">
               Each player gets the start time, their nation, the checksum, what a no-show costs and a link to unreserve on the
               website.
             </p>
           )}
           {last && (
-            <p className="mt-2 text-[11px] text-slate-500">
+            <p className="mt-2 text-[11px] text-ink-500">
               Last: {last.kind === "early" ? "early" : "late"} reminder {dateTime(last.ts)}
               {last.by_name ? ` by ${last.by_name}` : ""} — {last.sent} DMed{last.failed ? `, ${last.failed} unreachable` : ""}.
             </p>
@@ -53,7 +53,7 @@ export default function RemindersCard({ game, now, onChanged }: { game: GameCont
             type="button"
             disabled={request.busy || game.players === 0}
             onClick={() => void request.submit({ action: "game_remind", payload: { thread_id: game.id, kind } })}
-            className="flex shrink-0 items-center gap-2 rounded-xl border border-amber-300/50 bg-amber-400/15 px-4 py-2.5 text-sm font-black text-amber-100 transition hover:bg-amber-400/25 disabled:cursor-not-allowed disabled:opacity-40"
+            className="flex shrink-0 items-center gap-2 rounded-xl border border-brand-300/50 bg-brand-400/15 px-4 py-2.5 text-sm font-black text-brand-100 transition hover:bg-brand-400/25 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {request.busy && <Spinner className="h-4 w-4" />}
             {kind === "early" ? `⏰ Send early reminder (${game.players})` : "🔔 Send late reminder"}

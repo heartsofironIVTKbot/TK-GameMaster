@@ -31,7 +31,7 @@ export interface StepContext {
 export { inviteUrl } from "@/lib/serverSettingsTypes";
 
 export const inputClass =
-  "w-full rounded-lg border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-amber-300/60 focus:outline-none";
+  "w-full rounded-lg border border-white/10 bg-ink-950/70 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:border-brand-300/60 focus:outline-none";
 
 export function Field({
   label,
@@ -48,16 +48,16 @@ export function Field({
 }) {
   return (
     <div className="space-y-1.5">
-      <p className="flex items-center gap-1.5 text-xs font-bold text-slate-200">
+      <p className="flex items-center gap-1.5 text-xs font-bold text-ink-200">
         {label}
-        {required && <span className="rounded bg-amber-400/15 px-1 text-[9px] font-black uppercase tracking-wider text-amber-300">Required</span>}
+        {required && <span className="rounded bg-brand-400/15 px-1 text-[9px] font-black uppercase tracking-wider text-brand-300">Required</span>}
       </p>
       {children}
-      {hint && <p className="text-[11px] leading-snug text-slate-500">{hint}</p>}
+      {hint && <p className="text-[11px] leading-snug text-ink-500">{hint}</p>}
       {issues.map((issue) => (
         <p
           key={issue.path + issue.message}
-          className={`text-[11px] font-semibold ${issue.level === "error" ? "text-rose-300" : "text-amber-300"}`}
+          className={`text-[11px] font-semibold ${issue.level === "error" ? "text-rose-300" : "text-brand-300"}`}
         >
           {issue.level === "error" ? "⛔ " : "⚠️ "}
           <Rich text={issue.message} />
@@ -125,7 +125,7 @@ export function NumberField({
           type="button"
           aria-label={`Less ${label}`}
           onClick={() => commit(String(value - step))}
-          className="h-9 w-9 rounded-lg border border-white/10 bg-white/5 text-lg text-slate-200 hover:border-amber-300/50"
+          className="h-9 w-9 rounded-lg border border-white/10 bg-white/5 text-lg text-ink-200 hover:border-brand-300/50"
         >
           −
         </button>
@@ -144,11 +144,11 @@ export function NumberField({
           type="button"
           aria-label={`More ${label}`}
           onClick={() => commit(String(value + step))}
-          className="h-9 w-9 rounded-lg border border-white/10 bg-white/5 text-lg text-slate-200 hover:border-amber-300/50"
+          className="h-9 w-9 rounded-lg border border-white/10 bg-white/5 text-lg text-ink-200 hover:border-brand-300/50"
         >
           +
         </button>
-        {suffix && <span className="text-xs text-slate-400">{suffix}</span>}
+        {suffix && <span className="text-xs text-ink-400">{suffix}</span>}
       </div>
     </Field>
   );
@@ -157,7 +157,7 @@ export function NumberField({
 export function Callout({ tone = "info", title, children }: { tone?: "info" | "warn" | "error" | "ok"; title?: ReactNode; children: ReactNode }) {
   const tones = {
     info: "border-sky-400/30 bg-sky-500/10 text-sky-50",
-    warn: "border-amber-400/40 bg-amber-500/10 text-amber-50",
+    warn: "border-brand-400/40 bg-brand-500/10 text-brand-50",
     error: "border-rose-400/40 bg-rose-500/10 text-rose-50",
     ok: "border-emerald-400/40 bg-emerald-500/10 text-emerald-50",
   };
@@ -171,13 +171,13 @@ export function Callout({ tone = "info", title, children }: { tone?: "info" | "w
 
 export function Card({ title, subtitle, icon, right, children }: { title: ReactNode; subtitle?: ReactNode; icon?: ReactNode; right?: ReactNode; children: ReactNode }) {
   return (
-    <section className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+    <section className="rounded-2xl border border-white/10 bg-ink-950/40 p-4">
       <div className="mb-3 flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-2.5">
           {icon && <span className="mt-0.5 text-lg leading-none">{icon}</span>}
           <div className="min-w-0">
-            <h3 className="text-sm font-black text-slate-100">{title}</h3>
-            {subtitle && <p className="mt-0.5 text-xs text-slate-400">{subtitle}</p>}
+            <h3 className="text-sm font-black text-ink-100">{title}</h3>
+            {subtitle && <p className="mt-0.5 text-xs text-ink-400">{subtitle}</p>}
           </div>
         </div>
         {right}

@@ -19,9 +19,9 @@ import { outcomeOf, plural } from "./labels";
 type Choice = Verdict | "auto";
 
 const CHOICES: { value: Choice; label: string; className: string }[] = [
-  { value: "present", label: "Present", className: "border-emerald-300 bg-emerald-400 text-slate-950" },
+  { value: "present", label: "Present", className: "border-emerald-300 bg-emerald-400 text-ink-950" },
   { value: "absent", label: "Absent", className: "border-rose-300 bg-rose-500 text-white" },
-  { value: "excused", label: "Excused", className: "border-sky-300 bg-sky-400 text-slate-950" },
+  { value: "excused", label: "Excused", className: "border-sky-300 bg-sky-400 text-ink-950" },
   { value: "auto", label: "Automatic", className: "border-white/40 bg-white/20 text-white" },
 ];
 
@@ -109,25 +109,25 @@ export default function OverrideDialog({
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <div className={`gm-fade-up w-full max-w-lg rounded-3xl p-5 ${GLASS} bg-slate-900/95`}>
+      <div className={`gm-fade-up w-full max-w-lg rounded-3xl p-5 ${GLASS} bg-ink-900/95`}>
         <div className="flex items-start gap-3">
           <Avatar url={player.avatar_url} name={player.name} size={44} />
           <div className="min-w-0 flex-1">
             <p className="text-[11px] font-black uppercase tracking-[0.18em] text-emerald-300">Change attendance</p>
             <p className="truncate text-lg font-black text-white">{player.name}</p>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-ink-400">
               {player.slots.map((slot) => slot.label).join(" + ")} · seen in {player.hits}/{game.samples.length} · now{" "}
-              <span className="font-bold text-slate-200">{outcome.label}</span>
+              <span className="font-bold text-ink-200">{outcome.label}</span>
             </p>
           </div>
-          <button type="button" onClick={onClose} className="text-slate-400 hover:text-white" aria-label="Close">
+          <button type="button" onClick={onClose} className="text-ink-400 hover:text-white" aria-label="Close">
             ✕
           </button>
         </div>
 
         {player.override && (
-          <p className="mt-3 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-[11px] text-slate-400">
-            Already set to <b className="text-slate-200">{player.override.verdict}</b>
+          <p className="mt-3 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-[11px] text-ink-400">
+            Already set to <b className="text-ink-200">{player.override.verdict}</b>
             {player.override.by_name ? ` by ${player.override.by_name}` : ""}: “{player.override.reason}”
           </p>
         )}
@@ -143,7 +143,7 @@ export default function OverrideDialog({
                 disabled={isCurrent}
                 onClick={() => setChoice(option.value)}
                 className={`rounded-xl border px-2 py-2 text-xs font-black transition disabled:cursor-not-allowed disabled:opacity-40 ${
-                  active ? option.className : "border-white/10 bg-white/[0.03] text-slate-200 hover:border-white/30"
+                  active ? option.className : "border-white/10 bg-white/[0.03] text-ink-200 hover:border-white/30"
                 }`}
                 aria-label={isCurrent ? `${option.label} (current)` : option.label}
               >

@@ -117,16 +117,16 @@ export default function RoleCheckCard({ onOpen }: { onOpen: (id: string) => void
       <div className="flex flex-wrap items-start gap-3">
         <div className="min-w-0 flex-1">
           <h2 className="text-[11px] font-black uppercase tracking-[0.18em] text-sky-300">🛡️ Role check</h2>
-          <p className="mt-1 text-xs text-slate-400">
+          <p className="mt-1 text-xs text-ink-400">
             Checks Trusted (5+ commends, VIP or a Valor pick — with that game type&apos;s Verified role and no game ban), Hearts of
             Valor, Dishonored and the database&apos;s Verified / host flags. Runs by itself every day at {state?.daily_at_utc ?? "04:00"} UTC.
           </p>
           {last && (
-            <p className="mt-1 text-[11px] text-slate-500">
+            <p className="mt-1 text-[11px] text-ink-500">
               Last run: {when(last.finished_at)} · {last.trigger === "daily" ? "automatic" : `by ${last.by_name ?? "staff"}`} ·{" "}
               {last.total === 0 ? "nothing to change" : `${last.total} change${last.total === 1 ? "" : "s"}`}
               {last.total > 0 && (
-                <button type="button" onClick={() => setShowLast((value) => !value)} className="ml-1 font-bold text-slate-300 hover:text-white">
+                <button type="button" onClick={() => setShowLast((value) => !value)} className="ml-1 font-bold text-ink-300 hover:text-white">
                   {showLast ? "Hide" : "Show"}
                 </button>
               )}
@@ -149,7 +149,7 @@ export default function RoleCheckCard({ onOpen }: { onOpen: (id: string) => void
         <p className="mt-3 rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-100">{phase.message}</p>
       )}
       {running && (
-        <p className="mt-3 flex items-center gap-2 text-xs text-slate-300">
+        <p className="mt-3 flex items-center gap-2 text-xs text-ink-300">
           <Spinner className="h-3.5 w-3.5 text-sky-300" />
           {phase.mode === "preview"
             ? "Checking every member's roles… (nothing changes)"
@@ -164,7 +164,7 @@ export default function RoleCheckCard({ onOpen }: { onOpen: (id: string) => void
               ? "✅ Everything is in order — nothing would change."
               : `Preview: ${freshPreview.total} change${freshPreview.total === 1 ? "" : "s"} would be made`}
           </p>
-          <p className="text-[11px] text-slate-500">
+          <p className="text-[11px] text-ink-500">
             {when(freshPreview.finished_at)} · checked {freshPreview.members_checked.toLocaleString()} members (
             {freshPreview.members_scanned.toLocaleString()} with relevant roles or stats)
           </p>
@@ -176,12 +176,12 @@ export default function RoleCheckCard({ onOpen }: { onOpen: (id: string) => void
                 onClick={() => (confirm ? void run("apply") : setConfirm(true))}
                 onBlur={() => setConfirm(false)}
                 className={`rounded-xl px-4 py-2 text-xs font-black ${
-                  confirm ? "bg-rose-500 text-white" : "bg-amber-400 text-slate-950 hover:bg-amber-300"
+                  confirm ? "bg-rose-500 text-white" : "bg-brand-400 text-ink-950 hover:bg-brand-300"
                 }`}
               >
                 {confirm ? `Click again — apply ${freshPreview.total} change${freshPreview.total === 1 ? "" : "s"}` : "✅ Apply these changes"}
               </button>
-              <span className="text-[11px] text-slate-500">
+              <span className="text-[11px] text-ink-500">
                 Apply checks everything again at that moment, so the result can differ slightly if something changed meanwhile.
               </span>
             </div>
@@ -191,7 +191,7 @@ export default function RoleCheckCard({ onOpen }: { onOpen: (id: string) => void
 
       {last && showLast && last.total > 0 && (
         <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.02] p-3">
-          <p className="text-xs font-bold text-slate-200">Applied {when(last.finished_at)}</p>
+          <p className="text-xs font-bold text-ink-200">Applied {when(last.finished_at)}</p>
           <ChangeList run={last} onOpen={onOpen} />
         </div>
       )}
@@ -214,14 +214,14 @@ function ChangeList({ run, onOpen }: { run: RoleScanResult; onOpen: (id: string)
             <ul className="mt-1 grid gap-1 sm:grid-cols-2">
               {items.map((change) => (
                 <li key={`${change.user_id}-${change.kind}-${change.role}`} className="rounded-lg border border-white/5 bg-white/[0.02] px-2 py-1 text-xs">
-                  <button type="button" onClick={() => onOpen(change.user_id)} className="font-bold text-slate-100 hover:text-sky-200 hover:underline">
+                  <button type="button" onClick={() => onOpen(change.user_id)} className="font-bold text-ink-100 hover:text-sky-200 hover:underline">
                     {change.name}
                   </button>
-                  <span className="text-slate-400">
+                  <span className="text-ink-400">
                     {" "}
                     {change.kind.endsWith("_add") ? "gets" : change.kind.endsWith("_remove") ? "loses" : "·"} {change.role}
                   </span>
-                  <span className="block text-[10px] text-slate-500">{change.detail}</span>
+                  <span className="block text-[10px] text-ink-500">{change.detail}</span>
                 </li>
               ))}
             </ul>
@@ -229,10 +229,10 @@ function ChangeList({ run, onOpen }: { run: RoleScanResult; onOpen: (id: string)
         );
       })}
       {run.changes.length < run.total && (
-        <p className="text-[11px] text-slate-500">…and {run.total - run.changes.length} more (see the audit log).</p>
+        <p className="text-[11px] text-ink-500">…and {run.total - run.changes.length} more (see the audit log).</p>
       )}
       {run.errors.length > 0 && (
-        <p className="text-[11px] text-amber-300">⚠️ {run.errors.length} note(s): {run.errors.slice(0, 3).join(" · ")}</p>
+        <p className="text-[11px] text-brand-300">⚠️ {run.errors.length} note(s): {run.errors.slice(0, 3).join(" · ")}</p>
       )}
     </div>
   );

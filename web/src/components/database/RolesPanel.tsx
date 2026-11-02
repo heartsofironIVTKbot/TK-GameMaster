@@ -85,7 +85,7 @@ export default function RolesPanel({
   const busy = state.phase === "sending" || state.phase === "waiting";
 
   return (
-    <section data-tour="database.roles" className="rounded-2xl border border-violet-400/25 bg-slate-950/70 p-4 shadow-xl shadow-black/30">
+    <section data-tour="database.roles" className="rounded-2xl border border-violet-400/25 bg-ink-950/70 p-4 shadow-xl shadow-black/30">
       <div className="mb-3 flex items-center justify-between gap-2">
         <h2 className="text-[11px] font-black uppercase tracking-[0.18em] text-violet-300">🪪 Verification, host branches & VIP</h2>
         {data && data.nonce !== nonce && <Spinner className="h-3 w-3 text-violet-300" />}
@@ -93,7 +93,7 @@ export default function RolesPanel({
       {data?.error && <p className="mb-2 rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-100">{data.error}</p>}
       {!roles ? (
         !data?.error && (
-          <p className="flex items-center gap-2 text-xs text-slate-400">
+          <p className="flex items-center gap-2 text-xs text-ink-400">
             <Spinner className="h-3.5 w-3.5 text-violet-300" /> Loading…
           </p>
         )
@@ -128,7 +128,7 @@ export default function RolesPanel({
             send={send}
           />
           {!roles.can_manage && (
-            <p className="text-[11px] text-slate-500">Only Host Management (or admins) can change these.</p>
+            <p className="text-[11px] text-ink-500">Only Host Management (or admins) can change these.</p>
           )}
         </div>
       )}
@@ -165,7 +165,7 @@ function VerificationRow({
         <span className="text-sm">{entry.has ? "✅" : "▫️"}</span>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-bold text-white">{entry.label}</p>
-          <p className="truncate text-[11px] text-slate-400">
+          <p className="truncate text-[11px] text-ink-400">
             {!entry.role_ready
               ? "The bot creates this role on its next start."
               : entry.has
@@ -176,7 +176,7 @@ function VerificationRow({
                   ? `Removed by ${entry.removed_by} · ${date(entry.removed_at)}`
                   : `Not verified for ${entry.track === "Roleplay" ? "Roleplay" : "Historical"} games`}
           </p>
-          {!entry.has && entry.removed_reason && <p className="truncate text-[11px] italic text-slate-500">“{entry.removed_reason}”</p>}
+          {!entry.has && entry.removed_reason && <p className="truncate text-[11px] italic text-ink-500">“{entry.removed_reason}”</p>}
         </div>
         {canManage && entry.role_ready && !removing && (
           entry.has ? (
@@ -184,7 +184,7 @@ function VerificationRow({
               type="button"
               onClick={() => setRemoving(true)}
               disabled={busy}
-              className="rounded-lg px-2 py-1 text-[11px] font-bold text-slate-400 hover:bg-rose-500/10 hover:text-rose-200 disabled:opacity-40"
+              className="rounded-lg px-2 py-1 text-[11px] font-bold text-ink-400 hover:bg-rose-500/10 hover:text-rose-200 disabled:opacity-40"
             >
               Remove…
             </button>
@@ -204,7 +204,7 @@ function VerificationRow({
         <div className="mt-2 space-y-2 border-t border-white/10 pt-2">
           <ReasonBox value={reason} onChange={setReason} quick={QUICK_UNVERIFY} placeholder="Why are you taking it away?" />
           <div className="flex gap-2">
-            <button type="button" onClick={() => setRemoving(false)} className="rounded-lg px-3 py-2 text-xs font-bold text-slate-400 hover:text-white">
+            <button type="button" onClick={() => setRemoving(false)} className="rounded-lg px-3 py-2 text-xs font-bold text-ink-400 hover:text-white">
               Cancel
             </button>
             <div className="flex-1">
@@ -242,7 +242,7 @@ function HostTierSection({
   return (
     <div className="space-y-2 border-t border-white/10 pt-3">
       <p className="text-[10px] font-black uppercase tracking-[0.18em] text-sky-300">🎖️ Host branches</p>
-      <p className="text-[11px] text-slate-500">
+      <p className="text-[11px] text-ink-500">
         RP hosts host Roleplay games, HIST hosts Historical games. Each branch has its own rank and its own Acclamations /
         Violations.
       </p>
@@ -257,7 +257,7 @@ function HostTierSection({
           send={send}
         />
       ))}
-      {roles.can_manage && isSelf && <p className="text-[11px] text-slate-500">You can&apos;t change your own host role.</p>}
+      {roles.can_manage && isSelf && <p className="text-[11px] text-ink-500">You can&apos;t change your own host role.</p>}
     </div>
   );
 }
@@ -299,16 +299,16 @@ function HostBranchRow({
   return (
     <div className={`rounded-xl border px-3 py-2 ${tier === "None" ? "border-white/10 bg-white/[0.02]" : "border-sky-400/30 bg-sky-500/[0.06]"}`}>
       <div className="flex items-center gap-2">
-        <span className="w-11 shrink-0 rounded bg-white/10 px-1.5 py-0.5 text-center text-[10px] font-black text-slate-200">{branch}</span>
-        <span className={`text-sm font-bold ${tier === "None" ? "text-slate-400" : "text-white"}`}>
+        <span className="w-11 shrink-0 rounded bg-white/10 px-1.5 py-0.5 text-center text-[10px] font-black text-ink-200">{branch}</span>
+        <span className={`text-sm font-bold ${tier === "None" ? "text-ink-400" : "text-white"}`}>
           {tier === "None" ? "Not in this branch" : `${tier} ${branch} Host`}
         </span>
-        <span className="ml-auto min-w-0 truncate text-[10px] text-slate-500">
+        <span className="ml-auto min-w-0 truncate text-[10px] text-ink-500">
           {entry.changed_by ? `${entry.changed_by} · ${date(entry.changed_at)}` : tier !== "None" ? "set before records" : ""}
         </span>
       </div>
-      {entry.note && <p className="mt-0.5 text-[11px] italic text-slate-500">“{entry.note}”</p>}
-      {!entry.roles_ready && <p className="mt-1 text-[11px] text-amber-300">The bot creates the {branch} host roles on its next start.</p>}
+      {entry.note && <p className="mt-0.5 text-[11px] italic text-ink-500">“{entry.note}”</p>}
+      {!entry.roles_ready && <p className="mt-1 text-[11px] text-brand-300">The bot creates the {branch} host roles on its next start.</p>}
 
       {canManage && !isSelf && entry.roles_ready && (
         <div className="mt-2 flex gap-1" role="radiogroup" aria-label={`${branch} host rank`}>
@@ -327,7 +327,7 @@ function HostBranchRow({
                     ? option.value === "None"
                       ? "border-rose-300/60 bg-rose-500/15 text-rose-100"
                       : "border-sky-300 bg-sky-400/15 text-sky-100"
-                    : "border-white/10 bg-white/[0.03] text-slate-300 hover:border-white/25"
+                    : "border-white/10 bg-white/[0.03] text-ink-300 hover:border-white/25"
                 }`}
               >
                 {option.label}
@@ -345,12 +345,12 @@ function HostBranchRow({
               value={note}
               onChange={(event) => setNote(event.target.value.slice(0, 300))}
               placeholder="Note for the log (optional)"
-              className="w-full rounded-lg border border-white/10 bg-slate-900/80 px-2.5 py-1.5 text-xs text-slate-100 placeholder:text-slate-500 focus:border-sky-300/50 focus:outline-none"
+              className="w-full rounded-lg border border-white/10 bg-ink-900/80 px-2.5 py-1.5 text-xs text-ink-100 placeholder:text-ink-500 focus:border-sky-300/50 focus:outline-none"
             />
           )}
           <PreviewBox preview={{ lines, error: null, danger: removing || demotion }} />
           <div className="flex gap-2">
-            <button type="button" onClick={() => setPicked(null)} className="rounded-lg px-3 py-2 text-xs font-bold text-slate-400 hover:text-white">
+            <button type="button" onClick={() => setPicked(null)} className="rounded-lg px-3 py-2 text-xs font-bold text-ink-400 hover:text-white">
               Cancel
             </button>
             <div className="flex-1">
@@ -390,15 +390,15 @@ function VipSection({
 
   return (
     <div className="space-y-2 border-t border-white/10 pt-3">
-      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-300">🌟 VIP</p>
+      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-brand-300">🌟 VIP</p>
       {vip.current ? (
         <GrantCard grant={vip.current} />
       ) : vip.has_role ? (
-        <p className="rounded-xl border border-amber-300/30 bg-amber-400/[0.06] px-3 py-2 text-xs text-amber-50">
+        <p className="rounded-xl border border-brand-300/30 bg-brand-400/[0.06] px-3 py-2 text-xs text-brand-50">
           VIP — given before VIP records were kept (no category). Give it again below to record a category.
         </p>
       ) : (
-        <p className="text-xs text-slate-400">Not VIP on this server.</p>
+        <p className="text-xs text-ink-400">Not VIP on this server.</p>
       )}
 
       {vip.pending && (
@@ -417,10 +417,10 @@ function VipSection({
       )}
 
       {vip.elsewhere.length > 0 && (
-        <p className="text-[11px] text-slate-400">
+        <p className="text-[11px] text-ink-400">
           Also VIP on:{" "}
           {vip.elsewhere.map((entry, index) => (
-            <span key={`${entry.server}-${index}`} className="text-slate-200">
+            <span key={`${entry.server}-${index}`} className="text-ink-200">
               {index > 0 && ", "}
               {entry.server} ({vipCategoryMeta(entry.category)?.label})
             </span>
@@ -435,7 +435,7 @@ function VipSection({
               type="button"
               onClick={() => setGiving(true)}
               disabled={busy}
-              className="rounded-lg border border-amber-300/40 bg-amber-400/10 px-3 py-1.5 text-xs font-bold text-amber-100 hover:bg-amber-400/20 disabled:opacity-40"
+              className="rounded-lg border border-brand-300/40 bg-brand-400/10 px-3 py-1.5 text-xs font-bold text-brand-100 hover:bg-brand-400/20 disabled:opacity-40"
             >
               {isVip ? "Change VIP category…" : "🌟 Make VIP…"}
             </button>
@@ -445,23 +445,23 @@ function VipSection({
               type="button"
               onClick={() => setRemoving(true)}
               disabled={busy}
-              className="rounded-lg px-3 py-1.5 text-xs font-bold text-slate-400 hover:bg-rose-500/10 hover:text-rose-200 disabled:opacity-40"
+              className="rounded-lg px-3 py-1.5 text-xs font-bold text-ink-400 hover:bg-rose-500/10 hover:text-rose-200 disabled:opacity-40"
             >
               Remove VIP…
             </button>
           )}
         </div>
       )}
-      {canManage && isSelf && <p className="text-[11px] text-slate-500">You can&apos;t change your own VIP.</p>}
+      {canManage && isSelf && <p className="text-[11px] text-ink-500">You can&apos;t change your own VIP.</p>}
 
       {giving && <GiveVipForm playerName={playerName} replacing={vip.current} busy={busy} onCancel={() => setGiving(false)} send={send} />}
 
       {removing && (
         <div className="space-y-2 rounded-xl border border-rose-400/25 bg-rose-500/[0.05] p-3">
           <ReasonBox value={reason} onChange={setReason} quick={QUICK_VIP_REMOVE} placeholder="Why is VIP being taken away?" />
-          <p className="text-[11px] text-slate-400">Only the VIP role goes — their Verified and Trusted roles stay.</p>
+          <p className="text-[11px] text-ink-400">Only the VIP role goes — their Verified and Trusted roles stay.</p>
           <div className="flex gap-2">
-            <button type="button" onClick={() => setRemoving(false)} className="rounded-lg px-3 py-2 text-xs font-bold text-slate-400 hover:text-white">
+            <button type="button" onClick={() => setRemoving(false)} className="rounded-lg px-3 py-2 text-xs font-bold text-ink-400 hover:text-white">
               Cancel
             </button>
             <div className="flex-1">
@@ -478,8 +478,8 @@ function VipSection({
       )}
 
       {vip.history.length > 0 && (
-        <details className="text-[11px] text-slate-400">
-          <summary className="cursor-pointer select-none font-semibold text-slate-400 hover:text-slate-200">
+        <details className="text-[11px] text-ink-400">
+          <summary className="cursor-pointer select-none font-semibold text-ink-400 hover:text-ink-200">
             Earlier VIP ({vip.history.length})
           </summary>
           <ul className="mt-1 space-y-1">
@@ -488,7 +488,7 @@ function VipSection({
                 {vipCategoryMeta(grant.category)?.icon} {vipCategoryMeta(grant.category)?.label}
                 {grant.from_server ? ` (from ${grant.from_server})` : ""} — {grant.status === "declined" ? "declined" : "removed"}
                 {grant.decided_by ? ` by ${grant.decided_by}` : ""} · {date(grant.decided_at)}
-                {grant.decision_note && <span className="italic text-slate-500"> — “{grant.decision_note}”</span>}
+                {grant.decision_note && <span className="italic text-ink-500"> — “{grant.decision_note}”</span>}
               </li>
             ))}
           </ul>
@@ -501,11 +501,11 @@ function VipSection({
 function GrantCard({ grant }: { grant: VipGrant }) {
   const meta = vipCategoryMeta(grant.category);
   return (
-    <div className="rounded-xl border border-amber-300/40 bg-amber-400/[0.08] p-3">
-      <p className="text-sm font-black text-amber-50">
+    <div className="rounded-xl border border-brand-300/40 bg-brand-400/[0.08] p-3">
+      <p className="text-sm font-black text-brand-50">
         {meta?.icon} {meta?.label} VIP
       </p>
-      <p className="text-[11px] text-amber-100/70">
+      <p className="text-[11px] text-brand-100/70">
         {grant.from_server
           ? `Carried over from ${grant.from_server}${grant.decided_by ? ` · approved by ${grant.decided_by}` : ""}`
           : grant.granted_by
@@ -525,7 +525,7 @@ function GrantDetails({ grant }: { grant: VipGrant }) {
       <ul className="mt-2 space-y-1">
         {links.map((link) => (
           <li key={link.url} className="flex items-center gap-2 text-xs">
-            <span className="w-16 shrink-0 rounded bg-white/10 px-1.5 py-0.5 text-center text-[10px] font-bold text-slate-200">{link.platform}</span>
+            <span className="w-16 shrink-0 rounded bg-white/10 px-1.5 py-0.5 text-center text-[10px] font-bold text-ink-200">{link.platform}</span>
             <a href={link.url} target="_blank" rel="noreferrer noopener" className="truncate text-sky-200 underline-offset-2 hover:underline">
               {link.url.replace(/^https?:\/\/(www\.)?/, "")}
             </a>
@@ -534,8 +534,8 @@ function GrantDetails({ grant }: { grant: VipGrant }) {
       </ul>
     );
   }
-  if (reason) return <p className="mt-1.5 whitespace-pre-line text-xs italic text-slate-200">“{reason}”</p>;
-  if (note) return <p className="mt-1.5 text-xs text-slate-300">{note}</p>;
+  if (reason) return <p className="mt-1.5 whitespace-pre-line text-xs italic text-ink-200">“{reason}”</p>;
+  if (note) return <p className="mt-1.5 text-xs text-ink-300">{note}</p>;
   return null;
 }
 
@@ -587,7 +587,7 @@ function GiveVipForm({
     : [];
 
   return (
-    <div className="space-y-3 rounded-xl border border-amber-300/30 bg-amber-400/[0.04] p-3">
+    <div className="space-y-3 rounded-xl border border-brand-300/30 bg-brand-400/[0.04] p-3">
       <Field label="Category">
         <div className="grid gap-1.5">
           {VIP_CATEGORIES.map((option) => (
@@ -598,14 +598,14 @@ function GiveVipForm({
               onClick={() => setCategory(option.value)}
               className={`rounded-lg border px-3 py-2 text-left transition ${
                 category === option.value
-                  ? "border-amber-300 bg-amber-400/15"
+                  ? "border-brand-300 bg-brand-400/15"
                   : "border-white/10 bg-white/[0.03] hover:border-white/25"
               }`}
             >
               <span className="text-sm font-bold text-white">
                 {option.icon} {option.label}
               </span>
-              <span className="block text-[11px] text-slate-400">{option.description}</span>
+              <span className="block text-[11px] text-ink-400">{option.description}</span>
             </button>
           ))}
         </div>
@@ -616,7 +616,7 @@ function GiveVipForm({
           <div className="space-y-1.5">
             {links.map((link, index) => (
               <div key={index} className="flex items-center gap-1.5">
-                <span className="w-16 shrink-0 rounded bg-white/10 px-1.5 py-1 text-center text-[10px] font-bold text-slate-300">
+                <span className="w-16 shrink-0 rounded bg-white/10 px-1.5 py-1 text-center text-[10px] font-bold text-ink-300">
                   {link.trim() ? vipPlatform(link.trim()) : "Link"}
                 </span>
                 <input
@@ -624,14 +624,14 @@ function GiveVipForm({
                   onChange={(event) => setLinks((current) => current.map((value, i) => (i === index ? event.target.value : value)))}
                   placeholder="https://www.youtube.com/@channel"
                   maxLength={VIP_LINK_MAX_LEN}
-                  className="min-w-0 flex-1 rounded-lg border border-white/10 bg-slate-900/80 px-2.5 py-1.5 text-xs text-slate-100 placeholder:text-slate-500 focus:border-amber-300/50 focus:outline-none"
+                  className="min-w-0 flex-1 rounded-lg border border-white/10 bg-ink-900/80 px-2.5 py-1.5 text-xs text-ink-100 placeholder:text-ink-500 focus:border-brand-300/50 focus:outline-none"
                   aria-label={`Channel link ${index + 1}`}
                 />
                 {links.length > 1 && (
                   <button
                     type="button"
                     onClick={() => setLinks((current) => current.filter((_, i) => i !== index))}
-                    className="px-1 text-xs text-slate-500 hover:text-rose-300"
+                    className="px-1 text-xs text-ink-500 hover:text-rose-300"
                     aria-label={`Remove link ${index + 1}`}
                   >
                     ✕
@@ -643,7 +643,7 @@ function GiveVipForm({
               <button
                 type="button"
                 onClick={() => setLinks((current) => [...current, ""])}
-                className="text-[11px] font-bold text-amber-200 hover:text-amber-100"
+                className="text-[11px] font-bold text-brand-200 hover:text-brand-100"
               >
                 ＋ Add another link (Twitch, Kick, TikTok…)
               </button>
@@ -658,7 +658,7 @@ function GiveVipForm({
             value={note}
             onChange={(event) => setNote(event.target.value.slice(0, VIP_NOTE_MAX))}
             placeholder="Community manager for HOI4"
-            className="w-full rounded-lg border border-white/10 bg-slate-900/80 px-2.5 py-1.5 text-xs text-slate-100 placeholder:text-slate-500 focus:border-amber-300/50 focus:outline-none"
+            className="w-full rounded-lg border border-white/10 bg-ink-900/80 px-2.5 py-1.5 text-xs text-ink-100 placeholder:text-ink-500 focus:border-brand-300/50 focus:outline-none"
           />
         </Field>
       )}
@@ -670,14 +670,14 @@ function GiveVipForm({
             onChange={(event) => setReason(event.target.value.slice(0, VIP_REASON_MAX))}
             rows={3}
             placeholder="E.g. ran our tournaments for two years, helped moderate…"
-            className="w-full resize-y rounded-lg border border-white/10 bg-slate-900/80 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-amber-300/50 focus:outline-none"
+            className="w-full resize-y rounded-lg border border-white/10 bg-ink-900/80 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:border-brand-300/50 focus:outline-none"
           />
         </Field>
       )}
 
       <PreviewBox preview={{ lines, error, danger: false }} />
       <div className="flex gap-2">
-        <button type="button" onClick={onCancel} className="rounded-lg px-3 py-2 text-xs font-bold text-slate-400 hover:text-white">
+        <button type="button" onClick={onCancel} className="rounded-lg px-3 py-2 text-xs font-bold text-ink-400 hover:text-white">
           Cancel
         </button>
         <div className="flex-1">
@@ -717,7 +717,7 @@ function ReasonBox({
         onChange={(event) => onChange(event.target.value.slice(0, 300))}
         rows={2}
         placeholder={placeholder}
-        className="w-full resize-y rounded-lg border border-white/10 bg-slate-900/80 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-amber-300/50 focus:outline-none"
+        className="w-full resize-y rounded-lg border border-white/10 bg-ink-900/80 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:border-brand-300/50 focus:outline-none"
       />
       <div className="flex flex-wrap gap-1">
         {quick.map((text) => (
@@ -725,7 +725,7 @@ function ReasonBox({
             key={text}
             type="button"
             onClick={() => onChange(text)}
-            className="rounded-md border border-white/10 bg-white/[0.03] px-2 py-0.5 text-[11px] text-slate-300 hover:border-white/25"
+            className="rounded-md border border-white/10 bg-white/[0.03] px-2 py-0.5 text-[11px] text-ink-300 hover:border-white/25"
           >
             {text}
           </button>

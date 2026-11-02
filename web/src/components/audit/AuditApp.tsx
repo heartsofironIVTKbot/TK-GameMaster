@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
+import SiteHeader from "@/components/site/SiteHeader";
 import { useEffect, useMemo, useState } from "react";
 import ServerSwitcher from "@/components/ServerSwitcher";
-import { GLASS, HostAvatar, Spinner } from "@/components/schedule/ui";
+import { GLASS, Spinner } from "@/components/schedule/ui";
 import { AUDIT_CATEGORIES, AUDIT_CATEGORY_LABELS } from "@/lib/auditTypes";
 import type { HostProfile } from "@/lib/scheduleTypes";
 import AuditList, { CATEGORY_ICON, useAuditFeed } from "./AuditList";
@@ -14,10 +14,8 @@ import AuditList, { CATEGORY_ICON, useAuditFeed } from "./AuditList";
  * and admins only; read-only. ?player=<id> / ?game=<id> pre-filter it.
  */
 
-const NAV_LINK =
-  "rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-slate-300 hover:border-amber-300/40 hover:text-white";
 const INPUT =
-  "rounded-lg border border-white/10 bg-slate-950/60 px-3 py-1.5 text-xs text-slate-100 placeholder:text-slate-500 focus:border-amber-300/50 focus:outline-none";
+  "rounded-lg border border-white/10 bg-ink-950/60 px-3 py-1.5 text-xs text-ink-100 placeholder:text-ink-500 focus:border-brand-300/50 focus:outline-none";
 
 interface Filters {
   category: string;
@@ -74,41 +72,15 @@ export default function AuditApp({ host }: { host: HostProfile }) {
   const filtered = Boolean(filters.category || filters.q || filters.player || filters.game || filters.from || filters.to);
 
   return (
-    <div className="gm-backdrop min-h-screen w-full text-slate-100">
-      <header className="sticky top-0 z-[1100] border-b border-white/10 bg-slate-950/60 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-[1400px] flex-wrap items-center gap-3 px-4 py-3 sm:px-6">
-          <Link href="/" className="flex items-center gap-2.5" title="Back to the map">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-amber-200 to-amber-600 text-lg shadow-lg shadow-amber-500/30">
-              📜
-            </span>
-            <span className="leading-tight">
-              <span className="block text-sm font-black tracking-tight text-white">Audit log</span>
-              <span className="block text-[11px] font-semibold text-slate-400">GameMaster · Who did what, and when</span>
-            </span>
-          </Link>
+    <div className="gm-backdrop min-h-screen w-full text-ink-100">
+      <SiteHeader page="audit" icon="📜" title="Audit log" subtitle="GameMaster · Who did what, and when" gradient="from-brand-200 to-brand-600">
           {host.demo && (
             <span className="rounded-full border border-fuchsia-400/40 bg-fuchsia-500/15 px-3 py-1 text-[11px] font-bold text-fuchsia-200">
               PREVIEW MODE · sample data
             </span>
           )}
           <ServerSwitcher host={host} />
-          <nav className="ml-auto flex flex-wrap items-center gap-2">
-            <Link href="/" className={NAV_LINK}>
-              🗺️ Map
-            </Link>
-            <Link href="/games" className={NAV_LINK}>
-              🎮 Games
-            </Link>
-            <Link href="/database" className={NAV_LINK}>
-              🗂️ Database
-            </Link>
-            <div className="hidden items-center gap-2 pl-1 sm:flex">
-              <HostAvatar host={host} />
-              <span className="text-xs font-semibold text-slate-300">{host.display_name || host.username}</span>
-            </div>
-          </nav>
-        </div>
-      </header>
+      </SiteHeader>
 
       <main className="mx-auto max-w-[1400px] space-y-4 px-4 py-5 sm:px-6">
         <section className={`space-y-3 rounded-3xl p-4 sm:p-5 ${GLASS}`}>
@@ -156,11 +128,11 @@ export default function AuditApp({ host }: { host: HostProfile }) {
               className={`${INPUT} w-[170px] font-mono`}
               aria-label="Only actions in this game"
             />
-            <label className="flex items-center gap-1.5 text-[11px] text-slate-400">
+            <label className="flex items-center gap-1.5 text-[11px] text-ink-400">
               From
               <input type="date" value={filters.from} onChange={(event) => set({ from: event.target.value })} className={INPUT} />
             </label>
-            <label className="flex items-center gap-1.5 text-[11px] text-slate-400">
+            <label className="flex items-center gap-1.5 text-[11px] text-ink-400">
               To
               <input type="date" value={filters.to} onChange={(event) => set({ to: event.target.value })} className={INPUT} />
             </label>
@@ -171,7 +143,7 @@ export default function AuditApp({ host }: { host: HostProfile }) {
                   setSearch("");
                   setFilters({ category: "", q: "", player: "", game: "", from: "", to: "" });
                 }}
-                className="rounded-lg px-2 py-1.5 text-[11px] font-bold text-slate-400 hover:bg-white/5 hover:text-white"
+                className="rounded-lg px-2 py-1.5 text-[11px] font-bold text-ink-400 hover:bg-white/5 hover:text-white"
               >
                 Clear filters
               </button>
@@ -180,21 +152,21 @@ export default function AuditApp({ host }: { host: HostProfile }) {
               <button
                 type="button"
                 onClick={refresh}
-                className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[11px] font-bold text-slate-400 hover:bg-white/5 hover:text-white"
+                className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[11px] font-bold text-ink-400 hover:bg-white/5 hover:text-white"
                 aria-label="Refresh"
               >
                 {loading && <Spinner className="h-3 w-3" />}↻ Refresh
               </button>
               <a
                 href={`/api/audit/export${query ? `?${query}` : ""}`}
-                className="rounded-lg border border-amber-300/40 bg-amber-400/10 px-3 py-1.5 text-[11px] font-bold text-amber-200 hover:bg-amber-400/20"
+                className="rounded-lg border border-brand-300/40 bg-brand-400/10 px-3 py-1.5 text-[11px] font-bold text-brand-200 hover:bg-brand-400/20"
                 title="Download what's shown (with these filters) as a spreadsheet file — up to 10,000 rows"
               >
                 ⬇ Export CSV
               </a>
             </div>
           </div>
-          <p className="text-[11px] text-slate-500">
+          <p className="text-[11px] text-ink-500">
             Updates every 15 seconds. Click a row for the details. Rows can&apos;t be edited or deleted; they&apos;re kept for 400 days.
           </p>
         </section>
@@ -217,7 +189,7 @@ export default function AuditApp({ host }: { host: HostProfile }) {
 function chip(active: boolean): string {
   return `rounded-full border px-3 py-1 text-xs font-bold transition ${
     active
-      ? "border-amber-300 bg-amber-400 text-slate-950"
-      : "border-white/10 bg-white/5 text-slate-300 hover:border-amber-300/40 hover:text-white"
+      ? "border-brand-300 bg-brand-400 text-ink-950"
+      : "border-white/10 bg-white/5 text-ink-300 hover:border-brand-300/40 hover:text-white"
   }`;
 }

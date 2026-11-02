@@ -70,16 +70,16 @@ export function WelcomeStep({ ctx, added, reinviteUrl }: { ctx: StepContext; add
       <Card icon="🤖" title="GameMaster in your server" subtitle={`Last reported ${ago(snap.updated_at)} · ${snap.guild.member_count} members`}>
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
-            <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Its highest role</p>
+            <p className="text-[10px] font-black uppercase tracking-wider text-ink-400">Its highest role</p>
             <p className="mt-1 flex items-center gap-2 text-sm font-bold text-white">
               <span className="h-2.5 w-2.5 rounded-full" style={{ background: botRole?.color ?? "#99aab5" }} />
               {botRole?.name ?? "Unknown"}
-              <span className="text-xs font-normal text-slate-400">· position {snap.bot.top_role_position}</span>
+              <span className="text-xs font-normal text-ink-400">· position {snap.bot.top_role_position}</span>
             </p>
-            <p className="mt-1 text-[11px] text-slate-500">GameMaster can only give out roles that are below this one.</p>
+            <p className="mt-1 text-[11px] text-ink-500">GameMaster can only give out roles that are below this one.</p>
           </div>
           <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
-            <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Permissions</p>
+            <p className="text-[10px] font-black uppercase tracking-wider text-ink-400">Permissions</p>
             <p className={`mt-1 text-sm font-bold ${missing.length ? "text-rose-300" : "text-emerald-300"}`}>
               {missing.length ? `${missing.length} missing` : `All ${REQUIRED_PERMISSIONS.length} granted`}
             </p>
@@ -100,8 +100,8 @@ export function WelcomeStep({ ctx, added, reinviteUrl }: { ctx: StepContext; add
               <li key={perm.bit} className="flex items-start gap-2 rounded-lg px-2 py-1 text-xs">
                 <span className={ok ? "text-emerald-400" : "text-rose-400"}>{ok ? "✓" : "✗"}</span>
                 <span>
-                  <span className={`font-bold ${ok ? "text-slate-200" : "text-rose-200"}`}>{perm.name}</span>
-                  <span className="block text-[11px] text-slate-500">{perm.why}</span>
+                  <span className={`font-bold ${ok ? "text-ink-200" : "text-rose-200"}`}>{perm.name}</span>
+                  <span className="block text-[11px] text-ink-500">{perm.why}</span>
                 </span>
               </li>
             );
@@ -119,7 +119,7 @@ export function WelcomeStep({ ctx, added, reinviteUrl }: { ctx: StepContext; add
           </ul>
         </Callout>
       )}
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-ink-500">
         GameMaster asks only for the permissions it uses, never Administrator. If a check above fails, fix it in Discord. This page
         updates within a minute.
       </p>
@@ -151,7 +151,7 @@ export function BasicsStep({ ctx }: { ctx: StepContext }) {
             const other = branch === "RP" ? "HIST" : "RP";
             const modes = MODE_CATALOG.filter((mode) => mode.branch === branch);
             return (
-              <div key={branch} className={`rounded-xl border p-3 ${on ? "border-amber-300/40 bg-amber-400/[0.06]" : "border-white/10 bg-white/[0.02]"}`}>
+              <div key={branch} className={`rounded-xl border p-3 ${on ? "border-brand-300/40 bg-brand-400/[0.06]" : "border-white/10 bg-white/[0.02]"}`}>
                 <Toggle
                   checked={on}
                   disabled={on && !draft.branches[other].enabled}
@@ -163,7 +163,7 @@ export function BasicsStep({ ctx }: { ctx: StepContext }) {
             );
           })}
         </div>
-        <p className="text-[11px] text-slate-500">
+        <p className="text-[11px] text-ink-500">
           At least one branch stays on. Turning a branch off hides its roles, ranks and game modes, and its games can&apos;t be scheduled.
           What you set for it is kept, so turning it back on restores everything.
         </p>
@@ -201,10 +201,10 @@ export function StaffStep({ ctx }: { ctx: StepContext }) {
         </Field>
       </Card>
       <Card icon="🔑" title="Who can change these settings">
-        <ul className="space-y-1 text-xs text-slate-300">
+        <ul className="space-y-1 text-xs text-ink-300">
           <li>✓ The server owner</li>
           <li>✓ Anyone with Discord&apos;s Administrator permission</li>
-          <li className={draft.access.staff_can_edit_settings ? "" : "text-slate-500"}>
+          <li className={draft.access.staff_can_edit_settings ? "" : "text-ink-500"}>
             {draft.access.staff_can_edit_settings ? "✓" : "✗"} Host Management ({staffCount} member{staffCount === 1 ? "" : "s"} right now)
           </li>
         </ul>
@@ -294,7 +294,7 @@ export function BranchesStep({ ctx }: { ctx: StepContext }) {
           )}
           <RuleNumber ctx={ctx} rule="host_strip_at" />
         </div>
-        <p className="text-[11px] text-slate-500">
+        <p className="text-[11px] text-ink-500">
           They work exactly like commends and warnings. Senior hosts of a branch (or its Full hosts, when they take over Senior host powers) and Host Management give them on the Database page;
           Acclamations promote a host, Violations strip their rank. A Violation never removes an Acclamation (or the other way round) —
           only Host Management can take either back, and a host whose rank was stripped by Violations gets it back when they drop

@@ -116,7 +116,8 @@ export default function Home() {
   const [nations, setNations] = useState<RosterNation[]>([]);
   const [reservations, setReservations] = useState<LobbyReservation[]>([]);
   const [gameLock, setGameLock] = useState<LobbyGameLock | null>(null);
-  const [rosterOpen, setRosterOpen] = useState(true);
+  // null: open on wide screens, collapsed on phones, until the viewer toggles it.
+  const [rosterOpen, setRosterOpen] = useState<boolean | null>(null);
 
   // Imperative camera focus for roster row clicks (nonce forces re-focus).
   const [focusRequest, setFocusRequest] = useState<{
@@ -578,7 +579,7 @@ export default function Home() {
     hostToolOn: toolsActive,
     helpLeft: true,
     helpTop: true,
-    helpBesideLeftPanel: rosterOpen,
+    helpBesideLeftPanel: rosterOpen !== false,
   });
 
   // Nickname modal: only when authenticated AND the profile is known (a null
@@ -618,7 +619,7 @@ export default function Home() {
       {/* Left slide-out reservation board (below the top bar). */}
       <ReservationDrawer
         open={rosterOpen}
-        onToggle={() => setRosterOpen((current) => !current)}
+        onToggle={() => setRosterOpen((current) => !(current ?? window.matchMedia("(min-width: 640px)").matches))}
         nations={nations}
         reservations={reservations}
         selected={selected}

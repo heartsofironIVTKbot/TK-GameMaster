@@ -41,8 +41,8 @@ export default function BasicsTab({
                 onClick={() => onModeChange(mode.value)}
                 className={`rounded-xl border px-3 py-2 text-left text-xs font-bold transition ${
                   active
-                    ? "border-amber-300/70 bg-amber-400/15 text-amber-100"
-                    : "border-white/10 bg-white/[0.03] text-slate-300 hover:border-white/25 disabled:opacity-35 disabled:hover:border-white/10"
+                    ? "border-brand-300/70 bg-brand-400/15 text-brand-100"
+                    : "border-white/10 bg-white/[0.03] text-ink-300 hover:border-white/25 disabled:opacity-35 disabled:hover:border-white/10"
                 }`}
               >
                 <span className={meta.text}>{meta.emoji}</span> {mode.label}
@@ -59,8 +59,8 @@ export default function BasicsTab({
           disabled={disabled}
           onChange={(event) => update({ name: event.target.value })}
           placeholder="e.g. Europe only, Axis vs Allies, Tournament rules"
-          className={`w-full rounded-lg border bg-slate-950/70 px-3 py-2 text-sm font-semibold text-slate-100 placeholder:text-slate-600 focus:outline-none ${
-            state.name.trim() ? "border-white/10 focus:border-amber-300/50" : "border-rose-400/50"
+          className={`w-full rounded-lg border bg-ink-950/70 px-3 py-2 text-sm font-semibold text-ink-100 placeholder:text-ink-600 focus:outline-none ${
+            state.name.trim() ? "border-white/10 focus:border-brand-300/50" : "border-rose-400/50"
           }`}
           aria-label="Preset name"
         />
@@ -71,10 +71,10 @@ export default function BasicsTab({
           onChange={(event) => update({ description: event.target.value })}
           rows={3}
           placeholder="What's special about it? (shown on the preset card and in the library)"
-          className="mt-2 w-full resize-none rounded-lg border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-600 focus:border-amber-300/50 focus:outline-none"
+          className="mt-2 w-full resize-none rounded-lg border border-white/10 bg-ink-950/70 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-600 focus:border-brand-300/50 focus:outline-none"
           aria-label="Description"
         />
-        <p className="mt-1 text-right text-[10px] text-slate-500">
+        <p className="mt-1 text-right text-[10px] text-ink-500">
           {state.description.length}/{PRESET_LIMITS.description}
         </p>
       </SectionCard>
@@ -91,7 +91,7 @@ export default function BasicsTab({
               : `Only ${serverName ?? "this server"} can see and use it.`
           }
         />
-        <p className="mt-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-[11px] text-slate-400">
+        <p className="mt-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-[11px] text-ink-400">
           Every host of {serverName ?? "this server"} can use this preset when scheduling a game. Only you (and staff) can
           change or delete it.
         </p>

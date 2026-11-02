@@ -1,5 +1,6 @@
 "use client";
 
+import SiteHeader from "@/components/site/SiteHeader";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -164,8 +165,8 @@ export default function ServerSetupApp({ serverId, initialStep, added }: { serve
   if (!detail || !draft) {
     return (
       <Shell>
-        <div className="flex items-center gap-3 text-slate-300">
-          <Spinner className="h-5 w-5 text-amber-400" />
+        <div className="flex items-center gap-3 text-ink-300">
+          <Spinner className="h-5 w-5 text-brand-400" />
           <span className="text-sm font-semibold">Loading the server…</span>
         </div>
       </Shell>
@@ -179,7 +180,7 @@ export default function ServerSetupApp({ serverId, initialStep, added }: { serve
         <div className={`mx-auto max-w-xl rounded-3xl p-6 text-center ${GLASS}`}>
           <p className="text-4xl">🤖</p>
           <h2 className="mt-2 text-xl font-black text-white">GameMaster isn&apos;t in {server.name}</h2>
-          <p className="mt-2 text-sm text-slate-300">
+          <p className="mt-2 text-sm text-ink-300">
             Add it first. Discord shows the permissions it needs, then brings you straight back here to set it up.
           </p>
           <a href={inviteUrl(server.id)} className="mt-5 inline-flex rounded-xl bg-[#5865F2] px-6 py-3 text-sm font-bold text-white hover:bg-[#4752c4]">
@@ -302,7 +303,7 @@ export default function ServerSetupApp({ serverId, initialStep, added }: { serve
           )}
         </span>
       ) : (
-        <span className="flex-1 text-xs text-slate-400">
+        <span className="flex-1 text-xs text-ink-400">
           {dirty ? "You have unsaved changes." : savedAt ? "All changes saved ✓" : setupDone ? "No changes." : "Your progress is saved at every step."}
         </span>
       )}
@@ -310,7 +311,7 @@ export default function ServerSetupApp({ serverId, initialStep, added }: { serve
         <button
           type="button"
           onClick={() => saved && setDraft(saved)}
-          className="rounded-xl px-3 py-2 text-xs font-bold text-slate-400 hover:text-white"
+          className="rounded-xl px-3 py-2 text-xs font-bold text-ink-400 hover:text-white"
         >
           Discard
         </button>
@@ -319,7 +320,7 @@ export default function ServerSetupApp({ serverId, initialStep, added }: { serve
         <button
           type="button"
           onClick={() => goTo(STEPS[stepIndex - 1].id)}
-          className="rounded-xl border border-white/10 px-4 py-2 text-xs font-bold text-slate-200 hover:border-white/25"
+          className="rounded-xl border border-white/10 px-4 py-2 text-xs font-bold text-ink-200 hover:border-white/25"
         >
           ← Back
         </button>
@@ -329,7 +330,7 @@ export default function ServerSetupApp({ serverId, initialStep, added }: { serve
           type="button"
           disabled={!dirty || saving}
           onClick={() => void save({})}
-          className="flex items-center gap-2 rounded-xl bg-amber-400 px-5 py-2 text-xs font-black text-slate-950 hover:bg-amber-300 disabled:opacity-40"
+          className="flex items-center gap-2 rounded-xl bg-brand-400 px-5 py-2 text-xs font-black text-ink-950 hover:bg-brand-300 disabled:opacity-40"
         >
           {saving && <Spinner className="h-3.5 w-3.5" />}Save changes
         </button>
@@ -344,7 +345,7 @@ export default function ServerSetupApp({ serverId, initialStep, added }: { serve
                 goTo(nextStep);
               }
             }}
-            className="flex items-center gap-2 rounded-xl bg-amber-400 px-5 py-2 text-xs font-black text-slate-950 hover:bg-amber-300 disabled:opacity-40"
+            className="flex items-center gap-2 rounded-xl bg-brand-400 px-5 py-2 text-xs font-black text-ink-950 hover:bg-brand-300 disabled:opacity-40"
           >
             {saving && <Spinner className="h-3.5 w-3.5" />}Save & continue →
           </button>
@@ -361,7 +362,7 @@ export default function ServerSetupApp({ serverId, initialStep, added }: { serve
         <div className="mx-auto max-w-5xl">
           <div className="mb-5">
             <h1 className="text-2xl font-black text-white">⚙️ Settings</h1>
-            <p className="text-sm text-slate-400">Pick a section. Problems show as a red number on its tile.</p>
+            <p className="text-sm text-ink-400">Pick a section. Problems show as a red number on its tile.</p>
           </div>
           <div data-tour="server.tiles" className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             {tiles.map((entry) => {
@@ -371,15 +372,15 @@ export default function ServerSetupApp({ serverId, initialStep, added }: { serve
                   key={entry}
                   type="button"
                   onClick={() => goTo(entry)}
-                  className={`group relative flex aspect-square flex-col items-start justify-between rounded-3xl p-4 text-left transition hover:-translate-y-0.5 hover:border-amber-300/40 ${GLASS}`}
+                  className={`group relative flex aspect-square flex-col items-start justify-between rounded-3xl p-4 text-left transition hover:-translate-y-0.5 hover:border-brand-300/40 ${GLASS}`}
                 >
-                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 text-2xl transition group-hover:bg-amber-400/15">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 text-2xl transition group-hover:bg-brand-400/15">
                     {viewIcon(entry)}
                   </span>
                   {state && (state.errors > 0 || state.warnings > 0) ? (
                     <span
                       className={`absolute right-3 top-3 rounded-full px-2 py-0.5 text-[11px] font-black ${
-                        state.errors > 0 ? "bg-rose-500/25 text-rose-100" : "bg-amber-400/20 text-amber-100"
+                        state.errors > 0 ? "bg-rose-500/25 text-rose-100" : "bg-brand-400/20 text-brand-100"
                       }`}
                       title={`${state.errors} problem(s), ${state.warnings} warning(s)`}
                     >
@@ -390,7 +391,7 @@ export default function ServerSetupApp({ serverId, initialStep, added }: { serve
                   ) : null}
                   <span className="min-w-0">
                     <span className="block text-base font-black text-white">{viewLabel(entry)}</span>
-                    <span className="mt-0.5 line-clamp-2 block text-[11px] leading-snug text-slate-400">{viewBlurb(entry)}</span>
+                    <span className="mt-0.5 line-clamp-2 block text-[11px] leading-snug text-ink-400">{viewBlurb(entry)}</span>
                   </span>
                 </button>
               );
@@ -409,13 +410,13 @@ export default function ServerSetupApp({ serverId, initialStep, added }: { serve
           <button
             type="button"
             onClick={() => goTo("home")}
-            className="mb-3 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs font-bold text-slate-300 hover:text-white"
+            className="mb-3 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs font-bold text-ink-300 hover:text-white"
           >
             ← All settings
           </button>
         ) : (
           <nav aria-label="Setup steps" data-tour="server.steps" className="mb-4">
-            <p className="mb-2 text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">
+            <p className="mb-2 text-[10px] font-black uppercase tracking-[0.18em] text-ink-500">
               Setup · step {Math.max(1, stepIndex + 1)} of {STEPS.length}
             </p>
             <ol className="flex gap-1.5 overflow-x-auto pb-1 [scrollbar-color:rgba(255,255,255,0.15)_transparent] [scrollbar-width:thin]">
@@ -434,8 +435,8 @@ export default function ServerSetupApp({ serverId, initialStep, added }: { serve
                       title={locked ? "Press Save & continue to get here" : step.blurb}
                       className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-40 ${
                         active
-                          ? "border-amber-300/60 bg-amber-400/15 text-white"
-                          : "border-white/10 bg-white/[0.03] text-slate-300 enabled:hover:border-white/25"
+                          ? "border-brand-300/60 bg-brand-400/15 text-white"
+                          : "border-white/10 bg-white/[0.03] text-ink-300 enabled:hover:border-white/25"
                       }`}
                     >
                       <span>{step.icon}</span>
@@ -463,9 +464,9 @@ export default function ServerSetupApp({ serverId, initialStep, added }: { serve
               <h1 className="text-xl font-black text-white">
                 {viewIcon(view)} {viewLabel(view)}
               </h1>
-              <p className="text-sm text-slate-400">{viewBlurb(view)}</p>
+              <p className="text-sm text-ink-400">{viewBlurb(view)}</p>
               {stepIssues.length > 0 && view !== "review" && view !== "welcome" && (
-                <p className="mt-2 text-xs text-slate-400">
+                <p className="mt-2 text-xs text-ink-400">
                   {stepIssues.filter((issue) => issue.level === "error").length} problem(s) and{" "}
                   {stepIssues.filter((issue) => issue.level === "warning").length} warning(s) on this step: shown under each field.
                 </p>
@@ -494,32 +495,31 @@ function Shell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="gm-backdrop min-h-screen w-full text-slate-100">
-      <header className="sticky top-0 z-40 border-b border-white/10 bg-slate-950/80 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-[1400px] items-center gap-3 px-4 py-3 sm:px-6">
-          <Link
-            href="/servers"
-            className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs font-bold text-slate-300 hover:text-white"
-          >
-            ← Your servers
-          </Link>
-          {server && (
-            <>
-              <ServerIcon name={server.name} url={server.icon_url} size={32} />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-black text-white">{server.name}</p>
-                <p className="flex items-center gap-2 text-[11px] text-slate-400">
-                  <StatusChip setup={server.setup} />
-                  <span className="capitalize">You: {server.access}</span>
-                </p>
-              </div>
-              <span className="hidden text-[11px] text-slate-400 sm:block">
-                {saving ? "Saving…" : dirty ? "● Unsaved changes" : savedAt ? "Saved ✓" : ""}
-              </span>
-            </>
-          )}
-        </div>
-      </header>
+    <div className="gm-backdrop min-h-screen w-full text-ink-100">
+      <SiteHeader
+        page="servers"
+        icon="⚙️"
+        title={server?.name ?? "Server setup"}
+        subtitle="GameMaster · server settings"
+        gradient="from-ink-300 to-ink-600"
+      >
+        <Link
+          href="/servers"
+          className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs font-bold text-ink-300 hover:text-white"
+        >
+          ← Your servers
+        </Link>
+        {server && (
+          <>
+            <ServerIcon name={server.name} url={server.icon_url} size={24} />
+            <StatusChip setup={server.setup} />
+            <span className="text-[11px] capitalize text-ink-400">You: {server.access}</span>
+            <span className="text-[11px] text-ink-400">
+              {saving ? "Saving…" : dirty ? "● Unsaved changes" : savedAt ? "Saved ✓" : ""}
+            </span>
+          </>
+        )}
+      </SiteHeader>
       <div className="mx-auto max-w-[1400px] px-4 py-5 sm:px-6">{children}</div>
     </div>
   );

@@ -1,39 +1,17 @@
 "use client";
 
-import Link from "next/link";
+import SiteHeader from "@/components/site/SiteHeader";
 import { useState, type ReactNode } from "react";
 import { CATEGORY_META, categoryOfMode, modeOption } from "@/lib/scheduleOptions";
 import type { RpVerdict } from "@/lib/rpArchiveTypes";
 
 /** Shared bits of the public roleplay pages. */
 
-export const NAV_LINK =
-  "rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-slate-300 hover:border-amber-300/40 hover:text-white";
-
 export function RpHeader({ children }: { children?: ReactNode }) {
   return (
-    <header className="sticky top-0 z-[1100] border-b border-white/10 bg-slate-950/60 backdrop-blur-xl">
-      <div className="mx-auto flex max-w-[1500px] flex-wrap items-center gap-3 px-4 py-3 sm:px-6">
-        <Link href="/roleplay" className="flex items-center gap-2.5" title="Roleplay archive">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-violet-300 to-fuchsia-700 text-lg shadow-lg shadow-fuchsia-500/30">
-            🎭
-          </span>
-          <span className="leading-tight">
-            <span className="block text-sm font-black tracking-tight text-white">Roleplay Archive</span>
-            <span className="block text-[11px] font-semibold text-slate-400">GameMaster · every game&apos;s story</span>
-          </span>
-        </Link>
-        {children}
-        <nav className="ml-auto flex flex-wrap items-center gap-2">
-          <Link href="/" className={NAV_LINK}>
-            🗺️ Map
-          </Link>
-          <Link href="/profile" className={NAV_LINK}>
-            👤 My profile
-          </Link>
-        </nav>
-      </div>
-    </header>
+    <SiteHeader page="roleplay" icon="🎭" title="Roleplay Archive" subtitle="GameMaster · every game's story" gradient="from-violet-300 to-fuchsia-700">
+      {children}
+    </SiteHeader>
   );
 }
 
@@ -42,7 +20,7 @@ export function Flag({ tag, className = "h-4 w-6" }: { tag: string; className?: 
   const [failed, setFailed] = useState(false);
   if (!tag || failed) {
     return (
-      <span className={`inline-flex shrink-0 items-center justify-center rounded-sm bg-slate-700 text-[8px] font-black text-slate-300 ${className}`}>
+      <span className={`inline-flex shrink-0 items-center justify-center rounded-sm bg-ink-700 text-[8px] font-black text-ink-300 ${className}`}>
         {tag.slice(0, 3)}
       </span>
     );
@@ -60,9 +38,9 @@ export function Flag({ tag, className = "h-4 w-6" }: { tag: string; className?: 
 
 const VERDICT_STYLE: Record<RpVerdict["kind"], string> = {
   commend: "border-emerald-400/50 bg-emerald-500/15 text-emerald-100",
-  merit: "border-amber-400/50 bg-amber-500/15 text-amber-100",
-  none: "border-white/10 bg-white/5 text-slate-300",
-  no_rp: "border-white/10 bg-white/[0.03] text-slate-500",
+  merit: "border-brand-400/50 bg-brand-500/15 text-brand-100",
+  none: "border-white/10 bg-white/5 text-ink-300",
+  no_rp: "border-white/10 bg-white/[0.03] text-ink-500",
 };
 
 export function VerdictBadge({ verdict, small }: { verdict: RpVerdict; small?: boolean }) {
@@ -86,12 +64,12 @@ export function ModeBadge({ mode }: { mode: string }) {
 
 export function ServerChip({ name, icon }: { name: string; icon: string | null }) {
   return (
-    <span className="inline-flex min-w-0 items-center gap-1.5 text-[11px] font-semibold text-slate-400">
+    <span className="inline-flex min-w-0 items-center gap-1.5 text-[11px] font-semibold text-ink-400">
       {icon ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={icon} alt="" className="h-4 w-4 shrink-0 rounded-full" />
       ) : (
-        <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-slate-700 text-[8px] font-black">
+        <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-ink-700 text-[8px] font-black">
           {name.charAt(0)}
         </span>
       )}

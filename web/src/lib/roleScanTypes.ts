@@ -51,9 +51,9 @@ export interface RoleScanState {
 export const ROLE_SCAN_GROUPS: readonly { kinds: RoleScanKind[]; title: string; tone: string }[] = [
   { kinds: ["trusted_remove"], title: "🚫 Trusted removed", tone: "text-rose-200" },
   { kinds: ["trusted_add"], title: "✅ Trusted added", tone: "text-emerald-200" },
-  { kinds: ["valor_add", "valor_remove"], title: "🎖️ Hearts of Valor", tone: "text-amber-200" },
+  { kinds: ["valor_add", "valor_remove"], title: "🎖️ Hearts of Valor", tone: "text-brand-200" },
   { kinds: ["dishonored_add", "dishonored_remove"], title: "⚖️ Dishonored", tone: "text-violet-200" },
-  { kinds: ["record"], title: "🗂️ Records fixed (database only)", tone: "text-slate-200" },
+  { kinds: ["record"], title: "🗂️ Records fixed (database only)", tone: "text-ink-200" },
 ];
 
 export function roleScanVerb(kind: RoleScanKind): string {

@@ -1,10 +1,11 @@
 "use client";
 
+import SiteHeader from "@/components/site/SiteHeader";
 import Link from "next/link";
 import ServerSwitcher from "@/components/ServerSwitcher";
 import { useCallback, useEffect, useState } from "react";
 import { useNow } from "@/components/attendance/labels";
-import { GLASS, HostAvatar, Segmented, Spinner } from "@/components/schedule/ui";
+import { GLASS, Segmented, Spinner } from "@/components/schedule/ui";
 import { presetSummary, type GamePreset } from "@/lib/presetTypes";
 import { CATEGORY_META, SCHEDULE_MODES, lockLevelLabel, modeOption } from "@/lib/scheduleOptions";
 import type { HostProfile } from "@/lib/scheduleTypes";
@@ -20,8 +21,6 @@ import { formatRelative } from "@/lib/timeEngine";
 
 type View = "ours" | "library";
 
-const NAV_LINK =
-  "rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-slate-300 hover:border-amber-300/40 hover:text-white";
 
 function readView(): View {
   return new URLSearchParams(window.location.search).get("view") === "library" ? "library" : "ours";
@@ -137,37 +136,15 @@ export default function PresetsApp({ host }: { host: HostProfile }) {
   const error = view === "ours" ? ours?.error : library?.error;
 
   return (
-    <div className="gm-backdrop min-h-screen w-full text-slate-100">
-      <header className="sticky top-0 z-[1100] border-b border-white/10 bg-slate-950/60 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-[1500px] flex-wrap items-center gap-3 px-4 py-3 sm:px-6">
-          <Link href="/" className="flex items-center gap-2.5" title="Back to the map">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-teal-300 to-emerald-600 text-lg shadow-lg shadow-emerald-500/30">
-              🧩
-            </span>
-            <span className="leading-tight">
-              <span className="block text-sm font-black tracking-tight text-white">Presets</span>
-              <span className="block text-[11px] font-semibold text-slate-400">GameMaster · Game mode presets</span>
-            </span>
-          </Link>
+    <div className="gm-backdrop min-h-screen w-full text-ink-100">
+      <SiteHeader page="presets" icon="🧩" title="Presets" subtitle="GameMaster · Game mode presets" gradient="from-teal-300 to-emerald-600">
           {host.demo && (
             <span className="rounded-full border border-fuchsia-400/40 bg-fuchsia-500/15 px-3 py-1 text-[11px] font-bold text-fuchsia-200">
               PREVIEW MODE · sample data
             </span>
           )}
           <ServerSwitcher host={host} />
-          <nav className="ml-auto flex flex-wrap items-center gap-2">
-            <Link href="/" className={NAV_LINK}>🗺️ Map</Link>
-            <Link href="/schedule" className={NAV_LINK}>🗓️ Calendar</Link>
-            <Link href="/games" className={NAV_LINK}>🎮 Games</Link>
-            <Link href="/attendance" className={NAV_LINK}>🎯 Attendance</Link>
-            <Link href="/database" className={NAV_LINK}>🗂️ Database</Link>
-            <div className="hidden items-center gap-2 pl-1 sm:flex">
-              <HostAvatar host={host} />
-              <span className="text-xs font-semibold text-slate-300">{host.display_name || host.username}</span>
-            </div>
-          </nav>
-        </div>
-      </header>
+      </SiteHeader>
 
       <main className="mx-auto max-w-[1500px] px-4 py-5 sm:px-6">
         <section className={`rounded-3xl p-4 sm:p-5 ${GLASS}`}>
@@ -188,13 +165,13 @@ export default function PresetsApp({ host }: { host: HostProfile }) {
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="🔎 Search by name, description or server…"
-                className="min-w-[220px] flex-1 rounded-xl border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-amber-300/50 focus:outline-none"
+                className="min-w-[220px] flex-1 rounded-xl border border-white/10 bg-ink-950/70 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:border-brand-300/50 focus:outline-none"
               />
             )}
             <Link
               href={`/presets/new${modeFilter ? `?mode=${encodeURIComponent(modeFilter)}` : ""}`}
               data-tour="presets.new"
-              className="ml-auto rounded-xl bg-amber-400 px-4 py-2.5 text-sm font-black text-slate-950 shadow-lg shadow-amber-500/20 hover:bg-amber-300"
+              className="ml-auto rounded-xl bg-brand-400 px-4 py-2.5 text-sm font-black text-ink-950 shadow-lg shadow-brand-500/20 hover:bg-brand-300"
             >
               ＋ New preset
             </Link>
@@ -210,7 +187,7 @@ export default function PresetsApp({ host }: { host: HostProfile }) {
               />
             ))}
           </div>
-          <p className="mt-3 text-xs text-slate-400">
+          <p className="mt-3 text-xs text-ink-400">
             {view === "ours"
               ? "Every host of this server can load these when scheduling a game. Only a preset's creator (or staff) can change or delete it."
               : "Presets every server chose to share. Copy one to get your own version — changing it never touches the original."}
@@ -221,14 +198,14 @@ export default function PresetsApp({ host }: { host: HostProfile }) {
           <p className="mt-4 rounded-2xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">{error}</p>
         )}
         {loading && !error && (
-          <p className="mt-6 flex items-center gap-2 px-2 text-sm text-slate-400">
-            <Spinner className="h-4 w-4 text-amber-300" /> Loading…
+          <p className="mt-6 flex items-center gap-2 px-2 text-sm text-ink-400">
+            <Spinner className="h-4 w-4 text-brand-300" /> Loading…
           </p>
         )}
         {!loading && !error && shown.length === 0 && (
           <div className={`mt-4 rounded-3xl p-10 text-center ${GLASS}`}>
             <p className="text-4xl">{view === "ours" ? "🧩" : "🌐"}</p>
-            <p className="mt-3 text-sm font-semibold text-slate-300">
+            <p className="mt-3 text-sm font-semibold text-ink-300">
               {view === "ours"
                 ? modeFilter
                   ? `No presets for ${modeOption(modeFilter)?.label ?? modeFilter} yet.`
@@ -238,7 +215,7 @@ export default function PresetsApp({ host }: { host: HostProfile }) {
                   : "Nobody has shared a preset for this mode yet."}
             </p>
             {view === "ours" && (
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="mt-1 text-xs text-ink-500">
                 Make one with <b>＋ New preset</b>, or copy one from the public library.
               </p>
             )}
@@ -261,7 +238,7 @@ export default function PresetsApp({ host }: { host: HostProfile }) {
       </main>
 
       {toast && (
-        <div className="gm-fade-up fixed bottom-6 left-1/2 z-[1500] -translate-x-1/2 rounded-full border border-white/15 bg-slate-900/90 px-4 py-2 text-xs font-semibold text-slate-100 shadow-xl backdrop-blur-md">
+        <div className="gm-fade-up fixed bottom-6 left-1/2 z-[1500] -translate-x-1/2 rounded-full border border-white/15 bg-ink-900/90 px-4 py-2 text-xs font-semibold text-ink-100 shadow-xl backdrop-blur-md">
           {toast}
         </div>
       )}
@@ -275,7 +252,7 @@ function FilterChip({ active, onClick, label }: { active: boolean; onClick: () =
       type="button"
       onClick={onClick}
       className={`rounded-lg border px-2.5 py-1 text-xs font-semibold transition ${
-        active ? "border-amber-300/70 bg-amber-400/15 text-amber-100" : "border-white/10 bg-white/[0.03] text-slate-300 hover:border-white/25"
+        active ? "border-brand-300/70 bg-brand-400/15 text-brand-100" : "border-white/10 bg-white/[0.03] text-ink-300 hover:border-white/25"
       }`}
     >
       {label}
@@ -305,12 +282,12 @@ function PresetCard({
   const data = preset.data;
   const locks = data.nation_locks;
   const button =
-    "rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-slate-200 transition hover:border-white/25 disabled:opacity-50";
+    "rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-ink-200 transition hover:border-white/25 disabled:opacity-50";
 
   return (
     <article className={`flex flex-col rounded-3xl p-4 ${GLASS}`}>
       <div className="flex flex-wrap items-center gap-1.5">
-        <span className={`rounded-full border px-2 py-0.5 text-[11px] font-bold ${meta?.chip ?? "border-white/10 text-slate-300"}`}>
+        <span className={`rounded-full border px-2 py-0.5 text-[11px] font-bold ${meta?.chip ?? "border-white/10 text-ink-300"}`}>
           {meta?.emoji} {mode?.label ?? preset.mode}
         </span>
         {preset.shared && preset.own_server && (
@@ -322,24 +299,24 @@ function PresetCard({
           </span>
         )}
         {view === "library" && preset.own_server && (
-          <span className="rounded-full bg-amber-400/20 px-2 py-0.5 text-[11px] font-bold text-amber-100">Ours</span>
+          <span className="rounded-full bg-brand-400/20 px-2 py-0.5 text-[11px] font-bold text-brand-100">Ours</span>
         )}
         {preset.uses > 0 && (
-          <span className="ml-auto text-[11px] font-semibold text-slate-400" title="Games scheduled with it">
+          <span className="ml-auto text-[11px] font-semibold text-ink-400" title="Games scheduled with it">
             🗓️ used {preset.uses}×
           </span>
         )}
       </div>
       <h2 className="mt-2 text-lg font-black leading-tight text-white">{preset.name}</h2>
-      {preset.description && <p className="mt-1 line-clamp-3 text-sm text-slate-300">{preset.description}</p>}
+      {preset.description && <p className="mt-1 line-clamp-3 text-sm text-ink-300">{preset.description}</p>}
       <div className="mt-3 flex flex-wrap gap-1.5">
         {presetSummary(data).map((part) => (
-          <span key={part} className="rounded-md bg-white/5 px-2 py-0.5 text-[11px] font-semibold text-slate-300">
+          <span key={part} className="rounded-md bg-white/5 px-2 py-0.5 text-[11px] font-semibold text-ink-300">
             {part}
           </span>
         ))}
       </div>
-      <p className="mt-3 text-[11px] text-slate-500">
+      <p className="mt-3 text-[11px] text-ink-500">
         by {preset.created_by_name ?? "a host"} · updated {formatRelative(preset.updated_at * 1000, now)}
         {preset.copied_from ? " · copied from the library" : ""}
       </p>
@@ -347,45 +324,45 @@ function PresetCard({
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
-        className="mt-2 self-start text-xs font-semibold text-slate-400 hover:text-white"
+        className="mt-2 self-start text-xs font-semibold text-ink-400 hover:text-white"
       >
         {open ? "Hide details ▴" : "Details ▾"}
       </button>
       {open && (
-        <dl className="gm-fade-up mt-2 space-y-2 rounded-2xl border border-white/10 bg-slate-950/40 p-3 text-xs">
+        <dl className="gm-fade-up mt-2 space-y-2 rounded-2xl border border-white/10 bg-ink-950/40 p-3 text-xs">
           <div>
-            <dt className="font-semibold text-slate-500">Nation groups</dt>
+            <dt className="font-semibold text-ink-500">Nation groups</dt>
             <dd className="mt-1 flex flex-wrap gap-1">
               {data.layout ? (
                 data.layout.map((group) => (
                   <span
                     key={group.id}
-                    className={`rounded-md px-1.5 py-0.5 ${group.enabled ? "bg-white/5 text-slate-200" : "bg-rose-500/10 text-rose-200 line-through"}`}
+                    className={`rounded-md px-1.5 py-0.5 ${group.enabled ? "bg-white/5 text-ink-200" : "bg-rose-500/10 text-rose-200 line-through"}`}
                     title={group.tiers.flatMap((tier) => tier.nations).join(", ")}
                   >
                     {group.name} ({group.tiers.reduce((sum, tier) => sum + tier.nations.length, 0)})
                   </span>
                 ))
               ) : (
-                <span className="text-slate-300">The mode&apos;s standard groups</span>
+                <span className="text-ink-300">The mode&apos;s standard groups</span>
               )}
             </dd>
           </div>
           <div>
-            <dt className="font-semibold text-slate-500">Who can reserve</dt>
-            <dd className="mt-0.5 text-slate-200">
+            <dt className="font-semibold text-ink-500">Who can reserve</dt>
+            <dd className="mt-0.5 text-ink-200">
               Majors {lockLevelLabel(data.major_lock_level)} · Minors {lockLevelLabel(data.minor_lock_level)}
             </dd>
           </div>
           <div>
-            <dt className="font-semibold text-slate-500">Nation locks</dt>
-            <dd className="mt-0.5 text-slate-200">
+            <dt className="font-semibold text-ink-500">Nation locks</dt>
+            <dd className="mt-0.5 text-ink-200">
               {locks.length === 0
                 ? "None"
                 : locks.map((group) => (
                     <span key={group.label} className="block">
                       {group.label}: {group.nations.join(", ")}
-                      <span className="text-slate-500">
+                      <span className="text-ink-500">
                         {group.release_hours_before ? ` — opens ${group.release_hours_before}h before` : " — all game"}
                       </span>
                     </span>
@@ -393,14 +370,14 @@ function PresetCard({
             </dd>
           </div>
           <div>
-            <dt className="font-semibold text-slate-500">Rules</dt>
-            <dd className="mt-0.5 text-slate-200">
+            <dt className="font-semibold text-ink-500">Rules</dt>
+            <dd className="mt-0.5 text-ink-200">
               {data.rules ? (data.rules.length ? data.rules.map((entry) => entry.name).join(", ") : "None") : "Standard"}
             </dd>
           </div>
           <div>
-            <dt className="font-semibold text-slate-500">Mods</dt>
-            <dd className="mt-0.5 text-slate-200">
+            <dt className="font-semibold text-ink-500">Mods</dt>
+            <dd className="mt-0.5 text-ink-200">
               {data.mods ? (data.mods.length ? data.mods.map((entry) => entry.name).join(", ") : "None") : "Standard"}
             </dd>
           </div>
@@ -437,7 +414,7 @@ function PresetCard({
                 <button
                   type="button"
                   onClick={() => setConfirmDelete(true)}
-                  className="ml-auto rounded-lg px-2 py-1.5 text-xs font-bold text-slate-500 hover:text-rose-300"
+                  className="ml-auto rounded-lg px-2 py-1.5 text-xs font-bold text-ink-500 hover:text-rose-300"
                 >
                   🗑️ Delete
                 </button>
@@ -449,7 +426,7 @@ function PresetCard({
               type="button"
               onClick={onCopy}
               disabled={busy}
-              className="flex items-center gap-1.5 rounded-lg bg-amber-400 px-3 py-1.5 text-xs font-black text-slate-950 hover:bg-amber-300 disabled:opacity-60"
+              className="flex items-center gap-1.5 rounded-lg bg-brand-400 px-3 py-1.5 text-xs font-black text-ink-950 hover:bg-brand-300 disabled:opacity-60"
             >
               {busy && <Spinner className="h-3 w-3" />}⧉ Copy to our server
             </button>

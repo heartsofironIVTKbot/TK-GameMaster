@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import SiteHeader from "@/components/site/SiteHeader";
 import { GLASS, Spinner } from "@/components/schedule/ui";
 import { UptimeBars, usePublicStatus } from "./UptimeCard";
 
@@ -29,28 +29,16 @@ export default function StatusPage() {
   const banner = {
     online: { text: "GameMaster is online", tone: "border-emerald-400/40 bg-emerald-500/10", dot: "bg-emerald-400" },
     offline: { text: "GameMaster is offline", tone: "border-rose-400/50 bg-rose-500/15", dot: "bg-rose-500" },
-    unknown: { text: "Status not available yet", tone: "border-white/15 bg-white/5", dot: "bg-slate-500" },
+    unknown: { text: "Status not available yet", tone: "border-white/15 bg-white/5", dot: "bg-ink-500" },
   }[state];
 
   return (
-    <div className="gm-backdrop min-h-screen w-full text-slate-100">
-      <header className="border-b border-white/10 bg-slate-950/60 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-3 sm:px-6">
-          <Link href="/" className="flex items-center gap-2.5" title="Back to the map">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-300 to-teal-600 text-lg shadow-lg shadow-emerald-500/30">
-              📡
-            </span>
-            <span className="leading-tight">
-              <span className="block text-sm font-black tracking-tight text-white">Status</span>
-              <span className="block text-[11px] font-semibold text-slate-400">GameMaster</span>
-            </span>
-          </Link>
-        </div>
-      </header>
+    <div className="gm-backdrop min-h-screen w-full text-ink-100">
+      <SiteHeader page="status" icon="📡" title="Status" subtitle="GameMaster" gradient="from-emerald-300 to-teal-600"></SiteHeader>
 
       <main className="mx-auto max-w-3xl space-y-4 px-4 py-6 sm:px-6">
         {!status && !error && (
-          <p className="flex items-center gap-2 text-sm text-slate-400">
+          <p className="flex items-center gap-2 text-sm text-ink-400">
             <Spinner className="h-4 w-4 text-emerald-300" /> Checking…
           </p>
         )}
@@ -66,7 +54,7 @@ export default function StatusPage() {
                 </span>
                 <h1 className="text-xl font-black text-white">{banner.text}</h1>
               </div>
-              <p className="mt-1.5 text-sm text-slate-300">
+              <p className="mt-1.5 text-sm text-ink-300">
                 {state === "online" && status.started_at
                   ? `Running for ${duration(now - status.started_at)}${status.latency_ms !== null ? ` · ${status.latency_ms} ms to Discord` : ""}${
                       status.servers !== null ? ` · serving ${status.servers} ${status.servers === 1 ? "community" : "communities"}` : ""
@@ -75,7 +63,7 @@ export default function StatusPage() {
                     ? `Last heard from ${duration(now - status.last_beat)} ago. Games, reminders and website requests resume when it's back.`
                     : "GameMaster reports here once it runs the latest update."}
               </p>
-              <p className="mt-1 text-[11px] text-slate-500">Checked {dateTime(status.checked_at)} · refreshes every minute</p>
+              <p className="mt-1 text-[11px] text-ink-500">Checked {dateTime(status.checked_at)} · refreshes every minute</p>
             </section>
 
             <section className={`rounded-3xl p-5 ${GLASS}`}>
@@ -85,17 +73,17 @@ export default function StatusPage() {
             <section className={`rounded-3xl p-5 ${GLASS}`}>
               <h2 className="text-sm font-black text-white">Incidents</h2>
               {status.incidents.length === 0 ? (
-                <p className="mt-2 text-sm text-slate-400">No incidents in the last 30 days.</p>
+                <p className="mt-2 text-sm text-ink-400">No incidents in the last 30 days.</p>
               ) : (
                 <ul className="mt-3 divide-y divide-white/5 overflow-hidden rounded-xl border border-white/10">
                   {status.incidents.map((incident, index) => (
-                    <li key={`${incident.started_at}-${index}`} className="flex items-start gap-3 bg-slate-950/40 px-3 py-2.5 text-sm">
+                    <li key={`${incident.started_at}-${index}`} className="flex items-start gap-3 bg-ink-950/40 px-3 py-2.5 text-sm">
                       <span>{incident.kind === "outage" ? (incident.ended_at === null ? "🔴" : "🟠") : "🔁"}</span>
                       <span className="min-w-0 flex-1">
-                        <span className="block font-semibold text-slate-100">
+                        <span className="block font-semibold text-ink-100">
                           {incident.kind === "outage" ? (incident.ended_at === null ? "Offline now" : "Outage") : "Restart"}
                         </span>
-                        <span className="block text-xs text-slate-400">
+                        <span className="block text-xs text-ink-400">
                           {dateTime(incident.started_at)}
                           {incident.kind === "outage" &&
                             ` · ${incident.ended_at === null ? `for ${duration(now - incident.started_at)} so far` : `lasted ${duration(incident.ended_at - incident.started_at)}`}`}

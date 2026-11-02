@@ -144,11 +144,11 @@ export function ChannelsStep({ ctx }: { ctx: StepContext }) {
                     type="button"
                     disabled={fix.op !== null || !draft.channels.schedule_panel}
                     onClick={() => void fix.run("schedule_panel")}
-                    className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs font-bold text-slate-200 hover:border-amber-300/40 hover:text-white disabled:opacity-50"
+                    className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs font-bold text-ink-200 hover:border-brand-300/40 hover:text-white disabled:opacity-50"
                   >
-                    {fix.op === "schedule_panel" ? <Spinner className="h-3 w-3 text-amber-300" /> : "📅"} Post / re-post the panel
+                    {fix.op === "schedule_panel" ? <Spinner className="h-3 w-3 text-brand-300" /> : "📅"} Post / re-post the panel
                   </button>
-                  <p className="text-[11px] text-slate-500">Save a new channel first. The old panel is removed and the new one pinned.</p>
+                  <p className="text-[11px] text-ink-500">Save a new channel first. The old panel is removed and the new one pinned.</p>
                   {fix.message && <Callout tone={fix.message.tone === "ok" ? "ok" : "error"}>{fix.message.text}</Callout>}
                 </div>
               )}
@@ -242,7 +242,7 @@ function LinkList({ title, value, onChange }: { title: string; value: LinkEntry[
   return (
     <Field label={title} hint="Used when a game has no preset. Presets and each game's Rules & mods card can change them.">
       <ul className="space-y-1">
-        {value.length === 0 && <li className="text-xs text-slate-500">None.</li>}
+        {value.length === 0 && <li className="text-xs text-ink-500">None.</li>}
         {value.map((entry, index) => (
           <li key={`${entry.link}-${index}`} className="flex items-center gap-2 rounded-lg border border-white/5 bg-white/[0.03] px-2 py-1 text-xs">
             <a href={entry.link} target="_blank" rel="noreferrer" className="min-w-0 flex-1 truncate font-semibold text-sky-300 hover:underline">
@@ -257,7 +257,7 @@ function LinkList({ title, value, onChange }: { title: string; value: LinkEntry[
                 [next[index - 1], next[index]] = [next[index], next[index - 1]];
                 onChange(next);
               }}
-              className="rounded px-1 text-slate-400 hover:text-white disabled:opacity-20"
+              className="rounded px-1 text-ink-400 hover:text-white disabled:opacity-20"
             >
               ↑
             </button>
@@ -265,7 +265,7 @@ function LinkList({ title, value, onChange }: { title: string; value: LinkEntry[
               type="button"
               aria-label={`Remove ${entry.name}`}
               onClick={() => onChange(value.filter((_, i) => i !== index))}
-              className="rounded px-1 text-slate-400 hover:text-rose-300"
+              className="rounded px-1 text-ink-400 hover:text-rose-300"
             >
               ×
             </button>
@@ -284,7 +284,7 @@ function LinkList({ title, value, onChange }: { title: string; value: LinkEntry[
               setName("");
               setLink("");
             }}
-            className="rounded-lg border border-amber-300/40 px-3 py-1.5 text-xs font-bold text-amber-200 hover:bg-amber-400/10 disabled:opacity-30"
+            className="rounded-lg border border-brand-300/40 px-3 py-1.5 text-xs font-bold text-brand-200 hover:bg-brand-400/10 disabled:opacity-30"
           >
             Add
           </button>
@@ -373,21 +373,21 @@ function BranchSharing({ ctx, branch }: { ctx: StepContext; branch: Branch }) {
       aria-pressed={shared === value}
       onClick={() => choose(value)}
       className={`flex-1 rounded-lg border px-3 py-1.5 text-xs font-bold transition ${
-        shared === value ? "border-amber-300/60 bg-amber-400/15 text-amber-100" : "border-white/10 text-slate-300 hover:border-white/25"
+        shared === value ? "border-brand-300/60 bg-brand-400/15 text-brand-100" : "border-white/10 text-ink-300 hover:border-white/25"
       }`}
     >
       {label}
     </button>
   );
   return (
-    <div className="space-y-3 rounded-2xl border border-white/10 bg-slate-950/40 p-3">
+    <div className="space-y-3 rounded-2xl border border-white/10 bg-ink-950/40 p-3">
       <div className="flex flex-col gap-1.5 sm:flex-row">
         {option(true, `One set for all ${branch} modes`)}
         {option(false, "Set up each mode separately")}
       </div>
       {shared && (
         <>
-          <p className="text-[11px] text-slate-500">
+          <p className="text-[11px] text-ink-500">
             Every {branch} mode uses these channels and this ping role. Each mode&apos;s mods and rules are still set below.
           </p>
           <ModeFields
@@ -414,7 +414,7 @@ function ModeCard({ ctx, modeKey }: { ctx: StepContext; modeKey: string }) {
   const siblings = MODE_CATALOG.filter((entry) => entry.branch === mode.branch && entry.key !== modeKey && ctx.draft.modes[entry.key]?.enabled);
   const set = (mutate: (m: ModeSettings) => void) => ctx.update((s) => mutate(s.modes[modeKey]));
   return (
-    <div className={`rounded-2xl border ${settings.enabled ? "border-white/10 bg-slate-950/40" : "border-white/5 bg-slate-950/20"}`}>
+    <div className={`rounded-2xl border ${settings.enabled ? "border-white/10 bg-ink-950/40" : "border-white/5 bg-ink-950/20"}`}>
       <div className="flex flex-wrap items-center gap-3 p-3">
         <Toggle checked={settings.enabled} onChange={(checked) => set((m) => void (m.enabled = checked))} label={mode.label} description={`Mod: ${mode.mod}`} />
         <span className="ml-auto flex items-center gap-2">
@@ -429,7 +429,7 @@ function ModeCard({ ctx, modeKey }: { ctx: StepContext; modeKey: string }) {
               type="button"
               aria-expanded={open}
               onClick={() => setOpen((current) => !current)}
-              className="rounded-lg border border-white/10 px-2.5 py-1 text-xs font-bold text-slate-300 hover:border-white/25 hover:text-white"
+              className="rounded-lg border border-white/10 px-2.5 py-1 text-xs font-bold text-ink-300 hover:border-white/25 hover:text-white"
             >
               {open ? "Close" : "Edit"}
             </button>
@@ -439,10 +439,10 @@ function ModeCard({ ctx, modeKey }: { ctx: StepContext; modeKey: string }) {
       {settings.enabled && open && (
         <div className="space-y-4 border-t border-white/10 p-3">
           {shared && (
-            <p className="text-xs text-slate-400">Uses the shared {mode.branch} channels and ping role above.</p>
+            <p className="text-xs text-ink-400">Uses the shared {mode.branch} channels and ping role above.</p>
           )}
           {!shared && siblings.length > 0 && (
-            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-ink-400">
               Same channels and ping role as:
               {siblings.map((sibling) => (
                 <button
@@ -455,7 +455,7 @@ function ModeCard({ ctx, modeKey }: { ctx: StepContext; modeKey: string }) {
                       s.modes[modeKey].ping_role = from.ping_role;
                     })
                   }
-                  className="rounded-md border border-white/10 px-2 py-0.5 font-bold text-slate-200 hover:border-amber-300/40"
+                  className="rounded-md border border-white/10 px-2 py-0.5 font-bold text-ink-200 hover:border-brand-300/40"
                 >
                   {sibling.label}
                 </button>
@@ -495,7 +495,7 @@ export function ModesStep({ ctx }: { ctx: StepContext }) {
         ))}
       {branches.map((branch) => (
         <div key={branch} className="space-y-2">
-          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
+          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-ink-400">
             {BRANCH_INFO[branch].emoji} {BRANCH_INFO[branch].long}
           </p>
           <BranchSharing ctx={ctx} branch={branch} />
@@ -504,7 +504,7 @@ export function ModesStep({ ctx }: { ctx: StepContext }) {
           ))}
         </div>
       ))}
-      <p className="text-[11px] text-slate-500">
+      <p className="text-[11px] text-ink-500">
         Modes that are off don&apos;t show up on the calendar and can&apos;t be scheduled. Games already scheduled still go ahead.
       </p>
     </div>
@@ -532,15 +532,15 @@ export function TicketsStep({ ctx }: { ctx: StepContext }) {
         <ul className="divide-y divide-white/5 overflow-hidden rounded-xl border border-white/10 text-xs">
           {TICKET_ACCESS.map(([kind, who]) => (
             <li key={kind} className="flex flex-wrap gap-x-3 gap-y-0.5 bg-white/[0.02] px-3 py-2">
-              <span className="min-w-[220px] flex-1 font-bold text-slate-100">{kind}</span>
-              <span className="text-slate-400">{who}</span>
+              <span className="min-w-[220px] flex-1 font-bold text-ink-100">{kind}</span>
+              <span className="text-ink-400">{who}</span>
             </li>
           ))}
         </ul>
-        <p className="text-[11px] text-slate-500">
+        <p className="text-[11px] text-ink-500">
           Server admins can open and close every ticket. Resolving a verification ticket gives the player that branch&apos;s Verified role;
           resolving a host application gives the Assistant host role of the branch they applied for. Staff post the panel with{" "}
-          <code className="rounded bg-slate-900/80 px-1">/spawn</code> in the ticket panel channel.
+          <code className="rounded bg-ink-900/80 px-1">/spawn</code> in the ticket panel channel.
         </p>
       </Card>
       <Card icon="🧑‍💼" title="Ticket staff">

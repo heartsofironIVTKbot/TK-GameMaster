@@ -26,14 +26,14 @@ function RequestRow({ game, entry, onChanged }: { game: GameControl; entry: HotJ
     void request.submit({ action: "hotjoin_decide", payload: { thread_id: game.id, user_id: entry.user_id, approve, force } });
   const pending = entry.status === "pending";
   return (
-    <li className="bg-slate-950/40 px-3 py-2.5">
+    <li className="bg-ink-950/40 px-3 py-2.5">
       <div className="flex flex-wrap items-center gap-2.5">
         <Avatar url={entry.avatar_url} name={entry.name} size={28} />
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-xs font-bold text-slate-100">
-            {entry.name} <span className="font-normal text-slate-400">→ {entry.nation}</span>
+          <span className="block truncate text-xs font-bold text-ink-100">
+            {entry.name} <span className="font-normal text-ink-400">→ {entry.nation}</span>
           </span>
-          <span className="block text-[11px] text-slate-500">
+          <span className="block text-[11px] text-ink-500">
             Asked {dateTime(entry.ts)}
             {entry.current ? ` · on the list as ${prettySlotName(entry.current)} now` : " · not on the list yet"}
             {!pending && entry.decided_by_name ? ` · ${HOTJOIN_STATUS_TEXT[entry.status].toLowerCase()} by ${entry.decided_by_name}` : ""}
@@ -45,7 +45,7 @@ function RequestRow({ game, entry, onChanged }: { game: GameControl; entry: HotJ
               type="button"
               disabled={request.busy}
               onClick={() => decide(true)}
-              className="flex items-center gap-1.5 rounded-lg bg-emerald-400 px-2.5 py-1 text-[11px] font-black text-slate-950 hover:bg-emerald-300 disabled:opacity-40"
+              className="flex items-center gap-1.5 rounded-lg bg-emerald-400 px-2.5 py-1 text-[11px] font-black text-ink-950 hover:bg-emerald-300 disabled:opacity-40"
             >
               {request.busy && <Spinner className="h-3 w-3" />}✅ Approve
             </button>
@@ -53,7 +53,7 @@ function RequestRow({ game, entry, onChanged }: { game: GameControl; entry: HotJ
               type="button"
               disabled={request.busy}
               onClick={() => decide(false)}
-              className="rounded-lg border border-white/15 bg-white/5 px-2.5 py-1 text-[11px] font-bold text-slate-200 hover:border-rose-300/50 hover:text-white disabled:opacity-40"
+              className="rounded-lg border border-white/15 bg-white/5 px-2.5 py-1 text-[11px] font-bold text-ink-200 hover:border-rose-300/50 hover:text-white disabled:opacity-40"
             >
               Decline
             </button>
@@ -64,8 +64,8 @@ function RequestRow({ game, entry, onChanged }: { game: GameControl; entry: HotJ
               entry.status === "approved"
                 ? "border-emerald-400/40 bg-emerald-500/15 text-emerald-100"
                 : pending
-                  ? "border-amber-400/40 bg-amber-500/15 text-amber-100"
-                  : "border-white/10 bg-white/5 text-slate-300"
+                  ? "border-brand-400/40 bg-brand-500/15 text-brand-100"
+                  : "border-white/10 bg-white/5 text-ink-300"
             }`}
           >
             {HOTJOIN_STATUS_TEXT[entry.status]}
@@ -73,7 +73,7 @@ function RequestRow({ game, entry, onChanged }: { game: GameControl; entry: HotJ
         )}
       </div>
       {request.state.phase === "confirm" && (
-        <div className="mt-2 rounded-xl border border-amber-400/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-50">
+        <div className="mt-2 rounded-xl border border-brand-400/40 bg-brand-500/10 px-3 py-2 text-xs text-brand-50">
           <p className="font-black">The bot found something to check first:</p>
           <ul className="mt-1 space-y-0.5">
             {(request.state.status.result?.warnings ?? []).map((warning) => (
@@ -81,7 +81,7 @@ function RequestRow({ game, entry, onChanged }: { game: GameControl; entry: HotJ
             ))}
           </ul>
           <div className="mt-2 flex gap-2">
-            <button type="button" onClick={() => decide(true, true)} className="rounded-md bg-amber-400 px-3 py-1 font-black text-slate-950 hover:bg-amber-300">
+            <button type="button" onClick={() => decide(true, true)} className="rounded-md bg-brand-400 px-3 py-1 font-black text-ink-950 hover:bg-brand-300">
               Approve anyway
             </button>
             <button type="button" onClick={request.reset} className="rounded-md border border-white/20 px-3 py-1 font-bold text-white hover:bg-white/10">
@@ -106,12 +106,12 @@ export default function HotJoinCard({ game, onChanged }: { game: GameControl; on
       <p className="text-[11px] font-black uppercase tracking-[0.18em] text-orange-300">
         Hot-join requests{waiting ? ` · ${waiting} waiting` : ""}
       </p>
-      <p className="mt-1 text-sm text-slate-400">
+      <p className="mt-1 text-sm text-ink-400">
         Players ask on the map to join this running game as a free nation. You get a Discord DM for each request. Approving gives
         them the nation, the Gamer Pass and a voice channel.
       </p>
       {game.hotjoin.length === 0 ? (
-        <p className="mt-3 text-xs text-slate-500">No requests yet.</p>
+        <p className="mt-3 text-xs text-ink-500">No requests yet.</p>
       ) : (
         <ul className="mt-3 divide-y divide-white/5 overflow-hidden rounded-xl border border-white/10">
           {game.hotjoin.map((entry) => (

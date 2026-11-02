@@ -7,10 +7,10 @@ import type { GamePhase, LifecycleAction } from "@/lib/gameControlTypes";
 
 export const PHASE: Record<GamePhase, { label: string; className: string; dot: string }> = {
   announced: { label: "Announced", className: "border-sky-400/40 bg-sky-500/10 text-sky-200", dot: "bg-sky-400" },
-  starting: { label: "Starting", className: "border-amber-400/50 bg-amber-500/15 text-amber-100", dot: "bg-amber-400 animate-pulse" },
+  starting: { label: "Starting", className: "border-brand-400/50 bg-brand-500/15 text-brand-100", dot: "bg-brand-400 animate-pulse" },
   live: { label: "Live", className: "border-rose-400/50 bg-rose-500/15 text-rose-200", dot: "bg-rose-400 animate-pulse" },
-  ending: { label: "Ending", className: "border-amber-400/50 bg-amber-500/15 text-amber-100", dot: "bg-amber-400" },
-  ended: { label: "Ended", className: "border-white/15 bg-white/5 text-slate-300", dot: "bg-slate-400" },
+  ending: { label: "Ending", className: "border-brand-400/50 bg-brand-500/15 text-brand-100", dot: "bg-brand-400" },
+  ended: { label: "Ended", className: "border-white/15 bg-white/5 text-ink-300", dot: "bg-ink-400" },
   cancelled: { label: "Cancelled", className: "border-rose-400/30 bg-rose-500/5 text-rose-300/80", dot: "bg-rose-400/60" },
 };
 
@@ -61,7 +61,7 @@ export function BotText({ text }: { text: string }) {
           {match[1]}
         </b>
       ) : (
-        <code key={match.index} className="rounded bg-white/10 px-1 text-[0.95em] text-amber-100">
+        <code key={match.index} className="rounded bg-white/10 px-1 text-[0.95em] text-brand-100">
           {match[2]}
         </code>
       ),
