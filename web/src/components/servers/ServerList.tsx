@@ -48,7 +48,7 @@ export default function ServerList({ servers, username, demo }: { servers: Serve
             Servers you own or admin, and ones whose owner let Host Management change settings. Logged in as {username}.
           </p>
         </div>
-        <a href={inviteUrl()} className="rounded-xl bg-[#5865F2] px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-indigo-500/20 hover:bg-[#4752c4]">
+        <a href={inviteUrl()} data-tour="servers.add" className="rounded-xl bg-[#5865F2] px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-indigo-500/20 hover:bg-[#4752c4]">
           ＋ Add GameMaster to a server
         </a>
       </div>
@@ -60,7 +60,7 @@ export default function ServerList({ servers, username, demo }: { servers: Serve
           <p className="mt-1 text-xs text-slate-400">You need to own a server or have Administrator in it. Add GameMaster to one to start.</p>
         </div>
       ) : (
-        <ul className="grid gap-3 sm:grid-cols-2">
+        <ul data-tour="servers.list" className="grid gap-3 sm:grid-cols-2">
           {servers.map((server) => (
             <li key={server.id} className={`flex flex-col rounded-3xl p-4 ${GLASS}`}>
               <div className="flex items-center gap-3">

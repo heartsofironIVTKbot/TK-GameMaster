@@ -89,7 +89,7 @@ export default function LateJoinCard({ game, onChanged }: { game: GameControl; o
   const slotLabel = kind === "nation" ? nation.trim() || "a nation" : "a filler slot";
 
   return (
-    <section className={`rounded-3xl p-4 sm:p-6 ${GLASS}`}>
+    <section data-tour="games.lateJoin" className={`rounded-3xl p-4 sm:p-6 ${GLASS}`}>
       <p className="text-[11px] font-black uppercase tracking-[0.18em] text-violet-300">Late join</p>
       <p className="mt-1 text-sm text-slate-400">
         Add a player to the running game. They get the nation, the Gamer Pass and a voice channel, and show as a late join on the

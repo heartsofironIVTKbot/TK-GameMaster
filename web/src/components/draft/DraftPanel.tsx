@@ -64,7 +64,7 @@ export default function DraftPanel({
   const canPlace = myTurn || canManage;
 
   return (
-    <section className="mx-3 mb-3 mt-1 rounded-2xl border border-amber-300/20 bg-gradient-to-b from-amber-500/[0.08] to-slate-950/40 p-3">
+    <section data-tour="map.draftPanel" className="mx-3 mb-3 mt-1 rounded-2xl border border-amber-300/20 bg-gradient-to-b from-amber-500/[0.08] to-slate-950/40 p-3">
       <div className="flex items-center gap-2">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-amber-300">🎯 Draft</p>
         <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold ${phase.tone}`}>{phase.text}</span>

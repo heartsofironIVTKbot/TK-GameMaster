@@ -30,7 +30,7 @@ export default function AccessCard({ game, onChanged }: { game: GameControl; onC
   const started = game.phase !== "announced";
 
   return (
-    <section className={`rounded-3xl p-4 sm:p-6 ${GLASS}`}>
+    <section data-tour="games.access" className={`rounded-3xl p-4 sm:p-6 ${GLASS}`}>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <div>
           <p className="text-[11px] font-black uppercase tracking-[0.18em] text-sky-300">Reservation access</p>

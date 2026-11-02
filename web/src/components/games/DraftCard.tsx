@@ -33,7 +33,7 @@ export default function DraftCard({ game, now, onChanged }: { game: GameControl;
   const canManage = game.can_manage;
 
   return (
-    <section className={`rounded-3xl p-4 sm:p-6 ${GLASS}`}>
+    <section data-tour="games.draft" className={`rounded-3xl p-4 sm:p-6 ${GLASS}`}>
       <div className="flex flex-wrap items-start gap-3">
         <div className="min-w-0 flex-1">
           <p className="text-[11px] font-black uppercase tracking-[0.18em] text-amber-300">Draft</p>

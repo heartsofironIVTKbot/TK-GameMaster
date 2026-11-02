@@ -150,7 +150,7 @@ export default function ChatLogCard({ game, onChanged }: { game: GameControl; on
   const staleLog = Boolean(result && game.chat_log && result.log && game.chat_log.uploaded_at > result.log.uploaded_at);
 
   return (
-    <section className={`rounded-3xl p-4 sm:p-6 ${GLASS}`}>
+    <section data-tour="games.chatlog" className={`rounded-3xl p-4 sm:p-6 ${GLASS}`}>
       <p className="text-[11px] font-black uppercase tracking-[0.18em] text-sky-300">Chat log & AI analysis</p>
       <p className="mt-1 text-sm text-slate-300">
         Upload the game&apos;s HOI4 chat log (.txt). The AI grades everyone&apos;s roleplay with strict rules, the log goes to the public

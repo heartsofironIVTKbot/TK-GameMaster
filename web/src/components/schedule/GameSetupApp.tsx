@@ -522,6 +522,7 @@ export default function GameSetupApp({
               <button
                 key={entry.id}
                 type="button"
+                data-tour={`setup.tab.${entry.id} setup.tabs`}
                 onClick={() => setTab(entry.id)}
                 className={`relative flex flex-1 flex-col items-center gap-0.5 rounded-xl px-1 py-1.5 text-[10px] font-bold uppercase tracking-wide transition ${
                   active ? "bg-amber-400 text-slate-950" : "text-slate-400 hover:bg-white/5 hover:text-white"
@@ -611,7 +612,7 @@ export default function GameSetupApp({
           )}
         </div>
 
-        <footer className="border-t border-white/10 bg-slate-950/40 p-3">
+        <footer data-tour="setup.footer" className="border-t border-white/10 bg-slate-950/40 p-3">
           {submitError && (
             <p className="mb-2 rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-1.5 text-xs text-rose-100">
               {submitError}

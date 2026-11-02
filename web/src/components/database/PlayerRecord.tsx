@@ -91,6 +91,7 @@ export default function PlayerRecord({
   return (
     <div className="gm-fade-up space-y-4">
       <section
+        data-tour="database.profile"
         className={`relative overflow-hidden rounded-3xl p-4 sm:p-5 ${GLASS} ${flagged ? "!border-rose-500/40" : ""}`}
         style={
           profile?.banner_url

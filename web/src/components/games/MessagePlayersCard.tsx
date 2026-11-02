@@ -57,7 +57,7 @@ export default function MessagePlayersCard({ game, onChanged }: { game: GameCont
   };
 
   return (
-    <section className={`rounded-3xl p-4 sm:p-6 ${GLASS}`}>
+    <section data-tour="games.message" className={`rounded-3xl p-4 sm:p-6 ${GLASS}`}>
       <p className="text-[11px] font-black uppercase tracking-[0.18em] text-amber-300">Message players</p>
       <p className="mt-1 text-sm text-slate-300">
         {everyone.length === 0

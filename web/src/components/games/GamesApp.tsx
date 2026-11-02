@@ -105,7 +105,7 @@ export default function GamesApp({ host }: { host: HostProfile }) {
             </span>
           )}
           <ServerSwitcher host={host} />
-          <nav className="ml-auto flex flex-wrap items-center gap-2">
+          <nav data-tour="games.nav" className="ml-auto flex flex-wrap items-center gap-2">
             <Link href="/" className={NAV_LINK}>
               🗺️ Map
             </Link>
@@ -131,6 +131,7 @@ export default function GamesApp({ host }: { host: HostProfile }) {
 
       <div className="mx-auto grid max-w-[1700px] gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[340px_minmax(0,1fr)]">
         <aside
+          data-tour="games.list"
           className={`flex flex-col rounded-3xl p-3 sm:p-4 lg:sticky lg:top-[76px] lg:max-h-[calc(100vh-96px)] ${GLASS} ${
             picked ? "hidden lg:flex" : ""
           }`}
@@ -186,7 +187,7 @@ export default function GamesApp({ host }: { host: HostProfile }) {
           </div>
         </aside>
 
-        <main className="min-w-0">
+        <main data-tour="games.panel" className="min-w-0">
           {activeId ? (
             <GameControlPanel key={activeId} gameId={activeId} host={host} onBack={picked ? closeGame : null} onChanged={onChanged} />
           ) : (

@@ -35,6 +35,7 @@ import { reservationLookup } from "@/lib/reservationMatch";
 import { versionedMapUrl } from "@/lib/mapVersion";
 import { useLiveLobby, useShareSelection } from "./live/useLiveLobby";
 import LiveSelectionLabels, { type LiveSelectionLabel } from "./live/LiveSelectionLabels";
+import { useTutorialActions } from "./tutorial/TutorialProvider";
 import {
   DEFAULT_SCENARIO,
   SCENARIOS,
@@ -1363,6 +1364,10 @@ export default function MapViewer({
   }, []);
   const activeHostId = games.find((game) => game.thread_id === selectedThread)?.host_id ?? null;
   const gameRunning = gameStarted;
+  const tutorial = useTutorialActions();
+  // Nothing picked and no nation of your own yet: say how to reserve.
+  const showReserveHint =
+    !selected && Boolean(selectedThread) && !gameRunning && !lobbyLock?.draft && !mySlot && !hostTools?.dragAvatars;
 
   if (error) {
     return (
@@ -1400,7 +1405,7 @@ export default function MapViewer({
   );
 
   return (
-    <div className={className ?? "h-screen w-screen relative overflow-hidden bg-[#16283b]"}>
+    <div data-tour="map.canvas" className={className ?? "h-screen w-screen relative overflow-hidden bg-[#16283b]"}>
       <div
         className="relative h-full w-full"
         onDragEnter={() => {
@@ -1539,9 +1544,26 @@ export default function MapViewer({
             onChanged={() => void refreshLobbyReservations()}
           />
         )}
+        {showReserveHint && (
+          <div
+            data-tour="map.reserveHint"
+            className="absolute bottom-6 left-1/2 z-[900] flex -translate-x-1/2 items-center gap-3 rounded-2xl border border-amber-300/30 bg-slate-950/85 py-2 pl-4 pr-2 shadow-2xl backdrop-blur-md"
+          >
+            <span className="text-sm font-bold text-amber-100">👆 Click a nation on the map to reserve it</span>
+            {tutorial && (
+              <button
+                type="button"
+                onClick={() => tutorial.start("map-player")}
+                className="rounded-xl bg-amber-400 px-3 py-1.5 text-xs font-black text-slate-950 transition hover:bg-amber-300"
+              >
+                Show me how
+              </button>
+            )}
+          </div>
+        )}
         {/* Draft games: nations are handed out by the captains — no direct reserving. */}
         {selected && selectionKind && lobbyLock?.draft && !gameRunning && (
-          <div className="absolute bottom-6 left-1/2 z-[900] flex -translate-x-1/2 flex-col items-center gap-2">
+          <div data-tour="map.draftJoin" className="absolute bottom-6 left-1/2 z-[900] flex -translate-x-1/2 flex-col items-center gap-2">
             <p className="rounded-xl border border-amber-300/30 bg-slate-950/80 px-4 py-2 text-center text-xs font-semibold text-amber-100 shadow-xl backdrop-blur-md">
               🎯 Draft game — the team captains place players on nations.
             </p>
@@ -1557,7 +1579,7 @@ export default function MapViewer({
           </div>
         )}
         {selected && selectionKind && !lobbyLock?.draft && !gameRunning && (
-          <div className="absolute bottom-6 left-1/2 z-[900] flex -translate-x-1/2 flex-col items-center gap-2">
+          <div data-tour="map.reserve" className="absolute bottom-6 left-1/2 z-[900] flex -translate-x-1/2 flex-col items-center gap-2">
             {selectionKind === "pending" &&
               (authUser ? (
                 <button

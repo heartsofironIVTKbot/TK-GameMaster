@@ -159,7 +159,7 @@ export default function GameAttendance({
   return (
     <div className="space-y-5">
       {/* Header */}
-      <section className={`rounded-3xl p-4 sm:p-6 ${GLASS}`}>
+      <section data-tour="attendance.header" className={`rounded-3xl p-4 sm:p-6 ${GLASS}`}>
         <div className="flex flex-wrap items-start gap-3">
           {onBack && (
             <button
@@ -237,7 +237,7 @@ export default function GameAttendance({
       </section>
 
       {/* Samples + actions */}
-      <section className={`grid gap-5 rounded-3xl p-4 sm:p-6 xl:grid-cols-[minmax(0,1fr)_320px] ${GLASS}`}>
+      <section data-tour="attendance.samples" className={`grid gap-5 rounded-3xl p-4 sm:p-6 xl:grid-cols-[minmax(0,1fr)_320px] ${GLASS}`}>
         <div className="min-w-0">
           <p className="text-[11px] font-black uppercase tracking-[0.18em] text-emerald-300">Voice samples</p>
           <p className="mt-1 text-sm text-slate-400">
@@ -305,7 +305,7 @@ export default function GameAttendance({
       </section>
 
       {/* Roster */}
-      <section className={`rounded-3xl p-4 sm:p-6 ${GLASS}`}>
+      <section data-tour="attendance.roster" className={`rounded-3xl p-4 sm:p-6 ${GLASS}`}>
         <div className="flex flex-wrap items-center gap-2">
           <p className="mr-auto text-[11px] font-black uppercase tracking-[0.18em] text-emerald-300">Roster</p>
           {game.live_check && (

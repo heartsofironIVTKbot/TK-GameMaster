@@ -99,7 +99,7 @@ export default function ProfileApp() {
             </span>
           </Link>
           <nav className="ml-auto flex items-center gap-2">
-            <Link href="/tickets" className={NAV_LINK} title="Read your closed tickets">
+            <Link href="/tickets" data-tour="profile.tickets" className={NAV_LINK} title="Read your closed tickets">
               🎫 My tickets
             </Link>
             <Link href="/" className={NAV_LINK}>
@@ -111,6 +111,7 @@ export default function ProfileApp() {
 
       <main className="mx-auto max-w-[1300px] space-y-4 px-4 py-5 sm:px-6">
         <section
+          data-tour="profile.header"
           className={`relative overflow-hidden rounded-3xl p-4 sm:p-5 ${GLASS} ${flagged ? "!border-rose-500/40" : ""}`}
           style={
             profile?.banner_url
@@ -155,12 +156,12 @@ export default function ProfileApp() {
         </section>
 
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
-          <section className={`min-w-0 space-y-4 rounded-3xl p-4 sm:p-5 ${GLASS}`}>
+          <section data-tour="profile.portfolio" className={`min-w-0 space-y-4 rounded-3xl p-4 sm:p-5 ${GLASS}`}>
             <h2 className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">📊 Portfolio</h2>
             <PortfolioBody portfolio={portfolio} playerView />
           </section>
 
-          <aside className="space-y-4">
+          <aside data-tour="profile.side" className="space-y-4">
             <AiResultsCard results={aiResults} />
             {portfolio.host && <HostingCard standing={portfolio.host} />}
             <section className={`rounded-2xl p-4 text-sm text-slate-300 ${GLASS}`}>

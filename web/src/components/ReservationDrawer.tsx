@@ -479,6 +479,7 @@ export default function ReservationDrawer({
         type="button"
         onClick={onToggle}
         aria-label="Open reservation roaster"
+        data-tour="map.roster"
         className="absolute left-0 top-1/2 z-[950] -translate-y-1/2 rounded-r-lg border border-l-0 border-slate-700 bg-slate-900/90 px-1.5 py-4 text-[10px] font-black uppercase tracking-widest text-slate-300 shadow-lg backdrop-blur-md transition-colors hover:bg-slate-800"
         style={{ writingMode: "vertical-rl" }}
       >
@@ -710,6 +711,7 @@ export default function ReservationDrawer({
   return (
     <aside
       aria-label="Reservation roaster"
+      data-tour="map.roster"
       className="absolute bottom-0 left-0 top-20 z-[950] flex w-[400px] flex-col border-r border-slate-800 bg-slate-950/70 shadow-2xl backdrop-blur-md"
     >
       {/* Header */}
@@ -762,7 +764,7 @@ export default function ReservationDrawer({
         {/* Draft games: the shared pool, teams and whose pick it is. */}
         {draftPanel && <div className="-mx-2 pt-3">{draftPanel}</div>}
         {gameLock?.ironlegion && (
-          <div className="mt-3 rounded-lg border border-sky-400/30 bg-sky-500/10 px-3 py-2 text-[11px] leading-relaxed text-sky-100">
+          <div data-tour="map.ironlegion" className="mt-3 rounded-lg border border-sky-400/30 bg-sky-500/10 px-3 py-2 text-[11px] leading-relaxed text-sky-100">
             🛡️ <b>Steam authentication required.</b> This game needs IronLegion&apos;s authenticated role to reserve.{" "}
             {gameLock.ironlegion.verify_url ? (
               <a href={gameLock.ironlegion.verify_url} target="_blank" rel="noopener noreferrer" className="font-semibold text-sky-300 underline underline-offset-2 hover:text-sky-200">

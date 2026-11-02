@@ -85,7 +85,7 @@ export default function RolesPanel({
   const busy = state.phase === "sending" || state.phase === "waiting";
 
   return (
-    <section className="rounded-2xl border border-violet-400/25 bg-slate-950/70 p-4 shadow-xl shadow-black/30">
+    <section data-tour="database.roles" className="rounded-2xl border border-violet-400/25 bg-slate-950/70 p-4 shadow-xl shadow-black/30">
       <div className="mb-3 flex items-center justify-between gap-2">
         <h2 className="text-[11px] font-black uppercase tracking-[0.18em] text-violet-300">🪪 Verification, host branches & VIP</h2>
         {data && data.nonce !== nonce && <Spinner className="h-3 w-3 text-violet-300" />}

@@ -113,7 +113,7 @@ export default function RoleCheckCard({ onOpen }: { onOpen: (id: string) => void
   const running = phase.kind === "running";
 
   return (
-    <section className={`mb-4 rounded-3xl p-4 sm:p-5 ${GLASS}`}>
+    <section data-tour="database.roleCheck" className={`mb-4 rounded-3xl p-4 sm:p-5 ${GLASS}`}>
       <div className="flex flex-wrap items-start gap-3">
         <div className="min-w-0 flex-1">
           <h2 className="text-[11px] font-black uppercase tracking-[0.18em] text-sky-300">🛡️ Role check</h2>

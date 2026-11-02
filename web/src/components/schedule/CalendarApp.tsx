@@ -34,6 +34,7 @@ import {
 import TimeZonePicker, { useHostTimeZone } from "./TimeZonePicker";
 import { GLASS, HostAvatar, Spinner } from "./ui";
 import { submitScheduleRequest, useRequestPoller } from "./useRequestPoller";
+import { useTutorialFacts } from "@/components/tutorial/TutorialProvider";
 
 /**
  * Live host calendar: a month grid of every game on the schedule board,
@@ -131,6 +132,7 @@ function slotBadge(slot: CalendarSlot, nowSec: number, timeZone: string): SlotBa
 }
 
 export default function CalendarApp({ host }: { host: HostProfile }) {
+  useTutorialFacts({ isHost: true, isStaff: host.is_staff });
   const [timeZone, setTimeZone] = useHostTimeZone();
   const [nowMs, setNowMs] = useState(() => Date.now());
   const today = todayInZone(timeZone, nowMs);
@@ -292,6 +294,7 @@ export default function CalendarApp({ host }: { host: HostProfile }) {
           <div className="ml-auto flex flex-wrap items-center gap-3">
             <Link
               href="/games"
+              data-tour="calendar.nav"
               className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-slate-300 hover:border-amber-300/40 hover:text-white"
               title="Start, end and cancel games"
             >
@@ -299,6 +302,7 @@ export default function CalendarApp({ host }: { host: HostProfile }) {
             </Link>
             <Link
               href="/presets"
+              data-tour="calendar.nav"
               className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-slate-300 hover:border-amber-300/40 hover:text-white"
               title="Game mode presets — nation groups, locks, rules and mods"
             >
@@ -306,6 +310,7 @@ export default function CalendarApp({ host }: { host: HostProfile }) {
             </Link>
             <Link
               href="/database"
+              data-tour="calendar.nav"
               className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-slate-300 hover:border-amber-300/40 hover:text-white"
               title="Search players and manage commends, warnings, bans and Dishonored"
             >
@@ -313,12 +318,15 @@ export default function CalendarApp({ host }: { host: HostProfile }) {
             </Link>
             <Link
               href="/attendance"
+              data-tour="calendar.nav"
               className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-slate-300 hover:border-amber-300/40 hover:text-white"
               title="Live attendance for started games"
             >
               🎯 Attendance
             </Link>
-            <TimeZonePicker value={timeZone} onChange={setTimeZone} />
+            <span data-tour="calendar.timezone" className="inline-flex">
+              <TimeZonePicker value={timeZone} onChange={setTimeZone} />
+            </span>
             <div className="hidden items-center gap-2 sm:flex">
               <HostAvatar host={host} />
               <span className="text-xs font-semibold text-slate-300">
@@ -331,7 +339,7 @@ export default function CalendarApp({ host }: { host: HostProfile }) {
 
       <div className="mx-auto grid max-w-[1600px] gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[minmax(0,1fr)_380px]">
         {/* Month grid */}
-        <section className={`rounded-3xl p-3 sm:p-5 ${GLASS}`}>
+        <section data-tour="calendar.grid" className={`rounded-3xl p-3 sm:p-5 ${GLASS}`}>
           <div className="mb-4 flex flex-wrap items-center gap-2">
             <button
               type="button"
@@ -648,7 +656,7 @@ function DayPanel({
 }) {
   const bookable = isBookableDate(date, today) && !lock;
   return (
-    <div className={`gm-slide-in rounded-3xl p-5 ${GLASS}`}>
+    <div data-tour="calendar.dayPanel" className={`gm-slide-in rounded-3xl p-5 ${GLASS}`}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-amber-300/80">
@@ -671,12 +679,15 @@ function DayPanel({
       </div>
 
       {host.is_staff && date >= today && (
+        <div data-tour="calendar.dayLock">
         <DayLockControl date={date} lock={lock} pendingRequest={dayRequest} onChanged={onChanged} />
+        </div>
       )}
 
       {bookable && (
         <Link
           href={`/schedule/new?date=${date}`}
+          data-tour="calendar.newGame"
           className="reserve-cta-glow mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-amber-400 px-5 py-3.5 text-sm font-black uppercase tracking-wider text-slate-950 transition hover:scale-[1.02]"
         >
           ＋ Set up a game this day
@@ -979,7 +990,7 @@ function OverviewPanel({
     .sort((a, b) => a.game_timestamp - b.game_timestamp);
   const failed = (data?.requests ?? []).filter((request) => request.status === "error");
   return (
-    <div className={`gm-fade-up rounded-3xl p-5 ${GLASS}`}>
+    <div data-tour="calendar.overview" className={`gm-fade-up rounded-3xl p-5 ${GLASS}`}>
       <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-amber-300/80">Your schedule</p>
       <h2 className="mt-1 text-xl font-black tracking-tight text-white">Upcoming games</h2>
       <p className="mt-1 text-xs text-slate-400">Pick a day on the calendar to see its games or set up a new one.</p>

@@ -30,7 +30,7 @@ export default function RemindersCard({ game, now, onChanged }: { game: GameCont
   }
 
   return (
-    <section className={`rounded-3xl p-4 sm:p-6 ${GLASS}`}>
+    <section data-tour="games.reminders" className={`rounded-3xl p-4 sm:p-6 ${GLASS}`}>
       <div className="flex flex-wrap items-start gap-4">
         <div className="min-w-0 flex-1">
           <p className="text-[11px] font-black uppercase tracking-[0.18em] text-amber-300">Reminders</p>

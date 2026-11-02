@@ -129,7 +129,7 @@ export default function GameControlPanel({
   return (
     <div className="space-y-5">
       {/* Header */}
-      <section className={`rounded-3xl p-4 sm:p-6 ${GLASS}`}>
+      <section data-tour="games.header" className={`rounded-3xl p-4 sm:p-6 ${GLASS}`}>
         <div className="flex flex-wrap items-start gap-3">
           {onBack && (
             <button
@@ -404,7 +404,7 @@ function LiveCard({
   const ending = game.phase === "ending";
   const confirmed = game.roster.filter((player) => player.confirmed).length;
   return (
-    <section className={`grid gap-5 rounded-3xl p-4 sm:p-6 xl:grid-cols-[minmax(0,1fr)_340px] ${GLASS}`}>
+    <section data-tour="games.live" className={`grid gap-5 rounded-3xl p-4 sm:p-6 xl:grid-cols-[minmax(0,1fr)_340px] ${GLASS}`}>
       <div>
         <p className="text-[11px] font-black uppercase tracking-[0.18em] text-rose-300">{ending ? "Ending" : "Live game"}</p>
         <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -480,7 +480,7 @@ function CancelCard({ game, busy, onCancel }: { game: GameControl; busy: boolean
     );
   }
   return (
-    <section className="gm-fade-up rounded-3xl border border-rose-400/30 bg-rose-500/5 p-4 sm:p-6">
+    <section data-tour="games.cancel" className="gm-fade-up rounded-3xl border border-rose-400/30 bg-rose-500/5 p-4 sm:p-6">
       <div className="flex items-start gap-3">
         <div className="flex-1">
           <p className="text-[11px] font-black uppercase tracking-[0.18em] text-rose-300">Cancel the game</p>
@@ -523,7 +523,7 @@ function CancelCard({ game, busy, onCancel }: { game: GameControl; busy: boolean
 function RosterCard({ game }: { game: GameControl }) {
   const started = game.roster.some((player) => player.confirmed !== null);
   return (
-    <section className={`rounded-3xl p-4 sm:p-6 ${GLASS}`}>
+    <section data-tour="games.roster" className={`rounded-3xl p-4 sm:p-6 ${GLASS}`}>
       <div className="flex items-baseline justify-between gap-2">
         <p className="text-[11px] font-black uppercase tracking-[0.18em] text-amber-300">Reserved players</p>
         <p className="text-xs text-slate-400">{game.players} player(s)</p>

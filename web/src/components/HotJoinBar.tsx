@@ -123,7 +123,7 @@ export default function HotJoinBar({ threadId, selected, selectionKind, ownerLab
   }
 
   return (
-    <div className="absolute bottom-6 left-1/2 z-[900] flex w-max max-w-[min(92vw,520px)] -translate-x-1/2 flex-col items-center gap-2">
+    <div data-tour="map.hotjoin" className="absolute bottom-6 left-1/2 z-[900] flex w-max max-w-[min(92vw,520px)] -translate-x-1/2 flex-col items-center gap-2">
       {main}
       {sent && !pending && (
         <p className="rounded-md bg-slate-950/80 px-3 py-1.5 text-xs text-emerald-300">Sent! The host got a DM — you&apos;ll get one when they decide.</p>

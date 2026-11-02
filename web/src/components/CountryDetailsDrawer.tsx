@@ -432,7 +432,7 @@ export default function CountryDetailsDrawer({
   }
 
   return (
-    <aside className="country-drawer absolute bottom-0 right-0 top-20 z-[1000] flex w-[380px] flex-col border-l border-slate-800 bg-slate-900/95 text-slate-100 shadow-2xl backdrop-blur-md">
+    <aside data-tour="map.details" className="country-drawer absolute bottom-0 right-0 top-20 z-[1000] flex w-[380px] flex-col border-l border-slate-800 bg-slate-900/95 text-slate-100 shadow-2xl backdrop-blur-md">
       {/* Header: flag + name + Major/Minor badge. The selection chip and
           the minimize/close controls live in the top bar (TopBar.tsx). */}
       <div className="border-b border-slate-800 p-4">
@@ -675,7 +675,7 @@ export default function CountryDetailsDrawer({
 
       {/* Bottom bar: lobby picker only. The reserve / unreserve actions live
           in the glowing bottom-center button rendered by MapViewer. */}
-      <div className="border-t border-slate-800 p-4">
+      <div data-tour="map.gamePicker" className="border-t border-slate-800 p-4">
         {authUser ? (
           <>
             <label

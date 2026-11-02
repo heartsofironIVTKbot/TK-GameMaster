@@ -146,6 +146,7 @@ export default function HostToolsPanel({
     <section
       ref={panelRef}
       aria-label="Host Tool"
+      data-tour="hosttool.panel"
       style={{
         left: position?.left ?? 0,
         top: position?.top ?? 0,
@@ -214,7 +215,7 @@ export default function HostToolsPanel({
             </div>
           )}
 
-          <div>
+          <div data-tour="hosttool.search">
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
@@ -280,7 +281,7 @@ export default function HostToolsPanel({
             </ul>
           )}
 
-          <div className="grid grid-cols-2 gap-2">
+          <div data-tour="hosttool.zones" className="grid grid-cols-2 gap-2">
             <DropZone
               icon="＋"
               label="Add as filler"
@@ -305,6 +306,7 @@ export default function HostToolsPanel({
             type="button"
             role="switch"
             aria-checked={notify}
+            data-tour="hosttool.notify"
             onClick={() => onNotifyChange(!notify)}
             className={`flex w-full items-center gap-2.5 rounded-xl border px-3 py-2 text-left transition ${
               notify ? "border-emerald-400/20 bg-emerald-500/5" : "border-white/10 bg-white/[0.03]"

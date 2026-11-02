@@ -172,7 +172,7 @@ export default function PresetsApp({ host }: { host: HostProfile }) {
       <main className="mx-auto max-w-[1500px] px-4 py-5 sm:px-6">
         <section className={`rounded-3xl p-4 sm:p-5 ${GLASS}`}>
           <div className="flex flex-wrap items-center gap-3">
-            <div className="w-full sm:w-[380px]">
+            <div data-tour="presets.view" className="w-full sm:w-[380px]">
               <Segmented<View>
                 ariaLabel="Which presets"
                 value={view}
@@ -193,12 +193,13 @@ export default function PresetsApp({ host }: { host: HostProfile }) {
             )}
             <Link
               href={`/presets/new${modeFilter ? `?mode=${encodeURIComponent(modeFilter)}` : ""}`}
+              data-tour="presets.new"
               className="ml-auto rounded-xl bg-amber-400 px-4 py-2.5 text-sm font-black text-slate-950 shadow-lg shadow-amber-500/20 hover:bg-amber-300"
             >
               ＋ New preset
             </Link>
           </div>
-          <div className="mt-3 flex flex-wrap gap-1.5">
+          <div data-tour="presets.filters" className="mt-3 flex flex-wrap gap-1.5">
             <FilterChip active={!modeFilter} onClick={() => setModeFilter("")} label="All modes" />
             {SCHEDULE_MODES.map((mode) => (
               <FilterChip
@@ -244,7 +245,7 @@ export default function PresetsApp({ host }: { host: HostProfile }) {
           </div>
         )}
 
-        <div className="mt-4 grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+        <div data-tour="presets.list" className="mt-4 grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
           {shown.map((preset) => (
             <PresetCard
               key={`${view}-${preset.preset_id}`}

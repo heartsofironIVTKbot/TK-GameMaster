@@ -112,7 +112,7 @@ export default function HostStandingPanel({
   onApplied: () => void;
 }) {
   return (
-    <section className="rounded-2xl border border-sky-400/25 bg-slate-950/70 p-4 shadow-xl shadow-black/30">
+    <section data-tour="database.hostStanding" className="rounded-2xl border border-sky-400/25 bg-slate-950/70 p-4 shadow-xl shadow-black/30">
       <div className="mb-3 flex items-center justify-between gap-2">
         <h2 className="text-[11px] font-black uppercase tracking-[0.18em] text-sky-300">🎖️ Host standing</h2>
         <span className="text-[11px] text-slate-400">Hosted {standing.hosted_games}</span>

@@ -102,7 +102,7 @@ function RequestRow({ game, entry, onChanged }: { game: GameControl; entry: HotJ
 export default function HotJoinCard({ game, onChanged }: { game: GameControl; onChanged: () => void }) {
   const waiting = game.hotjoin.filter((entry) => entry.status === "pending").length;
   return (
-    <section className={`rounded-3xl p-4 sm:p-6 ${GLASS}`}>
+    <section data-tour="games.hotjoin" className={`rounded-3xl p-4 sm:p-6 ${GLASS}`}>
       <p className="text-[11px] font-black uppercase tracking-[0.18em] text-orange-300">
         Hot-join requests{waiting ? ` · ${waiting} waiting` : ""}
       </p>

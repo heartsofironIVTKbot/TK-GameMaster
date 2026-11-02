@@ -70,7 +70,7 @@ export default function MessagePanel({
   const entries = history?.entries ?? null;
 
   return (
-    <section className="rounded-2xl border border-amber-300/20 bg-slate-950/70 p-4 shadow-xl shadow-black/30">
+    <section data-tour="database.message" className="rounded-2xl border border-amber-300/20 bg-slate-950/70 p-4 shadow-xl shadow-black/30">
       <div className="mb-1 flex items-center justify-between gap-2">
         <h2 className="text-[11px] font-black uppercase tracking-[0.18em] text-amber-300">✉️ Send a message</h2>
         {entries && entries.length > 0 && <span className="text-[11px] text-slate-500">{entries.length} sent before</span>}

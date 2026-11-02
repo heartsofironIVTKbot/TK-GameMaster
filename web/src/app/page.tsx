@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import TopBar from "@/components/TopBar";
 import ReservationDrawer from "@/components/ReservationDrawer";
 import NicknameModal from "@/components/NicknameModal";
+import { useTutorialFacts } from "@/components/tutorial/TutorialProvider";
 import DraftJoinModal from "@/components/draft/DraftJoinModal";
 import DraftPanel from "@/components/draft/DraftPanel";
 import DraftPickDialog from "@/components/draft/DraftPickDialog";
@@ -562,6 +563,23 @@ export default function Home() {
   const sessionTime = `${activeGame?.game_started ? "🔴 In progress · " : ""}${
     formatSessionTime(activeGame?.start_timestamp) || "Session Start: TBA"
   }`;
+
+  // What the guided tours need to know (docs/tutorial.md).
+  useTutorialFacts({
+    loggedIn: authUser !== null,
+    isHost: host.isHost,
+    isStaff: Boolean(host.isStaff),
+    hasGame: Boolean(selectedThread),
+    nationSelected: selected !== null,
+    hasReservation: myReservation !== null,
+    ironLegionRequired: Boolean(gameLock?.ironlegion),
+    draftOpen: Boolean(draft),
+    gameRunning: gameStarted,
+    hostToolOn: toolsActive,
+    helpLeft: true,
+    helpTop: true,
+    helpBesideLeftPanel: rosterOpen,
+  });
 
   // Nickname modal: only when authenticated AND the profile is known (a null
   // profile means the database is unreachable — don't nag in that case).

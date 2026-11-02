@@ -266,11 +266,12 @@ export default function DatabaseApp({ host }: { host: HostProfile }) {
       <div className="mx-auto grid max-w-[1700px] gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[370px_minmax(0,1fr)]">
         {/* Search + results */}
         <aside
+          data-tour="database.list"
           className={`flex flex-col rounded-3xl p-3 sm:p-4 lg:sticky lg:top-[76px] lg:max-h-[calc(100vh-96px)] ${GLASS} ${
             selected ? "hidden lg:flex" : ""
           }`}
         >
-          <div className="relative">
+          <div data-tour="database.search" className="relative">
             <input
               ref={searchRef}
               value={query}
@@ -505,7 +506,7 @@ function ActivityFeed({ nonce, onOpen }: { nonce: number; onOpen: (id: string) =
 
   const items = state?.items ?? null;
   return (
-    <section className={`rounded-3xl p-4 sm:p-6 ${GLASS}`}>
+    <section data-tour="database.activity" className={`rounded-3xl p-4 sm:p-6 ${GLASS}`}>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-[11px] font-black uppercase tracking-[0.18em] text-amber-300">📜 Moderation activity</p>

@@ -184,7 +184,7 @@ export default function EventLog({ events, now }: { events: AttendanceEvent[]; n
   const kinds = GROUPS.find((option) => option.value === group)?.kinds ?? null;
   const shown = kinds ? events.filter((event) => kinds.includes(event.kind)) : events;
   return (
-    <section className={`rounded-3xl p-4 sm:p-6 ${GLASS}`}>
+    <section data-tour="attendance.log" className={`rounded-3xl p-4 sm:p-6 ${GLASS}`}>
       <div className="flex flex-wrap items-center gap-2">
         <div className="mr-auto">
           <p className="text-[11px] font-black uppercase tracking-[0.18em] text-emerald-300">Audit log</p>

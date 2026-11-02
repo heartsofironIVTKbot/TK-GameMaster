@@ -69,7 +69,7 @@ export default function StartGameForm({
   const missing = !serverId.trim() ? "Enter the server ID" : !password.trim() ? "Enter the password" : !checksumOk ? "Enter a 4-character checksum" : null;
 
   return (
-    <section className={`grid gap-5 rounded-3xl p-4 sm:p-6 xl:grid-cols-[minmax(0,1fr)_360px] ${GLASS}`}>
+    <section data-tour="games.start" className={`grid gap-5 rounded-3xl p-4 sm:p-6 xl:grid-cols-[minmax(0,1fr)_360px] ${GLASS}`}>
       <div className="space-y-4">
         <div>
           <p className="text-[11px] font-black uppercase tracking-[0.18em] text-amber-300">Start the game</p>

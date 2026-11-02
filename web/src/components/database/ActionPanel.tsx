@@ -346,7 +346,7 @@ export default function ActionPanel({
 
 function PanelShell({ children }: { children: ReactNode }) {
   return (
-    <section className="rounded-2xl border border-amber-400/25 bg-slate-950/70 p-4 shadow-xl shadow-black/30">
+    <section data-tour="database.moderate" className="rounded-2xl border border-amber-400/25 bg-slate-950/70 p-4 shadow-xl shadow-black/30">
       <h2 className="mb-3 text-[11px] font-black uppercase tracking-[0.18em] text-amber-300">🛠️ Moderate</h2>
       {children}
     </section>

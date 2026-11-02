@@ -291,7 +291,7 @@ export default function ServerSetupApp({ serverId, initialStep, added }: { serve
   const showSaveBar = view !== "history" && view !== "dashboard" && (view !== "home" || dirty);
 
   const saveBar = showSaveBar && (
-    <div className={`sticky bottom-3 z-20 mt-4 flex flex-wrap items-center gap-2 rounded-2xl px-4 py-3 ${GLASS}`}>
+    <div data-tour="server.save" className={`sticky bottom-3 z-20 mt-4 flex flex-wrap items-center gap-2 rounded-2xl px-4 py-3 ${GLASS}`}>
       {saveError ? (
         <span className="flex-1 text-xs font-semibold text-rose-300">
           {saveError}{" "}
@@ -363,7 +363,7 @@ export default function ServerSetupApp({ serverId, initialStep, added }: { serve
             <h1 className="text-2xl font-black text-white">⚙️ Settings</h1>
             <p className="text-sm text-slate-400">Pick a section. Problems show as a red number on its tile.</p>
           </div>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          <div data-tour="server.tiles" className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             {tiles.map((entry) => {
               const state = tileState(entry);
               return (
@@ -414,7 +414,7 @@ export default function ServerSetupApp({ serverId, initialStep, added }: { serve
             ← All settings
           </button>
         ) : (
-          <nav aria-label="Setup steps" className="mb-4">
+          <nav aria-label="Setup steps" data-tour="server.steps" className="mb-4">
             <p className="mb-2 text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">
               Setup · step {Math.max(1, stepIndex + 1)} of {STEPS.length}
             </p>
@@ -458,7 +458,7 @@ export default function ServerSetupApp({ serverId, initialStep, added }: { serve
         )}
 
         <main className="min-w-0">
-          <div className={`rounded-3xl p-4 sm:p-6 ${GLASS}`}>
+          <div data-tour="server.step" className={`rounded-3xl p-4 sm:p-6 ${GLASS}`}>
             <div className="mb-5">
               <h1 className="text-xl font-black text-white">
                 {viewIcon(view)} {viewLabel(view)}

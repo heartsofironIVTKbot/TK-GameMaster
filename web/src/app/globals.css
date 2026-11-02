@@ -409,3 +409,63 @@ body {
 .roster-scroll::-webkit-scrollbar-thumb:hover {
   background: #475569;
 }
+
+/* ---- Guided tours (components/tutorial) ---------------------------------- */
+/* The lit control: a hole in the dimming (one huge shadow) with an amber ring. */
+.gm-tour-spot {
+  box-shadow:
+    0 0 0 2px rgba(251, 191, 36, 0.95),
+    0 0 26px 6px rgba(251, 191, 36, 0.35),
+    0 0 0 200vmax rgba(2, 6, 23, 0.72);
+  transition:
+    top 220ms ease,
+    left 220ms ease,
+    width 220ms ease,
+    height 220ms ease;
+  animation: gmTourRing 2.2s ease-in-out infinite;
+}
+@keyframes gmTourRing {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 2px rgba(251, 191, 36, 0.95),
+      0 0 26px 6px rgba(251, 191, 36, 0.35),
+      0 0 0 200vmax rgba(2, 6, 23, 0.72);
+  }
+  50% {
+    box-shadow:
+      0 0 0 3px rgba(251, 191, 36, 1),
+      0 0 38px 10px rgba(251, 191, 36, 0.5),
+      0 0 0 200vmax rgba(2, 6, 23, 0.72);
+  }
+}
+.gm-tour-dim {
+  background: rgba(2, 6, 23, 0.72);
+  animation: gmTourFade 200ms ease-out both;
+}
+@keyframes gmTourFade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes gmTourCard {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.gm-tour-card {
+  animation: gmTourCard 220ms ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .gm-tour-spot,
+  .gm-tour-dim,
+  .gm-tour-card {
+    animation: none;
+    transition: none;
+  }
+}

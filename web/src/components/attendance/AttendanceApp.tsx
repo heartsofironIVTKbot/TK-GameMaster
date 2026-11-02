@@ -119,6 +119,7 @@ export default function AttendanceApp({ host }: { host: HostProfile }) {
 
       <div className="mx-auto grid max-w-[1700px] gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[320px_minmax(0,1fr)]">
         <aside
+          data-tour="attendance.list"
           className={`flex flex-col rounded-3xl p-3 sm:p-4 lg:sticky lg:top-[76px] lg:max-h-[calc(100vh-96px)] ${GLASS} ${
             picked ? "hidden lg:flex" : ""
           }`}
@@ -156,7 +157,7 @@ export default function AttendanceApp({ host }: { host: HostProfile }) {
           </div>
         </aside>
 
-        <main className="min-w-0">
+        <main data-tour="attendance.panel" className="min-w-0">
           {activeId ? (
             <GameAttendance key={activeId} gameId={activeId} host={host} onBack={picked ? closeGame : null} onChanged={onChanged} />
           ) : (
