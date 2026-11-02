@@ -3,6 +3,7 @@ from discord import app_commands
 from discord.ext import commands, tasks
 from discord.ui import View, Select, Button, UserSelect, Modal, TextInput
 import json
+import logging
 import os
 import io
 import zipfile
@@ -1166,7 +1167,16 @@ def _apply_host_settings_to_game(game: dict, settings: dict, add_on: Optional[st
 db_config: dict = {}
 
 _DB_POOL_SIZE = 10
+_DB_POOL_WAIT_SEC = 5.0
 _db_pool_lock = threading.Lock()
+
+
+def _on_event_loop_thread() -> bool:
+    try:
+        asyncio.get_running_loop()
+        return True
+    except RuntimeError:
+        return False
 db_pool = None
 
 
@@ -1248,12 +1258,22 @@ def _db_get_connection():
         _rebuild_db_pool("pool was not initialized at startup")
 
     def _checkout():
-        try:
-            return db_pool.get_connection()
-        except mysql.connector.errors.PoolError as e:
-            # Pool exhausted — connections leaked to stuck threads. Rebuild.
-            _rebuild_db_pool(f"pool exhausted: {e}")
-            return db_pool.get_connection()
+        # An empty pool usually just means it is busy (startup runs ~25 loops at
+        # once). Worker threads wait up to _DB_POOL_WAIT_SEC for a connection to
+        # come back; only then is it treated as leaked. Rebuilding straight away
+        # abandoned connections other threads were still using. The event-loop
+        # thread never waits: sleeping there would freeze the bot.
+        deadline = time.monotonic() + (0 if _on_event_loop_thread() else _DB_POOL_WAIT_SEC)
+        delay = 0.05
+        while True:
+            try:
+                return db_pool.get_connection()
+            except mysql.connector.errors.PoolError as e:
+                if time.monotonic() >= deadline:
+                    _rebuild_db_pool(f"pool exhausted: {e}")
+                    return db_pool.get_connection()
+                time.sleep(delay)
+                delay = min(delay * 2, 0.5)
 
     conn = _checkout()
     try:
@@ -1386,8 +1406,6 @@ def _ensure_users_schema_mysql() -> list[str]:
         if added:
             conn.commit()
             print(f"✅ users schema migration complete — added: {', '.join(added)}")
-        else:
-            print("✅ users schema OK (merit_points / dishonored columns present).")
 
         # Web Randomizer: single-use access token table (bot writes, web app
         # validates + burns). Idempotent — the commit also covers this DDL.
@@ -7131,18 +7149,21 @@ async def init_files_async():
             data = await _run_mysql_io(fetch_fn, label=f"startup {label}")
             setter(data)
             count = len(data) if hasattr(data, "__len__") else "?"
-            print(f"✅ Loaded {count} {label} from MySQL")
+            return f"{count} {label}"
         except Exception as e:
             print(f"⚠️ Could not load {label} from MySQL at startup: {e}")
             setter(empty)
+            return None
 
-    await asyncio.gather(
+    loaded = await asyncio.gather(
         _load("games", _fetch_all_games_mysql, _set_games_cache, {}),
         _load("schedule slots", _fetch_all_schedule_mysql, _set_schedule_cache, []),
         _load("locked days", _fetch_all_locked_days_mysql, _set_locked_days_cache, []),
         _load("bot config", _fetch_bot_config_mysql, _bot_config_load_all, {}),
         _load("host stats", _fetch_host_stats_mysql, _set_host_stats_cache, {}),
     )
+    if any(loaded):
+        print("✅ Loaded from MySQL: " + ", ".join(part for part in loaded if part))
 
 intents = discord.Intents.default()
 # Message Content is intentionally DISABLED: the bot only reads its own
@@ -9333,7 +9354,6 @@ async def _backfill_users_vip_flags() -> None:
     try:
         guild = bot.get_guild(cur_gid())
         if guild is None or not _vip_role_ids():
-            print("[VIP-BACKFILL] skipped — guild or VIP role unavailable")
             return
         vip_holders = [m.id for m in list(guild.members) if _has_vip_role(m)]
         if not vip_holders:
@@ -16171,8 +16191,6 @@ async def resume_incomplete_attendance_snapshots():
 
     if resumed:
         print(f"📸 Resumed {resumed} incomplete attendance snapshot task(s).")
-    else:
-        print("📸 No incomplete attendance snapshots to resume.")
 
 
 _attendance_finalize_locks: dict[str, asyncio.Lock] = {}
@@ -17600,7 +17618,6 @@ async def _activate_participation_tracker(game_id: str, delay_sec: int = PARTICI
 
 async def resume_participation_trackers() -> None:
     """Boot must not PATCH trackers. Live games update only on Yes/No or host roster changes."""
-    print("🎟️ Participation Tracker: boot refresh disabled (event-driven only).")
 
 
 @tasks.loop(seconds=30)
@@ -33074,8 +33091,6 @@ async def _bootstrap_server_settings() -> None:
             _load_runtime_from_row(guild, rows.get(str(guild.id)))
         except Exception as e:
             print(f"⚠️ Settings for {guild.id} could not be applied: {e}")
-    if seeded:
-        print(f"⚙️ Home server settings v{_rt(GUILD_ID).version} applied.")
 
     # Hist Verified and the website's role ids for the home server; VIPs get Hist Verified once.
     with guild_scope(GUILD_ID):
@@ -33722,8 +33737,6 @@ async def _bot_status_started() -> None:
         _bot_start_recorded = True
         try:
             kind = await _run_mysql_io(lambda: _bot_started_mysql(int(time.time())), label="bot status start")
-            if kind == "outage":
-                print("📉 Recorded an outage since the last heartbeat.")
         except Exception as e:
             print(f"[WARN] bot status start failed: {e}")
     if not bot_heartbeat_loop.is_running():
@@ -33771,17 +33784,14 @@ async def on_ready():
     # Restart-proof casino access panel buttons.
     try:
         bot.add_view(CasinoPanelView())
-        print("✅ Casino panel buttons registered.")
     except Exception as e:
         print(f"⚠️ Could not register casino panel buttons: {e}")
     try:
         bot.add_dynamic_items(FortunesSatisfactionButton)
-        print("✅ Fortunes Yes/No satisfaction buttons registered.")
     except Exception as e:
         print(f"⚠️ Could not register Fortunes satisfaction buttons: {e}")
     try:
         bot.add_dynamic_items(FortuneCardButton)
-        print("✅ Fortunes card buttons registered.")
     except Exception as e:
         print(f"⚠️ Could not register Fortunes card buttons: {e}")
 
@@ -33793,7 +33803,6 @@ async def on_ready():
     # Restart-proof VIP host-presence request buttons (game-start VIP DMs).
     try:
         bot.add_dynamic_items(VipHostPresenceButton)
-        print("✅ VIP host-presence buttons registered.")
     except Exception as e:
         print(f"⚠️ Could not register VIP host-presence buttons: {e}")
     # Restart-proof hot-join panel + host approve/decline buttons.
@@ -33830,7 +33839,6 @@ async def on_ready():
     except Exception as e:
         print(f"⚠️ Could not register VIP buttons: {e}")
 
-    print("--------------------------------------------------")
     print(f"✅ Logged in as {bot.user} (ID: {bot.user.id})")
 
     if _on_ready_bootstrapped:
@@ -33842,10 +33850,8 @@ async def on_ready():
     try:
         await init_files_async()
         _warm_nation_list_caches()
-        print("📁 Data files initialized.")
         if not get_cached_player_stats():
             await read_json(PLAYER_STATS_FILE)
-            print("📊 Player stats cache warmed.")
     except Exception as e:
         print(f"❌ Error initializing files: {e}")
 
@@ -33855,44 +33861,43 @@ async def on_ready():
         n = await _auto_lock_pending_fortunes_draws()
         if n:
             print(f"🔒 Auto-locked {n} pending Fortunes confirmation(s) as Yes.")
-        else:
-            print("🔒 No pending Fortunes confirmations to auto-lock.")
     except Exception as e:
         print(f"⚠️ Fortunes pending auto-lock failed: {e}")
 
     # 2. Start Background Tasks
     try:
-        print("🕒 Schedule board: command-driven only (no 5-minute PATCH loop)")
+        loops_started = 0
 
         if not player_stats_cache_refresh.is_running():
             player_stats_cache_refresh.start()
-            print("📊 Player stats cache refresh: Started")
+            loops_started += 1
 
         # --- NEW ANNOUNCEMENT LOOP STARTED HERE ---
         if not check_scheduled_announcements.is_running():
             check_scheduled_announcements.start()
-            print("⏰ Automated Announcement Loop: Started")
+            loops_started += 1
 
         # Web Host Configuration Panel → board sync (Phase 2).
         if not host_config_sync_loop.is_running():
             host_config_sync_loop.start()
-            print("🎛️ Host Config Sync Loop: Started")
+            loops_started += 1
 
         # Web Scheduling Calendar: host roster mirror + request queue → board.
         if not web_host_roster_loop.is_running():
             web_host_roster_loop.start()
-            print("🗓️ Web Host Roster Loop: Started")
+            loops_started += 1
         if not audit_trail_retention_loop.is_running():
             audit_trail_retention_loop.start()
+            loops_started += 1
         if not web_schedule_request_loop.is_running():
             web_schedule_request_loop.start()
-            print("🗓️ Web Schedule Request Loop (web calendar + live map host tools): Started")
+            loops_started += 1
         if not web_member_directory_loop.is_running():
             web_member_directory_loop.start()
-            print("👥 Web Member Directory Loop (live map player search): Started")
+            loops_started += 1
         if not player_summary_loop.is_running():
             player_summary_loop.start()
-            print("📊 Player Summary Loop (web portfolios): Started")
+            loops_started += 1
         # The web Database page offers exactly the Dishonored nation names
         # the moderation engine validates.
         _spawn_background(publish_web_moderation_options(), "web moderation options")
@@ -33902,70 +33907,69 @@ async def on_ready():
         _spawn_background(_bootstrap_server_settings(), "server settings")
         if not vip_cross_server_loop.is_running():
             vip_cross_server_loop.start()
-            print("🌟 VIP cross-server loop: Started")
+            loops_started += 1
         # The role check (formerly /scan) also runs by itself once a day.
         if not daily_role_scan_loop.is_running():
             daily_role_scan_loop.start()
-            print("🛡️ Daily role check: Started (04:00 UTC)")
+            loops_started += 1
 
         # Host Override Panel → DM links + result apply (Phase 4).
         if not host_override_sync_loop.is_running():
             host_override_sync_loop.start()
-            print("🛠️ Host Override Sync Loop: Started")
+            loops_started += 1
 
         if not scheduled_game_reminder_loop.is_running():
             scheduled_game_reminder_loop.start()
-            print("⏰ Scheduled Game Reminder Loop: Started")
+            loops_started += 1
 
         # Scheduled nation unlock loop — SKIPS Casino add-on games (web-
         # managed 2-tier locks); still active for regular games.
         if not scheduled_nation_unlock_loop.is_running():
             scheduled_nation_unlock_loop.start()
-            print("🔓 Scheduled Nation Unlock Loop: Started")
+            loops_started += 1
 
         # Automated 2-tier lock tier transitions (Tier 1 → Tier 2 at the
         # host's step-down threshold) — persisted to schedule_slots.current_tier
         # and enforced by /api/spin/nation at reservation time.
         if not automated_lock_tier_loop.is_running():
             automated_lock_tier_loop.start()
-            print("⏱️ Automated Lock Tier Loop: Started")
+            loops_started += 1
 
         # Web → Discord reservation sync (Phase 7): drains the
         # reservation_sync_queue written by /api/spin/nation at POOL
         # SELECTION time and re-renders the public reservation embeds.
         if not reservation_sync_loop.is_running():
             reservation_sync_loop.start()
-            print("🔄 Reservation Sync Loop (web → Discord board): Started")
+            loops_started += 1
 
         # Web run FINALIZED → receipt DM delivery: drains receipt_dm_queue
         # (written by POST /api/session at Stage 5) and DMs the player their
         # receipt + 24h multi-use link, then audit-logs the dispatch.
         if not receipt_dm_loop.is_running():
             receipt_dm_loop.start()
-            print("🧾 Receipt DM Loop (web FINALIZED → Discord DM): Started")
+            loops_started += 1
 
         # Zero-trust audit trail (Phase 9): posts web-queued audit events as
         # rich embeds to the dedicated audit channel.
         if not audit_events_sync_loop.is_running():
             audit_events_sync_loop.start()
-            print("📋 Audit Events Sync Loop (web → audit channel): Started")
+            loops_started += 1
 
         # Username backfill — heals web_sessions.username NULLs (players who
         # validated tokens minted before the zero-trust username column).
         if not username_backfill_loop.is_running():
             username_backfill_loop.start()
-            print("👤 Username Backfill Loop (web_sessions NULL usernames): Started")
+            loops_started += 1
 
         if not db_health_watchdog.is_running():
             db_health_watchdog.start()
-            print("🩺 MySQL Health Watchdog: Started")
+            loops_started += 1
 
         if not feedback_lifecycle_loop.is_running():
             feedback_lifecycle_loop.start()
-            print("⭐ Session Feedback Lifecycle (24h eval / 48h archive): Started")
+            loops_started += 1
 
-        print("🎟️ Participation Tracker polling loop: OFF (updates on Yes/No and host roster changes only)")
-        print("📸 Multi-Snapshot HCC retry loop: OFF (posts at snapshot finalize only)")
+        print(f"✅ {loops_started} background loops running.")
 
     except Exception as e:
         print(f"❌ Error starting background tasks: {e}")
@@ -33988,9 +33992,7 @@ async def on_ready():
         bot.add_view(CommendCheckerView())
     except Exception as e:
         print(f"⚠️ Could not register CommendCheckerView: {e}")
-    print("--------------------------------------------------")
-    print("🚀 HOI4 Manager Bot is READY and listening!")
-    print("--------------------------------------------------")
+    print("🚀 GameMaster is ready.")
 
 # Every per-server value is defined by now: the home server's runtime takes
 # them and the module-level dicts / lists become per-server proxies.
@@ -34008,16 +34010,16 @@ if __name__ == "__main__":
             "Set MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD, and MYSQL_DATABASE."
         )
     else:
-        if not GENAI_API_KEY:
-            print(
-                "⚠️ WARNING: GENAI_API_KEY is not set; "
-                "AI chat-log grading stays off."
-            )
-        if not HOST_LOG_WEBHOOK_URL:
-            print(
-                "⚠️ WARNING: HOST_LOG_WEBHOOK_URL is not set; "
-                "host logs will use channel fallback only."
-            )
+        off = [label for label, value in (
+            ("AI chat-log grading (GENAI_API_KEY)", GENAI_API_KEY),
+            ("host log webhook (HOST_LOG_WEBHOOK_URL)", HOST_LOG_WEBHOOK_URL),
+        ) if not value]
+        if off:
+            print("ℹ️ Off until set: " + ", ".join(off) + ".")
+        # Message Content is off on purpose (see `intents`); discord.py warns about it on every start.
+        logging.getLogger("discord.ext.commands.bot").addFilter(
+            lambda record: "message content intent" not in record.getMessage()
+        )
         try:
             bot.run(BOT_TOKEN)
         except Exception as e:
