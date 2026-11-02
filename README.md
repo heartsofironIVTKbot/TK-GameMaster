@@ -88,14 +88,17 @@ Secrets go on the Apollo **Variables** tab (yellow **Create Variables**), not in
 | --- | --- |
 | `DISCORD_BOT_TOKEN` | Token from the staging Discord application |
 | `HOME_GUILD_ID` | The test Discord server's id |
-| `MYSQL_HOST` | Host shown on the database page |
-| `MYSQL_PORT` | `3306` |
-| `MYSQL_USER` | Staging database user |
-| `MYSQL_PASSWORD` | Staging database password |
-| `MYSQL_DATABASE` | Staging database name |
+| `MYSQL_HOST` | Host from the Aiven service's **Overview** page |
+| `MYSQL_PORT` | Port from the same page (Aiven's is not `3306`) |
+| `MYSQL_USER` | User from the same page (`avnadmin` unless you made another) |
+| `MYSQL_PASSWORD` | Password from the same page |
+| `MYSQL_DATABASE` | The GameMaster database name on Aiven (the one the website uses) |
+| `MYSQL_SSL_CA` | Aiven's **CA certificate**: paste the whole text, `-----BEGIN CERTIFICATE-----` to `-----END CERTIFICATE-----` |
 | `BASE_URL` | The website's public address, e.g. `https://hoi4gamemaster.online` |
 
-`GENAI_API_KEY`, `HOST_LOG_WEBHOOK_URL`, and `MESSAGE_CONTENT_INTENT` stay empty. Do this on the new server, not on the live TommyKay one.
+Without `MYSQL_SSL_CA` the bot connects without TLS and Aiven refuses it. The panel may squash the certificate's line breaks; the bot rebuilds them. `GENAI_API_KEY`, `HOST_LOG_WEBHOOK_URL`, `MESSAGE_CONTENT_INTENT` and the `IRONLEGION_DB_*` set stay empty. Do this on the new server, not on the live TommyKay one.
+
+When the bot starts, the console should end with `Logged in as …`. A database error there usually means a wrong port or a missing certificate.
 
 ## Where the live service stands
 
