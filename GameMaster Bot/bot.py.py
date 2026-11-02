@@ -151,8 +151,8 @@ def _build_db_config() -> dict:
 
 BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 GENAI_API_KEY = os.getenv("GENAI_API_KEY")
-# gemini-2.5-flash was retired; override via GEMINI_MODEL if Google renames again.
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
+# Override via GEMINI_MODEL if Google renames or retires it (docs/ai-log-analysis.md).
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
 # Host-log webhook (separate Discord rate-limit bucket, keeps the bot's global
 # bucket free). Sanitized at load: whitespace-only / empty values become None so
 # every consumer can rely on a simple truthiness check.
@@ -19347,11 +19347,33 @@ def _rp_payload_from_log_line(line: str, tag: str) -> str:
     return ""
 
 
+# Game-control and lobby one-liners that are never roleplay ("unpause", "lag?",
+# "gg wp"): a message made only of these words (at most 4) isn't counted. Kept in
+# sync with web/src/lib/rpArchive.ts OOC_WORDS (the public page dims them).
+_OOC_WORDS = frozenset("""
+pause unpause unpaused unp paused resume p up go lag lagging laggy desync desynced oos rehost rehosting
+save saved saving load speed faster slower slow ready rdy r gg ggs wp gl hf glhf brb afk back ok okay k
+lol lmao xd ty thx np sec wait min checksum host hosting crash crashed kick ping
+""".split())
+
+
+def _is_ooc_payload(payload: str) -> bool:
+    """A message that is plainly out of character: (( ... )), "ooc: ...", or only game-control words."""
+    text = (payload or "").strip()
+    if not text:
+        return True
+    lowered = text.lower()
+    if lowered.startswith(("((", "ooc", "[ooc", "(ooc")):
+        return True
+    words = re.findall(r"[a-z0-9']+", lowered)
+    return 0 < len(words) <= 4 and all(word in _OOC_WORDS for word in words)
+
+
 def _authoritative_nation_rp_stats(log_text: str, tag: str) -> dict:
     extracted = _extract_nation_log_lines(log_text, tag)
     payloads = [
         payload for payload in (_rp_payload_from_log_line(line, tag) for line in extracted)
-        if payload
+        if payload and not _is_ooc_payload(payload)
     ]
     return {
         "tag": tag,
@@ -19491,7 +19513,7 @@ async def _find_game_for_commend(thread_ref) -> tuple[str | None, dict]:
 # exact word counts — the AI can't be generous. Merit is only recommended on
 # servers that use it (server settings → Features → Hearts of Valor & Merit).
 # ==========================================================================
-AI_GRADING_VERSION = 2
+AI_GRADING_VERSION = 3  # 3: Gemini 3.8 Flash, Search, several log files, game summary
 AI_COMMEND_TIERS = ((3000, 3), (1500, 2), (750, 1))  # in-character words → commends
 AI_MERIT_TIERS = ((500, 4), (350, 3), (200, 2))      # in-character words → Merit points
 AI_COMMEND_MIN_CREATIVITY = 7
@@ -19595,27 +19617,129 @@ def _ai_player_slots(log_text: str, reservations: dict | None, guild=None) -> li
     return slots
 
 
-def _ai_grading_prompt(log_text: str, slots: list[dict], stats: dict) -> str:
+# Bot-side game-mode background for the AI. Short on purpose: the AI looks up
+# details (focus paths, mod lore, unusual tags) with Google Search.
+# Matched in order against the game's mode ("Kaiserreich (FFA)", "TFR", "Roleplay"
+# = Road to 56, "Historical (TFB)"…): the specific mods first, plain Roleplay last.
+_AI_MODE_NOTES = (
+    (("kaiserreich",), "Kaiserreich: an alternate 1936 where Germany won the First World War "
+                       "(syndicalist France and Britain, a divided America, many new countries)."),
+    (("millennium dawn",), "Millennium Dawn: a modern-day mod (2000s onwards)."),
+    (("novum vexillum",), "Novum Vexillum: an alternate-history mod with its own world and focus trees."),
+    (("tfr", "the fire rises"), "The Fire Rises: an alternate-history mod with its own world and focus trees."),
+    (("roleplay", "road to 56"), "Road to 56: an expanded 1936 setting with many extra focus trees and paths."),
+)
+
+
+def _ai_is_historical(mode: str) -> bool:
+    """Historical branch games (Vanilla, TFB, Hearts of Oak, Horstorical, BFFU)."""
+    return str(mode or "").lower().startswith("historical")
+
+
+def _ai_mode_note(mode: str) -> str:
+    text = str(mode or "").lower()
+    if _ai_is_historical(text):
+        return "A historical game: nations broadly follow their real history."
+    for keys, note in _AI_MODE_NOTES:
+        if any(key in text for key in keys):
+            return note
+    return "A Hearts of Iron IV game; players may take any path the game allows, historical or not."
+
+
+def _ai_history_note(mode: str) -> str:
+    if _ai_is_historical(mode):
+        return (
+            "- This is a historical game, but the roleplay is still the players' own story: judge it on its "
+            "own terms and don't mark it down for small departures from real history."
+        )
+    return (
+        "- This is NOT a history re-enactment. Players are meant to take alternate paths: a communist America, a\n"
+        "  restored monarchy, a fascist France, a new empire. Judge the roleplay on its own terms and never mark it\n"
+        "  down for being unhistorical."
+    )
+
+
+# What the AI must answer with (Gemini holds it to this exactly).
+_AI_RESPONSE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "game_summary": {"type": "string"},
+        "players": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "tag": {"type": "string"},
+                    "user_id": {"type": "string"},
+                    "in_character_share": {"type": "number"},
+                    "share_of_tag": {"type": "number"},
+                    "creativity": {"type": "integer"},
+                    "toxicity": {"type": "integer"},
+                    "low_effort": {"type": "boolean"},
+                    "left_early": {"type": "boolean"},
+                    "summary": {"type": "string"},
+                    "snippets": {"type": "array", "items": {"type": "string"}},
+                },
+                "required": [
+                    "tag", "user_id", "in_character_share", "share_of_tag", "creativity", "toxicity",
+                    "low_effort", "left_early", "summary", "snippets",
+                ],
+            },
+        },
+    },
+    "required": ["game_summary", "players"],
+}
+
+
+def _ai_grading_prompt(log_text: str, slots: list[dict], stats: dict, context: dict | None = None) -> str:
+    context = context or {}
+    mode = str(context.get("mode") or "Hearts of Iron IV")
+    files = int(context.get("files") or 1)
     roster = "\n".join(
-        f"- tag {slot['tag']} | {slot['nation']} | {slot['role']} | user_id {slot['user_id'] or 'none'}"
+        f"- tag {slot['tag']} | {slot['nation']} | {slot['role']} | user_id {slot['user_id'] or ''}"
         f"{' | ' + slot['name'] if slot.get('name') else ''} | RP lines {stats[slot['tag']]['rp_lines']} | "
         f"RP words {stats[slot['tag']]['rp_words']}"
         for slot in slots
     )
+    files_note = (
+        f"- The log comes in {files} files, all from this ONE game, in the order played (the game was rehosted "
+        "after a crash, or the log was saved in parts). Each file starts with a `===== CHAT LOG FILE n of N =====` "
+        "line. Read them as one continuous game: a player may rejoin under a slightly different name, and the story "
+        "carries on from one file to the next.\n"
+        if files > 1 else ""
+    )
     return f"""You grade the roleplay (RP) of each player in a Hearts of Iron IV multiplayer chat log.
 Be strict: rewards are for standout roleplay, not for taking part.
 
+THE GAME
+- Game mode: {mode}. {_ai_mode_note(mode)}
+{_ai_history_note(mode)}
+- You have Google Search. Use it, briefly, when it helps you understand what a player is roleplaying: an
+  unfamiliar focus path, an in-game event, a mod's lore or leader, or a country tag you don't know. Don't search
+  for things the log already makes clear.
+{files_note}
+HOW THE LOG LOOKS
+- Lines start with the country tag fused to the in-game name (e.g. `SOVNikoloza:`). The tag is the nation.
+- Country tags below are the base game's. Mods can use a tag for a different country: the roster's nation names
+  (from the game's own board) are what each tag means in this game.
+
+WHAT COUNTS AS ROLEPLAY
+- In character: diplomacy, speeches, news, propaganda, story, characters, negotiations written as the nation.
+- NOT roleplay, ignore it: the lobby talk at the very start of the log before the game gets going (picking
+  nations, "ready", mod and checksum talk, waiting for players), and out-of-character chat anywhere:
+  "unpause", "pause", "lag", "speed up", "rehost", "save", "brb", "gg", game mechanics, coordinating moves,
+  jokes about the game, arguing with players, ((brackets)) or "ooc:" messages. The bot already drops one-word
+  game-control messages from its counts.
+
 Return ONLY JSON in exactly this shape:
-{{"players": [{{"tag": "SOV", "user_id": "123" or null, "in_character_share": 0.0, "share_of_tag": 1.0,
+{{"game_summary": "...", "players": [{{"tag": "SOV", "user_id": "123" or "", "in_character_share": 0.0, "share_of_tag": 1.0,
   "creativity": 0, "toxicity": 0, "low_effort": false, "left_early": false,
   "summary": "one short sentence", "snippets": ["a line copied exactly from the log"]}}]}}
-
 Rules:
-- One entry for EVERY row of the roster below, with the same tag and user_id.
-- Lines start with the country tag fused to the in-game name (e.g. `SOVNikoloza:`). The tag is the nation.
-- in_character_share (0-1): the part of that tag's words that is real in-character roleplay — diplomacy,
-  speeches, news, story, characters. Out-of-character chat does NOT count: lag, pauses, "gg", game mechanics,
-  coordinating moves, jokes about the game, arguing with players.
+- One entry for EVERY row of the roster below, with the same tag and user_id ("" when the roster has none).
+- game_summary: 2-4 sentences, in plain English, on the story the players told: who allied, who
+  fought, what happened. Name nations, not players. Shown publicly with the results.
+- in_character_share (0-1): the part of that tag's words that is real in-character roleplay (see above).
 - share_of_tag (0-1): when several players share a tag (MAIN + COOP), how much of the tag's in-character RP
   this player wrote (they add up to 1). Otherwise 1.
 - creativity (0-10, strict): 3 = bare minimum, 5 = ordinary, 7 = clearly good and original, 9-10 = exceptional.
@@ -19623,8 +19747,9 @@ Rules:
 - toxicity (0-10): insults, harassment, slurs, rule-breaking.
 - low_effort: true when the RP is mostly short one-liners, spam or filler.
 - left_early: true when the player clearly left long before the end.
-- snippets: 1-3 representative lines copied exactly from the log (empty for players with no RP).
-- Do NOT count words or recommend rewards — the bot does that from your scores and its own counts.
+- summary: one short sentence on that player's roleplay. It is shown publicly.
+- snippets: 1-3 of that player's best in-character lines, copied exactly from the log (empty for no RP).
+- Do NOT count words or recommend rewards: the bot does that from your scores and its own counts.
 - Read the whole log, to the END marker.
 
 Country tags: {TAGS_PROMPT_STRING}
@@ -19655,28 +19780,60 @@ def _parse_ai_json(text: str):
     return None
 
 
-async def _gemini_json(prompt: str) -> str:
+def _gemini_configs(schema: dict | None) -> list[tuple[str, dict]]:
+    """Request settings, best first: Google Search + the exact JSON shape; Search
+    alone (JSON from the prompt); the JSON shape alone. A model that refuses one
+    combination gets the next."""
+    search = {"tools": [{"google_search": {}}]}
+    shaped = {"response_mime_type": "application/json"}
+    if schema:
+        shaped["response_json_schema"] = schema
+    return [("search+schema", {**search, **shaped}), ("search", dict(search)), ("schema", shaped)]
+
+
+# The settings that last worked (so a refused combination isn't retried every run).
+_gemini_config_ok: str | None = None
+
+
+def _gemini_refused_config(error: Exception) -> bool:
+    """Google said no to the request's settings (not overload, not the API key)."""
+    text = str(error).lower()
+    refused = "400" in text or "invalid_argument" in text or "not supported" in text or "unsupported" in text
+    return refused and "api key" not in text
+
+
+async def _gemini_json(prompt: str, schema: dict | None = None) -> str:
     """Ask Gemini for JSON (retries while it's overloaded). Raises on failure."""
+    global _gemini_config_ok
+    configs = _gemini_configs(schema)
+    if _gemini_config_ok:
+        configs.sort(key=lambda item: item[0] != _gemini_config_ok)
     last = None
-    for attempt in range(3):
-        try:
-            response = await client.aio.models.generate_content(
-                model=GEMINI_MODEL, contents=prompt, config={"response_mime_type": "application/json"},
-            )
-            return response.text or ""
-        except Exception as e:
-            last = e
-            text = str(e).lower()
-            if attempt < 2 and ("503" in text or "unavailable" in text or "overloaded" in text):
-                await asyncio.sleep(2.0 * (2 ** attempt))
-                continue
-            raise
+    for name, config in configs:
+        for attempt in range(3):
+            try:
+                response = await client.aio.models.generate_content(model=GEMINI_MODEL, contents=prompt, config=config)
+                _gemini_config_ok = name
+                return response.text or ""
+            except Exception as e:
+                last = e
+                text = str(e).lower()
+                if attempt < 2 and ("503" in text or "unavailable" in text or "overloaded" in text):
+                    await asyncio.sleep(2.0 * (2 ** attempt))
+                    continue
+                break
+        if not _gemini_refused_config(last):
+            raise last
+        print(f"[AI] Gemini refused the '{name}' settings, trying the next: {last}")
     raise last
 
 
 def _ai_assemble(slots: list[dict], stats: dict, ai_players: list, merit_enabled: bool) -> list[dict]:
     """Combine the AI's quality scores with the bot's counts and rules."""
     entries = [p for p in (ai_players or []) if isinstance(p, dict)]
+    for p in entries:  # "" / "none" / "null" all mean no reservation
+        if str(p.get("user_id") or "").strip().lower() in ("", "none", "null"):
+            p["user_id"] = ""
     by_key = {(str(p.get("tag") or "").upper(), str(p.get("user_id") or "")): p for p in entries}
     by_tag: dict[str, list] = {}
     for p in entries:
@@ -19729,8 +19886,10 @@ def _ai_assemble(slots: list[dict], stats: dict, ai_players: list, merit_enabled
 
 
 async def run_ai_log_analysis(log_text: str, reservations: dict | None, guild=None, *,
-                              merit_enabled: bool | None = None, slots: list | None = None):
-    """Grade a chat log. Returns the analysis dict, or an error message (str)."""
+                              merit_enabled: bool | None = None, slots: list | None = None,
+                              context: dict | None = None):
+    """Grade a chat log. Returns the analysis dict, or an error message (str).
+    context: {"mode": the game mode, "files": how many log files were joined}."""
     if not client:
         return "❌ AI is not configured. Missing GENAI_API_KEY."
     if not (log_text or "").strip():
@@ -19741,7 +19900,7 @@ async def run_ai_log_analysis(log_text: str, reservations: dict | None, guild=No
         return "❌ Couldn't find any players in the log or the reservations."
     stats = {tag: _authoritative_nation_rp_stats(log_text, tag) for tag in {slot["tag"] for slot in slots}}
     try:
-        raw = await _gemini_json(_ai_grading_prompt(log_text, slots, stats))
+        raw = await _gemini_json(_ai_grading_prompt(log_text, slots, stats, context), _AI_RESPONSE_SCHEMA)
     except Exception as e:
         print(f"Gemini API Error: {e}")
         return f"❌ The AI couldn't analyze the log: {e}"
@@ -19753,6 +19912,8 @@ async def run_ai_log_analysis(log_text: str, reservations: dict | None, guild=No
         "at": int(time.time()),
         "merit_enabled": merit,
         "rules": _ai_rules(),
+        "model": GEMINI_MODEL,
+        "game_summary": str(data.get("game_summary") or "").strip()[:1200],
         "players": _ai_assemble(slots, stats, data["players"], merit),
     }
 
@@ -22727,17 +22888,74 @@ def _profile_url(gid=None) -> str:
     return f"{WEB_SITE_URL}/profile?guild={gid or cur_gid()}"
 
 
+# A game's chat log can come in several files (a rehost after a crash, a log
+# saved in parts). The website writes them here, in order; game_chat_logs holds
+# older single uploads and is still read when a game has no files here.
+_GAME_CHAT_LOG_FILES_DDL = """
+CREATE TABLE IF NOT EXISTS game_chat_log_files (
+    file_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    game_id VARCHAR(32) NOT NULL,
+    guild_id VARCHAR(32) NOT NULL,
+    part INT NOT NULL,
+    filename VARCHAR(200) NOT NULL,
+    content MEDIUMTEXT NOT NULL,
+    bytes INT NOT NULL,
+    uploaded_by BIGINT NOT NULL,
+    uploaded_at BIGINT NOT NULL,
+    INDEX idx_chat_log_files_game (game_id, part)
+)
+"""
+
+
 def _load_game_chat_log_mysql(game_ids: list) -> dict | None:
+    """A game's chat log files, in order: {"files": [...], "text", "signature",
+    "filename", "uploaded_at"}. None when nothing was uploaded."""
     _guild_settings_query_mysql(_GAME_CHAT_LOGS_DDL, commit=True)
-    for game_id in dict.fromkeys(str(g) for g in game_ids if g):
+    _guild_settings_query_mysql(_GAME_CHAT_LOG_FILES_DDL, commit=True)
+    ids = list(dict.fromkeys(str(g) for g in game_ids if g))
+    for game_id in ids:
+        rows = _guild_settings_query_mysql(
+            "SELECT file_id, filename, content, bytes, CAST(uploaded_by AS CHAR) AS uploaded_by, uploaded_at "
+            "FROM game_chat_log_files WHERE game_id = %s ORDER BY part, file_id",
+            (game_id,), fetch="all",
+        ) or []
+        if rows:
+            return _chat_log_bundle(list(rows))
+    for game_id in ids:
         row = _guild_settings_query_mysql(
             "SELECT filename, content, bytes, CAST(uploaded_by AS CHAR) AS uploaded_by, uploaded_at "
             "FROM game_chat_logs WHERE game_id = %s",
             (game_id,), fetch="one",
         )
         if row:
-            return row
+            return _chat_log_bundle([{**row, "file_id": "legacy"}])
     return None
+
+
+def _chat_log_bundle(rows: list[dict]) -> dict:
+    """Join a game's log files into one text the AI reads as one game (marked file by file)."""
+    files = [{
+        "id": str(row.get("file_id")),
+        "filename": str(row.get("filename") or "chat_log.txt"),
+        "content": str(row.get("content") or ""),
+        "bytes": int(row.get("bytes") or 0),
+        "uploaded_at": int(row.get("uploaded_at") or 0),
+    } for row in rows]
+    if len(files) == 1:
+        text = files[0]["content"]
+    else:
+        text = "\n".join(
+            f"===== CHAT LOG FILE {index} of {len(files)}: {entry['filename']} =====\n{entry['content']}"
+            for index, entry in enumerate(files, start=1)
+        )
+    return {
+        "files": files,
+        "text": text,
+        # Changes whenever a file is added, removed or replaced (archive once per set of files).
+        "signature": ",".join(f"{entry['id']}:{entry['uploaded_at']}" for entry in files),
+        "filename": files[0]["filename"] if len(files) == 1 else f"{len(files)} files",
+        "uploaded_at": max(entry["uploaded_at"] for entry in files),
+    }
 
 
 async def _process_web_game_log_analysis(req: dict):
@@ -22757,8 +22975,11 @@ async def _process_web_game_log_analysis(req: dict):
         return False, None, "❌ The game hasn't started yet — upload the chat log once it's played."
     if not client:
         return False, None, "❌ The AI isn't set up on this bot (GENAI_API_KEY is missing)."
-    log = await _run_mysql_io(lambda: _load_game_chat_log_mysql([key, thread_id]), label="chat log read")
-    if not log or not str(log.get("content") or "").strip():
+    log = await _run_mysql_io(
+        lambda: _load_game_chat_log_mysql([key, thread_id, game.get("lobby_thread_id"), game.get("original_thread_id")]),
+        label="chat log read",
+    )
+    if not log or not str(log.get("text") or "").strip():
         return False, None, "❌ Upload the game's chat log (.txt) first."
     request_id = str(req.get("request_id") or "")
     try:
@@ -22774,8 +22995,13 @@ async def _process_web_game_log_analysis(req: dict):
     return WEB_REQUEST_RUNNING, None, None
 
 
-async def _archive_game_chat_log(game: dict, key: str, text: str, filename: str) -> tuple[bool, int]:
-    """Post the log to the mode's public archive and tell the players (once per upload)."""
+def _rp_page_url(game_id: str) -> str:
+    """The game's page in the website's public roleplay archive."""
+    return f"{WEB_SITE_URL}/roleplay/{game_id}"
+
+
+async def _archive_game_chat_log(game: dict, key: str, files: list[dict]) -> tuple[bool, int]:
+    """Post the log files to the mode's public archive and tell the players (once per set of files)."""
     mode = game.get("mode", "Roleplay")
     archive_id = (MODE_CONFIG.get(mode) or {}).get("public_log_channel_id") or _public_log_channel_for_base(
         game.get("base_mode", "Roleplay")
@@ -22784,19 +23010,28 @@ async def _archive_game_chat_log(game: dict, key: str, text: str, filename: str)
     posted = False
     if channel is not None:
         lobby_ref = game.get("lobby_thread_id") or game.get("original_thread_id") or key
+        content = (
+            f"📁 **Public Log Archive** | {mode}\n"
+            f"**Date:** {datetime.datetime.now().strftime('%m.%d.%Y')} | **Host:** <@{game.get('host_id')}>\n"
+            f"**Thread:** <#{lobby_ref}>\n**Game-ID:** `{key}`"
+            + (f" · {len(files)} log files" if len(files) > 1 else "")
+            + f"\n\n🎭 *Read everyone's roleplay and the AI results: {_rp_page_url(key)}*"
+        )
+        attachments = [
+            discord.File(fp=io.BytesIO(str(entry["content"]).encode("utf-8")), filename=entry["filename"])
+            for entry in files[:10]  # Discord's limit per message
+        ]
         try:
-            await channel.send(
-                content=(
-                    f"📁 **Public Log Archive** | {mode}\n"
-                    f"**Date:** {datetime.datetime.now().strftime('%m.%d.%Y')} | **Host:** <@{game.get('host_id')}>\n"
-                    f"**Thread:** <#{lobby_ref}>\n**Game-ID:** `{key}`\n\n"
-                    f"✨ *Your AI result for this game is on your profile: {_profile_url()}*"
-                ),
-                file=discord.File(fp=io.BytesIO(text.encode("utf-8")), filename=filename),
-            )
+            await channel.send(content=content, files=attachments)
             posted = True
         except Exception as e:
-            print(f"[WARN] chat log archive post failed: {e}")
+            # Too big to attach: the website has the full log.
+            print(f"[WARN] chat log archive post with files failed: {e}")
+            try:
+                await channel.send(content=content + "\n*(The log files are too big for Discord: read them on the website.)*")
+                posted = True
+            except Exception as e2:
+                print(f"[WARN] chat log archive post failed: {e2}")
     guild = bot.get_guild(cur_gid())
     notified = 0
     where = f" in <#{archive_id}>" if posted else ""
@@ -22808,7 +23043,7 @@ async def _archive_game_chat_log(game: dict, key: str, text: str, filename: str)
             member,
             content=(
                 f"📁 The chat log for your **{mode}** game is archived{where}.\n"
-                f"Your AI result is on your profile: {_profile_url()}"
+                f"Read everyone's roleplay and your AI result: {_rp_page_url(key)}"
             ),
             label="chat log archive",
         ):
@@ -22819,31 +23054,44 @@ async def _archive_game_chat_log(game: dict, key: str, text: str, filename: str)
 async def _run_web_game_log_analysis(request_id: str, actor, key: str, game: dict, log: dict) -> None:
     status, result, error = "error", None, None
     try:
-        text = str(log.get("content") or "")
-        filename = str(log.get("filename") or "chat_log.txt")
+        text = str(log.get("text") or "")
+        files = list(log.get("files") or [])
         uploaded_at = int(log.get("uploaded_at") or 0)
-        analysis = await run_ai_log_analysis(text, game.get("reservations") or {}, bot.get_guild(cur_gid()))
+        # Changes when a file is added, removed or replaced: archive once per set of files.
+        signature = str(log.get("signature") or uploaded_at)
+        analysis = await run_ai_log_analysis(
+            text, game.get("reservations") or {}, bot.get_guild(cur_gid()),
+            context={"mode": game.get("mode"), "files": len(files) or 1},
+        )
         if isinstance(analysis, str):
             error = analysis
         else:
             analysis["by"] = str(actor.id)
-            analysis["log"] = {"filename": filename, "bytes": len(text.encode("utf-8")), "uploaded_at": uploaded_at}
+            analysis["log"] = {
+                "filename": str(log.get("filename") or "chat_log.txt"),
+                "bytes": sum(int(entry.get("bytes") or 0) for entry in files) or len(text.encode("utf-8")),
+                "uploaded_at": uploaded_at,
+                "signature": signature,
+                "files": [{"filename": entry["filename"], "bytes": entry["bytes"]} for entry in files],
+            }
             games = await _load_games_resilient()
             fresh_key, fresh = _find_game_entry(games, key)
             target = fresh if fresh is not None else game
-            first_time = int(target.get("chat_log_archived_upload") or 0) != uploaded_at
+            archived = str(target.get("chat_log_archived_upload") or "")
+            # Games archived before several files existed stored the upload time.
+            first_time = archived != signature and not (len(files) == 1 and archived == str(uploaded_at))
             target["ai_analysis"] = analysis
             target["ai_analysis_text"] = _render_ai_analysis_text(analysis)
             target["ai_analysis_at"] = analysis["at"]
             if first_time:
-                target["chat_log_archived_upload"] = uploaded_at
+                target["chat_log_archived_upload"] = signature
             await save_single_game(fresh_key or key, target, rewrite_reservations=False)
 
             notes = []
             if first_time:
-                posted, notified = await _archive_game_chat_log(target, key, text, filename)
+                posted, notified = await _archive_game_chat_log(target, key, files)
                 notes.append("Archived the log in the public log channel." if posted else "Couldn't post to the public log archive.")
-                notes.append(f"Told {notified} player(s) their result is on their profile.")
+                notes.append(f"Told {notified} player(s) where to read the roleplay and their result.")
             host_log = bot.get_channel(G.HOST_LOG_CHANNEL_ID)
             if host_log is not None:
                 try:

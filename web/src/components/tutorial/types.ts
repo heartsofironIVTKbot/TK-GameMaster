@@ -47,7 +47,7 @@ export interface Tour {
   title: string;
   /** One line for the ❓ menu. */
   summary: string;
-  /** Pages it runs on (pathname, exact). */
+  /** Pages it runs on: exact pathnames, or "/section/*" for any page under /section/. */
   paths: string[];
   /** Offer and auto-start only when this is true (e.g. hosts only). */
   when?: (facts: TutorialFacts) => boolean;

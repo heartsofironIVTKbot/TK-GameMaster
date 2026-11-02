@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { SelectionKind } from "@/lib/types";
 
 interface TopBarProps {
@@ -98,6 +99,14 @@ export default function TopBar({
           >
             👤 My profile
           </a>
+          <Link
+            href="/roleplay"
+            data-tour="map.roleplay"
+            title="Roleplay archive: every graded game's story and roleplay"
+            className="rounded-lg border border-slate-700 bg-slate-800/80 px-4 py-2 text-sm font-bold text-slate-200 transition hover:border-fuchsia-400/60 hover:bg-slate-700"
+          >
+            🎭 Roleplay
+          </Link>
           {hostTools &&
             HOST_LINKS.filter((link) => !link.staffOnly || hostTools.isStaff).map((link) => (
               <a

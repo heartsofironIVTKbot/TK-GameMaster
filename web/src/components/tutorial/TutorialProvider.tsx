@@ -9,6 +9,7 @@ import {
   useMemo,
   useRef,
   useState,
+  Suspense,
   type ReactNode,
 } from "react";
 import { usePathname, useRouter } from "next/navigation";
@@ -90,6 +91,11 @@ function writePending(tour: string | null): void {
   }
 }
 
+/** The tour runs on this page ("/roleplay/*" = any page under /roleplay/). */
+export function onTourPage(tour: Tour, path: string): boolean {
+  return tour.paths.some((entry) => (entry.endsWith("/*") ? path.startsWith(entry.slice(0, -1)) : entry === path));
+}
+
 function factOk(tour: Tour, facts: TutorialFacts): boolean {
   return tour.when ? tour.when(facts) : true;
 }
@@ -98,14 +104,16 @@ function factOk(tour: Tour, facts: TutorialFacts): boolean {
 function toursFor(path: string, facts: TutorialFacts): Tour[] {
   return TOURS.filter(
     (tour) =>
-      tour.paths.includes(path) &&
+      onTourPage(tour, path) &&
       factOk(tour, facts) &&
       (typeof tour.auto === "object" ? Boolean(facts[tour.auto.fact]) : true),
   );
 }
 
 export default function TutorialProvider({ children }: { children: ReactNode }) {
-  const pathname = usePathname() ?? "/";
+  // Read in a Suspense-wrapped child: reading the address in the layout itself
+  // would stop Next from pre-rendering the pages (cacheComponents).
+  const [pathname, setPathname] = useState<string | null>(null);
   const router = useRouter();
 
   const [factsByOwner, setFactsByOwner] = useState<Record<string, TutorialFacts>>({});
@@ -117,7 +125,7 @@ export default function TutorialProvider({ children }: { children: ReactNode }) 
   const progressRef = useRef<TutorialProgress | null>(null);
   const loggedInRef = useRef(false);
   const factsRef = useRef<TutorialFacts>({});
-  const pathRef = useRef(pathname);
+  const pathRef = useRef(pathname ?? "");
   const quietUntilRef = useRef(0);
 
   useEffect(() => {
@@ -125,7 +133,7 @@ export default function TutorialProvider({ children }: { children: ReactNode }) 
   }, [facts]);
 
   useEffect(() => {
-    pathRef.current = pathname;
+    pathRef.current = pathname ?? "";
     quietUntilRef.current = Math.max(quietUntilRef.current, Date.now() + SETTLE_MS);
   }, [pathname]);
 
@@ -188,12 +196,14 @@ export default function TutorialProvider({ children }: { children: ReactNode }) 
     (tourId: string) => {
       const tour = TOURS_BY_ID.get(tourId);
       if (!tour) return;
-      if (tour.paths.includes(pathRef.current)) {
+      if (onTourPage(tour, pathRef.current)) {
         writePending(null);
         setActive({ tourId, index: 0, dir: 1, seen: [] });
       } else {
         writePending(tourId);
-        router.push(tour.paths[0]);
+        const page = tour.paths.find((entry) => !entry.endsWith("/*"));
+        if (!page) return;
+        router.push(page);
       }
     },
     [router],
@@ -217,7 +227,7 @@ export default function TutorialProvider({ children }: { children: ReactNode }) 
         const tour = TOURS_BY_ID.get(pending.tour);
         if (!tour || Date.now() - pending.at > PENDING_TTL_MS) {
           writePending(null);
-        } else if (tour.paths.includes(path) && targetVisible(anchorOf(tour))) {
+        } else if (onTourPage(tour, path) && targetVisible(anchorOf(tour))) {
           writePending(null);
           setActive({ tourId: tour.id, index: 0, dir: 1, seen: [] });
           return;
@@ -250,7 +260,7 @@ export default function TutorialProvider({ children }: { children: ReactNode }) 
   const [activePath, setActivePath] = useState(pathname);
   if (activePath !== pathname) {
     setActivePath(pathname);
-    if (activeTour && !activeTour.paths.includes(pathname)) setActive(null);
+    if (activeTour && pathname !== null && !onTourPage(activeTour, pathname)) setActive(null);
   }
 
   const finish = useCallback(
@@ -291,7 +301,7 @@ export default function TutorialProvider({ children }: { children: ReactNode }) 
     () => ({ setFacts, start, setAutoStart, resetAll }),
     [setFacts, start, setAutoStart, resetAll],
   );
-  const pageTours = useMemo(() => toursFor(pathname, facts), [pathname, facts]);
+  const pageTours = useMemo(() => (pathname === null ? [] : toursFor(pathname, facts)), [pathname, facts]);
   const state = useMemo<TutorialState>(
     () => ({ facts, progress, loggedIn, activeTourId: active?.tourId ?? null, pageTours }),
     [facts, progress, loggedIn, active, pageTours],
@@ -300,6 +310,9 @@ export default function TutorialProvider({ children }: { children: ReactNode }) 
   return (
     <ActionsContext.Provider value={actions}>
       <StateContext.Provider value={state}>
+        <Suspense fallback={null}>
+          <PathWatcher onPath={setPathname} />
+        </Suspense>
         {children}
         {progress && <HelpButton />}
         {active && activeTour && (
@@ -322,6 +335,15 @@ export default function TutorialProvider({ children }: { children: ReactNode }) 
       </StateContext.Provider>
     </ActionsContext.Provider>
   );
+}
+
+/** Reports the current page (it suspends while the address isn't known yet). */
+function PathWatcher({ onPath }: { onPath: (path: string) => void }) {
+  const pathname = usePathname() ?? "/";
+  useEffect(() => {
+    onPath(pathname);
+  }, [pathname, onPath]);
+  return null;
 }
 
 export function useTutorialActions(): TutorialActions | null {

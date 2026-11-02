@@ -98,7 +98,10 @@ export interface GameControl extends GameControlSummary {
   /** Messages sent to its players, newest first (last 5). */
   messages: GameMessageEntry[];
   /** The uploaded chat log (.txt), or null. */
-  chat_log: GameChatLog | null;
+  /** The game's chat log files, in the order played (several when it was rehosted). */
+  chat_logs: GameChatLog[];
+  /** Signature of those files, as the bot computes it (the analysis is stale when it differs). */
+  chat_log_signature: string | null;
   /** The latest AI chat-log analysis, or null. */
   ai_analysis: GameAiAnalysis | null;
   /** Hot-join requests from the map (running games), waiting ones first. */

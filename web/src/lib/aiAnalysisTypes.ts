@@ -4,8 +4,14 @@
  * word counts (bot.py.py AI_* constants — keep in sync). Client-safe.
  */
 
-/** Largest chat log the website accepts (HOI4 logs are usually well under 2 MB). */
-export const CHAT_LOG_MAX_BYTES = 8 * 1024 * 1024;
+/**
+ * How much log text one game can have, all files together. The AI reads a
+ * game's files in one go, and about 3 MB is what fits (HOI4 logs are usually
+ * well under 1 MB).
+ */
+export const CHAT_LOG_MAX_BYTES = 3 * 1024 * 1024;
+/** Files per game (a rehost after a crash, a log saved in parts). */
+export const CHAT_LOG_MAX_FILES = 10;
 
 export interface AiRules {
   /** [in-character words, commends], highest first. */
@@ -74,10 +80,15 @@ export interface GameAiAnalysis {
   merit_enabled: boolean;
   rules: AiRules;
   players: AiPlayerResult[];
-  log: { filename: string; bytes: number; uploaded_at: number } | null;
+  /** The files that were graded (signature changes when a file is added, removed or moved). */
+  log: { filename: string; bytes: number; uploaded_at: number; signature: string | null; files: number } | null;
+  /** The AI's 2-4 sentence recap of the game's story (public). */
+  game_summary: string;
 }
 
 export interface GameChatLog {
+  file_id: string;
+  part: number;
   filename: string;
   bytes: number;
   uploaded_at: number;

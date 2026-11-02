@@ -186,7 +186,12 @@ export default function ProfileApp() {
 function AiResultsCard({ results }: { results: ProfileAiResult[] }) {
   return (
     <section className={`rounded-2xl p-4 ${GLASS}`}>
-      <h2 className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">🤖 AI roleplay results</h2>
+      <div className="flex items-baseline gap-2">
+        <h2 className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">🤖 AI roleplay results</h2>
+        <Link href="/roleplay" className="ml-auto text-[11px] font-bold text-fuchsia-300 hover:text-fuchsia-200">
+          🎭 Archive ↗
+        </Link>
+      </div>
       {results.length === 0 ? (
         <p className="mt-2 text-xs text-slate-400">
           None yet. After a game, the host uploads its chat log and the AI grades everyone&apos;s roleplay — your result shows up here.
@@ -205,7 +210,9 @@ function AiResultsCard({ results }: { results: ProfileAiResult[] }) {
             return (
               <li key={result.game_id} className="rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2">
                 <div className="flex items-center gap-2">
-                  <span className="min-w-0 flex-1 truncate text-xs font-bold text-slate-100">{result.game_name}</span>
+                  <Link href={`/roleplay/${result.game_id}`} className="min-w-0 flex-1 truncate text-xs font-bold text-slate-100 hover:text-fuchsia-200 hover:underline" title="Read this game's roleplay">
+                    {result.game_name}
+                  </Link>
                   <span className={`shrink-0 text-xs font-black ${rewarded ? "text-emerald-300" : "text-slate-400"}`}>{verdict}</span>
                 </div>
                 <p className="text-[11px] text-slate-500">

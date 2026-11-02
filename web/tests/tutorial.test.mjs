@@ -65,7 +65,7 @@ test("tours are well formed", () => {
   assert.equal(TOUR_IDS.size, TOURS.length, "tour ids are unique");
   for (const tour of TOURS) {
     assert.ok(tour.steps.length > 0, `${tour.id} has steps`);
-    assert.ok(tour.paths.length > 0 && tour.paths.every((p) => p.startsWith("/")), `${tour.id} paths`);
+    assert.ok(tour.paths.length > 0 && tour.paths.every((p) => p.startsWith("/") && (!p.includes("*") || p.endsWith("/*"))), `${tour.id} paths`);
     for (const id of tour.after ?? []) assert.ok(TOUR_IDS.has(id), `${tour.id} waits for unknown tour ${id}`);
     if (tour.next) {
       const next = TOURS_BY_ID.get(tour.next.tour);

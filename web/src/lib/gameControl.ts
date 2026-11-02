@@ -1,6 +1,6 @@
 import { HOME_GUILD_ID } from "@/lib/currentGuild";
 import { DEFAULT_AI_RULES, type AiPlayerResult, type AiRules, type AiStatus, type GameAiAnalysis } from "@/lib/aiAnalysisTypes";
-import { chatLogMeta } from "@/lib/chatLogs";
+import { chatLogSignature, listChatLogs } from "@/lib/chatLogs";
 import { getPool } from "@/lib/db";
 import { GAME_COLUMNS, rawGames, stableId, type GameRow, type RawAttendanceGame } from "@/lib/attendance";
 import { demoControlRaw } from "@/lib/gameControlDemo";
@@ -164,7 +164,7 @@ export async function getGameControl(gameId: string, viewer: HostProfile): Promi
   const lastReminder = reminderHistory[reminderHistory.length - 1] ?? null;
   const messageHistory = (Array.isArray(data.message_history) ? data.message_history.map(obj) : []).slice(-5).reverse();
   const draftRaw = obj(data.draft);
-  const [chatLog, serverSettings] = await Promise.all([chatLogMeta(keysOf(raw)).catch(() => null), settingsOf(viewer.guild_id)]);
+  const [chatLogs, serverSettings] = await Promise.all([listChatLogs(keysOf(raw)).catch(() => []), settingsOf(viewer.guild_id)]);
   const hotJoins = parseHotJoin(data.hotjoin_requests).slice(0, 15);
   const aiRaw = obj(data.ai_analysis);
   const aiPlayers = Array.isArray(aiRaw.players) ? aiRaw.players.map(obj) : [];
@@ -173,7 +173,7 @@ export async function getGameControl(gameId: string, viewer: HostProfile): Promi
     ...aiPlayers.map((player) => String(player.user_id ?? "")),
     ...Object.values(aiGiven).map((entry) => String(obj(entry).by ?? "")),
     String(aiRaw.by ?? ""),
-    chatLog?.uploaded_by ?? "",
+    ...chatLogs.map((file) => file.uploaded_by),
     ...hotJoins.flatMap((entry) => [entry.user_id, entry.decided_by ?? ""]),
     ...Object.values(raw.reservations),
     raw.host_id ?? "",
@@ -286,14 +286,15 @@ export async function getGameControl(gameId: string, viewer: HostProfile): Promi
       failed: num(entry.failed),
       total: num(entry.total),
     })),
-    chat_log: chatLog
-      ? {
-          filename: chatLog.filename,
-          bytes: chatLog.bytes,
-          uploaded_at: chatLog.uploaded_at,
-          uploaded_by_name: nameOf(names, chatLog.uploaded_by),
-        }
-      : null,
+    chat_logs: chatLogs.map((file) => ({
+      file_id: file.file_id,
+      part: file.part,
+      filename: file.filename,
+      bytes: file.bytes,
+      uploaded_at: file.uploaded_at,
+      uploaded_by_name: nameOf(names, file.uploaded_by),
+    })),
+    chat_log_signature: chatLogs.length ? chatLogSignature(chatLogs) : null,
     ai_analysis: parseAiAnalysis(aiRaw, aiPlayers, aiGiven, names),
     hotjoin: hotJoins.map((entry) => ({
       ...entry,
@@ -374,7 +375,16 @@ function parseAiAnalysis(
     by_name: nameOf(names, raw.by ? String(raw.by) : null),
     merit_enabled: raw.merit_enabled !== false,
     rules: aiRules(raw.rules),
-    log: log.filename ? { filename: String(log.filename), bytes: num(log.bytes), uploaded_at: num(log.uploaded_at) } : null,
+    log: log.filename
+      ? {
+          filename: String(log.filename),
+          bytes: num(log.bytes),
+          uploaded_at: num(log.uploaded_at),
+          signature: typeof log.signature === "string" ? log.signature : null,
+          files: Array.isArray(log.files) ? log.files.length : 1,
+        }
+      : null,
+    game_summary: typeof raw.game_summary === "string" ? raw.game_summary : "",
     players: players.map((player): AiPlayerResult => {
       const userId = player.user_id ? String(player.user_id) : null;
       const reward = obj(player.reward);
@@ -413,7 +423,7 @@ function parseAiAnalysis(
 export function logAnalysisRefusal(game: GameControl): string | null {
   if (!game.can_manage) return "Only the game's host or Host Management can run its AI analysis.";
   if (game.phase === "announced" || game.phase === "cancelled") return "The AI reads the chat log of a game that was played — start it first.";
-  if (!game.chat_log) return "Upload the game's chat log (.txt) first.";
+  if (game.chat_logs.length === 0) return "Upload the game's chat log (.txt) first.";
   return null;
 }
 

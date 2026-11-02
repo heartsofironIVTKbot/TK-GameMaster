@@ -156,6 +156,12 @@ const MAP_PLAYER: Tour = {
       body: "Your games, attendance, commends, warnings and roles, all in one place.",
     },
     {
+      target: "map.roleplay",
+      placement: "bottom",
+      title: "The roleplay archive",
+      body: "Every graded game's story and everyone's roleplay, from every server. Search it for a player, a nation or a line.",
+    },
+    {
       target: "help.button",
       placement: "bottom",
       title: "Need this again?",
@@ -627,6 +633,16 @@ const GAMES: Tour = {
       body: "Everyone signed up. Once the game starts, it also shows who confirmed.",
     },
     {
+      target: "games.chatlog",
+      placement: "left",
+      title: "Chat log & AI analysis",
+      body:
+        "After the game, add its HOI4 chat log (.txt). Rehosted after a crash? Add every file: the AI reads them as one game, " +
+        "in the order shown (↑ ↓ to fix it).\n\n" +
+        "**Run the AI analysis**: it grades everyone's roleplay with the strict rules and puts the game on the public " +
+        "**roleplay archive**. Nothing is given until you press **Give**.",
+    },
+    {
       title: "Every action is logged",
       body:
         "After you click, the page shows the bot at work, step by step. You can leave and come back. " +
@@ -950,6 +966,82 @@ const PROFILE: Tour = {
   ],
 };
 
+// ---------------------------------------------------------------------------
+// The public roleplay archive
+// ---------------------------------------------------------------------------
+
+const ROLEPLAY_ARCHIVE: Tour = {
+  id: "roleplay-archive",
+  version: 1,
+  title: "Roleplay archive",
+  summary: "Find any game's story and roleplay.",
+  paths: ["/roleplay"],
+  auto: "visit",
+  anchor: "rp.search",
+  steps: [
+    {
+      title: "The roleplay archive",
+      body:
+        "Every game whose chat log was graded, from every server: the story, everyone's result and every line of roleplay. " +
+        "Anyone can read it, no login needed.",
+    },
+    {
+      target: "rp.search",
+      placement: "bottom",
+      title: "Search",
+      body: "Type a player's name, a nation, a game or a few words from a line. Share the page address to share the search.",
+    },
+    {
+      target: "rp.filters",
+      placement: "bottom",
+      title: "Narrow it down",
+      body: "Pick a game mode, only games with rewarded roleplay, a server, or sort by the most roleplay.",
+    },
+    {
+      target: "rp.list",
+      placement: "top",
+      missing: "center",
+      title: "Open a game",
+      body: "Each card has the AI's recap of the story and the best roleplayers. Click one to read the whole game.",
+      missingBody: "Games appear here once a host uploads the chat log and runs the AI analysis.",
+    },
+  ],
+};
+
+const ROLEPLAY_GAME: Tour = {
+  id: "roleplay-game",
+  version: 1,
+  title: "Reading a game",
+  summary: "The story, everyone's result and the full log.",
+  paths: ["/roleplay/*"],
+  auto: "visit",
+  anchor: "rp.players",
+  steps: [
+    {
+      target: "rp.story",
+      placement: "bottom",
+      title: "The story",
+      body: "The AI's short recap of what happened: who allied, who fought, how it ended.",
+    },
+    {
+      target: "rp.players",
+      placement: "top",
+      title: "Every player",
+      body:
+        "Their result, how much they wrote in character, how creative it was, and their best lines. " +
+        "**Read all of…** jumps to that nation's lines in the log.",
+    },
+    {
+      target: "rp.log",
+      placement: "top",
+      title: "The full roleplay",
+      body:
+        "Every line of the game, nation by nation. Search it, pick one nation, or show the out-of-character chat too " +
+        "(\"unpause\", \"lag?\" and the like are hidden at first). A rehosted game shows where each part starts.",
+    },
+  ],
+};
+
 export const TOURS: Tour[] = [
   MAP_PLAYER,
   MAP_DRAFT,
@@ -966,6 +1058,8 @@ export const TOURS: Tour[] = [
   SERVER_SETUP,
   SERVER_SETTINGS,
   PROFILE,
+  ROLEPLAY_ARCHIVE,
+  ROLEPLAY_GAME,
 ];
 
 export const TOURS_BY_ID: ReadonlyMap<string, Tour> = new Map(TOURS.map((tour) => [tour.id, tour]));

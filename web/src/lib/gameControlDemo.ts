@@ -8,7 +8,7 @@ import {
   demoAttendanceStart,
 } from "@/lib/attendanceDemo";
 import { demoModerationOptions } from "@/lib/databaseDemo";
-import { demoChatLogText } from "@/lib/chatLogs";
+import { chatLogSignature, demoChatLogFiles } from "@/lib/chatLogs";
 import { buildLobbyDraft, draftSlots, type DraftPhase, type LobbyDraft } from "@/lib/draft";
 import { ACCESS_LEVELS, type LifecycleAction } from "@/lib/gameControlTypes";
 import { parseHotJoin, type HotJoinEntry } from "@/lib/hotJoinTypes";
@@ -381,8 +381,8 @@ export function applyDemoLogAnalysis(payload: Record<string, unknown>, hostId: s
   if (!raw) return refuse("❌ Game not found — it may have been removed.");
   if (raw.host_id !== hostId && hostId !== DEMO_HOST_ID) return refuse("❌ Only the game's host or Host Management can run its AI analysis.");
   if (!raw.data.game_started && raw.status !== "ended") return refuse("❌ The game hasn't started yet — upload the chat log once it's played.");
-  const log = demoChatLogText([raw.storage_key, gameId]);
-  if (!log) return refuse("❌ Upload the game's chat log (.txt) first.");
+  const files = demoChatLogFiles([raw.storage_key, gameId]);
+  if (files.length === 0) return refuse("❌ Upload the game's chat log (.txt) first.");
   const players = Object.entries(raw.reservations)
     .filter(([slot]) => !slot.startsWith("_FILL_"))
     .map(([slot, userId]) => {
@@ -432,7 +432,16 @@ export function applyDemoLogAnalysis(payload: Record<string, unknown>, hostId: s
     merit_enabled: true,
     rules: DEFAULT_AI_RULES,
     players,
-    log: { filename: log.filename, bytes: log.bytes, uploaded_at: log.uploaded_at },
+    game_summary:
+      "Preview: the great powers traded threats over the Balkans while the smaller nations picked sides. " +
+      "A last-minute treaty kept the peace until the final session, when the war everyone expected finally began.",
+    log: {
+      filename: files.length === 1 ? files[0].filename : `${files.length} files`,
+      bytes: files.reduce((sum, file) => sum + file.bytes, 0),
+      uploaded_at: Math.max(...files.map((file) => file.uploaded_at)),
+      signature: chatLogSignature(files),
+      files: files.map((file) => ({ filename: file.filename, bytes: file.bytes })),
+    },
   };
   const rewarded = players.filter((player) => player.reward.commends || player.reward.merit);
   const commends = players.reduce((sum, player) => sum + player.reward.commends, 0);
