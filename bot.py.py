@@ -153,6 +153,23 @@ BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 GENAI_API_KEY = os.getenv("GENAI_API_KEY")
 # Override via GEMINI_MODEL if Google renames or retires it (docs/ai-log-analysis.md).
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+
+
+# ==========================================================================
+# EMBED COLOURS: GameMaster's one palette for Discord, used by meaning. A new
+# look is a change here only (the website's are in web/src/app/globals.css:
+# brand and ink, plus the same status colours).
+# ==========================================================================
+class EmbedColor:
+    BRAND = 0xFBBF24      # the identity colour (website brand-400): rewards, highlights
+    SUCCESS = 0x22C55E    # done, approved, present
+    DANGER = 0xEF4444     # refused, removed, bans, errors
+    WARNING = 0xF97316    # needs a look, reminders
+    INFO = 0x38BDF8       # neutral news: mods, logs, requests
+    ROLEPLAY = 0xA855F7   # roleplay, Fortunes, the AI
+    NEUTRAL = 0x64748B    # finished, archived (website ink-500)
+    INK = 0x1E293B        # dark cards: the casino panel (website ink-800)
+
 # Host-log webhook (separate Discord rate-limit bucket, keeps the bot's global
 # bucket free). Sanitized at load: whitespace-only / empty values become None so
 # every consumer can rely on a simple truthiness check.
@@ -2764,7 +2781,7 @@ def _game_resource_embed(resource_type: str, entries: list[dict], mode: str, gam
     embed = discord.Embed(
         title=f"🛠️ Mods in use for {game_date} {mode} game" if is_mod else f"📖 Rules for {game_date} {mode} game",
         description=description,
-        color=discord.Color.blue() if is_mod else discord.Color.gold(),
+        color=EmbedColor.INFO if is_mod else EmbedColor.BRAND,
     )
     embed.set_footer(text=(
         "Click the links above to subscribe on the Steam Workshop!"
@@ -3903,7 +3920,7 @@ def build_player_embed(
     roll: PlayerRoll,
     *,
     title: str = "🚀 ROCKET ROULETTE",
-    color: int = 0xF1C40F,
+    color: int = EmbedColor.BRAND,
 ) -> discord.Embed:
     """Discord embed for one nation's full roll."""
     description = f"{roll.flag} **{roll.nation}** — {roll.tier_label}"
@@ -3980,7 +3997,7 @@ def build_lobby_summary_embed(
     lobby: RocketRouletteLobby,
     *,
     title: str = "🚀 Rocket Roulette — Lobby Results",
-    color: int = 0xF1C40F,
+    color: int = EmbedColor.BRAND,
 ) -> discord.Embed:
     """Compact overview embed for a full lobby roll."""
     parity_label = {
@@ -5155,7 +5172,7 @@ class RandomizerUnreserveModal(discord.ui.Modal, title="Emergency Unreserve"):
             except: pass
 
         if log_channel:
-            log_embed = discord.Embed(title="🚨 Emergency Unreserve", color=0xe74c3c)
+            log_embed = discord.Embed(title="🚨 Emergency Unreserve", color=EmbedColor.DANGER)
             log_embed.add_field(name="Player", value=f"<@{user_id}>", inline=True)
             log_embed.add_field(name="Nation", value=f"{self.reserved_nation} ({'Major' if self.is_major else 'Minor'})", inline=True)
             log_embed.add_field(name="Reason", value=self.reason.value, inline=False)
@@ -8439,7 +8456,7 @@ def build_valor_perks_embed(member, stats: dict) -> discord.Embed:
             f"You reached **{_merit_points(stats)} Merit** and **{_valor_game_count(member.id, stats)} attended "
             f"games**. Thank you for everything you do for the community — here are your perks:"
         ),
-        color=discord.Color.gold(),
+        color=EmbedColor.BRAND,
     )
     embed.add_field(
         name="📣 Early game notice",
@@ -8522,7 +8539,7 @@ async def _sync_valor_role(member, stats) -> list[str]:
                     f"<@{uid}> has {_merit_points(stats)} Merit and {attended} attended games, but "
                     f"{_current_warnings(stats)} current warning(s). They were told to open a ticket."
                 ),
-                color=discord.Color.orange(),
+                color=EmbedColor.WARNING,
             )
             try:
                 await send_host_log_embed(held)
@@ -8552,7 +8569,7 @@ async def _sync_valor_role(member, stats) -> list[str]:
             f"{member.mention} earned **Hearts of Valor** with **{_merit_points(stats)} Merit Points** "
             f"and **{attended} attended games**. They can now request a Trusted role of their choice."
         ),
-        color=discord.Color.gold(),
+        color=EmbedColor.BRAND,
     )
     try:
         log_ref = await send_host_log_embed(valor_embed)
@@ -8625,7 +8642,7 @@ class ValorTrustedChoiceButton(discord.ui.DynamicItem[discord.ui.Button],
         request = discord.Embed(
             title="🎖️ Hearts of Valor — Trusted request",
             description=f"<@{uid}> holds **Hearts of Valor** and asks for **{label} Trusted**.",
-            color=discord.Color.gold(),
+            color=EmbedColor.BRAND,
         )
         request.add_field(name="Merit", value=str(_merit_points(stats)), inline=True)
         request.add_field(name="Attended games", value=str(_valor_game_count(uid, stats)), inline=True)
@@ -8767,7 +8784,7 @@ class ModerationAppealModal(discord.ui.Modal, title="Appeal"):
         embed = discord.Embed(
             title="📨 Appeal",
             description=f"<@{interaction.user.id}> appealed:",
-            color=discord.Color.blurple(),
+            color=EmbedColor.INFO,
             timestamp=discord.utils.utcnow(),
         )
         embed.add_field(name="About", value=_trim_field(summary), inline=False)
@@ -8859,7 +8876,7 @@ async def _send_valor_early_notices(schedule_data: list, locked_days, now: int) 
                 f"<t:{ann}:R> (<t:{ann}:t>)."
                 + (f"\nThe game starts <t:{int(item['game_timestamp'])}:F>." if item.get("game_timestamp") else "")
             ),
-            color=discord.Color.gold(),
+            color=EmbedColor.BRAND,
         )
         for member in holders:
             async with _discord_api_sem:
@@ -10011,7 +10028,7 @@ async def _send_reservation_limit_warning(game: dict, thread, msg_count: int, pe
             f"list across **{msg_count}** message(s) so nothing gets dropped.\n\n"
             f"ℹ️ This is just a heads-up that the board is close to full."
         ),
-        color=discord.Color.orange(),
+        color=EmbedColor.WARNING,
     )
 
     channel = await _resolve_host_control_center(game, getattr(thread, "id", None))
@@ -10227,7 +10244,7 @@ def _build_draft_pool_embed(game: dict) -> discord.Embed:
     pool_cap = draft.get("pool_cap") or get_draft_pool_capacity(game.get("mode", ""))
     teams = _draft_teams(game)
 
-    color = {"ENLISTING": discord.Color.blurple(), "DRAFTING": discord.Color.gold()}.get(phase, discord.Color.green())
+    color = {"ENLISTING": EmbedColor.INFO, "DRAFTING": EmbedColor.BRAND}.get(phase, EmbedColor.SUCCESS)
     embed = discord.Embed(title="🎯 Draft Pool", color=color)
     for team in teams:
         embed.add_field(name=f"🚩 {team.get('name')}", value=f"Captain <@{team.get('captain_id')}>", inline=True)
@@ -13251,7 +13268,7 @@ async def handle_fortunes_satisfaction(interaction: discord.Interaction, thread_
                 f"**15 cards** rest face-down. Choose **one** — "
                 f"{_fortunes_redraw_remaining_text(remaining)}"
             ),
-            color=0x9b59b6,
+            color=EmbedColor.ROLEPLAY,
         )
         view = FortunesView(int(user_id), int(thread_id),
                             is_major_player=is_major_player, redraws_used=redraws_used)
@@ -13408,7 +13425,7 @@ async def handle_fortunes_card_draw(interaction: discord.Interaction, *,
     if not game:
         return await interaction.response.edit_message(
             embed=discord.Embed(title="❌ Game Not Found",
-                                description="This game session no longer exists.", color=0xe74c3c),
+                                description="This game session no longer exists.", color=EmbedColor.DANGER),
             view=None,
         )
 
@@ -13416,7 +13433,7 @@ async def handle_fortunes_card_draw(interaction: discord.Interaction, *,
     if isinstance(drawn, dict) and str(user_id) in drawn:
         return await interaction.response.edit_message(
             embed=discord.Embed(title="❌ Already Drawn",
-                                description="You have already drawn your fate for this game!", color=0xe74c3c),
+                                description="You have already drawn your fate for this game!", color=EmbedColor.DANGER),
             view=None,
         )
 
@@ -13426,7 +13443,7 @@ async def handle_fortunes_card_draw(interaction: discord.Interaction, *,
             embed=discord.Embed(
                 title="❌ Awaiting Confirmation",
                 description="You already have a card waiting — check above and click **Yes** or **No**.",
-                color=0xe74c3c),
+                color=EmbedColor.DANGER),
             view=None,
         )
 
@@ -13453,7 +13470,7 @@ async def handle_fortunes_card_draw(interaction: discord.Interaction, *,
         title="🎴 Fortunes of War 🎴",
         description=(f"✨ {FORTUNE_CARD_BACK} A card is being pulled from the deck... ✨\n\n"
                      "🔄 Flipping card... ⚡"),
-        color=0x9b59b6,
+        color=EmbedColor.ROLEPLAY,
     )
     await interaction.response.edit_message(embed=suspense, view=disabled_view)
     await asyncio.sleep(1.5)
@@ -13464,7 +13481,7 @@ async def handle_fortunes_card_draw(interaction: discord.Interaction, *,
     if game is None:
         return await interaction.edit_original_response(
             embed=discord.Embed(title="❌ Game Not Found",
-                                description="This game session no longer exists.", color=0xe74c3c),
+                                description="This game session no longer exists.", color=EmbedColor.DANGER),
             view=None,
         )
     if not isinstance(game.get("fortunes_drawn"), dict):
@@ -13472,7 +13489,7 @@ async def handle_fortunes_card_draw(interaction: discord.Interaction, *,
     if str(user_id) in game["fortunes_drawn"]:
         return await interaction.edit_original_response(
             embed=discord.Embed(title="❌ Already Drawn",
-                                description="You have already drawn your fate for this game!", color=0xe74c3c),
+                                description="You have already drawn your fate for this game!", color=EmbedColor.DANGER),
             view=None,
         )
     pending = game.get("fortunes_pending", {})
@@ -13481,7 +13498,7 @@ async def handle_fortunes_card_draw(interaction: discord.Interaction, *,
             embed=discord.Embed(
                 title="❌ Awaiting Confirmation",
                 description="You already have a card waiting — check above and click **Yes** or **No**.",
-                color=0xe74c3c),
+                color=EmbedColor.DANGER),
             view=None,
         )
 
@@ -13563,7 +13580,7 @@ async def send_fortunes_dm(interaction: discord.Interaction, thread_id: int, fla
         description=((flavor + "\n\n" if flavor else "The deck of fate lies before you.\n\n") +
                      "**15 cards** rest face-down. Choose **one** to reveal your power-up for this game.\n\n"
                      + draw_rule),
-        color=0x9b59b6,
+        color=EmbedColor.ROLEPLAY,
     )
     view = FortunesView(
         interaction.user.id, thread_id,
@@ -14219,7 +14236,7 @@ def _receipt_audit_embed(
     GREEN (0x2ECC71) = original run completion; RED (0xE74C3C) = modified /
     override / cancelled. Fields carry the full HOI4-thematic module set and
     the footer is UTC-stamped for the Audit System v2 layout."""
-    color = 0xE74C3C if modified else 0x2ECC71
+    color = EmbedColor.DANGER if modified else EmbedColor.SUCCESS
     title = (
         "⚠️ [AUDIT LOG] CASINO RECEIPT — MODIFIED / OVERRIDE"
         if modified
@@ -14468,7 +14485,7 @@ async def _post_house_receipt_log(
             f"🔗 **Static receipt:** {receipt_url}\n"
             "*This link is permanent — keep it for your records.*"
         ),
-        color=0x22c55e,
+        color=EmbedColor.SUCCESS,
     )
     print(f"[DM] Attempting DM to user_id={user_id}")
     dm_user = await _resolve_dm_target(
@@ -14548,7 +14565,7 @@ async def _mark_receipt_log_unreserved(thread_id, user_id) -> None:
             return
         embed = message.embeds[0]
         # Dynamic color rule: an unreserve is a MODIFIED/cancelled run → RED.
-        embed.color = discord.Color(0xE74C3C)
+        embed.color = discord.Color(EmbedColor.DANGER)
         embed.title = "[AUDIT LOG] CASINO RECEIPT - MODIFIED / OVERRIDE"
         status_set = False
         for i, field in enumerate(embed.fields):
@@ -14749,7 +14766,7 @@ async def handle_randomizer_reroll(interaction: discord.Interaction, thread_id: 
     reveal = discord.Embed(
         title="🎰 RE-ROLLED! 🎰",
         description=f"✅ You are now **{chosen}**!\n\n**Your New Roll:**\n{result_slots}\n\n*(Check your DMs for the details!)*",
-        color=0x2ecc71,
+        color=EmbedColor.SUCCESS,
     )
     if remaining_after > 0:
         content = "**Are you happy with your pick?**"
@@ -14831,7 +14848,7 @@ def _build_achievement_result_embed(result: dict) -> discord.Embed:
     embed = discord.Embed(
         title="🎲 Achievement Roll Result",
         description=(f"*“{a['description']}”*" if a["description"] else None),
-        color=0xF1C40F,
+        color=EmbedColor.BRAND,
     )
     embed.add_field(name="Achievement Title", value=a["title"], inline=False)
     embed.add_field(name="Nation", value=a["nation"], inline=True)
@@ -14853,7 +14870,7 @@ def _build_achievement_telemetry_embed(result: dict) -> discord.Embed:
     q = result["query"]
     embed = discord.Embed(
         title="⚙️ Engine Fallback Telemetry",
-        color=0x2ECC71 if result["status"] == "MATCH_SUCCESS" else 0xE67E22,
+        color=EmbedColor.SUCCESS if result["status"] == "MATCH_SUCCESS" else EmbedColor.WARNING,
     )
     embed.add_field(
         name="Target Query",
@@ -16479,7 +16496,7 @@ async def _finalize_attendance_results_locked(thread_key: str, guild, delay, sam
         try:
             warning_embed = discord.Embed(
                 title="⚠️ Automatic No-Show Warning",
-                color=discord.Color.orange(),
+                color=EmbedColor.WARNING,
                 timestamp=discord.utils.utcnow(),
             )
             warning_embed.add_field(
@@ -16574,7 +16591,7 @@ async def _finalize_attendance_results_locked(thread_key: str, guild, delay, sam
         embed = discord.Embed(
             title=f"{title}: {game.get('thread_name', thread_id)}",
             description=description,
-            color=discord.Color.brand_red() if absent_report else discord.Color.brand_green(),
+            color=EmbedColor.DANGER if absent_report else EmbedColor.SUCCESS,
             url=_attendance_page_url(stable_id),
         )
         embed.add_field(name="✅ Present", value=f"{len(present)} players", inline=True)
@@ -18425,7 +18442,7 @@ def _crash_report_build_embed(user: discord.User, sess: dict) -> discord.Embed:
     badge = "[✅ HOI4 Verified]" if verified else "[❌ Unverified]"
     embed = discord.Embed(
         title="🚨 New Crash Report",
-        color=discord.Color.red(),
+        color=EmbedColor.DANGER,
         timestamp=discord.utils.utcnow(),
     )
     embed.add_field(
@@ -18578,7 +18595,7 @@ async def _award_crash_report_merit(user_id: int, verified: bool) -> int:
         try:
             log_embed = discord.Embed(
                 title="🎖️ Crash Report Merit Awarded",
-                color=discord.Color.gold(),
+                color=EmbedColor.BRAND,
                 timestamp=discord.utils.utcnow(),
             )
             log_embed.add_field(name="Target", value=f"<@{user_id}>", inline=True)
@@ -18795,7 +18812,7 @@ def build_casino_panel_embed() -> discord.Embed:
             "Welcome to the casino floor. Access links are **single-use** and "
             "**expire after 60 seconds** — press the button below to receive yours."
         ),
-        color=0x1a1a2e,
+        color=EmbedColor.INK,
     )
     embed.add_field(
         name="🎲 Offline Mode — Singleplayer Run",
@@ -18848,7 +18865,7 @@ class CasinoPanelView(discord.ui.View):
                 "Singleplayer mode — no host required. Press the button below to enter.\n\n"
                 f"*Single-use link · expires in {WEB_ACCESS_TOKEN_TTL_SEC} seconds.*"
             ),
-            color=0x1a1a2e,
+            color=EmbedColor.INK,
         )
         view = discord.ui.View()
         view.add_item(
@@ -19102,7 +19119,7 @@ async def _game_start_core(guild, actor, thread_id_str: str, *, game_id: str, pa
     if game_info_channel:
         async with _discord_api_sem:
             await game_info_channel.purge(limit=100)
-        embed = discord.Embed(title=f"{game_mode} Game Information", color=discord.Color.blue())
+        embed = discord.Embed(title=f"{game_mode} Game Information", color=EmbedColor.INFO)
         embed.add_field(name="Game ID", value=f"```{game_id}```", inline=False)
         embed.add_field(name="Password", value=f"```{password}```", inline=False)
         embed.add_field(name="Checksum", value=f"```{checksum}```", inline=False)
@@ -19170,7 +19187,7 @@ async def _game_start_core(guild, actor, thread_id_str: str, *, game_id: str, pa
     embed = discord.Embed(
         title=f"Final Reservation List: {getattr(thread, 'name', None) or game.get('thread_name') or thread_id_str}",
         description=final_list_str,
-        color=discord.Color.dark_grey(),
+        color=EmbedColor.NEUTRAL,
     )
     await send_host_log_embed(embed)
 
@@ -20660,7 +20677,7 @@ class MasterHostPanel(discord.ui.View):
                     log_embed = discord.Embed(
                         title="📊 Monday Session Report",
                         description=ai_reply[:4000],
-                        color=discord.Color.dark_gold()
+                        color=EmbedColor.BRAND
                     )
                     log_embed.add_field(name="Session Thread", value=target_channel.mention)
                     log_embed.set_footer(text=f"Game ID: {self.game_id}")
@@ -20763,7 +20780,7 @@ def build_feedback_embed(game: dict) -> discord.Embed:
 
     embed = discord.Embed(
         title="⭐ Session Feedback",
-        color=discord.Color.gold(),
+        color=EmbedColor.BRAND,
         timestamp=datetime.datetime.now(datetime.timezone.utc),
     )
     embed.description = (
@@ -21019,11 +21036,11 @@ def build_archived_feedback_embed(game: dict, hosting_result: str | None = None)
     host_id = game.get("host_id")
     result = hosting_result or game.get("hosting_result")
 
-    color = discord.Color.gold()
+    color = EmbedColor.BRAND
     if result == "successful":
-        color = discord.Color.green()
+        color = EmbedColor.SUCCESS
     elif result == "unsuccessful":
-        color = discord.Color.red()
+        color = EmbedColor.DANGER
 
     embed = discord.Embed(
         title="⭐ Session Feedback — Archived",
@@ -21173,7 +21190,7 @@ async def _post_host_streak_alert(*, host_id: int, streak_type: str, streak_coun
     if streak_type == "successful":
         embed = discord.Embed(
             title="🌟 Host Streak — 2 Successful Hostings in a Row",
-            color=discord.Color.green(),
+            color=EmbedColor.SUCCESS,
             timestamp=datetime.datetime.now(datetime.timezone.utc),
         )
         embed.description = (
@@ -21185,7 +21202,7 @@ async def _post_host_streak_alert(*, host_id: int, streak_type: str, streak_coun
     else:
         embed = discord.Embed(
             title="⚠️ Host Streak — 2 Unsuccessful Hostings in a Row",
-            color=discord.Color.red(),
+            color=EmbedColor.DANGER,
             timestamp=datetime.datetime.now(datetime.timezone.utc),
         )
         embed.description = (
@@ -21252,7 +21269,7 @@ async def _open_game_log_thread(game_key, game: dict):
     mode = str(game.get("mode") or "Game")
     embed = discord.Embed(
         title=f"🎮 {MODE_THREAD_LABELS.get(mode, mode)} · {_game_log_thread_name(game, game_key).split(' · ')[0]}",
-        color=discord.Color.blurple(),
+        color=EmbedColor.INFO,
         description=(
             "Manage this game on the website: its attendance, chat log and AI analysis, and the rewards to give.\n"
             "Commends, warnings and anything else given for this game, and its feedback, are posted in this thread."
@@ -21919,7 +21936,7 @@ async def _game_cancel_core(guild, actor, thread_id_str: str, *, reason: str, pr
             member = guild.get_member(uid)
             if member:
                 try:
-                    embed = discord.Embed(title=f"🚫 Game Cancelled: {mode}", color=discord.Color.red())
+                    embed = discord.Embed(title=f"🚫 Game Cancelled: {mode}", color=EmbedColor.DANGER)
                     embed.add_field(name="Host", value=actor.mention, inline=True)
                     embed.add_field(name="Reason", value=reason, inline=False)
 
@@ -22012,7 +22029,7 @@ async def _game_cancel_core(guild, actor, thread_id_str: str, *, reason: str, pr
         if log_chan is None:
             log_chan = await bot.fetch_channel(G.HOST_LOG_CHANNEL_ID)
         if log_chan:
-            log_embed = discord.Embed(title="🗑️ Game Cancelled", color=discord.Color.dark_red())
+            log_embed = discord.Embed(title="🗑️ Game Cancelled", color=EmbedColor.DANGER)
             log_embed.add_field(name="Thread", value=str(game.get("thread_name") or thread_id_str), inline=False)
             log_embed.add_field(name="Host", value=actor.mention, inline=True)
             log_embed.add_field(name="Notified", value=f"{dm_count} users", inline=True)
@@ -22703,7 +22720,7 @@ async def _process_web_host_dm(req: dict):
     embed = discord.Embed(
         title=f"📩 Message from {actor.display_name} (Game Host)" if signed else "📩 Message from a Game Host",
         description=text,
-        color=discord.Color.gold(),
+        color=EmbedColor.BRAND,
     )
     embed.set_footer(text="This message was sent via the Game Master bot.")
     delivered = await _dm_user_safe(member, embed=embed, label="host message")
@@ -22714,7 +22731,7 @@ async def _process_web_host_dm(req: dict):
         )
     except Exception as e:
         print(f"[WARN] host message record failed: {e}")
-    log = discord.Embed(title="📝 Host DM", color=discord.Color.light_grey() if delivered else discord.Color.red())
+    log = discord.Embed(title="📝 Host DM", color=EmbedColor.NEUTRAL if delivered else EmbedColor.DANGER)
     log.add_field(name="Sender", value=actor.mention, inline=True)
     log.add_field(name="Recipient", value=member.mention, inline=True)
     log.add_field(name="Shown as", value=actor.display_name if signed else "Anonymous (a Game Host)", inline=True)
@@ -22790,7 +22807,7 @@ async def _run_web_game_message(request_id: str, actor, key: str, game: dict, te
         guild = bot.get_guild(cur_gid())
         mode = game.get("mode") or "game"
         open_thread = str(game.get("status") or "").lower() not in ("ended", "cancelled")
-        embed = discord.Embed(title=f"📢 Message from the host of your {mode} game", description=text, color=discord.Color.gold())
+        embed = discord.Embed(title=f"📢 Message from the host of your {mode} game", description=text, color=EmbedColor.BRAND)
         if open_thread and _game_has_thread(game):
             embed.add_field(name="Game thread", value=f"<#{key}>", inline=True)
         embed.add_field(name="On the website", value=_map_game_url(key), inline=True)
@@ -22827,7 +22844,7 @@ async def _run_web_game_message(request_id: str, actor, key: str, game: dict, te
             fresh["message_history"] = history[-GAME_MESSAGE_HISTORY_KEEP:]
             await save_single_game(fresh_key or key, fresh, rewrite_reservations=False)
 
-        log = discord.Embed(title="📢 Game message", color=discord.Color.purple())
+        log = discord.Embed(title="📢 Game message", color=EmbedColor.ROLEPLAY)
         log.add_field(name="Sender", value=actor.mention, inline=True)
         log.add_field(
             name="Game", value=f"<#{key}>" if open_thread and _game_has_thread(game) else f"{mode} ({key})", inline=True,
@@ -23102,7 +23119,7 @@ async def _run_web_game_log_analysis(request_id: str, actor, key: str, game: dic
             commends = sum(p["reward"]["commends"] for p in players)
             merit = sum(p["reward"]["merit"] for p in players)
             rewarded = sum(1 for p in players if p["reward"]["commends"] or p["reward"]["merit"])
-            embed = discord.Embed(title="🤖 AI chat-log analysis", color=discord.Color.blurple())
+            embed = discord.Embed(title="🤖 AI chat-log analysis", color=EmbedColor.INFO)
             embed.add_field(name="Game", value=f"{target.get('mode') or 'Game'} (`{key}`)", inline=True)
             embed.add_field(name="Run by", value=actor.mention, inline=True)
             embed.add_field(
@@ -23263,7 +23280,7 @@ async def apply_attendance_override(*, guild, actor, game_id: str, user_id: int,
         except Exception:
             pass
         try:
-            embed = discord.Embed(title="📝 Attendance changed", color=discord.Color.blue(), url=_attendance_page_url(stable_id))
+            embed = discord.Embed(title="📝 Attendance changed", color=EmbedColor.INFO, url=_attendance_page_url(stable_id))
             embed.add_field(name="Player", value=f"<@{uid}>", inline=True)
             embed.add_field(name="Change", value=summary, inline=True)
             embed.add_field(name="Host", value=f"<@{actor.id}>", inline=True)
@@ -23500,7 +23517,7 @@ async def send_command_audit_log(interaction: discord.Interaction, command_name:
     # 2. Build the Embed
     embed = discord.Embed(
         title=f"🤖 Command Used: /{command_name}",
-        color=0xf1c40f,
+        color=EmbedColor.BRAND,
         timestamp=datetime.datetime.now()
     )
 
@@ -23711,11 +23728,11 @@ _MODERATION_TITLES = {
     ("redeem", "warn"): "♻️ {label} Warnings Redeemed",
 }
 _MODERATION_COLORS = {
-    ("give", "commend"): discord.Color.green(),
-    ("give", "merit"): discord.Color.gold(),
-    ("give", "warn"): discord.Color.orange(),
-    ("give", "ban"): discord.Color.red(),
-    ("redeem", "warn"): discord.Color.teal(),
+    ("give", "commend"): EmbedColor.SUCCESS,
+    ("give", "merit"): EmbedColor.BRAND,
+    ("give", "warn"): EmbedColor.WARNING,
+    ("give", "ban"): EmbedColor.DANGER,
+    ("redeem", "warn"): EmbedColor.SUCCESS,
 }
 # moderation_events.action for each operation.
 _MODERATION_EVENT_ACTIONS = {
@@ -23982,7 +23999,7 @@ async def apply_moderation_action(
             print(f"[WARN] moderation public log refresh failed: {e}")
 
     title = _MODERATION_TITLES[key].format(label=label)
-    color = _MODERATION_COLORS.get(key, discord.Color.green())
+    color = _MODERATION_COLORS.get(key, EmbedColor.SUCCESS)
     stat_line = (
         f"Merit: {_merit_points(stats)}"
         if kind == "merit"
@@ -24200,7 +24217,7 @@ async def apply_dishonored_action(
     try:
         await _send_dishonored_host_log(
             title=title,
-            color=discord.Color.dark_red() if op == "give" else discord.Color.green(),
+            color=EmbedColor.DANGER if op == "give" else EmbedColor.SUCCESS,
             user=target_user,
             admin=actor,
             mode=mode,
@@ -24524,8 +24541,8 @@ async def apply_host_rating(
     status_line = f"{branch}: ⭐ {entry[acc_key]} Acclamations | ⚠️ {entry[vio_key]} Violations"
     summary = f"{branch} Host {label}: {'+' if op == 'give' else '−'}{amount}"
     color = (
-        discord.Color.light_grey() if op == "take"
-        else discord.Color.green() if kind == "acclamation" else discord.Color.orange()
+        EmbedColor.NEUTRAL if op == "take"
+        else EmbedColor.SUCCESS if kind == "acclamation" else EmbedColor.WARNING
     )
 
     dm_ok = False
@@ -24809,7 +24826,7 @@ async def apply_verification(*, guild, actor, user_id: int, track: str, grant: b
     try:
         log_embed = discord.Embed(
             title=title,
-            color=discord.Color.green() if grant else discord.Color.dark_grey(),
+            color=EmbedColor.SUCCESS if grant else EmbedColor.NEUTRAL,
             timestamp=datetime.datetime.now(datetime.timezone.utc),
         )
         log_embed.add_field(name="User", value=f"<@{uid}> (`{uid}`)", inline=True)
@@ -25115,14 +25132,14 @@ async def apply_vip_grant(*, guild, actor, user_id: int, category: str, payload:
                 "If that's right, there's nothing to do — welcome! If you're **not** Paradox staff, press the "
                 "button below: we'll take the VIP role away and let the staff know."
             ),
-            color=discord.Color.gold(),
+            color=EmbedColor.BRAND,
         )
         view = discord.ui.View(timeout=None)
         view.add_item(VipNotMeButton(grant["grant_id"]))
         dm_ok = await _dm_user_safe(member, embed=dm, view=view, label="vip pdx notice")
         notes.append("They got a DM about it, with a \"This isn't me\" button." if dm_ok else "⚠️ Couldn't DM them (their DMs are closed).")
     log = await _vip_log(
-        f"🌟 VIP Granted — {label}", discord.Color.gold(), user_id=uid, actor_id=actor.id,
+        f"🌟 VIP Granted — {label}", EmbedColor.BRAND, user_id=uid, actor_id=actor.id,
         category=category, details=details, extra=[("Roles", "\n".join(lines))],
     )
     record_moderation_event(
@@ -25162,7 +25179,7 @@ async def apply_vip_remove(*, guild, actor, user_id: int, reason: str, by_self: 
     category = rows[0]["category"] if rows else None
     title = "✋ VIP Removed — they said they aren't Paradox staff" if by_self else "🚫 VIP Removed"
     log = await _vip_log(
-        title, discord.Color.dark_grey(), user_id=uid, actor_id=None if by_self else actor_id,
+        title, EmbedColor.NEUTRAL, user_id=uid, actor_id=None if by_self else actor_id,
         category=category, extra=[("Reason", reason or "Pressed \"This isn't me\" on the PDX Staff DM."), ("Role", note)],
     )
     record_moderation_event(
@@ -25173,7 +25190,7 @@ async def apply_vip_remove(*, guild, actor, user_id: int, reason: str, by_self: 
         await _vip_post_notice(discord.Embed(
             title="✋ VIP removed — not Paradox staff",
             description=f"<@{uid}> said they aren't Paradox staff, so their **PDX Staff** VIP was taken away.",
-            color=discord.Color.orange(),
+            color=EmbedColor.WARNING,
         ))
     return {
         "title": title,
@@ -25215,7 +25232,7 @@ async def apply_vip_decision(*, guild, actor, user_id: int, approve: bool, note:
     await _vip_close_notice(row, f"{'✅ Approved' if approve else '✖️ Declined'} by <@{actor.id}>.")
     title = f"🌟 VIP from {origin} approved" if approve else f"✖️ VIP from {origin} declined"
     log = await _vip_log(
-        title, discord.Color.gold() if approve else discord.Color.dark_grey(), user_id=uid, actor_id=actor.id,
+        title, EmbedColor.BRAND if approve else EmbedColor.NEUTRAL, user_id=uid, actor_id=actor.id,
         category=row["category"], details=row.get("details"), extra=[("Note", note)] if note else (),
     )
     record_moderation_event(
@@ -25271,7 +25288,7 @@ async def _vip_sync_member(member, *, trigger: str = "sweep"):
     if transferable:
         lines = await _vip_give_roles(member, f"VIP ({label}) carried over from {origin}")
         log = await _vip_log(
-            f"🌟 VIP carried over from {origin}", discord.Color.gold(), user_id=uid,
+            f"🌟 VIP carried over from {origin}", EmbedColor.BRAND, user_id=uid,
             category=source["category"], details=source.get("details"), extra=[("Roles", "\n".join(lines))],
         )
         record_moderation_event(
@@ -25284,7 +25301,7 @@ async def _vip_sync_member(member, *, trigger: str = "sweep"):
                 f"<@{uid}> is a **{label}** VIP on **{origin}**, so they got VIP here automatically{joined}.\n"
                 "Press **Remove VIP** if they shouldn't have it here."
             ),
-            color=discord.Color.gold(),
+            color=EmbedColor.BRAND,
         )
         ops = ("remove",)
     else:
@@ -25294,7 +25311,7 @@ async def _vip_sync_member(member, *, trigger: str = "sweep"):
                 f"<@{uid}> is a **Highly Trusted** VIP on **{origin}**{' and just joined this server' if trigger == 'join' else ''}.\n"
                 "Highly Trusted VIP doesn't carry over by itself — approve it to give them VIP here."
             ),
-            color=discord.Color.blurple(),
+            color=EmbedColor.INFO,
         )
         ops = ("approve", "decline")
     granted_by = source.get("granted_by")
@@ -25504,7 +25521,7 @@ async def apply_host_tier(*, guild, actor, user_id: int, tier: str, note: str = 
     log_ref = None
     try:
         log_embed = discord.Embed(
-            title=title, color=discord.Color.blue(), timestamp=datetime.datetime.now(datetime.timezone.utc)
+            title=title, color=EmbedColor.INFO, timestamp=datetime.datetime.now(datetime.timezone.utc)
         )
         log_embed.add_field(name="User", value=f"<@{uid}> (`{uid}`)", inline=True)
         log_embed.add_field(name="Change", value=f"{was} → **{label}**", inline=True)
@@ -25620,7 +25637,7 @@ async def info(interaction: discord.Interaction):
             "Merit and Hearts of Valor, bans, Dishonored, your recent games and your roles.\n\n"
             "*Log in with Discord on the page if it asks — it only shows your own record.*"
         ),
-        color=discord.Color.blue(),
+        color=EmbedColor.INFO,
     )
     embed.set_thumbnail(url=interaction.user.display_avatar.url)
     view = discord.ui.View()
@@ -26005,7 +26022,7 @@ SCHEDULE_PANEL_VERSION = 2
 def _schedule_panel_embed() -> discord.Embed:
     embed = discord.Embed(
         title="🛠️ Host Panel",
-        color=discord.Color.brand_green(),
+        color=EmbedColor.SUCCESS,
         description=(
             "Games are scheduled and run on the website.\n\n"
             "🗓️ **Calendar** — schedule a game, edit or cancel yours, and see every game and locked day.\n"
@@ -27013,7 +27030,7 @@ async def _process_web_draft(req: dict):
                     member, game, key, actor,
                     title="🚫 Taken out of the draft pool",
                     text=f"**{actor.display_name}** took you out of the draft pool for this game.",
-                    color=discord.Color.red(), label="draft remove",
+                    color=EmbedColor.DANGER, label="draft remove",
                 )
             outcome = _draft_outcome("🗑️ Removed from the pool", f"<@{target_id}> is out of the draft pool.")
         elif op == "assign":
@@ -27075,7 +27092,7 @@ async def _process_web_draft(req: dict):
                 member, game, key, actor,
                 title="📋 You were placed in the draft",
                 text=f"**{actor.display_name}** placed you on **{slot_txt}**.",
-                color=discord.Color.green(), label="draft placed",
+                color=EmbedColor.SUCCESS, label="draft placed",
             )
     await update_draft_pool_message(int(key))
     for text in posts:
@@ -27322,7 +27339,7 @@ def _build_audit_event_embed(ev: dict) -> discord.Embed:
     username = str(ev.get("username") or "unknown")
     embed = discord.Embed(
         title=f"[AUDIT LOG] {ev.get('event_type') or 'EVENT'}",
-        color=0x1a1a2e,
+        color=EmbedColor.INK,
     )
     embed.add_field(name="User", value=f"<@{uid}>" if uid else "Unknown", inline=True)
     embed.add_field(name="Discord Username", value=username, inline=True)
@@ -27865,7 +27882,7 @@ async def _post_receipt_dm_audit(
     if channel is None:
         print(f"[WARN] audit channel {G.AUDIT_CHANNEL_ID} not reachable — receipt DM audit dropped")
         return
-    color = 0x22c55e if status == "SUCCESS" else (0xeab308 if status == "DM_CLOSED" else 0xef4444)
+    color = EmbedColor.SUCCESS if status == "SUCCESS" else (EmbedColor.WARNING if status == "DM_CLOSED" else EmbedColor.DANGER)
     embed = discord.Embed(title="[AUDIT LOG] RECEIPT_DM_DISPATCH", color=color)
     embed.add_field(name="User", value=f"<@{user_id}>", inline=True)
     embed.add_field(name="Game ID", value=str(thread_id), inline=True)
@@ -27998,7 +28015,7 @@ async def receipt_dm_loop():
                         f"🔗 **Receipt:** {receipt_url}\n"
                         f"{receipt_note}"
                     ),
-                    color=0x22c55e,
+                    color=EmbedColor.SUCCESS,
                 )
                 print(f"[DM] Attempting DM to user_id={user_id}")
                 dm_user = await _resolve_dm_target(user_id)
@@ -28159,7 +28176,7 @@ class HostPanelReopenButton(
                     f"**{slot.get('mode') or 'Unknown'}** · <t:{g_time}:F> (<t:{g_time}:R>)\n\n"
                     "Your saved configuration loads exactly as you left it."
                 ),
-                color=0x1a1a2e,
+                color=EmbedColor.INK,
             )
             view = discord.ui.View()
             view.add_item(
@@ -28225,7 +28242,7 @@ async def _post_host_config_save_log(game_id: str, slot: dict, settings: dict) -
             "for the scheduling host, and your configuration loads exactly as "
             "you left it."
         ),
-        color=0x1a1a2e,
+        color=EmbedColor.INK,
     )
     if g_time:
         embed.add_field(name="Game Time", value=f"<t:{g_time}:F>", inline=True)
@@ -28642,7 +28659,7 @@ async def _dm_web_schedule_confirmation(member, slot: dict, panel_url: str) -> N
             "Open the Host Scheduling Panel to configure casino modules, re-roll "
             "budgets and entry-level gating.\n*Link valid for 3 days.*"
         ),
-        color=0x1a1a2e,
+        color=EmbedColor.INK,
     )
     ann_ts = slot.get("announce_timestamp")
     embed.add_field(
@@ -29440,7 +29457,7 @@ async def _create_ticket(interaction, kind: str, *, fields: dict | None = None, 
     for label, value in (fields or {}).items():
         if value:
             lines.append(f"**{label}:**\n{value}")
-    embed = discord.Embed(title=f"#{number:04d} - {spec['label']}", description="\n".join(lines)[:4000], color=0x2ECC71)
+    embed = discord.Embed(title=f"#{number:04d} - {spec['label']}", description="\n".join(lines)[:4000], color=EmbedColor.SUCCESS)
     if TICKET_INSTRUCTIONS.get(kind):
         embed.add_field(name="What to do", value=TICKET_INSTRUCTIONS[kind][:1024], inline=False)
     embed.set_footer(text="Staff: close it with the buttons below when it's done.")
@@ -29650,7 +29667,7 @@ async def _ticket_transcript(channel, closer, status: str, meta: dict | None, wh
     log_id = (G.TICKET_PRIVATE_LOG_CHANNEL_ID if private else G.TICKET_LOG_CHANNEL_ID) or G.TICKET_LOG_CHANNEL_ID
     log_channel = channel.guild.get_channel(log_id) if log_id else None
     if log_channel is not None:
-        embed = discord.Embed(title="Ticket closed", color=0xE74C3C if status == "Unresolved" else 0x2ECC71)
+        embed = discord.Embed(title="Ticket closed", color=EmbedColor.DANGER if status == "Unresolved" else EmbedColor.SUCCESS)
         embed.add_field(name="Ticket", value=channel.name)
         embed.add_field(name="Type", value=_ticket_kind_label(kind))
         embed.add_field(name="Closed by", value=closer_name)
@@ -30028,7 +30045,7 @@ async def spawn_ticket_panel(interaction: discord.Interaction):
         return await _ticket_reply(interaction, "❌ This only works inside the server.")
     if not _member_is_staff(interaction.user):
         return await _ticket_reply(interaction, "❌ Only Host Management (or admins) can post the ticket panel.")
-    embed = discord.Embed(title="Contact the Host Team", description=TICKET_PANEL_DESCRIPTION, color=0x2ECC71)
+    embed = discord.Embed(title="Contact the Host Team", description=TICKET_PANEL_DESCRIPTION, color=EmbedColor.SUCCESS)
     try:
         await interaction.channel.send(embed=embed, view=TicketPanelView())
     except discord.HTTPException as e:
@@ -31101,7 +31118,7 @@ async def _process_web_roster_assign(req: dict):
                     + (f" (you were on **{_pretty_reservation_name(current_key)}**)" if current_key else "")
                     + ". You have the Gamer Pass, so hop into your voice channel."
                 ),
-                color=discord.Color.orange(), label="late join",
+                color=EmbedColor.WARNING, label="late join",
             )
             if kind != "filler":
                 await _roster_send_mode_info_dm(target, mode, nation)
@@ -31159,13 +31176,13 @@ async def _process_web_roster_assign(req: dict):
         by = f"**{actor.display_name}**"
         other = f"**{displaced.display_name}**" if displaced is not None else "the other player"
         if swapped_to:
-            title, color = "🔁 Your slot was swapped", discord.Color.blurple()
+            title, color = "🔁 Your slot was swapped", EmbedColor.INFO
             text = f"{by} swapped you with {other}: you're now **{label}** (you were on **{_pretty_reservation_name(current_key)}**)."
         elif current_key:
-            title, color = "🔄 You were moved", discord.Color.blurple()
+            title, color = "🔄 You were moved", EmbedColor.INFO
             text = f"{by} moved you from **{_pretty_reservation_name(current_key)}** to **{label}**."
         else:
-            title, color = "📋 You were added to a game", discord.Color.green()
+            title, color = "📋 You were added to a game", EmbedColor.SUCCESS
             text = f"{by} added you to the game as **{label}**."
         if occupant is not None and not swapped_to:
             text += f" {other} was taken off that slot."
@@ -31181,14 +31198,14 @@ async def _process_web_roster_assign(req: dict):
                         f"{by} swapped you with **{target.display_name}**: you're now "
                         f"**{_pretty_reservation_name(swapped_to)}** (you were on **{label}**)."
                     ),
-                    color=discord.Color.blurple(), label="roster displaced",
+                    color=EmbedColor.INFO, label="roster displaced",
                 )
             else:
                 await _roster_notify_player(
                     displaced, game, thread_id, actor,
                     title="🚫 You were removed from a game",
                     text=f"{by} gave **{label}** to **{target.display_name}**, so you're no longer in this game.",
-                    color=discord.Color.red(), label="roster displaced",
+                    color=EmbedColor.DANGER, label="roster displaced",
                 )
     if force and override_kind:
         await _roster_dm_host_override(game, actor, target, label, override_kind, last_played)
@@ -31255,7 +31272,7 @@ async def _process_web_roster_remove(req: dict):
             await _web_fetch_member(user_id), game, thread_id, actor,
             title="🚫 You were removed from a game",
             text=f"**{actor.display_name}** removed you from **{_pretty_reservation_name(keys[0])}**.",
-            color=discord.Color.red(), label="roster remove",
+            color=EmbedColor.DANGER, label="roster remove",
         )
     _audit_log("INFO", f"web roster remove thread={thread_id} by={actor.id} user={user_id} slots={keys}")
     target_name = _audit_who(user_id) or str(user_id)
@@ -31395,7 +31412,7 @@ async def _handle_override_dm_request(row: dict) -> None:
             "A host issued a custom roll for your session — press the button below to open it.\n\n"
             f"*Single-use link · expires in {WEB_ACCESS_TOKEN_TTL_SEC}s · open it immediately.*"
         ),
-        color=0x1a1a2e,
+        color=EmbedColor.INK,
     )
     view = discord.ui.View()
     view.add_item(
@@ -31429,7 +31446,7 @@ async def _log_host_override_receipt(
             f"🔗 **Static receipt:** {receipt_url}\n"
             "*Issued via host override — keep it for your records.*"
         ),
-        color=0x22c55e,
+        color=EmbedColor.SUCCESS,
     )
     print(f"[DM] Attempting DM to user_id={user_id}")
     dm_user = await _resolve_dm_target(user_id, preferred=member)
@@ -31984,7 +32001,7 @@ async def _run_role_verification_scan(*, apply: bool = True, trigger: str = "man
             return _trim_field("\n".join(f"<@{c['user_id']}> — {c['role']} ({c['detail']})" for c in picked))
         embed = discord.Embed(
             title="🛡️ Statistics Role Scan Complete" + (" (daily)" if trigger == "daily" else ""),
-            color=discord.Color.blurple(),
+            color=EmbedColor.INFO,
             timestamp=datetime.datetime.now(datetime.timezone.utc),
         )
         embed.add_field(
@@ -33183,7 +33200,7 @@ async def _welcome_new_guild(guild) -> None:
             "Only the server owner, admins and people the owner allows can change the settings. "
             "GameMaster switches on in this server as soon as setup is finished."
         ),
-        color=discord.Color.gold(),
+        color=EmbedColor.BRAND,
     )
     embed.set_footer(text="GameMaster · server setup")
     owner = guild.owner
@@ -33402,7 +33419,7 @@ async def _guild_switched_on(guild) -> None:
                     f"{count} slash commands are available here. Change anything in the "
                     f"[server settings]({_setup_url(guild.id)})."
                 ),
-                color=discord.Color.green(),
+                color=EmbedColor.SUCCESS,
             )
             try:
                 await channel.send(embed=embed)
@@ -33456,7 +33473,7 @@ async def guild_settings_loop():
                         description="\n".join(
                             f"• **{h.get('actor_name') or 'Someone'}**: {h.get('summary') or 'settings updated'}" for h in web_changes
                         )[:3500],
-                        color=discord.Color.blurple(),
+                        color=EmbedColor.INFO,
                     )
                     embed.add_field(name="Fields changed", value=str(len(changed)), inline=True)
                     embed.add_field(name="Settings", value=f"[Open]({_setup_url(guild.id)})", inline=True)
@@ -33667,7 +33684,7 @@ async def _alert_cross_server_bans(member) -> None:
             + "\n\nRecords are separate per server, so nothing changes here automatically — "
             f"check their [record on the website]({WEB_SITE_URL}/database?player={member.id}) and decide."
         ),
-        color=discord.Color.orange(),
+        color=EmbedColor.WARNING,
     )
     embed.set_footer(text="Cross-server ban alert · switch off in the server settings (Features)")
     try:
@@ -33809,7 +33826,7 @@ async def _process_web_server_setup(req: dict):
                 await channel.send(embed=discord.Embed(
                     title="🧪 Test message",
                     description=f"GameMaster can post here. Sent from the server dashboard by {member.mention}.",
-                    color=discord.Color.green(),
+                    color=EmbedColor.SUCCESS,
                 ))
             except discord.Forbidden:
                 return False, None, f"❌ GameMaster can't post in #{channel.name} — give it View Channel and Send Messages there."
