@@ -1,7 +1,9 @@
 "use client";
 
+import { ShieldCheck } from "lucide-react";
+import { CardTitle } from "@/components/games/labels";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { GLASS, Spinner } from "@/components/schedule/ui";
+import { Spinner } from "@/components/schedule/ui";
 import { ROLE_SCAN_GROUPS, type RoleScanResult, type RoleScanState } from "@/lib/roleScanTypes";
 import type { ScheduleRequestStatus } from "@/lib/scheduleTypes";
 
@@ -113,10 +115,10 @@ export default function RoleCheckCard({ onOpen }: { onOpen: (id: string) => void
   const running = phase.kind === "running";
 
   return (
-    <section data-tour="database.roleCheck" className={`mb-4 rounded-3xl p-4 sm:p-5 ${GLASS}`}>
+    <section data-tour="database.roleCheck" className="gm-plate p-4 sm:p-[18px]">
       <div className="flex flex-wrap items-start gap-3">
         <div className="min-w-0 flex-1">
-          <h2 className="text-[11px] font-black uppercase tracking-[0.18em] text-sky-300">🛡️ Role check</h2>
+          <CardTitle icon={ShieldCheck} title="Role check" />
           <p className="mt-1 text-xs text-ink-400">
             Checks Trusted (5+ commends, VIP or a Valor pick — with that game type&apos;s Verified role and no game ban), Hearts of
             Valor, Dishonored and the database&apos;s Verified / host flags. Runs by itself every day at {state?.daily_at_utc ?? "04:00"} UTC.
@@ -126,7 +128,7 @@ export default function RoleCheckCard({ onOpen }: { onOpen: (id: string) => void
               Last run: {when(last.finished_at)} · {last.trigger === "daily" ? "automatic" : `by ${last.by_name ?? "staff"}`} ·{" "}
               {last.total === 0 ? "nothing to change" : `${last.total} change${last.total === 1 ? "" : "s"}`}
               {last.total > 0 && (
-                <button type="button" onClick={() => setShowLast((value) => !value)} className="ml-1 font-bold text-ink-300 hover:text-white">
+                <button type="button" onClick={() => setShowLast((value) => !value)} className="ml-1 font-bold text-ink-300 hover:text-ink-100">
                   {showLast ? "Hide" : "Show"}
                 </button>
               )}
@@ -138,15 +140,15 @@ export default function RoleCheckCard({ onOpen }: { onOpen: (id: string) => void
             type="button"
             onClick={() => void run("preview")}
             disabled={running}
-            className="flex shrink-0 items-center gap-2 rounded-xl border border-sky-400/40 bg-sky-500/15 px-3.5 py-2 text-xs font-black text-sky-100 hover:bg-sky-500/25 disabled:opacity-50"
+            className="gm-btn gm-btn-secondary h-9 shrink-0 px-3.5 text-[13px]"
           >
-            {running && phase.mode === "preview" && <Spinner className="h-3.5 w-3.5" />}🔍 Preview changes
+            {running && phase.mode === "preview" && <Spinner className="h-3.5 w-3.5" />}Preview changes
           </button>
         )}
       </div>
       {loadError && <p className="mt-2 text-xs text-rose-300">{loadError}</p>}
       {phase.kind === "error" && (
-        <p className="mt-3 rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-100">{phase.message}</p>
+        <p className="mt-3 gm-cut [--cut:7px] border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-100">{phase.message}</p>
       )}
       {running && (
         <p className="mt-3 flex items-center gap-2 text-xs text-ink-300">
@@ -158,10 +160,10 @@ export default function RoleCheckCard({ onOpen }: { onOpen: (id: string) => void
       )}
 
       {freshPreview && !running && (
-        <div className="mt-4 rounded-2xl border border-sky-400/25 bg-sky-500/[0.05] p-3">
-          <p className="text-sm font-bold text-white">
+        <div className="mt-4 gm-cut [--cut:12px] border border-sky-400/25 bg-sky-500/[0.05] p-3">
+          <p className="text-sm font-bold text-ink-100">
             {freshPreview.total === 0
-              ? "✅ Everything is in order — nothing would change."
+              ? "Everything is in order — nothing would change."
               : `Preview: ${freshPreview.total} change${freshPreview.total === 1 ? "" : "s"} would be made`}
           </p>
           <p className="text-[11px] text-ink-500">
@@ -175,11 +177,9 @@ export default function RoleCheckCard({ onOpen }: { onOpen: (id: string) => void
                 type="button"
                 onClick={() => (confirm ? void run("apply") : setConfirm(true))}
                 onBlur={() => setConfirm(false)}
-                className={`rounded-xl px-4 py-2 text-xs font-black ${
-                  confirm ? "bg-rose-500 text-white" : "bg-brand-400 text-ink-950 hover:bg-brand-300"
-                }`}
+                className={`gm-btn h-9 px-4 text-[13px] ${confirm ? "bg-rose-500 text-white hover:bg-rose-400" : "gm-btn-primary"}`}
               >
-                {confirm ? `Click again — apply ${freshPreview.total} change${freshPreview.total === 1 ? "" : "s"}` : "✅ Apply these changes"}
+                {confirm ? `Click again to apply ${freshPreview.total} change${freshPreview.total === 1 ? "" : "s"}` : "Apply these changes"}
               </button>
               <span className="text-[11px] text-ink-500">
                 Apply checks everything again at that moment, so the result can differ slightly if something changed meanwhile.
@@ -190,7 +190,7 @@ export default function RoleCheckCard({ onOpen }: { onOpen: (id: string) => void
       )}
 
       {last && showLast && last.total > 0 && (
-        <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.02] p-3">
+        <div className="mt-3 gm-cut [--cut:12px] border border-ink-800 bg-ink-950 p-3">
           <p className="text-xs font-bold text-ink-200">Applied {when(last.finished_at)}</p>
           <ChangeList run={last} onOpen={onOpen} />
         </div>
@@ -208,12 +208,12 @@ function ChangeList({ run, onOpen }: { run: RoleScanResult; onOpen: (id: string)
         if (items.length === 0) return null;
         return (
           <div key={group.title}>
-            <p className={`text-[10px] font-black uppercase tracking-wider ${group.tone}`}>
+            <p className={`text-xs font-semibold ${group.tone}`}>
               {group.title} ({items.length})
             </p>
             <ul className="mt-1 grid gap-1 sm:grid-cols-2">
               {items.map((change) => (
-                <li key={`${change.user_id}-${change.kind}-${change.role}`} className="rounded-lg border border-white/5 bg-white/[0.02] px-2 py-1 text-xs">
+                <li key={`${change.user_id}-${change.kind}-${change.role}`} className="gm-cut [--cut:7px] border border-ink-800 bg-ink-950 px-2 py-1 text-xs">
                   <button type="button" onClick={() => onOpen(change.user_id)} className="font-bold text-ink-100 hover:text-sky-200 hover:underline">
                     {change.name}
                   </button>
@@ -232,7 +232,7 @@ function ChangeList({ run, onOpen }: { run: RoleScanResult; onOpen: (id: string)
         <p className="text-[11px] text-ink-500">…and {run.total - run.changes.length} more (see the audit log).</p>
       )}
       {run.errors.length > 0 && (
-        <p className="text-[11px] text-brand-300">⚠️ {run.errors.length} note(s): {run.errors.slice(0, 3).join(" · ")}</p>
+        <p className="text-[11px] text-brand-300">{run.errors.length} note(s): {run.errors.slice(0, 3).join(" · ")}</p>
       )}
     </div>
   );

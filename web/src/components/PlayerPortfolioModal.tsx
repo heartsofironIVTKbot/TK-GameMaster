@@ -1,5 +1,7 @@
 "use client";
 
+import { Check, Clock, Medal, Star, TriangleAlert, X } from "lucide-react";
+import ModeIcon from "@/components/schedule/ModeIcon";
 import { useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type {
@@ -9,7 +11,6 @@ import type {
   ModerationEvent,
   ModeStanding,
   PlayerPortfolio,
-  PortfolioMode,
   StandingStatus,
   TrustedRoad,
 } from "@/lib/playerTypes";
@@ -23,15 +24,9 @@ import { formatRelative } from "@/lib/timeEngine";
  * whole page regardless of where the profile card sits.
  */
 
-// 🎖️ is reserved for Merit in the portfolio, so Historical uses ⚔️ here.
-const MODE_EMOJI: Record<PortfolioMode, string> = {
-  Roleplay: "🎭",
-  Historical: "⚔️",
-};
-
 const STATUS_STYLE: Record<StandingStatus, { label: string; className: string }> = {
-  clear: { label: "🟢 Clear", className: "text-emerald-300" },
-  banned: { label: "🔴 Banned", className: "text-rose-300" },
+  clear: { label: "Clear", className: "text-emerald-300" },
+  banned: { label: "Banned", className: "text-rose-300" },
 };
 
 function formatDate(epochSec: number): string {
@@ -105,7 +100,7 @@ export default function PlayerPortfolioModal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[2000] flex items-center justify-center bg-ink-950/70 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[2000] flex items-center justify-center bg-ink-950/70 p-4"
       onPointerDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
@@ -113,9 +108,7 @@ export default function PlayerPortfolioModal({
       <div
         role="dialog"
         aria-label={`Portfolio of ${name}`}
-        className={`gm-fade-up flex max-h-[min(90vh,880px)] w-full max-w-xl flex-col overflow-hidden rounded-2xl border bg-ink-900 shadow-2xl ${
-          anyBanned ? "border-rose-500/50" : "border-ink-700"
-        }`}
+        className={`gm-fade-up flex max-h-[min(90vh,880px)] w-full max-w-xl flex-col overflow-hidden gm-cut [--cut:12px] border bg-ink-900 shadow-2xl ${ anyBanned ? "border-rose-500/50" : "border-ink-700" }`}
       >
         <header className="flex items-center gap-3 border-b border-ink-800 px-5 py-4">
           <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full bg-ink-800">
@@ -123,28 +116,28 @@ export default function PlayerPortfolioModal({
               // eslint-disable-next-line @next/next/no-img-element
               <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
             ) : (
-              <div className="flex h-full w-full items-center justify-center text-lg font-black text-ink-300">
+              <div className="flex h-full w-full items-center justify-center text-lg font-bold text-ink-300">
                 {name.charAt(0).toUpperCase()}
               </div>
             )}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-brand-300">📊 Player career report</p>
-            <p className="truncate text-lg font-black text-white">{name}</p>
+            <p className="text-xs font-semibold text-brand-300">Player career report</p>
+            <p className="truncate text-lg font-bold text-ink-100">{name}</p>
             {handle && <p className="truncate text-xs text-ink-400">@{handle}</p>}
           </div>
           <a
             href={`/database?player=${userId}`}
-            className="rounded-lg border border-brand-400/40 bg-brand-400/10 px-2.5 py-1.5 text-xs font-bold text-brand-200 hover:bg-brand-400/20"
+            className="gm-cut [--cut:7px] border border-brand-400/40 bg-brand-400/10 px-2.5 py-1.5 text-xs font-bold text-brand-200 hover:bg-brand-400/20"
             title="Give or take commends, warnings, bans and Dishonored"
           >
-            🗂️ Moderate
+            Moderate
           </a>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close portfolio"
-            className="rounded-lg px-2.5 py-1.5 text-sm text-ink-400 hover:bg-ink-800 hover:text-white"
+            className="gm-cut [--cut:7px] px-2.5 py-1.5 text-sm text-ink-400 hover:bg-ink-800 hover:text-ink-100"
           >
             ✕
           </button>
@@ -153,7 +146,7 @@ export default function PlayerPortfolioModal({
         <div className="roster-scroll flex-1 space-y-4 overflow-y-auto px-5 py-4">
           {!portfolio && !error && <p className="text-sm text-ink-400">Loading report…</p>}
           {error && (
-            <p className="rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">{error}</p>
+            <p className="gm-cut [--cut:7px] border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">{error}</p>
           )}
           {portfolio && <PortfolioBody portfolio={portfolio} />}
         </div>
@@ -177,17 +170,15 @@ export function PortfolioBody({ portfolio, playerView = false }: { portfolio: Pl
       {/* Career summary */}
       <section className="grid grid-cols-2 gap-2">
         <Tile label="Total games">
-          <p className="text-2xl font-black text-white">{portfolio.total_games}</p>
+          <p className="text-2xl font-bold text-ink-100">{portfolio.total_games}</p>
         </Tile>
         <Tile label="Games attended">
-          <p className="text-2xl font-black text-white">{portfolio.attended}</p>
+          <p className="text-2xl font-bold text-ink-100">{portfolio.attended}</p>
           <p className="pr-14 text-[10px] text-ink-500" title="Games whose attendance has been taken">
             of {portfolio.attendance_tracked} tracked
           </p>
           <span
-            className={`absolute bottom-2 right-3 text-lg font-black ${
-              attendancePercent === null ? "text-ink-500" : percentTone(attendancePercent)
-            }`}
+            className={`absolute bottom-2 right-3 text-lg font-bold ${ attendancePercent === null ? "text-ink-500" : percentTone(attendancePercent) }`}
             title="Attendance rate"
           >
             {attendancePercent === null ? "—" : `${attendancePercent}%`}
@@ -198,24 +189,24 @@ export function PortfolioBody({ portfolio, playerView = false }: { portfolio: Pl
       {/* Mode standings */}
       <section>
         <SectionTitle>Mode standings</SectionTitle>
-        <div className="overflow-hidden rounded-xl border border-ink-800">
+        <div className="overflow-hidden gm-cut [--cut:9px] border border-ink-800">
           {portfolio.standings.map((standing) => (
             <StandingRow key={standing.mode} standing={standing} />
           ))}
           <div className="flex items-center gap-3 bg-ink-950/40 px-3 py-2 text-sm">
-            <span className="w-28 font-bold text-ink-100">🎖️ Merit</span>
+            <span className="flex w-28 items-center gap-1.5 font-bold text-ink-100"><Medal aria-hidden className="h-4 w-4 text-yellow-300" />Merit</span>
             <span className="flex-1 text-xs text-ink-400">
               {portfolio.hearts_of_valor ? "Hearts of Valor earned" : "Shared across all modes"}
             </span>
-            <span className="text-xs font-semibold text-ink-300" title="Merit points">
-              🎖️ {portfolio.merit_points}
+            <span className="inline-flex items-center gap-1 text-xs font-semibold text-ink-300" title="Merit points">
+              <Medal aria-hidden className="h-3.5 w-3.5" />{portfolio.merit_points}
             </span>
           </div>
         </div>
       </section>
 
       {/* Road to Trusted */}
-      <RoadCard title="🛡️ Road to Trusted" hint={`${portfolio.trusted[0]?.required ?? 5} commends, Verified role, no game ban`}>
+      <RoadCard title="Road to Trusted" hint={`${portfolio.trusted[0]?.required ?? 5} commends, Verified role, no game ban`}>
         {portfolio.trusted.map((road) => (
           <TrustedRow key={road.mode} road={road} />
         ))}
@@ -223,7 +214,7 @@ export function PortfolioBody({ portfolio, playerView = false }: { portfolio: Pl
 
       {/* Road to Valor */}
       <RoadCard
-        title="🎖️ Road to Valor"
+        title="Road to Valor"
         hint={`${portfolio.merit_rules.valor_merit} Merit + ${portfolio.merit_rules.valor_attended} attended games · no current warning`}
         badge={portfolio.hearts_of_valor ? "Earned" : null}
       >
@@ -250,7 +241,7 @@ export function PortfolioBody({ portfolio, playerView = false }: { portfolio: Pl
       </RoadCard>
 
       {/* Road to Ban */}
-      <RoadCard title="⚠️ Road to Ban" hint={`${portfolio.bans[0]?.limit ?? 3} warnings in a mode = automatic game ban`}>
+      <RoadCard title="Road to ban" hint={`${portfolio.bans[0]?.limit ?? 3} warnings in a mode = automatic game ban`}>
         {portfolio.bans.map((road) => (
           <BanRow key={road.mode} road={road} />
         ))}
@@ -258,8 +249,8 @@ export function PortfolioBody({ portfolio, playerView = false }: { portfolio: Pl
 
       {/* Only when active */}
       {portfolio.dishonored.length > 0 && (
-        <section className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-3 py-2.5">
-          <SectionTitle>⚖️ Dishonored title — active</SectionTitle>
+        <section className="gm-cut [--cut:9px] border border-rose-500/40 bg-rose-500/10 px-3 py-2.5">
+          <SectionTitle>Dishonored title, active</SectionTitle>
           <div className="space-y-2.5">
             {portfolio.dishonored.map((entry) => (
               <DishonoredDetails key={entry.category} entry={entry} />
@@ -268,8 +259,8 @@ export function PortfolioBody({ portfolio, playerView = false }: { portfolio: Pl
         </section>
       )}
       {portfolio.game_bans.length > 0 && (
-        <section className="rounded-xl border border-rose-500/50 bg-rose-500/10 px-3 py-2.5">
-          <SectionTitle>🔴 Game banned</SectionTitle>
+        <section className="gm-cut [--cut:9px] border border-rose-500/50 bg-rose-500/10 px-3 py-2.5">
+          <SectionTitle>Game banned</SectionTitle>
           <div className="space-y-2.5">
             {portfolio.game_bans.map((ban) => (
               <GameBanDetails key={ban.mode} ban={ban} playerView={playerView} />
@@ -281,8 +272,8 @@ export function PortfolioBody({ portfolio, playerView = false }: { portfolio: Pl
       {/* Moderation log (moderation_events) */}
       {portfolio.events.length > 0 && (
         <section>
-          <SectionTitle>📜 Moderation history (latest 20)</SectionTitle>
-          <ul className="overflow-hidden rounded-xl border border-ink-800">
+          <SectionTitle>Moderation history (latest 20)</SectionTitle>
+          <ul className="overflow-hidden gm-cut [--cut:9px] border border-ink-800">
             {portfolio.events.map((event, index) => (
               <EventRow key={`${event.created_at}-${event.action}-${index}`} event={event} playerView={playerView} />
             ))}
@@ -292,18 +283,18 @@ export function PortfolioBody({ portfolio, playerView = false }: { portfolio: Pl
 
       {/* Recent games */}
       <section>
-        <SectionTitle>🎮 Recent game history (latest 20)</SectionTitle>
+        <SectionTitle>Recent games (latest 20)</SectionTitle>
         {portfolio.history.length === 0 ? (
           <p className="text-sm text-ink-500">No game history recorded.</p>
         ) : (
-          <ul className="overflow-hidden rounded-xl border border-ink-800">
+          <ul className="overflow-hidden gm-cut [--cut:9px] border border-ink-800">
             {portfolio.history.map((game) => (
               <li
                 key={game.thread_id}
                 className="flex items-center gap-2.5 border-b border-ink-800 bg-ink-950/40 px-3 py-1.5 text-xs last:border-b-0"
               >
                 <span title={game.present === null ? "Attendance not taken yet" : game.present ? "Showed up" : "No-show"}>
-                  {game.present === null ? "⏳" : game.present ? "✅" : "❌"}
+                  {game.present === null ? <Clock aria-hidden className="h-3.5 w-3.5 text-ink-400" /> : game.present ? <Check aria-hidden className="h-3.5 w-3.5 text-emerald-300" strokeWidth={2.5} /> : <X aria-hidden className="h-3.5 w-3.5 text-rose-300" strokeWidth={2.5} />}
                 </span>
                 <span className="min-w-0 flex-1 truncate font-bold text-ink-100">{game.nation}</span>
                 <span className="max-w-[40%] truncate text-ink-400">{game.mode}</span>
@@ -318,13 +309,13 @@ export function PortfolioBody({ portfolio, playerView = false }: { portfolio: Pl
 }
 
 function SectionTitle({ children }: { children: ReactNode }) {
-  return <h3 className="mb-1.5 text-[11px] font-black uppercase tracking-wider text-ink-400">{children}</h3>;
+  return <h3 className="mb-1.5 text-xs font-semibold text-ink-400">{children}</h3>;
 }
 
 function Tile({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="relative rounded-xl border border-ink-800 bg-ink-950/50 px-3 py-2.5">
-      <p className="text-[10px] font-bold uppercase tracking-wider text-ink-500">{label}</p>
+    <div className="relative gm-cut [--cut:9px] border border-ink-800 bg-ink-950/50 px-3 py-2.5">
+      <p className="text-xs font-semibold text-ink-500">{label}</p>
       {children}
     </div>
   );
@@ -334,13 +325,13 @@ function StandingRow({ standing }: { standing: ModeStanding }) {
   const status = STATUS_STYLE[standing.status];
   return (
     <div className="flex items-center gap-3 border-b border-ink-800 bg-ink-950/40 px-3 py-2 text-sm">
-      <span className="w-28 font-bold text-ink-100">
-        {MODE_EMOJI[standing.mode]} {standing.mode}
+      <span className="flex w-28 items-center gap-1.5 font-bold text-ink-100">
+        <ModeIcon mode={standing.mode} className="h-4 w-4 shrink-0 text-ink-300" /> {standing.mode}
       </span>
       <span className={`flex-1 text-xs font-bold ${status.className}`}>{status.label}</span>
-      <span className="text-xs font-semibold text-ink-300" title="Commends">⭐ {standing.commends}</span>
+      <span className="text-xs font-semibold text-ink-300" title="Commends"><Star aria-hidden className="mr-1 inline h-3.5 w-3.5 text-emerald-300" />{standing.commends}</span>
       <span className="w-10 text-right text-xs font-semibold text-ink-300" title="Warnings">
-        ⚠️ {standing.warns}
+        <TriangleAlert aria-hidden className="mr-1 inline h-3.5 w-3.5 text-yellow-300" />{standing.warns}
       </span>
     </div>
   );
@@ -358,11 +349,11 @@ function RoadCard({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-xl border border-ink-800 bg-ink-950/40 px-3 py-2.5">
+    <section className="gm-cut [--cut:9px] border border-ink-800 bg-ink-950/40 px-3 py-2.5">
       <div className="flex items-center gap-2">
-        <h3 className="text-[11px] font-black uppercase tracking-wider text-ink-300">{title}</h3>
+        <h3 className="text-xs font-semibold text-ink-300">{title}</h3>
         {badge && (
-          <span className="rounded-md bg-brand-400/15 px-1.5 py-0.5 text-[10px] font-black uppercase text-brand-300">
+          <span className="gm-cut [--cut:5px] bg-brand-400/15 px-1.5 py-0.5 text-[10px] font-bold uppercase text-brand-300">
             {badge}
           </span>
         )}
@@ -411,15 +402,15 @@ function TrustedRow({ road }: { road: TrustedRoad }) {
   return (
     <div>
       <div className="mb-1 flex items-center justify-between text-[11px] font-semibold">
-        <span className="text-ink-300">
-          {MODE_EMOJI[road.mode]} {road.mode}
+        <span className="flex items-center gap-1.5 text-ink-300">
+          <ModeIcon mode={road.mode} className="h-4 w-4 shrink-0 text-ink-300" /> {road.mode}
         </span>
         <span className={trusted ? "text-emerald-300" : "text-ink-400"}>
           {trusted ? (
             "✓ Trusted"
           ) : (
             <>
-              ⭐ {road.commends}/{road.required}
+              <Star aria-hidden className="mr-1 inline h-3.5 w-3.5" />{road.commends}/{road.required}
               {missing > 0 && <span className="text-ink-500"> · {missing} to go</span>}
             </>
           )}
@@ -439,11 +430,11 @@ function BanRow({ road }: { road: BanRoad }) {
   return (
     <div>
       <div className="mb-1 flex items-center justify-between text-[11px] font-semibold">
-        <span className="text-ink-300">
-          {MODE_EMOJI[road.mode]} {road.mode}
+        <span className="flex items-center gap-1.5 text-ink-300">
+          <ModeIcon mode={road.mode} className="h-4 w-4 shrink-0 text-ink-300" /> {road.mode}
         </span>
         <span className={road.banned ? "text-rose-300" : road.warns > 0 ? "text-orange-200" : "text-ink-400"}>
-          {road.banned ? "🔴 Banned" : `⚠️ ${road.warns}/${road.limit}`}
+          {road.banned ? "Banned" : `${road.warns}/${road.limit}`}
           {!road.banned && road.warns > 0 && (
             <span className="text-ink-500"> · {road.limit - road.warns} more = ban</span>
           )}
@@ -471,10 +462,10 @@ function DishonoredDetails({ entry }: { entry: DishonoredRestriction }) {
     .filter(Boolean)
     .join("; ");
   return (
-    <div className="space-y-0.5 rounded-lg bg-ink-950/40 px-2.5 py-2">
+    <div className="space-y-0.5 gm-cut [--cut:7px] bg-ink-950/40 px-2.5 py-2">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-xs font-black text-white">
-          {MODE_EMOJI[entry.category as PortfolioMode] ?? "⚖️"} {entry.category}
+        <p className="flex items-center gap-1.5 text-xs font-bold text-ink-100">
+          <ModeIcon mode={entry.category} className="h-4 w-4 shrink-0 text-ink-300" /> {entry.category}
         </p>
         <LogLink url={entry.log_url} />
       </div>
@@ -497,20 +488,20 @@ function LogLink({ url }: { url: string | null | undefined }) {
       href={url}
       target="_blank"
       rel="noreferrer"
-      className="shrink-0 rounded-md border border-ink-700 px-1.5 py-0.5 text-[10px] font-bold text-sky-300 hover:border-sky-400/60 hover:text-sky-200"
+      className="shrink-0 gm-cut [--cut:5px] border border-ink-700 px-1.5 py-0.5 text-[10px] font-bold text-sky-300 hover:border-sky-400/60 hover:text-sky-200"
       title="Open the host-log message in Discord"
     >
-      Log ↗
+      Log
     </a>
   );
 }
 
 function GameBanDetails({ ban, playerView }: { ban: GameBanInfo; playerView: boolean }) {
   return (
-    <div className="space-y-0.5 rounded-lg bg-ink-950/40 px-2.5 py-2">
+    <div className="space-y-0.5 gm-cut [--cut:7px] bg-ink-950/40 px-2.5 py-2">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-xs font-black text-white">
-          {MODE_EMOJI[ban.mode]} {ban.mode}
+        <p className="flex items-center gap-1.5 text-xs font-bold text-ink-100">
+          <ModeIcon mode={ban.mode} className="h-4 w-4 shrink-0 text-ink-300" /> {ban.mode}
         </p>
         <LogLink url={ban.log_url} />
       </div>

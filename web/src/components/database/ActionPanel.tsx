@@ -1,6 +1,7 @@
 "use client";
 
-import { Check } from "lucide-react";
+import { Ban, Check, Gavel, Medal, Scale, Star, TriangleAlert, Undo2, X, type LucideIcon } from "lucide-react";
+import { CardTitle } from "@/components/games/labels";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   DISHONORED_MAX_DAYS,
@@ -41,12 +42,12 @@ import { useModerationRequest, type ModerationRequest } from "./useModerationReq
 type Tab = "give" | "take" | "redeem";
 type ActionType = ModerationKind | "dishonored";
 
-const TYPE_LABEL: Record<ActionType, { label: string; icon: string; noun: string }> = {
-  commend: { label: "Commend", icon: "⭐", noun: "commend" },
-  merit: { label: "Merit", icon: "🎖️", noun: "Merit" },
-  warn: { label: "Warning", icon: "⚠️", noun: "warning" },
-  dishonored: { label: "Dishonor", icon: "⚖️", noun: "Dishonored" },
-  ban: { label: "Game ban", icon: "🔴", noun: "game ban" },
+const TYPE_LABEL: Record<ActionType, { label: string; icon: LucideIcon; noun: string }> = {
+  commend: { label: "Commend", icon: Star, noun: "commend" },
+  merit: { label: "Merit", icon: Medal, noun: "Merit" },
+  warn: { label: "Warning", icon: TriangleAlert, noun: "warning" },
+  dishonored: { label: "Dishonor", icon: Scale, noun: "Dishonored" },
+  ban: { label: "Game ban", icon: Ban, noun: "game ban" },
 };
 
 const QUICK_REASONS: Record<string, string[]> = {
@@ -113,7 +114,7 @@ function previewFor(
     if (amount > warns) return fail(`Only ${plural(warns, "warning")} to clear.`);
     if (amount > commends) return fail(`Only ${plural(commends, "commend")} to spend.`);
     lines.push(`${mode} commends ${commends} → ${commends - amount}`, `${mode} warnings ${warns} → ${warns - amount}`);
-    if (banned && warns >= WARN_BAN_LIMIT && warns - amount < WARN_BAN_LIMIT) lines.push("✅ Lifts the automatic game ban");
+    if (banned && warns >= WARN_BAN_LIMIT && warns - amount < WARN_BAN_LIMIT) lines.push("Lifts the automatic game ban");
     if (commends >= TRUSTED_COMMENDS && commends - amount < TRUSTED_COMMENDS && trusted?.has_role) {
       lines.push(`Drops below ${TRUSTED_COMMENDS} commends — loses ${mode} Trusted${mode === "Roleplay" ? " (unless VIP / Valor)" : ""}`);
     }
@@ -135,7 +136,7 @@ function previewFor(
           ? "Meets Hearts of Valor, but not while game banned"
           : warned
             ? "Meets Hearts of Valor, but a current warning holds it back — they'll be told to open a ticket"
-            : "🎖️ Unlocks Hearts of Valor — they get the perks DM and pick a Trusted role for the host team to approve",
+            : "Unlocks Hearts of Valor — they get the perks DM and pick a Trusted role for the host team to approve",
       );
     }
     if (valorNow && !valorNext) lines.push("Loses Hearts of Valor (and the Trusted role it came with)");
@@ -151,7 +152,7 @@ function previewFor(
           bannedAnywhere
             ? `Reaches ${TRUSTED_COMMENDS}, but game-banned players can't get Trusted`
             : trusted?.verified
-              ? `🛡️ Reaches ${TRUSTED_COMMENDS} — ${mode} Trusted will be granted`
+              ? `Reaches ${TRUSTED_COMMENDS} — ${mode} Trusted will be granted`
               : `Reaches ${TRUSTED_COMMENDS}, but Trusted needs the Verified role`,
         );
       }
@@ -159,14 +160,14 @@ function previewFor(
     } else if (kind === "warn") {
       lines.push(`${mode} warnings ${warns} → ${warns + amount}`);
       if (!banned && warns + amount >= WARN_BAN_LIMIT) {
-        lines.push(`🔴 Reaches ${WARN_BAN_LIMIT} — automatic ${mode} game ban`, ...banWipeLines(mode, commends, merit));
+        lines.push(`Reaches ${WARN_BAN_LIMIT} — automatic ${mode} game ban`, ...banWipeLines(mode, commends, merit));
         danger = true;
       } else if (commends > 0) {
         lines.push(`Commends stay at ${commends}`);
       }
     } else if (kind === "ban") {
       if (banned) return fail(`Already ${mode} game banned.`);
-      lines.push(`🔴 ${mode} game ban — lasts until lifted`, ...banWipeLines(mode, commends, merit));
+      lines.push(`${mode} game ban — lasts until lifted`, ...banWipeLines(mode, commends, merit));
       danger = true;
     }
     return { lines, error: null, danger };
@@ -182,11 +183,11 @@ function previewFor(
   } else if (kind === "warn") {
     if (amount > warns) return fail(`Only ${plural(warns, "warning")}.`);
     lines.push(`${mode} warnings ${warns} → ${warns - amount} (free — no commends spent)`);
-    if (banned && warns >= WARN_BAN_LIMIT && warns - amount < WARN_BAN_LIMIT) lines.push("✅ Lifts the automatic game ban");
+    if (banned && warns >= WARN_BAN_LIMIT && warns - amount < WARN_BAN_LIMIT) lines.push("Lifts the automatic game ban");
     if (banned && warns < WARN_BAN_LIMIT) lines.push("The manual game ban stays — remove it with Take → Game ban");
   } else if (kind === "ban") {
     if (!banned) return fail(`Not ${mode} game banned.`);
-    lines.push(`✅ Lifts the ${mode} game ban`, "Wiped commends and Merit don't come back");
+    lines.push(`Lifts the ${mode} game ban`, "Wiped commends and Merit don't come back");
     if (warns >= WARN_BAN_LIMIT) lines.push(`Still has ${warns} warnings — consider clearing some too`);
   }
   return { lines, error: null, danger };
@@ -263,7 +264,7 @@ export default function ActionPanel({
   if (isSelf) {
     return (
       <PanelShell>
-        <p className="text-sm text-ink-300">🪞 This is your own record — another host has to moderate you.</p>
+        <p className="text-sm text-ink-300">This is your own record. Another host has to moderate you.</p>
       </PanelShell>
     );
   }
@@ -294,9 +295,9 @@ export default function ActionPanel({
           if (state.phase === "error") reset();
         }}
         options={[
-          { value: "give", label: "➕ Give" },
-          { value: "take", label: "➖ Take" },
-          { value: "redeem", label: "♻️ Redeem" },
+          { value: "give", label: "Give" },
+          { value: "take", label: "Take" },
+          { value: "redeem", label: "Redeem" },
         ]}
       />
 
@@ -310,13 +311,9 @@ export default function ActionPanel({
                   type="button"
                   aria-pressed={type === value}
                   onClick={() => setType(value)}
-                  className={`rounded-lg border px-1 py-2 text-center text-[11px] font-bold transition ${
-                    type === value
-                      ? "border-brand-300 bg-brand-400/15 text-brand-100"
-                      : "border-white/10 bg-white/[0.03] text-ink-300 hover:border-white/25"
-                  }`}
+                  className={`gm-cut [--cut:7px] border px-1 py-2 text-center text-[11px] font-bold transition ${ type === value ? "border-brand-300 bg-brand-400/15 text-brand-100" : "border-ink-800 bg-ink-950 text-ink-300 hover:border-ink-600" }`}
                 >
-                  <span className="block text-base">{TYPE_LABEL[value].icon}</span>
+                  <TypeIcon type={value} />
                   {TYPE_LABEL[value].label}
                 </button>
               ))}
@@ -345,10 +342,16 @@ export default function ActionPanel({
   );
 }
 
+function TypeIcon({ type }: { type: keyof typeof TYPE_LABEL }) {
+  const Icon = TYPE_LABEL[type].icon;
+  return <Icon aria-hidden className="mx-auto mb-1 block h-[18px] w-[18px]" strokeWidth={1.75} />;
+}
+
 function PanelShell({ children }: { children: ReactNode }) {
   return (
-    <section data-tour="database.moderate" className="rounded-2xl border border-brand-400/25 bg-ink-950/70 p-4 shadow-xl shadow-black/30">
-      <h2 className="mb-3 text-[11px] font-black uppercase tracking-[0.18em] text-brand-300">🛠️ Moderate</h2>
+    <section data-tour="database.moderate" className="min-w-0">
+      <CardTitle icon={Gavel} title="Moderate" />
+      <div className="mb-3" />
       {children}
     </section>
   );
@@ -371,7 +374,7 @@ export function AmountStepper({ value, max, onChange }: { value: number; max: nu
       <button
         type="button"
         onClick={() => onChange(clamp(value - 1))}
-        className="h-9 w-9 rounded-lg border border-white/10 bg-white/5 text-lg text-ink-200 hover:border-brand-300/50"
+        className="h-9 w-9 gm-cut [--cut:7px] border border-ink-800 bg-ink-800 text-lg text-ink-200 hover:border-brand-300/50"
         aria-label="Less"
       >
         −
@@ -382,13 +385,13 @@ export function AmountStepper({ value, max, onChange }: { value: number; max: nu
         max={max}
         value={value}
         onChange={(event) => onChange(clamp(Number(event.target.value) || 1))}
-        className="h-9 w-16 rounded-lg border border-white/10 bg-ink-900/80 text-center text-sm font-bold text-white [color-scheme:dark] focus:border-brand-300/50 focus:outline-none"
+        className="h-9 w-16 gm-cut [--cut:7px] border border-ink-800 bg-ink-900/80 text-center text-sm font-bold text-ink-100 [color-scheme:dark] focus:border-brand-300/50 focus:outline-none"
         aria-label="Amount"
       />
       <button
         type="button"
         onClick={() => onChange(clamp(value + 1))}
-        className="h-9 w-9 rounded-lg border border-white/10 bg-white/5 text-lg text-ink-200 hover:border-brand-300/50"
+        className="h-9 w-9 gm-cut [--cut:7px] border border-ink-800 bg-ink-800 text-lg text-ink-200 hover:border-brand-300/50"
         aria-label="More"
       >
         +
@@ -449,7 +452,7 @@ function GameSelect({
       <select
         value={value ?? ""}
         onChange={(event) => onChange(event.target.value || null)}
-        className="w-full rounded-lg border border-white/10 bg-ink-900/80 px-3 py-2 text-sm text-ink-100 [color-scheme:dark] focus:border-brand-300/50 focus:outline-none"
+        className="gm-input w-full text-sm"
       >
         <option value="">Not game related</option>
         {games.map((game) => (
@@ -471,8 +474,8 @@ function ModePicker({ value, onChange }: { value: PortfolioMode; onChange: (mode
         value={value}
         onChange={onChange}
         options={[
-          { value: "Roleplay", label: "🎭 Roleplay" },
-          { value: "Historical", label: "⚔️ Historical" },
+          { value: "Roleplay", label: "Roleplay" },
+          { value: "Historical", label: "Historical" },
         ]}
       />
     </Field>
@@ -507,13 +510,7 @@ export function SubmitButton({
         setArmedFor(null);
         onConfirm();
       }}
-      className={`gm-btn h-11 w-full [--cut:10px] ${
-        armed
-          ? "animate-pulse bg-rose-500 text-white"
-          : danger
-            ? "bg-rose-500/90 text-white hover:bg-rose-500"
-            : "gm-btn-primary"
-      }`}
+      className={`gm-btn h-11 w-full [--cut:10px] ${ armed ? "animate-pulse bg-rose-500 text-ink-100" : danger ? "bg-rose-500/90 text-ink-100 hover:bg-rose-500" : "gm-btn-primary" }`}
     >
       {busy && <Spinner className="h-4 w-4" />}
       {armed ? `Click again to confirm: ${label}` : label}
@@ -603,13 +600,13 @@ function StatForm({
   return (
     <div className="space-y-3.5">
       {op === "redeem" && (
-        <p className="rounded-lg border border-sky-400/30 bg-sky-500/10 px-3 py-2 text-xs text-sky-100">
+        <p className="gm-cut [--cut:7px] border border-sky-400/30 bg-sky-500/10 px-3 py-2 text-xs text-sky-100">
           Commends never cancel warnings on their own. Redeem spends a player&apos;s commends to clear the same number of
           warnings in that mode. To remove an <b>unjustified</b> warning for free, use <b>Take → Warning</b>.
         </p>
       )}
       {op === "give" && kind === "ban" && (
-        <p className="rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-100">
+        <p className="gm-cut [--cut:7px] border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-100">
           A game ban resets this mode&apos;s commends and all Merit to 0 and removes every positive role (Trusted, Hearts of
           Valor). For a temporary time-out that keeps their stats, use <b>Dishonor</b> instead.
         </p>
@@ -743,15 +740,15 @@ function DishonorForm({
 
   return (
     <div className="space-y-3.5">
-      <p className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-ink-300">
-        ⚖️ A time-out: blocks the chosen nations for a while and leaves all stats and roles untouched.
+      <p className="gm-cut [--cut:7px] border border-ink-800 bg-ink-950 px-3 py-2 text-xs text-ink-300">
+        A time-out: blocks the chosen nations for a while and leaves all stats and roles untouched.
       </p>
 
       <ModePicker value={mode} onChange={changeMode} />
 
       {active && (
-        <div className="rounded-lg border border-rose-400/40 bg-rose-500/10 px-3 py-2 text-xs text-rose-50">
-          <p className="font-black">Already Dishonored in {mode}</p>
+        <div className="gm-cut [--cut:7px] border border-rose-400/40 bg-rose-500/10 px-3 py-2 text-xs text-rose-50">
+          <p className="font-bold">Already Dishonored in {mode}</p>
           <p className="opacity-90">
             {restrictionText(active)}
             {active.expires_at ? ` · until ${formatDate(active.expires_at)}` : ""}
@@ -760,7 +757,7 @@ function DishonorForm({
       )}
 
       {!options && (
-        <p className="rounded-lg border border-brand-400/30 bg-brand-500/10 px-3 py-2 text-xs text-brand-100">
+        <p className="gm-cut [--cut:7px] border border-brand-400/30 bg-brand-500/10 px-3 py-2 text-xs text-brand-100">
           The bot hasn&apos;t published its nation lists yet (restart it with the latest code). You can still Dishonor from
           <b> All Majors</b>.
         </p>
@@ -776,11 +773,7 @@ function DishonorForm({
                 key={name}
                 type="button"
                 onClick={() => setMajors((current) => toggle(current, name))}
-                className={`rounded-md border px-2 py-1 text-[11px] font-semibold ${
-                  majors.includes(name)
-                    ? "border-rose-300 bg-rose-500/25 text-rose-50"
-                    : "border-white/10 bg-white/[0.03] text-ink-300 hover:border-white/25"
-                }`}
+                className={`gm-cut [--cut:5px] border px-2 py-1 text-[11px] font-semibold ${ majors.includes(name) ? "border-rose-300 bg-rose-500/25 text-rose-50" : "border-ink-800 bg-ink-950 text-ink-300 hover:border-ink-600" }`}
               >
                 {name}
               </button>
@@ -798,10 +791,10 @@ function DishonorForm({
                   key={name}
                   type="button"
                   onClick={() => setMinors((current) => current.filter((entry) => entry !== name))}
-                  className="rounded-md border border-rose-300 bg-rose-500/25 px-2 py-1 text-[11px] font-semibold text-rose-50"
+                  className="gm-cut [--cut:5px] border border-rose-300 bg-rose-500/25 px-2 py-1 text-[11px] font-semibold text-rose-50"
                   title="Remove"
                 >
-                  {name} ✕
+                  {name} <X aria-hidden className="h-3.5 w-3.5" />
                 </button>
               ))}
             </div>
@@ -809,8 +802,8 @@ function DishonorForm({
           <input
             value={minorQuery}
             onChange={(event) => setMinorQuery(event.target.value)}
-            placeholder="🔎 Find a minor nation"
-            className="w-full rounded-lg border border-white/10 bg-ink-900/80 px-3 py-1.5 text-xs text-ink-100 placeholder:text-ink-500 focus:border-brand-300/50 focus:outline-none"
+            placeholder="Find a minor nation"
+            className="gm-input w-full text-xs"
           />
           <div className="flex max-h-28 flex-wrap gap-1 overflow-y-auto">
             {minorMatches.map((name) => (
@@ -818,7 +811,7 @@ function DishonorForm({
                 key={name}
                 type="button"
                 onClick={() => setMinors((current) => [...current, name])}
-                className="rounded-md border border-white/10 bg-white/[0.03] px-2 py-0.5 text-[11px] text-ink-300 hover:border-white/25"
+                className="gm-cut [--cut:5px] border border-ink-800 bg-ink-950 px-2 py-0.5 text-[11px] text-ink-300 hover:border-ink-600"
               >
                 + {name}
               </button>
@@ -848,11 +841,7 @@ function DishonorForm({
               key={preset.days}
               type="button"
               onClick={() => setDays(preset.days)}
-              className={`rounded-md border px-2 py-0.5 text-[11px] font-bold ${
-                days === preset.days
-                  ? "border-brand-300 bg-brand-400/20 text-brand-100"
-                  : "border-white/10 text-ink-300 hover:border-white/25"
-              }`}
+              className={`gm-cut [--cut:5px] border px-2 py-0.5 text-[11px] font-bold ${ days === preset.days ? "border-brand-300 bg-brand-400/20 text-brand-100" : "border-ink-800 text-ink-300 hover:border-ink-600" }`}
             >
               {preset.label}
             </button>
@@ -864,7 +853,7 @@ function DishonorForm({
               max={DISHONORED_MAX_DAYS}
               value={days}
               onChange={(event) => setDaysClamped(Number(event.target.value))}
-              className="h-7 w-14 rounded-md border border-white/10 bg-ink-900/80 text-center text-xs font-bold text-white [color-scheme:dark] focus:outline-none"
+              className="h-7 w-14 gm-cut [--cut:5px] border border-ink-800 bg-ink-900/80 text-center text-xs font-bold text-ink-100 [color-scheme:dark] focus:outline-none"
               aria-label="Exact number of days"
             />
             days
@@ -941,7 +930,7 @@ function LiftDishonorForm({
   const entry = active.find((item) => item.category === picked) ?? active[0] ?? null;
 
   if (!entry) {
-    return <p className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-ink-300">No active Dishonored restriction to lift.</p>;
+    return <p className="gm-cut [--cut:7px] border border-ink-800 bg-ink-950 px-3 py-2 text-xs text-ink-300">No active Dishonored restriction to lift.</p>;
   }
   const reasonOk = reason.trim().length >= MIN_REASON_LENGTH;
 
@@ -954,13 +943,9 @@ function LiftDishonorForm({
               key={item.category}
               type="button"
               onClick={() => setPicked(item.category)}
-              className={`block w-full rounded-lg border px-3 py-2 text-left text-xs ${
-                item.category === entry.category
-                  ? "border-rose-300 bg-rose-500/15 text-rose-50"
-                  : "border-white/10 bg-white/[0.03] text-ink-300 hover:border-white/25"
-              }`}
+              className={`block w-full gm-cut [--cut:7px] border px-3 py-2 text-left text-xs ${ item.category === entry.category ? "border-rose-300 bg-rose-500/15 text-rose-50" : "border-ink-800 bg-ink-950 text-ink-300 hover:border-ink-600" }`}
             >
-              <span className="font-black">⚖️ {item.category}</span> — {restrictionText(item)}
+              <span className="font-bold">{item.category}</span> — {restrictionText(item)}
               {item.expires_at ? <span className="opacity-75"> · until {formatDate(item.expires_at)}</span> : null}
             </button>
           ))}
@@ -1027,7 +1012,7 @@ export function ResultBox({
   if (state.phase === "idle") return null;
   if (state.phase === "sending" || state.phase === "waiting") {
     return (
-      <div className="mt-4 flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-xs text-ink-300">
+      <div className="mt-4 flex items-center gap-2 gm-cut [--cut:9px] border border-ink-800 bg-ink-950 px-3 py-2.5 text-xs text-ink-300">
         <Spinner className="h-4 w-4 text-brand-300" />
         {state.phase === "sending" ? "Sending…" : "The bot is applying it (roles, DM, audit log)…"}
       </div>
@@ -1035,7 +1020,7 @@ export function ResultBox({
   }
   if (state.phase === "error") {
     return (
-      <div className="mt-4 rounded-xl border border-rose-400/40 bg-rose-500/10 px-3 py-2.5 text-xs text-rose-100">
+      <div className="mt-4 gm-cut [--cut:9px] border border-rose-400/40 bg-rose-500/10 px-3 py-2.5 text-xs text-rose-100">
         <div className="flex items-start gap-2">
           <span className="flex-1">{state.message}</span>
           <button type="button" onClick={onDismiss} className="opacity-60 hover:opacity-100" aria-label="Dismiss">
@@ -1046,10 +1031,10 @@ export function ResultBox({
     );
   }
   return (
-    <div className="gm-fade-up mt-4 rounded-xl border border-emerald-400/40 bg-emerald-500/10 px-3 py-2.5 text-xs text-emerald-50">
+    <div className="gm-fade-up mt-4 gm-cut [--cut:9px] border border-emerald-400/40 bg-emerald-500/10 px-3 py-2.5 text-xs text-emerald-50">
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
-          <p className="font-black">✅ {state.outcome.summary}</p>
+          <p className="flex items-center gap-1.5 font-bold"><Check aria-hidden className="h-4 w-4" strokeWidth={2.5} />{state.outcome.summary}</p>
           <p className="opacity-80">{appliedNote ?? `Applied to ${playerName}. They were DMed and it's in the audit log.`}</p>
           {state.outcome.notes.length > 0 && (
             <ul className="mt-1 space-y-0.5">
@@ -1060,7 +1045,7 @@ export function ResultBox({
           )}
         </div>
         <button type="button" onClick={onDismiss} className="opacity-60 hover:opacity-100" aria-label="Dismiss">
-          ✕
+          <X aria-hidden className="h-3.5 w-3.5" />
         </button>
       </div>
       <div className="mt-2 flex flex-wrap gap-2">
@@ -1069,19 +1054,19 @@ export function ResultBox({
             href={state.outcome.log_url}
             target="_blank"
             rel="noreferrer"
-            className="rounded-md border border-emerald-300/40 px-2 py-1 font-bold hover:bg-emerald-500/20"
+            className="gm-cut [--cut:5px] border border-emerald-300/40 px-2 py-1 font-bold hover:bg-emerald-500/20"
           >
-            Log ↗
+            Log
           </a>
         )}
         {undo && (
           <button
             type="button"
             onClick={onUndo}
-            className="rounded-md border border-white/20 px-2 py-1 font-bold text-white hover:bg-white/10"
+            className="gm-cut [--cut:5px] border border-white/20 px-2 py-1 font-bold text-ink-100 hover:bg-ink-800"
             aria-label={`Undo — ${undo.label.toLowerCase()}`}
           >
-            ↶ Undo ({undo.label.toLowerCase()}) <span className="font-normal opacity-60">· 10 min</span>
+            <Undo2 aria-hidden className="h-3.5 w-3.5" />Undo ({undo.label.toLowerCase()}) <span className="font-normal opacity-60">· 10 min</span>
           </button>
         )}
       </div>

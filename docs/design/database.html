@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GameMaster Database Mock-up</title>
+<!-- Design mock-up of the Database page in the cut-plate style (docs/branding.md).
+     Not part of the app. Drawn at 1440x900 (desktop) or 390x844 (phone),
+     with the sample data of the local preview. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Big+Shoulders+Stencil+Display:wght@800&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+<style>
+  :root {
+    --ink-950: oklch(11.8% 0.009 152); --ink-900: oklch(19.2% 0.011 152); --ink-850: oklch(22.8% 0.012 152); --ink-800: oklch(26.6% 0.012 152);
+    --ink-700: oklch(36.2% 0.013 152); --ink-600: oklch(44.4% 0.014 152); --ink-500: oklch(55.4% 0.015 152); --ink-400: oklch(70.4% 0.015 152);
+    --ink-300: oklch(86.4% 0.012 152); --ink-100: oklch(96.6% 0.006 152);
+    --brand-400: oklch(76.4% 0.186 146); --brand-950: oklch(19.4% 0.046 146);
+    /* What an action means: good (mint), a warning (yellow), a sanction (red), neutral (grey). */
+    --good: oklch(79.4% 0.118 174); --warn: oklch(86% 0.15 95); --bad: oklch(70% 0.17 22); --sky: oklch(76% 0.11 235); --gold: oklch(82% 0.12 85);
+    --display: "Big Shoulders Display", "Arial Narrow", sans-serif; --stencil: "Big Shoulders Stencil Display", var(--display); --body: "Public Sans", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: oklch(8% 0.006 152); color: var(--ink-300); font: 400 14px/1.45 var(--body); font-variant-numeric: tabular-nums; display: flex; flex-direction: column; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
+  svg.lucide { width: 16px; height: 16px; stroke-width: 1.75; flex: none; }
+  .switches { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; padding: 10px 16px; border-bottom: 1px solid var(--ink-800); background: var(--ink-950); }
+  .switches h1 { margin: 0 6px 0 0; font: 800 22px/1 var(--display); text-transform: uppercase; color: var(--ink-100); }
+  .seg { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-500); }
+  .seg div { display: flex; border: 1px solid var(--ink-700); border-radius: 4px; overflow: hidden; }
+  .seg button { padding: 5px 10px; font-size: 12px; font-weight: 600; color: var(--ink-400); }
+  .seg button + button { border-left: 1px solid var(--ink-700); }
+  .seg button[aria-pressed="true"] { background: var(--ink-800); color: var(--ink-100); }
+  .seg.off { opacity: .35; pointer-events: none; }
+  .viewport { flex: 1; min-height: 0; display: grid; place-items: center; padding: 16px; overflow: hidden; }
+  .frame { position: relative; overflow: hidden; outline: 1px solid var(--ink-800); }
+  .stage { position: absolute; left: 0; top: 0; transform-origin: 0 0; overflow: hidden; background: var(--ink-950); }
+  .stage.desk { width: 1440px; height: 900px; } .stage.phone { width: 390px; height: 844px; }
+  [hidden] { display: none !important; }
+
+  .cut, .btn, .plate, .field { clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut)); }
+  .cut, .btn, .field { --cut: 8px; }
+  .plate { --cut: 14px; --line: var(--ink-800); background-color: var(--ink-900); }
+  .plate, .field, .btn-secondary, .btn-danger { border: 1px solid var(--line);
+    background-image: linear-gradient(135deg, var(--line) calc(var(--cut) * .7071 + 1px), transparent 0), linear-gradient(315deg, var(--line) calc(var(--cut) * .7071 + 1px), transparent 0); background-origin: border-box; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; height: 34px; padding: 0 13px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+  .btn-primary { background-color: var(--brand-400); color: var(--brand-950); }
+  .btn-secondary { --line: var(--ink-700); color: var(--ink-100); background-color: var(--ink-950); }
+  .btn-quiet { color: var(--ink-300); } .btn-icon { width: 32px; padding: 0; }
+  .field { --line: var(--ink-700); display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 10px; background-color: var(--ink-950); color: var(--ink-500); font-size: 13.5px; }
+  .field b { flex: 1; font-weight: 400; color: var(--ink-100); }
+  .kbd { display: grid; place-items: center; width: 20px; height: 20px; --cut: 4px; background: var(--ink-800); font-size: 11px; color: var(--ink-400); }
+  .tag { display: inline-flex; align-items: center; gap: 6px; height: 21px; padding: 0 11px; font-size: 11.5px; font-weight: 600; white-space: nowrap; clip-path: polygon(7px 0, calc(100% - 7px) 0, 100% 50%, calc(100% - 7px) 100%, 7px 100%, 0 50%); }
+  .tag svg { width: 12px; height: 12px; }
+  .dot::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .t-ink { color: var(--ink-300); background: var(--ink-800); }
+  .t-good { color: var(--good); background: color-mix(in oklab, var(--good) 15%, var(--ink-950)); }
+  .t-warn { color: var(--warn); background: color-mix(in oklab, var(--warn) 15%, var(--ink-950)); }
+  .t-bad { color: var(--bad); background: color-mix(in oklab, var(--bad) 16%, var(--ink-950)); }
+  .title { font-family: var(--display); font-weight: 800; text-transform: uppercase; line-height: .95; color: var(--ink-100); }
+  .mark { width: 30px; height: 30px; --cut: 7px; display: grid; place-items: center; background: var(--brand-400); color: var(--brand-950); font: 800 17px/1 var(--stencil); }
+  .avatar { border-radius: 50%; display: grid; place-items: center; flex: none; background: var(--ink-800); color: var(--ink-100); font-weight: 700; }
+  .small { font-size: 12px; color: var(--ink-400); } .label { margin: 0 0 6px; font-size: 12px; font-weight: 600; color: var(--ink-500); }
+  .h { display: flex; align-items: center; gap: 9px; margin: 0 0 4px; } .h .title { font-size: 22px; } .h > svg { color: var(--brand-400); width: 18px; height: 18px; } .h .right { margin-left: auto; }
+  .sub { margin: 0 0 12px; font-size: 13px; color: var(--ink-400); }
+  .card { padding: 16px; }
+
+  .top { height: 56px; display: flex; align-items: center; gap: 12px; padding: 0 20px; border-bottom: 1px solid var(--ink-800); background: var(--ink-950); }
+  .top .title { font-size: 26px; } .top small { display: block; font-size: 12px; color: var(--ink-400); }
+  .top-end { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  .nav { display: flex; align-self: stretch; } .nav a { display: flex; align-items: center; gap: 6px; padding: 0 11px; font-size: 13px; color: var(--ink-400); }
+  .nav a.on { color: var(--ink-100); box-shadow: inset 0 -3px 0 var(--brand-400); } .nav a.on svg { color: var(--brand-400); }
+  .page { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 20px; padding: 20px; height: calc(100% - 56px); }
+
+  /* list */
+  .list { padding: 12px; display: flex; flex-direction: column; overflow: hidden; }
+  .chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
+  .chip { display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 10px; --cut: 6px; background: var(--ink-950); box-shadow: inset 0 0 0 1px var(--ink-800); font-size: 12px; font-weight: 600; color: var(--ink-300); }
+  .chip svg { width: 13px; height: 13px; } .chip small { color: var(--ink-500); font-weight: 500; }
+  .chip.on { background: var(--brand-400); box-shadow: none; color: var(--brand-950); } .chip.on small { color: var(--brand-950); opacity: .7; }
+  .listbar { display: flex; align-items: center; justify-content: space-between; margin: 10px 2px 8px; }
+  .prow { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 7px 8px; --cut: 8px; margin-bottom: 3px; }
+  .prow:hover { background: var(--ink-850); }
+  .prow.on { background: oklch(21% 0.03 146); box-shadow: inset 3px 0 0 var(--brand-400); }
+  .prow strong { display: flex; align-items: center; gap: 5px; font-size: 13.5px; color: var(--ink-100); font-weight: 600; }
+  .prow strong svg { width: 13px; height: 13px; }
+  .prow small { display: block; font-size: 12px; color: var(--ink-400); }
+  .prow .games { text-align: right; font-size: 11px; color: var(--ink-500); line-height: 1.1; } .prow .games b { display: block; font: 800 18px/1 var(--display); color: var(--ink-300); }
+  .mk-trusted { color: var(--sky); } .mk-valor { color: var(--gold); } .mk-dis { color: oklch(72% 0.13 300); } .mk-ban { color: var(--bad); }
+
+  .main { min-width: 0; overflow: hidden; display: grid; gap: 14px; align-content: start; }
+  /* activity */
+  .rules { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .rule { padding: 11px 12px; --cut: 10px; background: var(--ink-950); }
+  .rule strong { display: flex; align-items: center; gap: 7px; font-size: 13.5px; color: var(--ink-100); }
+  .rule p { margin: 4px 0 0; font-size: 12px; line-height: 1.4; color: var(--ink-400); }
+  .ico { display: grid; place-items: center; flex: none; --cut: 6px; }
+  .ico svg { width: 15px; height: 15px; }
+  .i-good { color: var(--good); background: color-mix(in oklab, var(--good) 14%, var(--ink-950)); }
+  .i-warn { color: var(--warn); background: color-mix(in oklab, var(--warn) 14%, var(--ink-950)); }
+  .i-bad { color: var(--bad); background: color-mix(in oklab, var(--bad) 15%, var(--ink-950)); }
+  .i-ink { color: var(--ink-300); background: var(--ink-800); }
+  .feed { margin-top: 12px; }
+  .frow { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 12px; padding: 10px 2px; border-top: 1px solid var(--ink-800); }
+  .frow .ico { width: 28px; height: 28px; }
+  .frow p { margin: 0; font-size: 13.5px; color: var(--ink-300); } .frow b { color: var(--ink-100); font-weight: 600; }
+  .frow em { display: block; font-style: italic; font-size: 12.5px; color: var(--ink-400); margin-top: 2px; }
+  .frow small { display: flex; align-items: center; gap: 6px; margin-top: 3px; font-size: 12px; color: var(--ink-500); }
+  .frow small a { color: var(--sky); }
+  .rolecheck { display: grid; grid-template-columns: 1fr auto; gap: 14px; align-items: center; }
+
+  /* record */
+  .rhead { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 16px 18px; }
+  .rhead.flag { box-shadow: inset 3px 0 0 var(--bad); }
+  .rhead .title { font-size: 32px; }
+  .rhead .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 4px; font-size: 13px; color: var(--ink-400); }
+  .mono { font-family: ui-monospace, monospace; font-size: 12px; color: var(--ink-500); }
+  .roles { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; grid-column: 2 / -1; }
+  .rtag { display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 9px; --cut: 5px; background: var(--ink-950); box-shadow: inset 0 0 0 1px var(--ink-800); font-size: 12px; color: var(--ink-300); }
+  .rtag i { width: 8px; height: 8px; border-radius: 50%; }
+  .rgrid { display: grid; grid-template-columns: minmax(0, 1fr) 410px; gap: 14px; align-items: start; }
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stat { padding: 11px 12px; --cut: 10px; background: var(--ink-950); }
+  .stat span { display: block; font-size: 12px; color: var(--ink-400); } .stat strong { display: block; margin-top: 3px; font: 800 30px/1 var(--display); color: var(--ink-100); }
+  .stat em { font-style: normal; font-size: 12px; color: var(--ink-500); }
+  .stand { margin-top: 12px; display: grid; gap: 4px; }
+  .srow { display: grid; grid-template-columns: 22px 1fr auto auto auto; gap: 10px; align-items: center; padding: 8px 10px; --cut: 8px; background: var(--ink-950); font-size: 13.5px; color: var(--ink-100); }
+  .srow svg.m { width: 16px; height: 16px; color: var(--ink-300); }
+  .cnt { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; }
+  .cnt svg { width: 13px; height: 13px; }
+  .roads { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 12px; }
+  .road { padding: 12px; --cut: 10px; background: var(--ink-950); }
+  .road strong { display: flex; align-items: center; gap: 7px; font-size: 13.5px; color: var(--ink-100); }
+  .road strong svg { width: 15px; height: 15px; }
+  .road > p { margin: 3px 0 10px; font-size: 11.5px; color: var(--ink-500); }
+  .bar { margin-top: 7px; } .bar div { display: flex; justify-content: space-between; font-size: 12px; color: var(--ink-400); } .bar div b { color: var(--ink-100); font-weight: 600; }
+  .bar span { display: block; height: 5px; margin-top: 4px; background: var(--ink-800); border-radius: 3px; overflow: hidden; } .bar span i { display: block; height: 100%; border-radius: 3px; }
+  .dis { margin-top: 12px; padding: 12px 14px; --cut: 10px; background: color-mix(in oklab, var(--bad) 10%, var(--ink-950)); box-shadow: inset 3px 0 0 var(--bad); font-size: 13px; }
+  .dis strong { display: flex; align-items: center; gap: 7px; color: var(--ink-100); } .dis p { margin: 5px 0 0; color: var(--ink-300); }
+  .hist { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+  .lrow { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: 9px; align-items: center; padding: 7px 0; border-top: 1px solid var(--ink-800); font-size: 13px; color: var(--ink-100); }
+  .lrow .ico { width: 24px; height: 24px; } .lrow small { display: block; font-size: 12px; color: var(--ink-400); } .lrow .when { font-size: 12px; color: var(--ink-500); }
+
+  /* actions */
+  .atabs { display: flex; border-bottom: 1px solid var(--ink-800); margin: -4px 0 14px; }
+  .atabs button { display: flex; align-items: center; gap: 6px; height: 38px; padding: 0 10px; font-size: 13px; font-weight: 600; color: var(--ink-400); box-shadow: inset 0 -2px 0 transparent; white-space: nowrap; }
+  .atabs button[aria-current] { color: var(--ink-100); box-shadow: inset 0 -2px 0 var(--brand-400); } .atabs button[aria-current] svg { color: var(--brand-400); }
+  .segc { display: flex; gap: 2px; padding: 2px; --cut: 8px; background: var(--ink-950); box-shadow: inset 0 0 0 1px var(--ink-700); }
+  .segc button { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; height: 32px; --cut: 6px; font-size: 13px; font-weight: 600; color: var(--ink-300); }
+  .segc button.on { background: var(--brand-400); color: var(--brand-950); }
+  .types { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
+  .type { display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 9px 2px 8px; --cut: 8px; background: var(--ink-950); box-shadow: inset 0 0 0 1px var(--ink-800); font-size: 11.5px; font-weight: 600; color: var(--ink-300); }
+  .type svg { width: 18px; height: 18px; }
+  .type.on { background: oklch(20% 0.035 146); box-shadow: inset 0 0 0 1px var(--brand-400); color: var(--ink-100); }
+  .stack { display: grid; gap: 12px; }
+  .stepper { display: flex; gap: 4px; } .stepper .field { width: 64px; justify-content: center; } .stepper .field b { flex: none; }
+  .textarea { --line: var(--ink-700); height: 64px; padding: 8px 10px; --cut: 8px; background-color: var(--ink-950); font-size: 13px; color: var(--ink-500); }
+  .qchips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+  .will { margin: 0; padding: 11px 13px; --cut: 10px; background: var(--ink-950); list-style: none; display: grid; gap: 5px; font-size: 12.5px; color: var(--ink-300); }
+  .will li { display: grid; grid-template-columns: 14px 1fr; gap: 8px; } .will li svg { width: 14px; height: 14px; color: var(--ink-500); margin-top: 2px; }
+  .vrow { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 9px 10px; --cut: 9px; background: var(--ink-950); margin-bottom: 5px; }
+  .vrow .ico { width: 28px; height: 28px; } .vrow strong { display: block; font-size: 13.5px; color: var(--ink-100); } .vrow small { font-size: 12px; color: var(--ink-400); }
+  .branch { display: grid; grid-template-columns: 50px 1fr; gap: 10px; align-items: center; margin-top: 6px; } .branch b { font-size: 13px; color: var(--ink-100); }
+  .toggle { display: flex; align-items: center; gap: 10px; padding: 10px; --cut: 10px; background: var(--ink-950); }
+  .toggle strong { display: block; font-size: 13px; color: var(--ink-100); } .toggle span { font-size: 12px; color: var(--ink-400); }
+  .sw { width: 38px; height: 22px; --cut: 5px; background: var(--brand-400); position: relative; margin-left: auto; flex: none; }
+  .sw::after { content: ""; position: absolute; top: 3px; left: 19px; width: 16px; height: 16px; background: var(--brand-950); clip-path: polygon(4px 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%, 0 4px); }
+
+  /* phone */
+  .phone .top { padding: 0 10px; gap: 10px; } .phone .top .title { font-size: 21px; }
+  .p-body { padding: 10px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; height: calc(100% - 56px); overflow: hidden; align-content: start; }
+  .phone .rhead { grid-template-columns: 48px minmax(0, 1fr); padding: 14px; } .phone .rhead .title { font-size: 24px; } .phone .rhead .x { display: none; }
+  .phone .roads, .phone .hist { grid-template-columns: 1fr; } .phone .atabs { overflow-x: auto; scrollbar-width: none; }
+</style>
+</head>
+<body>
+<div class="switches">
+  <h1>Database mock-up</h1>
+  <div class="seg">Show <div data-k="view"><button data-v="feed">Nobody picked (activity)</button><button data-v="record">A player's record</button></div></div>
+  <div class="seg" data-only="record">Actions <div data-k="actions"><button data-v="stack">Stacked (now)</button><button data-v="tabs">Tabs</button></div></div>
+  <div class="seg" data-only="tabs">Tab <div data-k="atab"><button data-v="moderate">Moderate</button><button data-v="roles">Roles</button><button data-v="host">Host</button><button data-v="message">Message</button></div></div>
+  <div class="seg">Size <div data-k="size"><button data-v="desk">Desktop</button><button data-v="phone">Phone</button></div></div>
+</div>
+
+<div class="viewport"><div class="frame" id="frame">
+  <div class="stage desk" id="desk">
+    <header class="top"><span class="mark cut">GM</span><div><div class="title">Database</div><small>TommyKay HOI4</small></div>
+      <span class="tag" style="color:oklch(80% 0.12 330);background:oklch(24% 0.06 330)">Preview: sample data</span>
+      <div class="top-end"><nav class="nav"><a><i data-lucide="map"></i>Map</a><a><i data-lucide="calendar-days"></i>Calendar</a><a><i data-lucide="swords"></i>Games</a><a class="on"><i data-lucide="database"></i>Database</a></nav>
+        <span class="avatar" style="width:28px;height:28px;font-size:12px">D</span><button class="btn btn-quiet"><i data-lucide="menu"></i>Menu</button></div></header>
+    <div class="page"><aside class="list plate" data-list></aside><main class="main" data-main></main></div>
+  </div>
+  <div class="stage phone" id="phone" hidden>
+    <header class="top"><span class="mark cut">GM</span><div class="title">Database</div><div class="top-end"><button class="btn btn-quiet btn-icon"><i data-lucide="menu"></i></button></div></header>
+    <div class="p-body" data-phone></div>
+  </div>
+</div></div>
+
+<script>
+  const TANK = '<svg class="lucide m" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="14" width="20" height="6" rx="3"/><path d="M5 14v-2h14v2"/><path d="M8 12V9.5A1.5 1.5 0 0 1 9.5 8h4A1.5 1.5 0 0 1 15 9.5V12"/><path d="M15 10h7"/></svg>';
+  const state = { view: "record", actions: "tabs", atab: "moderate", size: "desk" };
+  const ic = (name, tone, size = 28) => `<span class="ico cut i-${tone}" style="width:${size}px;height:${size}px"><i data-lucide="${name}"></i></span>`;
+
+  const PLAYERS = [["C", "Carl", "@cooldown_carl", 26, ["dis"]], ["C", "Charles", "@free_french", 14, []], ["D", "Demo Host", "@demo_host", 4, []], ["E", "Erwin", "@rommel77", 25, ["trusted"]],
+    ["I", "Isoroku", "@yamamoto_san", 23, ["valor"]], ["J", "Jan", "@winged_hussar", 16, []], ["L", "Lena", "@lena_hoi", 21, []], ["N", "Nikolai", "@tsar_nikolai", 18, []], ["O", "Otto", "@bismarck_fan", 11, []], ["R", "Rookie", "@new_player", 19, ["ban"]]];
+  const MARK = { trusted: ["shield-check", "mk-trusted", "Trusted"], valor: ["medal", "mk-valor", "Hearts of Valor"], dis: ["scale", "mk-dis", "Dishonored"], ban: ["ban", "mk-ban", "Game banned"] };
+  function list() {
+    return `<label class="field"><i data-lucide="search"></i><b style="color:var(--ink-500)">Search name, @handle or Discord ID</b><span class="kbd cut">/</span></label>
+      <div class="chips">${[["All", null, 13, true], ["Warned", "triangle-alert", 9], ["Banned", "ban", 1], ["Dishonored", "scale", 1], ["Trusted", "shield-check", 1], ["Valor", "medal", 1]]
+        .map(([t, i, n, on]) => `<button class="chip cut ${on ? "on" : ""}">${i ? `<i data-lucide="${i}"></i>` : ""}${t}<small>${n}</small></button>`).join("")}</div>
+      <div class="listbar"><span class="small">13 users with history</span><label class="small" style="display:flex;align-items:center;gap:6px">Sort <span class="field" style="height:28px;font-size:12px;--cut:6px"><b>Name</b><i data-lucide="chevron-down"></i></span></label></div>
+      <div style="overflow:hidden">${PLAYERS.map(([a, n, u, g, m], i) => `<div class="prow cut ${state.view === "record" && i === 0 ? "on" : ""}"><span class="avatar" style="width:36px;height:36px;font-size:13px">${a}</span>
+        <span style="min-width:0"><strong>${n}${m.map((k) => `<i data-lucide="${MARK[k][0]}" class="${MARK[k][1]}" title="${MARK[k][2]}"></i>`).join("")}</strong><small>${u}</small></span><span class="games"><b>${g}</b>games</span></div>`).join("")}</div>`;
+  }
+
+  function feed() {
+    const rules = [["star", "good", "Commends", "5 in a mode and Verified earn that mode's Trusted. They never cancel warnings by themselves."], ["triangle-alert", "warn", "Warnings", "3 in a mode is an automatic game ban. Take one away for free if it was unjustified."],
+      ["recycle", "good", "Redeem", "Spend commends to clear the same number of warnings. The host decides, never automatic."], ["medal", "good", "Hearts of Valor", "25 Merit and 50 attended games, no current warning. Early game notice and a Trusted role."],
+      ["ban", "bad", "Game ban", "Resets that mode's commends and all Merit to 0, removes Trusted and Hearts of Valor."], ["scale", "bad", "Dishonor", "A time-out: blocks chosen nations, usually 1 week to 3 months. Stats and roles stay."]];
+    const rows = [["scale", "bad", "Carl", "Dishonored, Roleplay", "Left two Major games early in a row.", "by Demo Host, 5 days ago"], ["ban", "bad", "Rookie", "Game banned, Roleplay", "Automatic: reached 3 Roleplay warnings (no-show)", "Automatic, 6 days ago"],
+      ["triangle-alert", "warn", "Rookie", "Warning, Roleplay", "No-show: present in 0/5 attendance checks", "Automatic, 6 days ago"], ["triangle-alert", "warn", "Carl", "Warning ×2, Historical", "Ignored host instructions", "by Demo Host, 8 days ago"],
+      ["star", "good", "Otto", "Commendation, Roleplay", "Great RP and diplomacy", "by Demo Host, 10 days ago"]];
+    return `<section class="plate card"><div class="rolecheck"><div><div class="h"><i data-lucide="shield-check"></i><span class="title">Role check</span></div>
+        <p class="sub" style="margin:0">Checks Trusted, Hearts of Valor, Dishonored and the Verified and host flags against the records. Runs by itself every day at 04:00 UTC.</p>
+        <p class="small" style="margin:6px 0 0">Last run: Nov 3, 04:27, automatic, 2 changes</p></div><button class="btn btn-secondary"><i data-lucide="eye"></i>Preview changes</button></div></section>
+      <section class="plate card"><div class="h"><i data-lucide="history"></i><span class="title">Recent actions</span><button class="btn btn-quiet btn-icon right" aria-label="Refresh"><i data-lucide="refresh-cw"></i></button></div>
+        <p class="sub">Every commend, Merit, warning, ban and Dishonored from the website and the bot, newest first. Pick a player on the left to open their record.</p>
+        <div class="rules">${rules.map(([i, t, n, d]) => `<div class="rule cut"><strong>${ic(i, t, 24)}${n}</strong><p>${d}</p></div>`).join("")}</div>
+        <div class="feed">${rows.map(([i, t, who, what, why, by]) => `<div class="frow">${ic(i, t)}<div><p><b>${who}</b> ${what}</p><em>“${why}”</em><small>${by}<a>Log</a></small></div></div>`).join("")}</div></section>`;
+  }
+
+  function record() {
+    return `<section class="plate rhead flag"><span class="avatar" style="width:64px;height:64px;font-size:22px">C</span>
+        <div style="min-width:0"><div class="small">User record</div><div class="title">Carl</div>
+          <div class="meta">@cooldown_carl<span class="mono">500000000000000013</span><button class="btn btn-quiet" style="height:24px;padding:0 6px;font-size:12px"><i data-lucide="copy"></i>Copy ID</button><span class="tag t-bad"><i data-lucide="scale"></i>Dishonored</span></div></div>
+        <button class="btn btn-quiet btn-icon x" aria-label="Close"><i data-lucide="x"></i></button>
+        <div class="roles">${[["HOI4 Verified", "#3ba55d"], ["RP Gamer Pass", "#9b59b6"], ["Member", "#99aab5"]].map(([n, c]) => `<span class="rtag cut"><i style="background:${c}"></i>${n}</span>`).join("")}</div></section>
+      <div class="rgrid" style="${state.size === "phone" ? "grid-template-columns:1fr" : ""}">${state.size === "phone" ? actions() + portfolio() : portfolio() + actions()}</div>`;
+  }
+  function portfolio() {
+    const bar = (label, a, b, color) => `<div class="bar"><div>${label}<b>${a}/${b}</b></div><span><i style="width:${(a / b) * 100}%;background:${color}"></i></span></div>`;
+    return `<section class="plate card"><div class="h"><i data-lucide="bar-chart-3"></i><span class="title">Portfolio</span></div>
+      <div class="stats" style="margin-top:10px"><div class="stat cut"><span>Total games</span><strong>26</strong></div><div class="stat cut"><span>Games attended</span><strong>20 <em>of 25 tracked, 80%</em></strong></div></div>
+      <div class="stand">
+        <div class="srow cut"><i data-lucide="drama" class="m"></i>Roleplay<span class="tag dot t-good">Clear</span><span class="cnt" style="color:var(--good)"><i data-lucide="star"></i>3</span><span class="cnt" style="color:var(--warn)"><i data-lucide="triangle-alert"></i>1</span></div>
+        <div class="srow cut">${TANK}Historical<span class="tag dot t-good">Clear</span><span class="cnt" style="color:var(--good)"><i data-lucide="star"></i>3</span><span class="cnt" style="color:var(--warn)"><i data-lucide="triangle-alert"></i>2</span></div>
+        <div class="srow cut"><i data-lucide="medal" class="m"></i>Merit<span class="small">All modes</span><span class="cnt" style="color:var(--gold)"><i data-lucide="medal"></i>12</span><span></span></div></div>
+      <div class="roads">
+        <div class="road cut"><strong><i data-lucide="shield-check" style="color:var(--sky)"></i>Road to Trusted</strong><p>5 commends, Verified, no game ban</p>${bar("Roleplay", 3, 5, "var(--good)")}${bar("Historical", 3, 5, "var(--good)")}<p style="margin:8px 0 0;color:var(--warn);font-size:12px">Blocked: needs the Verified role</p></div>
+        <div class="road cut"><strong><i data-lucide="medal" style="color:var(--gold)"></i>Road to Valor</strong><p>25 Merit and 50 attended games</p>${bar("Merit", 12, 25, "var(--gold)")}${bar("Attended games", 20, 50, "var(--sky)")}</div>
+        <div class="road cut"><strong><i data-lucide="triangle-alert" style="color:var(--warn)"></i>Road to ban</strong><p>3 warnings in a mode</p>${bar("Roleplay", 1, 3, "var(--warn)")}${bar("Historical", 2, 3, "var(--bad)")}</div></div>
+      <div class="dis cut"><strong><i data-lucide="scale" style="color:var(--bad)"></i>Dishonored, Roleplay<span class="small" style="margin-left:auto">until Nov 12 (in 9 days)</span></strong><p>Banned from all Major nations. “Left two Major games early in a row.”</p></div>
+      <div class="hist"><div><p class="label">Moderation history</p>${[["scale", "bad", "Dishonored, Roleplay", "Left two Major games early", "Oct 29"], ["triangle-alert", "warn", "Warning ×2, Historical", "Ignored host instructions", "Oct 26"], ["star", "good", "Commend, Roleplay", "Great RP and diplomacy", "Oct 24"]]
+        .map(([i, t, a, b, d]) => `<div class="lrow">${ic(i, t, 24)}<span>${a}<small>${b}</small></span><span class="when">${d}</span></div>`).join("")}</div>
+        <div><p class="label">Recent games</p>${[["clock", "ink", "Empire of Japan", "Historical (Vanilla)", "Nov 4"], ["check", "good", "Filler", "Kaiserreich (FFA)", "Nov 1"], ["x", "bad", "United Kingdom (Co-op)", "Millennium Dawn", "Oct 29"]]
+        .map(([i, t, a, b, d]) => `<div class="lrow">${ic(i, t, 24)}<span>${a}<small>${b}</small></span><span class="when">${d}</span></div>`).join("")}</div></div></section>`;
+  }
+  const PANELS = {
+    moderate: () => `<div class="h"><i data-lucide="gavel"></i><span class="title">Moderate</span></div><div class="stack" style="margin-top:10px">
+      <div class="segc cut"><button class="cut on"><i data-lucide="plus"></i>Give</button><button class="cut"><i data-lucide="minus"></i>Take</button><button class="cut"><i data-lucide="recycle"></i>Redeem</button></div>
+      <div><p class="label">Type</p><div class="types">${[["star", "Commend", 1], ["medal", "Merit"], ["triangle-alert", "Warning"], ["scale", "Dishonor"], ["ban", "Game ban"]].map(([i, t, on]) => `<button class="type cut ${on ? "on" : ""}"><i data-lucide="${i}"></i>${t}</button>`).join("")}</div></div>
+      <div><p class="label">Mode</p><div class="segc cut"><button class="cut on"><i data-lucide="drama"></i>Roleplay</button><button class="cut">${TANK.replace('class="lucide m"', 'class="lucide"')}Historical</button></div></div>
+      <div style="display:grid;grid-template-columns:auto 1fr;gap:12px"><div><p class="label">Amount</p><div class="stepper"><button class="btn btn-secondary btn-icon"><i data-lucide="minus"></i></button><span class="field cut"><b>1</b></span><button class="btn btn-secondary btn-icon"><i data-lucide="plus"></i></button></div></div>
+        <div><p class="label">Game</p><span class="field"><b>Not game related</b><i data-lucide="chevron-down"></i></span></div></div>
+      <div><p class="label">Reason (shown to the player and in the log)</p><div class="textarea field">What happened?</div><div class="qchips">${["Great roleplay", "Helped new players", "Excellent teamwork", "Played to the end"].map((t) => `<span class="tag t-ink">${t}</span>`).join("")}</div></div>
+      <ul class="will cut"><li><i data-lucide="check"></i>Roleplay commends 3 → 4</li><li><i data-lucide="check"></i>Warnings stay at 1. Use Redeem to clear them.</li></ul>
+      <button class="btn btn-primary" style="height:44px;--cut:10px">Give 1 Roleplay commend</button></div>`,
+    roles: () => `<div class="h"><i data-lucide="badge-check"></i><span class="title">Verified and VIP</span></div><p class="sub">GameMaster's Verified roles, one per branch, and VIP.</p>
+      <div class="vrow cut">${ic("badge-check", "good")}<span><strong>RP Verified</strong><small>Given before records were kept</small></span><button class="btn btn-quiet" style="height:28px;font-size:12px">Remove</button></div>
+      <div class="vrow cut">${ic("badge", "ink")}<span><strong>HIST Verified</strong><small>Not verified for Historical games</small></span><button class="btn btn-secondary" style="height:28px;font-size:12px">Verify</button></div>
+      <div class="vrow cut">${ic("star", "ink")}<span><strong>VIP</strong><small>Not VIP on this server</small></span><button class="btn btn-secondary" style="height:28px;font-size:12px">Make VIP</button></div>`,
+    host: () => `<div class="h"><i data-lucide="user-cog"></i><span class="title">Host branches</span></div><p class="sub">RP hosts host Roleplay games, HIST hosts Historical games. Each branch has its own rank, Acclamations and Violations.</p>
+      ${["RP", "HIST"].map((b) => `<div class="branch"><b>${b}</b><div class="segc cut">${["None", "Assistant", "Full", "Senior"].map((r, i) => `<button class="cut ${i === 0 ? "on" : ""}" style="font-size:12px">${r}</button>`).join("")}</div></div>`).join("")}`,
+    message: () => `<div class="h"><i data-lucide="send"></i><span class="title">Send a message</span></div><p class="sub">The bot DMs it to Carl. Every message goes to the audit log.</p>
+      <div class="textarea field" style="height:90px">Write your message</div><p class="small" style="text-align:right;margin:4px 0 8px">0 / 2000</p>
+      <div class="toggle cut"><span><strong>Sign it with my name</strong><span>Off: they see it as from “a Game Host”.</span></span><span class="sw cut"></span></div>
+      <button class="btn btn-primary" style="height:40px;width:100%;margin-top:10px"><i data-lucide="send"></i>Send to Carl</button>`,
+  };
+  function actions() {
+    if (state.actions === "tabs") {
+      const tabs = [["moderate", "gavel", "Moderate"], ["roles", "badge-check", "Roles"], ["host", "user-cog", "Host"], ["message", "send", "Message"]];
+      return `<section class="plate card"><nav class="atabs">${tabs.map(([v, i, t]) => `<button ${state.atab === v ? "aria-current" : ""} data-atab="${v}"><i data-lucide="${i}"></i>${t}</button>`).join("")}</nav>${PANELS[state.atab]()}</section>`;
+    }
+    return `<div style="display:grid;gap:14px">${["moderate", "roles", "host", "message"].map((k) => `<section class="plate card">${PANELS[k]()}</section>`).join("")}</div>`;
+  }
+
+  function render() {
+    document.querySelectorAll(".seg > div").forEach((seg) => seg.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(state[seg.dataset.k] === b.dataset.v))));
+    document.querySelector('[data-only="record"]').classList.toggle("off", state.view !== "record");
+    document.querySelector('[data-only="tabs"]').classList.toggle("off", state.view !== "record" || state.actions !== "tabs");
+    document.querySelector("[data-list]").innerHTML = list();
+    document.querySelector("[data-main]").innerHTML = state.view === "feed" ? feed() : record();
+    document.querySelector("[data-phone]").innerHTML = state.view === "feed"
+      ? `<section class="plate" style="padding:12px">${list()}</section>`
+      : `<button class="btn btn-quiet" style="justify-self:start;height:30px;padding:0 6px"><i data-lucide="chevron-left"></i>Players</button>` + record();
+    document.getElementById("desk").hidden = state.size !== "desk";
+    document.getElementById("phone").hidden = state.size !== "phone";
+    lucide.createIcons();
+    fit();
+  }
+  function fit() {
+    const stage = document.getElementById(state.size);
+    const w = state.size === "desk" ? 1440 : 390, h = state.size === "desk" ? 900 : 844;
+    const vp = document.querySelector(".viewport");
+    const s = Math.min((vp.clientWidth - 32) / w, (vp.clientHeight - 32) / h, state.size === "desk" ? 1 : 1.2);
+    stage.style.transform = `scale(${s})`;
+    const frame = document.getElementById("frame"); frame.style.width = `${w * s}px`; frame.style.height = `${h * s}px`;
+  }
+  document.querySelectorAll(".seg > div").forEach((seg) => seg.addEventListener("click", (e) => { const v = e.target.closest("button")?.dataset.v; if (v) { state[seg.dataset.k] = v; render(); } }));
+  document.addEventListener("click", (e) => { const t = e.target.closest("[data-atab]"); if (t) { state.atab = t.dataset.atab; render(); } });
+  addEventListener("resize", fit);
+  render();
+</script>
+</body>
+</html>

@@ -62,6 +62,14 @@ starting / on-going / ending are blue). A game's cards sit in tabs: Overview,
 Players, Messages, Nations and rules, Chat log. Card headings are `CardTitle`
 (a green line icon and the display title). Plain inputs use `gm-input`.
 
+**Database page** (`docs/design/database.html`): an action's colour says
+what it means: mint good (commends, Merit), yellow a warning, red a sanction
+(ban, Dishonored), grey neutral (`ActionIcon` in
+`components/database/actionIcons.tsx`). A record's actions sit in tabs:
+Moderate, Roles, Host (hosts only), Message. The portfolio view
+(`PlayerPortfolioModal.tsx`) uses mode icons and is shared with the map and
+the profile page.
+
 **The calendars** (`docs/design/calendar.html`): a game's colour is its
 status and nothing else: yellow scheduled, green announced, blue on-going,
 grey ended, red cancelled (`GameState` in `web/src/lib/scheduleOptions.ts`,

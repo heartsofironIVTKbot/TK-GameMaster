@@ -771,7 +771,7 @@ const ATTENDANCE: Tour = {
 
 const DATABASE: Tour = {
   id: "database",
-  version: 1,
+  version: 2,
   title: "Database",
   summary: "Player records: commends, warnings, bans, roles and VIP.",
   paths: ["/database"],
@@ -820,6 +820,14 @@ const DATABASE: Tour = {
       body:
         "**Give** or **take** a commend, Merit, a warning, a game ban or Dishonored. " +
         "Pick a reason, and **What will happen** shows the result (a promotion, a role, a ban) before you confirm.",
+    },
+    {
+      target: "database.actions",
+      placement: "left",
+      title: "The action tabs",
+      body:
+        "**Moderate**: commends, Merit, warnings, Dishonored and game bans. **Roles**: Verified for each branch, host branches and VIP. " +
+        "**Host**: a host's Acclamations and Violations (hosts only). **Message**: DM the player from the bot.",
     },
     {
       target: "database.roles",

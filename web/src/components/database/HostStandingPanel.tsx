@@ -1,5 +1,7 @@
 "use client";
 
+import { Star, TriangleAlert, UserCog } from "lucide-react";
+import { CardTitle } from "@/components/games/labels";
 import { useMemo, useState, type ReactNode } from "react";
 import type { HostBranch } from "@/lib/hostBranches";
 import {
@@ -50,9 +52,9 @@ function nextRank(standing: HostBranchStanding): string {
 }
 
 function employment(standing: HostBranchStanding): { label: string; className: string } {
-  if (standing.violations >= HOST_RATING_RULES.terminate_at) return { label: "🔴 Terminated", className: "text-rose-300" };
-  if (standing.violations === HOST_RATING_RULES.terminate_at - 1) return { label: "🟠 Final warning", className: "text-orange-300" };
-  return { label: "🟢 Active", className: "text-emerald-300" };
+  if (standing.violations >= HOST_RATING_RULES.terminate_at) return { label: "Terminated", className: "text-rose-300" };
+  if (standing.violations === HOST_RATING_RULES.terminate_at - 1) return { label: "Final warning", className: "text-orange-300" };
+  return { label: "Active", className: "text-emerald-300" };
 }
 
 /** Mirrors apply_host_rating (bot.py.py) so the rater sees what will happen. */
@@ -66,13 +68,13 @@ function hostRatingPreview(op: Op, kind: HostRatingKind, amount: number, standin
     if (kind === "acclamation") {
       const left = a - amount;
       lines.push(`${branch} Acclamations ${a} → ${left}`);
-      if (rank === "Senior" && left < HOST_RATING_RULES.senior_at) lines.push(`📉 Back to Full ${branch} Host (below ${HOST_RATING_RULES.senior_at})`);
-      else if (rank === "Full" && left < HOST_RATING_RULES.full_at) lines.push(`📉 Back to Assistant ${branch} Host (below ${HOST_RATING_RULES.full_at}), if Assistant hosts are used`);
+      if (rank === "Senior" && left < HOST_RATING_RULES.senior_at) lines.push(`Back to Full ${branch} Host (below ${HOST_RATING_RULES.senior_at})`);
+      else if (rank === "Full" && left < HOST_RATING_RULES.full_at) lines.push(`Back to Assistant ${branch} Host (below ${HOST_RATING_RULES.full_at}), if Assistant hosts are used`);
     } else {
       const left = v - amount;
       lines.push(`${branch} Violations ${v} → ${left}`);
       if (!rank && v >= HOST_RATING_RULES.terminate_at && left < HOST_RATING_RULES.terminate_at) {
-        lines.push(`↩️ Below ${HOST_RATING_RULES.terminate_at} — the ${branch} rank stripped by Violations comes back`);
+        lines.push(`Below ${HOST_RATING_RULES.terminate_at} — the ${branch} rank stripped by Violations comes back`);
       }
     }
     lines.push(`Only the ${branch} branch — their other branch doesn't change`);
@@ -81,13 +83,13 @@ function hostRatingPreview(op: Op, kind: HostRatingKind, amount: number, standin
   if (kind === "acclamation") {
     const total = a + amount;
     lines.push(`${branch} Acclamations ${a} → ${total} (Violations stay at ${v})`);
-    if (total >= HOST_RATING_RULES.senior_at && rank === "Full") lines.push(`🎊 Promoted to Senior ${branch} Host, if Senior hosts are used`);
-    else if (total >= HOST_RATING_RULES.full_at && rank === "Assistant") lines.push(`🎊 Promoted to Full ${branch} Host`);
+    if (total >= HOST_RATING_RULES.senior_at && rank === "Full") lines.push(`Promoted to Senior ${branch} Host, if Senior hosts are used`);
+    else if (total >= HOST_RATING_RULES.full_at && rank === "Assistant") lines.push(`Promoted to Full ${branch} Host`);
     lines.push(`Only the ${branch} branch — their other branch doesn't change`);
     return { lines, error: null, danger: false };
   }
   lines.push(`${branch} Violations ${v} → ${v + amount} (Acclamations stay at ${a})`);
-  if (v + amount >= HOST_RATING_RULES.terminate_at && rank) lines.push(`🚫 ${HOST_RATING_RULES.terminate_at} reached — the ${branch} rank is stripped`);
+  if (v + amount >= HOST_RATING_RULES.terminate_at && rank) lines.push(`${HOST_RATING_RULES.terminate_at} reached — the ${branch} rank is stripped`);
   lines.push(`Only the ${branch} branch — their other branch doesn't change`);
   return { lines, error: null, danger: true };
 }
@@ -112,31 +114,31 @@ export default function HostStandingPanel({
   onApplied: () => void;
 }) {
   return (
-    <section data-tour="database.hostStanding" className="rounded-2xl border border-sky-400/25 bg-ink-950/70 p-4 shadow-xl shadow-black/30">
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <h2 className="text-[11px] font-black uppercase tracking-[0.18em] text-sky-300">🎖️ Host standing</h2>
-        <span className="text-[11px] text-ink-400">Hosted {standing.hosted_games}</span>
-      </div>
+    <section data-tour="database.hostStanding" className="min-w-0">
+      <CardTitle icon={UserCog} title="Host standing">
+        <span className="text-xs text-ink-400">Hosted {standing.hosted_games}</span>
+      </CardTitle>
+      <div className="mb-3" />
       <div className="space-y-2">
         {standing.branches.map((branch) => {
           const status = employment(branch);
           return (
-            <div key={branch.branch} className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+            <div key={branch.branch} className="gm-cut [--cut:9px] border border-ink-800 bg-ink-950 px-3 py-2">
               <div className="flex items-center gap-2">
-                <span className="w-11 shrink-0 rounded bg-white/10 px-1.5 py-0.5 text-center text-[10px] font-black text-ink-200">
+                <span className="w-11 shrink-0 gm-cut [--cut:4px] bg-ink-800 px-1.5 py-0.5 text-center text-[10px] font-bold text-ink-200">
                   {branch.branch}
                 </span>
-                <span className={`text-sm font-bold ${branch.rank ? "text-white" : "text-ink-400"}`}>
+                <span className={`text-sm font-bold ${branch.rank ? "text-ink-100" : "text-ink-400"}`}>
                   {branch.rank ? `${branch.rank} ${branch.branch} Host` : "Not in this branch"}
                 </span>
                 <span className={`ml-auto text-[11px] font-semibold ${status.className}`}>{status.label}</span>
               </div>
               <div className="mt-1.5 grid grid-cols-2 gap-2">
                 <Stat label="Acclamations" hint={nextRank(branch)}>
-                  ⭐ {branch.acclamations}
+                  <Star aria-hidden className="h-3.5 w-3.5" />{branch.acclamations}
                 </Stat>
                 <Stat label="Violations" hint={`${HOST_RATING_RULES.terminate_at} = rank stripped`}>
-                  ⚠️ {branch.violations}
+                  <TriangleAlert aria-hidden className="h-3.5 w-3.5" />{branch.violations}
                 </Stat>
               </div>
             </div>
@@ -164,9 +166,9 @@ export default function HostStandingPanel({
 
 function Stat({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
-    <div className="rounded-lg border border-white/5 bg-ink-950/40 px-2.5 py-1.5">
-      <p className="text-[10px] font-bold uppercase tracking-wider text-ink-400">{label}</p>
-      <p className="text-base font-black text-white">{children}</p>
+    <div className="gm-cut [--cut:7px] border border-ink-800 bg-ink-950/40 px-2.5 py-1.5">
+      <p className="text-xs font-semibold text-ink-400">{label}</p>
+      <p className="text-base font-bold text-ink-100">{children}</p>
       {hint && <p className="text-[10px] text-ink-500">{hint}</p>}
     </div>
   );
@@ -219,7 +221,7 @@ function HostRatingForm({
   const label = `${op === "give" ? "Give" : "Take"} ${count} ${branch} ${noun}${count === 1 ? "" : "s"}`;
 
   return (
-    <div className="mt-4 space-y-3.5 border-t border-white/10 pt-4">
+    <div className="mt-4 space-y-3.5 border-t border-ink-800 pt-4">
       {rateBranches.length > 1 && (
         <Field label="Branch">
           <Segmented<HostBranch>
@@ -230,7 +232,7 @@ function HostRatingForm({
               setBranch(next);
               if (state.phase === "error") reset();
             }}
-            options={rateBranches.map((value) => ({ value, label: value === "RP" ? "🎭 RP" : "⚔️ HIST" }))}
+            options={rateBranches.map((value) => ({ value, label: value === "RP" ? "RP" : "HIST" }))}
           />
         </Field>
       )}
@@ -244,8 +246,8 @@ function HostRatingForm({
             if (state.phase === "error") reset();
           }}
           options={[
-            { value: "give", label: "➕ Give" },
-            { value: "take", label: "➖ Take back" },
+            { value: "give", label: "Give" },
+            { value: "take", label: "Take back" },
           ]}
         />
       )}
@@ -257,13 +259,9 @@ function HostRatingForm({
               type="button"
               aria-pressed={kind === value}
               onClick={() => setKind(value)}
-              className={`rounded-lg border px-2 py-2 text-xs font-bold transition ${
-                kind === value
-                  ? "border-sky-300 bg-sky-400/15 text-sky-100"
-                  : "border-white/10 bg-white/[0.03] text-ink-300 hover:border-white/25"
-              }`}
+              className={`gm-cut [--cut:7px] border px-2 py-2 text-xs font-bold transition ${ kind === value ? "border-sky-300 bg-sky-400/15 text-sky-100" : "border-ink-800 bg-ink-950 text-ink-300 hover:border-ink-600" }`}
             >
-              {value === "acclamation" ? "⭐ Acclamation" : "⚠️ Violation"}
+              {value === "acclamation" ? "Acclamation" : "Violation"}
             </button>
           ))}
         </div>

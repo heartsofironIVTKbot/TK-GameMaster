@@ -14,7 +14,25 @@ import type {
 import { PORTFOLIO_MODES } from "@/lib/moderationTypes";
 import type { HostProfile } from "@/lib/scheduleTypes";
 import { formatRelative } from "@/lib/timeEngine";
-import { GLASS, Spinner } from "@/components/schedule/ui";
+import {
+  Ban,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  History,
+  Medal,
+  RefreshCw,
+  Recycle,
+  Scale,
+  Search,
+  ShieldCheck,
+  Star,
+  TriangleAlert,
+  type LucideIcon,
+} from "lucide-react";
+import { Spinner } from "@/components/schedule/ui";
+import { CardTitle } from "@/components/games/labels";
+import { ACTION_ICON, ActionIcon, type Tone } from "./actionIcons";
 import Avatar from "./Avatar";
 import PlayerRecord from "./PlayerRecord";
 import RoleCheckCard from "./RoleCheckCard";
@@ -28,13 +46,13 @@ import RoleCheckCard from "./RoleCheckCard";
  * selected. ?player=<id> links to a record.
  */
 
-const FILTERS: { value: PlayerFilter; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "warned", label: "⚠️ Warned" },
-  { value: "banned", label: "🔴 Banned" },
-  { value: "dishonored", label: "⚖️ Dishonored" },
-  { value: "trusted", label: "🛡️ Trusted" },
-  { value: "valor", label: "🎖️ Valor" },
+const FILTERS: { value: PlayerFilter; label: string; icon: LucideIcon | null }[] = [
+  { value: "all", label: "All", icon: null },
+  { value: "warned", label: "Warned", icon: TriangleAlert },
+  { value: "banned", label: "Banned", icon: Ban },
+  { value: "dishonored", label: "Dishonored", icon: Scale },
+  { value: "trusted", label: "Trusted", icon: ShieldCheck },
+  { value: "valor", label: "Valor", icon: Medal },
 ];
 
 const SORTS: { value: PlayerSort; label: string }[] = [
@@ -45,32 +63,6 @@ const SORTS: { value: PlayerSort; label: string }[] = [
   { value: "recent", label: "Recently moderated" },
 ];
 
-
-const ACTION_ICON: Record<string, string> = {
-  commend: "⭐",
-  commend_removed: "➖",
-  merit: "🎖️",
-  merit_removed: "➖",
-  warn: "⚠️",
-  warn_removed: "✅",
-  redeem: "♻️",
-  ban: "🔴",
-  unban: "🟢",
-  appeal: "📨",
-  valor_trusted: "🛡️",
-  host_acclamation: "⭐",
-  host_violation: "⚠️",
-  host_acclamation_removed: "➖",
-  host_violation_removed: "✅",
-  dishonored_give: "⚖️",
-  dishonored_take: "🕊️",
-  valor_earned: "🎖️",
-  verified_granted: "🪪",
-  verified_removed: "➖",
-  vip_granted: "🌟",
-  vip_removed: "🚫",
-  vip_declined: "✖️",
-};
 
 function readPlayerParam(): string | null {
   const id = new URLSearchParams(window.location.search).get("player");
@@ -205,26 +197,23 @@ export default function DatabaseApp({ host }: { host: HostProfile }) {
     setCursor(0);
   };
 
+  const serverName = host.servers.find((server) => server.id === host.guild_id)?.name;
+
   return (
-    <div className="gm-backdrop min-h-screen w-full text-ink-100">
-      <SiteHeader page="database" title="Database" subtitle="GameMaster · User records">
-          {host.demo && (
-            <span className="rounded-full border border-fuchsia-400/40 bg-fuchsia-500/15 px-3 py-1 text-[11px] font-bold text-fuchsia-200">
-              PREVIEW MODE · sample data
-            </span>
-          )}
-          <ServerSwitcher host={host} />
+    <div className="min-h-screen w-full bg-ink-950 text-ink-100">
+      <SiteHeader page="database" title="Database" subtitle={serverName}>
+        {host.demo && <span className="gm-tag bg-fuchsia-500/15 text-fuchsia-200">Preview: sample data</span>}
+        <ServerSwitcher host={host} />
       </SiteHeader>
 
-      <div className="mx-auto grid max-w-[1700px] gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[370px_minmax(0,1fr)]">
+      <div className="mx-auto grid max-w-[1700px] gap-5 px-3 py-4 sm:px-6 sm:py-5 lg:grid-cols-[340px_minmax(0,1fr)]">
         {/* Search + results */}
         <aside
           data-tour="database.list"
-          className={`flex flex-col rounded-3xl p-3 sm:p-4 lg:sticky lg:top-[76px] lg:max-h-[calc(100vh-96px)] ${GLASS} ${
-            selected ? "hidden lg:flex" : ""
-          }`}
+          className={`gm-plate flex flex-col p-3 lg:sticky lg:top-[72px] lg:max-h-[calc(100vh-92px)] ${selected ? "hidden lg:flex" : ""}`}
         >
-          <div data-tour="database.search" className="relative">
+          <label data-tour="database.search" className="gm-field">
+            <Search aria-hidden className="h-4 w-4 shrink-0" />
             <input
               ref={searchRef}
               value={query}
@@ -247,18 +236,15 @@ export default function DatabaseApp({ host }: { host: HostProfile }) {
               }}
               placeholder="Search name, @handle or Discord ID"
               aria-label="Search users"
-              className="w-full rounded-xl border border-white/10 bg-ink-950/70 py-2.5 pl-9 pr-10 text-sm text-white placeholder:text-ink-500 focus:border-brand-300/60 focus:outline-none"
             />
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-ink-500">🔎</span>
-            <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded border border-white/15 px-1.5 text-[10px] font-bold text-ink-500">
-              /
-            </kbd>
-          </div>
+            <kbd className="gm-cut grid h-5 w-5 shrink-0 place-items-center bg-ink-800 text-[11px] font-semibold text-ink-400 [--cut:4px]">/</kbd>
+          </label>
 
-          <div className="mt-3 flex flex-wrap gap-1">
+          <div className="mt-2.5 flex flex-wrap gap-[5px]">
             {FILTERS.map((option) => {
               const active = option.value === filter;
               const count = data?.counts?.[option.value];
+              const Icon = option.icon;
               return (
                 <button
                   key={option.value}
@@ -267,20 +253,22 @@ export default function DatabaseApp({ host }: { host: HostProfile }) {
                     setFilter(option.value);
                     resetPaging();
                   }}
-                  className={`rounded-lg border px-2 py-1 text-[11px] font-bold transition ${
+                  aria-pressed={active}
+                  className={`gm-cut flex h-[26px] items-center gap-1.5 px-2.5 text-xs font-semibold transition-colors [--cut:6px] ${
                     active
-                      ? "border-brand-300 bg-brand-400 text-ink-950"
-                      : "border-white/10 bg-white/[0.03] text-ink-300 hover:border-white/25 hover:text-white"
+                      ? "bg-brand-400 text-brand-950"
+                      : "bg-ink-950 text-ink-300 shadow-[inset_0_0_0_1px_var(--color-ink-800)] hover:text-ink-100"
                   }`}
                 >
+                  {Icon && <Icon aria-hidden className="h-[13px] w-[13px]" />}
                   {option.label}
-                  {count !== undefined && <span className={active ? "ml-1 opacity-70" : "ml-1 text-ink-500"}>{count}</span>}
+                  {count !== undefined && <span className={active ? "opacity-70" : "font-medium text-ink-500"}>{count}</span>}
                 </button>
               );
             })}
           </div>
 
-          <div className="mt-3 flex items-center justify-between gap-2 text-[11px] text-ink-400">
+          <div className="mt-2.5 flex items-center justify-between gap-2 px-0.5 text-xs text-ink-400">
             <span className="flex items-center gap-1.5">
               {loading && <Spinner className="h-3 w-3 text-brand-300" />}
               {data
@@ -289,31 +277,32 @@ export default function DatabaseApp({ host }: { host: HostProfile }) {
             </span>
             <label className="flex items-center gap-1.5">
               Sort
-              <select
-                value={sort}
-                onChange={(event) => {
-                  setSort(event.target.value as PlayerSort);
-                  resetPaging();
-                }}
-                className="rounded-md border border-white/10 bg-ink-900/80 px-1.5 py-1 text-[11px] font-semibold text-ink-200 [color-scheme:dark] focus:outline-none"
-              >
-                {SORTS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+              <span className="gm-field h-7 px-2 text-xs [--cut:6px]">
+                <select
+                  value={sort}
+                  onChange={(event) => {
+                    setSort(event.target.value as PlayerSort);
+                    resetPaging();
+                  }}
+                  className="appearance-none pr-1 [color-scheme:dark]"
+                >
+                  {SORTS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown aria-hidden className="h-3.5 w-3.5 shrink-0" />
+              </span>
             </label>
           </div>
 
           <div className="roster-scroll -mx-1 mt-2 min-h-[200px] flex-1 overflow-y-auto px-1">
             {result?.error && !loading && (
-              <p className="rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-100">{result.error}</p>
+              <p className="gm-cut bg-rose-950 px-3 py-2 text-xs text-rose-200 [--cut:8px]">{result.error}</p>
             )}
-            {data && players.length === 0 && !loading && (
-              <p className="px-2 py-8 text-center text-xs text-ink-500">No users match.</p>
-            )}
-            <ul className={`space-y-1 transition-opacity ${loading && data ? "opacity-60" : ""}`}>
+            {data && players.length === 0 && !loading && <p className="px-2 py-8 text-center text-xs text-ink-500">No users match.</p>}
+            <ul className={`space-y-[3px] transition-opacity ${loading && data ? "opacity-60" : ""}`}>
               {players.map((player, index) => (
                 <PlayerRow
                   key={player.discord_id}
@@ -327,14 +316,10 @@ export default function DatabaseApp({ host }: { host: HostProfile }) {
           </div>
 
           {data && data.total > data.page_size && (
-            <div className="mt-2 flex items-center justify-between border-t border-white/10 pt-2 text-[11px] text-ink-400">
-              <button
-                type="button"
-                disabled={data.page === 0}
-                onClick={() => setPage(data.page - 1)}
-                className="rounded-md px-2 py-1 font-bold hover:bg-white/5 disabled:opacity-30"
-              >
-                ‹ Prev
+            <div className="mt-2 flex items-center justify-between border-t border-ink-800 pt-2 text-xs text-ink-400">
+              <button type="button" disabled={data.page === 0} onClick={() => setPage(data.page - 1)} className="gm-btn gm-btn-quiet h-7 px-2 text-xs">
+                <ChevronLeft aria-hidden />
+                Previous
               </button>
               <span>
                 {data.page * data.page_size + 1}–{Math.min(data.total, (data.page + 1) * data.page_size)} of {data.total}
@@ -343,9 +328,10 @@ export default function DatabaseApp({ host }: { host: HostProfile }) {
                 type="button"
                 disabled={(data.page + 1) * data.page_size >= data.total}
                 onClick={() => setPage(data.page + 1)}
-                className="rounded-md px-2 py-1 font-bold hover:bg-white/5 disabled:opacity-30"
+                className="gm-btn gm-btn-quiet h-7 px-2 text-xs"
               >
-                Next ›
+                Next
+                <ChevronRight aria-hidden />
               </button>
             </div>
           )}
@@ -364,10 +350,10 @@ export default function DatabaseApp({ host }: { host: HostProfile }) {
               onApplied={onApplied}
             />
           ) : (
-            <>
+            <div className="space-y-4">
               <RoleCheckCard onOpen={(id) => openPlayer(id, null)} />
               <ActivityFeed nonce={activityNonce} onOpen={(id) => openPlayer(id, null)} />
-            </>
+            </div>
           )}
         </main>
       </div>
@@ -387,6 +373,7 @@ function PlayerRow({
   onOpen: () => void;
 }) {
   const banned = PORTFOLIO_MODES.filter((mode) => player.modes[mode].banned);
+  const mark = "h-[13px] w-[13px] shrink-0";
   return (
     <li>
       <button
@@ -394,31 +381,35 @@ function PlayerRow({
         onClick={onOpen}
         aria-label={`Open ${player.name}'s record`}
         aria-current={active ? "true" : undefined}
-        className={`flex w-full items-center gap-2.5 rounded-xl border px-2.5 py-2 text-left transition ${
+        className={`gm-cut grid w-full grid-cols-[36px_minmax(0,1fr)_auto] items-center gap-2.5 px-2 py-[7px] text-left transition-colors [--cut:8px] ${
           active
-            ? "border-brand-300/70 bg-brand-400/10"
+            ? "bg-[oklch(21%_0.03_146)] shadow-[inset_3px_0_0_var(--color-brand-400)]"
             : focused
-              ? "border-white/25 bg-white/[0.06]"
-              : "border-transparent hover:border-white/10 hover:bg-white/[0.04]"
+              ? "bg-ink-800"
+              : "hover:bg-ink-800/70"
         }`}
       >
         <Avatar url={player.avatar_url} name={player.name} size={36} dim={!player.in_server} />
-        <span className="min-w-0 flex-1">
+        <span className="min-w-0">
           <span className="flex items-center gap-1.5">
-            <span className="truncate text-sm font-bold text-white">{player.name}</span>
-            {player.trusted.length > 0 && <span title={`Trusted: ${player.trusted.join(", ")}`}>🛡️</span>}
-            {player.valor && <span title="Hearts of Valor">🎖️</span>}
-            {player.dishonored.length > 0 && <span title={`Dishonored: ${player.dishonored.join(", ")}`}>⚖️</span>}
-            {banned.length > 0 && <span title={`Game banned: ${banned.join(", ")}`}>🔴</span>}
+            <span className="truncate text-[13.5px] font-semibold text-ink-100">{player.name}</span>
+            {player.trusted.length > 0 && (
+              <ShieldCheck aria-label={`Trusted: ${player.trusted.join(", ")}`} className={`${mark} text-sky-300`} />
+            )}
+            {player.valor && <Medal aria-label="Hearts of Valor" className={`${mark} text-yellow-300`} />}
+            {player.dishonored.length > 0 && (
+              <Scale aria-label={`Dishonored: ${player.dishonored.join(", ")}`} className={`${mark} text-violet-300`} />
+            )}
+            {banned.length > 0 && <Ban aria-label={`Game banned: ${banned.join(", ")}`} className={`${mark} text-rose-300`} />}
           </span>
-          <span className="flex flex-wrap items-center gap-x-2 text-[11px] text-ink-400">
+          <span className="flex flex-wrap items-center gap-x-2 text-xs text-ink-400">
             {player.username && <span className="truncate">@{player.username}</span>}
             {!player.in_server && <span className="text-ink-500">left the server</span>}
             {!player.has_history && <span className="text-ink-500">no history yet</span>}
           </span>
         </span>
-        <span className="shrink-0 text-right text-[10px] leading-tight text-ink-500">
-          <span className="block text-xs font-black text-ink-300">{player.total_games}</span>
+        <span className="shrink-0 text-right text-[11px] leading-tight text-ink-500">
+          <span className="block font-display text-lg font-extrabold leading-none text-ink-300">{player.total_games}</span>
           games
         </span>
       </button>
@@ -459,30 +450,26 @@ function ActivityFeed({ nonce, onOpen }: { nonce: number; onOpen: (id: string) =
 
   const items = state?.items ?? null;
   return (
-    <section data-tour="database.activity" className={`rounded-3xl p-4 sm:p-6 ${GLASS}`}>
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-brand-300">📜 Moderation activity</p>
-          <h1 className="mt-1 text-2xl font-black tracking-tight text-white">Recent actions</h1>
-          <p className="mt-1 max-w-2xl text-sm text-ink-400">
-            Every commend, Merit, warning, ban and Dishonored from the web and the bot — newest first. Pick a user on the
-            left to open their record and moderate them.
-          </p>
-        </div>
+    <section data-tour="database.activity" className="gm-plate p-4 sm:p-[18px]">
+      <CardTitle icon={History} title="Recent actions">
         <button
           type="button"
           onClick={() => setTick((value) => value + 1)}
-          className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-ink-300 hover:border-brand-300/40 hover:text-white"
+          className="gm-btn gm-btn-quiet h-8 w-8 p-0"
+          aria-label="Refresh"
+          title="Refresh"
         >
-          {state?.key !== key && <Spinner className="h-3 w-3" />}↻ Refresh
+          {state?.key !== key ? <Spinner className="h-3.5 w-3.5" /> : <RefreshCw aria-hidden />}
         </button>
-      </div>
+      </CardTitle>
+      <p className="max-w-3xl text-[13px] text-ink-400">
+        Every commend, Merit, warning, ban and Dishonored from the website and the bot, newest first. Pick a player on the left to
+        open their record and moderate them.
+      </p>
 
       <RuleCards />
 
-      {state?.error && (
-        <p className="mt-4 rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">{state.error}</p>
-      )}
+      {state?.error && <p className="gm-cut mt-4 bg-rose-950 px-3 py-2 text-sm text-rose-200 [--cut:8px]">{state.error}</p>}
       {!items && !state?.error && (
         <div className="mt-6 flex items-center gap-2 text-sm text-ink-400">
           <Spinner className="h-4 w-4 text-brand-300" /> Loading…
@@ -494,39 +481,42 @@ function ActivityFeed({ nonce, onOpen }: { nonce: number; onOpen: (id: string) =
         </p>
       )}
       {items && items.length > 0 && (
-        <ol className="mt-5 divide-y divide-white/5">
-          {items.map((item, index) => (
-            <li key={`${item.created_at}-${item.target_id}-${item.action}-${index}`} className="flex gap-3 py-2.5">
-              <span className="mt-0.5 w-6 shrink-0 text-center text-base">{ACTION_ICON[item.action] ?? "•"}</span>
-              <div className="min-w-0 flex-1 text-sm">
-                <p className="text-ink-200">
-                  <button
-                    type="button"
-                    onClick={() => onOpen(item.target_id)}
-                    className="font-bold text-white underline-offset-2 hover:text-brand-200 hover:underline"
-                  >
-                    {item.target_name}
-                  </button>{" "}
-                  <span className="text-ink-400">—</span> {item.label}
-                  {item.amount !== null && item.amount > 1 && <span className="text-ink-400"> ×{item.amount}</span>}
-                  {item.mode && <span className="text-ink-400"> · {item.mode}</span>}
-                </p>
-                {item.reason && <p className="mt-0.5 line-clamp-2 text-xs text-ink-400">“{item.reason}”</p>}
-                <p className="mt-0.5 text-[11px] text-ink-500">
-                  {item.automatic ? "🤖 Automatic" : item.issued_by ? `by ${item.issued_by}` : "by staff"} ·{" "}
-                  <span title={new Date(item.created_at * 1000).toLocaleString()}>{formatRelative(item.created_at * 1000, now)}</span>
-                  {item.log_url && (
-                    <>
-                      {" · "}
+        <ol className="mt-3">
+          {items.map((item, index) => {
+            const [Icon, tone] = ACTION_ICON[item.action] ?? [History, "ink" as Tone];
+            return (
+              <li
+                key={`${item.created_at}-${item.target_id}-${item.action}-${index}`}
+                className="grid grid-cols-[28px_minmax(0,1fr)] gap-3 border-t border-ink-800 py-2.5"
+              >
+                <ActionIcon icon={Icon} tone={tone} />
+                <div className="min-w-0 text-[13.5px]">
+                  <p className="text-ink-300">
+                    <button
+                      type="button"
+                      onClick={() => onOpen(item.target_id)}
+                      className="font-semibold text-ink-100 underline-offset-2 hover:text-brand-400 hover:underline"
+                    >
+                      {item.target_name}
+                    </button>{" "}
+                    {item.label}
+                    {item.amount !== null && item.amount > 1 && <span className="text-ink-400"> ×{item.amount}</span>}
+                    {item.mode && <span className="text-ink-400">, {item.mode}</span>}
+                  </p>
+                  {item.reason && <p className="mt-0.5 line-clamp-2 text-[12.5px] italic text-ink-400">“{item.reason}”</p>}
+                  <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-ink-500">
+                    <span>{item.automatic ? "Automatic" : item.issued_by ? `by ${item.issued_by}` : "by staff"}</span>
+                    <span title={new Date(item.created_at * 1000).toLocaleString()}>{formatRelative(item.created_at * 1000, now)}</span>
+                    {item.log_url && (
                       <a href={item.log_url} target="_blank" rel="noreferrer" className="font-semibold text-sky-300 hover:underline">
-                        log ↗
+                        Log
                       </a>
-                    </>
-                  )}
-                </p>
-              </div>
-            </li>
-          ))}
+                    )}
+                  </p>
+                </div>
+              </li>
+            );
+          })}
         </ol>
       )}
     </section>
@@ -535,22 +525,23 @@ function ActivityFeed({ nonce, onOpen }: { nonce: number; onOpen: (id: string) =
 
 /** The rules every action follows, in one glance. */
 function RuleCards() {
-  const cards = [
-    { icon: "⭐", title: "Commends", text: "5 in a mode + Verified → that mode's Trusted. They never cancel warnings by themselves." },
-    { icon: "⚠️", title: "Warnings", text: "3 in a mode → automatic game ban. Take one away for free if it was unjustified." },
-    { icon: "♻️", title: "Redeem", text: "Spend commends to clear the same number of warnings — the host decides, never automatic." },
-    { icon: "🎖️", title: "Hearts of Valor", text: "25 Merit + 50 attended games, no current warning. Perks: early game notice + a host-approved Trusted role." },
-    { icon: "🔴", title: "Game ban", text: "Resets that mode's commends and all Merit to 0, removes Trusted and Hearts of Valor." },
-    { icon: "⚖️", title: "Dishonor", text: "A time-out: blocks chosen nations (usually 1 week – 3 months). Stats and roles stay." },
+  const cards: { icon: LucideIcon; tone: Tone; title: string; text: string }[] = [
+    { icon: Star, tone: "good", title: "Commends", text: "5 in a mode and Verified earn that mode's Trusted. They never cancel warnings by themselves." },
+    { icon: TriangleAlert, tone: "warn", title: "Warnings", text: "3 in a mode is an automatic game ban. Take one away for free if it was unjustified." },
+    { icon: Recycle, tone: "good", title: "Redeem", text: "Spend commends to clear the same number of warnings. The host decides, never automatic." },
+    { icon: Medal, tone: "good", title: "Hearts of Valor", text: "25 Merit and 50 attended games, no current warning. Early game notice and a host-approved Trusted role." },
+    { icon: Ban, tone: "bad", title: "Game ban", text: "Resets that mode's commends and all Merit to 0, removes Trusted and Hearts of Valor." },
+    { icon: Scale, tone: "bad", title: "Dishonor", text: "A time-out: blocks chosen nations, usually 1 week to 3 months. Stats and roles stay." },
   ];
   return (
-    <div className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+    <div className="mt-3.5 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
       {cards.map((card) => (
-        <div key={card.title} className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
-          <p className="text-sm font-black text-white">
-            {card.icon} {card.title}
+        <div key={card.title} className="gm-cut bg-ink-950 p-3 [--cut:10px]">
+          <p className="flex items-center gap-2 text-[13.5px] font-semibold text-ink-100">
+            <ActionIcon icon={card.icon} tone={card.tone} size={24} />
+            {card.title}
           </p>
-          <p className="mt-1 text-[11px] leading-snug text-ink-400">{card.text}</p>
+          <p className="mt-1.5 text-xs leading-snug text-ink-400">{card.text}</p>
         </div>
       ))}
     </div>
