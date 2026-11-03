@@ -7,9 +7,11 @@ import type { GameControlSummary, GamePhase } from "@/lib/gameControlTypes";
 import type { HostProfile } from "@/lib/scheduleTypes";
 import { formatRelative } from "@/lib/timeEngine";
 import { useNow, useRefreshTick } from "@/components/attendance/labels";
-import { GLASS, Spinner } from "@/components/schedule/ui";
+import { RefreshCw } from "lucide-react";
+import ModeIcon from "@/components/schedule/ModeIcon";
+import { Spinner } from "@/components/schedule/ui";
 import GameControlPanel from "./GameControlPanel";
-import { ACTION_LABEL, PhaseBadge } from "./labels";
+import { ACTION_LABEL, PHASE, PhaseBadge, gameTitle } from "./labels";
 
 /**
  * /games — start, end and cancel games from the web (replaces Discord's
@@ -29,7 +31,7 @@ function readGameParam(): string | null {
 const GROUPS: { title: string; phases: GamePhase[] }[] = [
   { title: "Running", phases: ["starting", "live", "ending"] },
   { title: "Announced", phases: ["announced"] },
-  { title: "Finished · last 2 days", phases: ["ended", "cancelled"] },
+  { title: "Finished, last 2 days", phases: ["ended", "cancelled"] },
 ];
 
 export default function GamesApp({ host }: { host: HostProfile }) {
@@ -84,47 +86,42 @@ export default function GamesApp({ host }: { host: HostProfile }) {
   }, []);
   const onChanged = useCallback(() => setNonce((value) => value + 1), []);
 
+  const serverName = host.servers.find((server) => server.id === host.guild_id)?.name;
+
   return (
-    <div className="gm-backdrop min-h-screen w-full text-ink-100">
-      <SiteHeader page="games" title="Games" subtitle="GameMaster · Start, end & cancel">
-          {host.demo && (
-            <span className="rounded-full border border-fuchsia-400/40 bg-fuchsia-500/15 px-3 py-1 text-[11px] font-bold text-fuchsia-200">
-              PREVIEW MODE · sample data
-            </span>
-          )}
-          <ServerSwitcher host={host} />
+    <div className="min-h-screen w-full bg-ink-950 text-ink-100">
+      <SiteHeader page="games" title="Games" subtitle={serverName}>
+        {host.demo && <span className="gm-tag bg-fuchsia-500/15 text-fuchsia-200">Preview: sample data</span>}
+        <ServerSwitcher host={host} />
       </SiteHeader>
 
-      <div className="mx-auto grid max-w-[1700px] gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[340px_minmax(0,1fr)]">
+      <div className="mx-auto grid max-w-[1700px] gap-5 px-3 py-4 sm:px-6 sm:py-5 lg:grid-cols-[330px_minmax(0,1fr)]">
         <aside
           data-tour="games.list"
-          className={`flex min-w-0 flex-col rounded-3xl p-3 sm:p-4 lg:sticky lg:top-[76px] lg:max-h-[calc(100vh-96px)] ${GLASS} ${
-            picked ? "hidden lg:flex" : ""
-          }`}
+          className={`gm-plate flex min-w-0 flex-col p-3 lg:sticky lg:top-[72px] lg:max-h-[calc(100vh-92px)] ${picked ? "hidden lg:flex" : ""}`}
         >
-          <div className="flex items-center gap-2 px-1">
-            <label className="flex cursor-pointer items-center gap-2 text-[11px] font-bold text-ink-300">
+          <div className="flex items-center gap-2 border-b border-ink-800 px-0.5 pb-2.5">
+            <label className="flex cursor-pointer items-center gap-2 text-[13px] text-ink-300">
               <input
                 type="checkbox"
                 checked={mineOnly}
                 onChange={(event) => setMineOnly(event.target.checked)}
-                className="h-3.5 w-3.5 accent-brand-400"
+                className="h-4 w-4 accent-brand-400"
               />
               Only my games
             </label>
             <button
               type="button"
               onClick={refresh}
-              className="ml-auto flex items-center gap-1.5 rounded-md px-2 py-1 text-[11px] font-bold text-ink-400 hover:bg-white/5 hover:text-white"
+              className="gm-btn gm-btn-quiet ml-auto h-7 w-7 p-0"
               aria-label="Refresh the game list"
+              title="Refresh"
             >
-              {list?.key !== key && <Spinner className="h-3 w-3" />}↻
+              {list?.key !== key ? <Spinner className="h-3.5 w-3.5" /> : <RefreshCw aria-hidden />}
             </button>
           </div>
-          <div className="roster-scroll -mx-1 mt-2 min-h-[160px] flex-1 overflow-y-auto px-1">
-            {list?.error && (
-              <p className="rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-100">{list.error}</p>
-            )}
+          <div className="roster-scroll -mx-1 mt-1 min-h-[160px] flex-1 overflow-y-auto px-1">
+            {list?.error && <p className="gm-cut mt-2 bg-rose-950 px-3 py-2 text-xs text-rose-200 [--cut:8px]">{list.error}</p>}
             {!list && (
               <div className="flex items-center gap-2 px-2 py-6 text-xs text-ink-400">
                 <Spinner className="h-3.5 w-3.5 text-brand-300" /> Loading…
@@ -140,9 +137,9 @@ export default function GamesApp({ host }: { host: HostProfile }) {
               const items = shown.filter((game) => group.phases.includes(game.phase));
               if (items.length === 0) return null;
               return (
-                <div key={group.title} className="mb-3">
-                  <p className="px-1 pb-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-ink-500">{group.title}</p>
-                  <ul className="space-y-1.5">
+                <div key={group.title}>
+                  <p className="px-1 pb-1.5 pt-3 text-xs font-semibold text-ink-500">{group.title}</p>
+                  <ul className="space-y-[5px]">
                     {items.map((game) => (
                       <GameRow key={game.id} game={game} active={game.id === activeId} now={now} onOpen={() => openGame(game.id)} />
                     ))}
@@ -157,7 +154,7 @@ export default function GamesApp({ host }: { host: HostProfile }) {
           {activeId ? (
             <GameControlPanel key={activeId} gameId={activeId} host={host} onBack={picked ? closeGame : null} onChanged={onChanged} />
           ) : (
-            <section className={`rounded-3xl p-6 text-sm text-ink-400 ${GLASS}`}>
+            <section className="gm-plate p-6 text-sm text-ink-400">
               {games ? "Pick a game on the left." : <Spinner className="h-4 w-4 text-brand-300" />}
             </section>
           )}
@@ -194,25 +191,28 @@ function GameRow({
         type="button"
         onClick={onOpen}
         aria-current={active ? "true" : undefined}
-        className={`w-full rounded-xl border px-3 py-2.5 text-left transition ${
-          active ? "border-brand-300/60 bg-brand-400/10" : "border-white/5 bg-white/[0.02] hover:border-white/15 hover:bg-white/[0.05]"
-        }`}
+        data-game-state={PHASE[game.phase].state}
+        className={`gm-game gm-cut grid w-full grid-cols-[34px_minmax(0,1fr)] items-center gap-2.5 py-2 pl-2 pr-2.5 text-left [--cut:9px] ${
+          game.mine ? "gm-mine" : ""
+        } ${active ? "[--tint:color-mix(in_oklab,var(--s)_34%,var(--color-ink-800))]" : "[--tint:color-mix(in_oklab,var(--s)_10%,var(--color-ink-900))] hover:[--tint:color-mix(in_oklab,var(--s)_18%,var(--color-ink-800))]"}`}
       >
-        <span className="flex items-center gap-2">
-          <span className="min-w-0 flex-1 truncate text-sm font-bold text-white">{game.name}</span>
-          <PhaseBadge phase={game.phase} />
+        <span className="gm-cut flex h-[34px] w-[34px] items-center justify-center bg-ink-800 text-ink-100 [--cut:7px]">
+          <ModeIcon mode={game.mode} className="h-[18px] w-[18px]" strokeWidth={1.75} />
         </span>
-        <span className="mt-0.5 flex items-center gap-1.5 truncate text-[11px] text-ink-400">
-          {game.mine && <span className="rounded bg-brand-400/20 px-1 font-bold text-brand-200">You</span>}
-          <span className="truncate">
-            {game.mode} · {game.host_name ?? "unknown host"} · {when} · {game.players} players
+        <span className="min-w-0">
+          <span className="flex items-center gap-2">
+            <span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold text-ink-100">{gameTitle(game.name)}</span>
+            <PhaseBadge phase={game.phase} />
           </span>
+          <span className="block truncate text-xs text-ink-400">
+            {[game.mode, game.host_name ?? "unknown host", when, `${game.players} players`].filter(Boolean).join(", ")}
+          </span>
+          {game.in_flight && (
+            <span className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-ink-100">
+              <Spinner className="h-3 w-3" /> {ACTION_LABEL[game.in_flight].running}…
+            </span>
+          )}
         </span>
-        {game.in_flight && (
-          <span className="mt-1.5 flex items-center gap-1.5 text-[11px] font-bold text-brand-200">
-            <Spinner className="h-3 w-3" /> {ACTION_LABEL[game.in_flight].running}…
-          </span>
-        )}
       </button>
     </li>
   );

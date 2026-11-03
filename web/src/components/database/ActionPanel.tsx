@@ -1,5 +1,6 @@
 "use client";
 
+import { Check } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   DISHONORED_MAX_DAYS,
@@ -356,9 +357,9 @@ function PanelShell({ children }: { children: ReactNode }) {
 export function Field({ label, children, hint }: { label: string; children: ReactNode; hint?: ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <p className="text-[11px] font-bold uppercase tracking-wider text-ink-400">{label}</p>
+      <p className="text-xs font-semibold text-ink-500">{label}</p>
       {children}
-      {hint && <p className="text-[11px] text-ink-500">{hint}</p>}
+      {hint && <p className="text-xs text-ink-500">{hint}</p>}
     </div>
   );
 }
@@ -414,7 +415,7 @@ export function ReasonField({
         onChange={(event) => onChange(event.target.value.slice(0, 1000))}
         rows={3}
         placeholder="What happened?"
-        className="w-full resize-y rounded-lg border border-white/10 bg-ink-900/80 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:border-brand-300/50 focus:outline-none"
+        className="gm-cut w-full resize-y bg-ink-950 px-3 py-2 text-sm text-ink-100 shadow-[inset_0_0_0_1px_var(--color-ink-700)] outline-none [--cut:8px] placeholder:text-ink-500 focus:shadow-[inset_0_0_0_1px_var(--color-brand-400)]"
       />
       {quick.length > 0 && (
         <div className="flex flex-wrap gap-1">
@@ -423,7 +424,7 @@ export function ReasonField({
               key={text}
               type="button"
               onClick={() => onChange(value.trim() ? `${value.trim()} — ${text}` : text)}
-              className="rounded-md border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] font-semibold text-ink-300 hover:border-brand-300/40 hover:text-white"
+              className="gm-tag h-6 cursor-pointer bg-ink-800 px-3 text-ink-300 transition-colors hover:bg-ink-700 hover:text-ink-100"
             >
               {text}
             </button>
@@ -506,12 +507,12 @@ export function SubmitButton({
         setArmedFor(null);
         onConfirm();
       }}
-      className={`flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-40 ${
+      className={`gm-btn h-11 w-full [--cut:10px] ${
         armed
           ? "animate-pulse bg-rose-500 text-white"
           : danger
             ? "bg-rose-500/90 text-white hover:bg-rose-500"
-            : "bg-brand-400 text-ink-950 hover:bg-brand-300"
+            : "gm-btn-primary"
       }`}
     >
       {busy && <Spinner className="h-4 w-4" />}
@@ -522,19 +523,20 @@ export function SubmitButton({
 
 export function PreviewBox({ preview }: { preview: Preview }) {
   if (preview.error) {
-    return <p className="rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-xs font-semibold text-rose-100">{preview.error}</p>;
+    return <p className="gm-cut bg-rose-950 px-3 py-2 text-xs font-semibold text-rose-200 [--cut:8px]">{preview.error}</p>;
   }
   if (preview.lines.length === 0) return null;
   return (
     <div
-      className={`rounded-lg border px-3 py-2 text-xs ${
-        preview.danger ? "border-rose-400/40 bg-rose-500/10 text-rose-50" : "border-white/10 bg-white/[0.03] text-ink-200"
-      }`}
+      className={`gm-cut px-3.5 py-3 text-[12.5px] [--cut:10px] ${preview.danger ? "bg-rose-950/70 text-rose-100" : "bg-ink-950 text-ink-300"}`}
     >
-      <p className="mb-1 text-[10px] font-black uppercase tracking-wider text-ink-400">What will happen</p>
-      <ul className="space-y-0.5">
+      <p className="mb-1.5 text-xs font-semibold text-ink-500">What will happen</p>
+      <ul className="space-y-1">
         {preview.lines.map((line) => (
-          <li key={line}>• {line}</li>
+          <li key={line} className="grid grid-cols-[14px_minmax(0,1fr)] gap-2">
+            <Check aria-hidden className={`mt-0.5 h-3.5 w-3.5 ${preview.danger ? "text-rose-300" : "text-ink-500"}`} />
+            {line}
+          </li>
         ))}
       </ul>
     </div>

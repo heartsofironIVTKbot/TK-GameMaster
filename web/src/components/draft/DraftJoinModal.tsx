@@ -81,7 +81,7 @@ export default function DraftJoinModal({
             {draft.teams.map((team, index) => (
               <span key={team.key} className="flex items-center gap-2">
                 {index > 0 && <span>vs</span>}
-                <span className="gm-tag h-6 bg-ink-850 text-ink-300">
+                <span className="gm-tag h-6 bg-ink-800 text-ink-300">
                   <Flag aria-hidden className="h-3 w-3" />
                   {team.name}: {team.captain_name ?? "captain to be named"}
                 </span>

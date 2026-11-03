@@ -56,6 +56,12 @@ player being placed or a warning to accept is yellow. Steam status says
 Authenticated / Not authenticated (IronLegion's word). Help sits on layer
 1200: above the map panels, under every window.
 
+**Games page** (`docs/design/games.html`): the game list rows and the phase
+tag use the calendar's status colours (`PHASE` in `components/games/labels.tsx`;
+starting / on-going / ending are blue). A game's cards sit in tabs: Overview,
+Players, Messages, Nations and rules, Chat log. Card headings are `CardTitle`
+(a green line icon and the display title). Plain inputs use `gm-input`.
+
 **The calendars** (`docs/design/calendar.html`): a game's colour is its
 status and nothing else: yellow scheduled, green announced, blue on-going,
 grey ended, red cancelled (`GameState` in `web/src/lib/scheduleOptions.ts`,

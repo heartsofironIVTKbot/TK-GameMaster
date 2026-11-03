@@ -1,13 +1,14 @@
 "use client";
 
+import { Drama, FileText, FolderUp, X } from "lucide-react";
 import Link from "next/link";
 import { useRef, useState } from "react";
 import Avatar from "@/components/database/Avatar";
-import { GLASS, Spinner } from "@/components/schedule/ui";
+import { Spinner } from "@/components/schedule/ui";
 import { CHAT_LOG_MAX_BYTES, CHAT_LOG_MAX_FILES, DEFAULT_AI_RULES, rulesSummary, type AiPlayerResult } from "@/lib/aiAnalysisTypes";
 import type { GameControl } from "@/lib/gameControlTypes";
 import { categoryOfMode } from "@/lib/scheduleOptions";
-import { dateTime } from "./labels";
+import { dateTime, CardTitle } from "./labels";
 import { useBotRequest } from "./useBotRequest";
 
 /**
@@ -25,12 +26,12 @@ function size(bytes: number): string {
 }
 
 function verdict(player: AiPlayerResult): { text: string; tone: string } {
-  if (player.reward.commends) return { text: `⭐ ${player.reward.commends} commend${player.reward.commends > 1 ? "s" : ""}`, tone: "border-emerald-400/40 bg-emerald-500/15 text-emerald-100" };
-  if (player.reward.merit) return { text: `🎖️ ${player.reward.merit} Merit`, tone: "border-brand-400/40 bg-brand-500/15 text-brand-100" };
+  if (player.reward.commends) return { text: `${player.reward.commends} commend${player.reward.commends > 1 ? "s" : ""}`, tone: "border-emerald-400/40 bg-emerald-500/15 text-emerald-100" };
+  if (player.reward.merit) return { text: `${player.reward.merit} Merit`, tone: "border-brand-400/40 bg-brand-500/15 text-brand-100" };
   if (player.status === "toxic") return { text: "Toxic", tone: "border-rose-400/40 bg-rose-500/15 text-rose-100" };
-  if (player.status === "no_rp") return { text: "0 RP", tone: "border-white/10 bg-white/5 text-ink-300" };
-  if (player.status === "ungraded") return { text: "Not graded", tone: "border-white/10 bg-white/5 text-ink-300" };
-  return { text: "No reward", tone: "border-white/10 bg-white/5 text-ink-300" };
+  if (player.status === "no_rp") return { text: "0 RP", tone: "border-ink-800 bg-ink-800 text-ink-300" };
+  if (player.status === "ungraded") return { text: "Not graded", tone: "border-ink-800 bg-ink-800 text-ink-300" };
+  return { text: "No reward", tone: "border-ink-800 bg-ink-800 text-ink-300" };
 }
 
 function GiveButton({ game, player, onChanged }: { game: GameControl; player: AiPlayerResult; onChanged: () => void }) {
@@ -40,7 +41,7 @@ function GiveButton({ game, player, onChanged }: { game: GameControl; player: Ai
   if (player.given) {
     return (
       <span className="shrink-0 text-[11px] font-bold text-emerald-300" title={player.given.by_name ? `Given by ${player.given.by_name}` : undefined}>
-        ✓ Given
+        Given
       </span>
     );
   }
@@ -65,7 +66,7 @@ function GiveButton({ game, player, onChanged }: { game: GameControl; player: Ai
             },
           })
         }
-        className="flex items-center gap-1.5 rounded-lg bg-emerald-400 px-2.5 py-1 text-[11px] font-black text-ink-950 hover:bg-emerald-300 disabled:opacity-40"
+        className="gm-btn gm-btn-primary h-7 px-2.5 text-xs [--cut:6px]"
       >
         {request.busy && <Spinner className="h-3 w-3" />}
         Give {amount} {kind === "commend" ? `commend${amount > 1 ? "s" : ""}` : "Merit"}
@@ -107,7 +108,7 @@ function PlayerRow({ game, player, onChanged }: { game: GameControl; player: AiP
       {open && (
         <ul className="mt-1.5 space-y-1">
           {player.snippets.map((line) => (
-            <li key={line} className="border-l-2 border-white/15 pl-2 text-[11px] italic text-ink-300">
+            <li key={line} className="border-l-2 border-ink-700 pl-2 text-[11px] italic text-ink-300">
               {line}
             </li>
           ))}
@@ -174,8 +175,8 @@ function LogFiles({ game, busy, onChanged }: { game: GameControl; busy: boolean;
         setDragging(false);
         void upload([...event.dataTransfer.files]);
       }}
-      className={`rounded-xl border px-3 py-2.5 text-xs transition ${
-        dragging ? "border-sky-300/70 bg-sky-400/10" : "border-white/10 bg-white/[0.03]"
+      className={`gm-cut [--cut:9px] border px-3 py-2.5 text-xs transition ${
+        dragging ? "border-sky-300/70 bg-sky-400/10" : "border-ink-800 bg-ink-950"
       }`}
     >
       {files.length === 0 ? (
@@ -186,11 +187,11 @@ function LogFiles({ game, busy, onChanged }: { game: GameControl; busy: boolean;
         <ol className="space-y-1.5">
           {files.map((file, index) => (
             <li key={file.file_id} className="flex flex-wrap items-center gap-2">
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-sky-400/15 text-[10px] font-black text-sky-200">
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center gm-cut [--cut:5px] bg-sky-400/15 text-[10px] font-bold text-sky-200">
                 {index + 1}
               </span>
               <span className="min-w-0 flex-1 truncate text-ink-200">
-                📄 <b>{file.filename}</b> · {size(file.bytes)} · {dateTime(file.uploaded_at)}
+                <b className="font-semibold">{file.filename}</b>, {size(file.bytes)}, {dateTime(file.uploaded_at)}
                 {file.uploaded_by_name ? ` by ${file.uploaded_by_name}` : ""}
               </span>
               {game.can_manage && (
@@ -199,7 +200,7 @@ function LogFiles({ game, busy, onChanged }: { game: GameControl; busy: boolean;
                     type="button"
                     disabled={disabled || index === 0}
                     onClick={() => move(file.file_id, "up")}
-                    className="rounded-md border border-white/10 px-1.5 py-0.5 text-ink-300 hover:text-white disabled:opacity-30"
+                    className="gm-cut [--cut:5px] border border-ink-800 px-1.5 py-0.5 text-ink-300 hover:text-ink-100 disabled:opacity-30"
                     aria-label={`Move ${file.filename} earlier`}
                     title="Earlier in the game"
                   >
@@ -209,7 +210,7 @@ function LogFiles({ game, busy, onChanged }: { game: GameControl; busy: boolean;
                     type="button"
                     disabled={disabled || index === files.length - 1}
                     onClick={() => move(file.file_id, "down")}
-                    className="rounded-md border border-white/10 px-1.5 py-0.5 text-ink-300 hover:text-white disabled:opacity-30"
+                    className="gm-cut [--cut:5px] border border-ink-800 px-1.5 py-0.5 text-ink-300 hover:text-ink-100 disabled:opacity-30"
                     aria-label={`Move ${file.filename} later`}
                     title="Later in the game"
                   >
@@ -219,11 +220,11 @@ function LogFiles({ game, busy, onChanged }: { game: GameControl; busy: boolean;
                     type="button"
                     disabled={disabled}
                     onClick={() => void call({ method: "DELETE" }, `?file=${encodeURIComponent(file.file_id)}`)}
-                    className="rounded-md border border-white/10 px-1.5 py-0.5 text-rose-300 hover:border-rose-300/50 disabled:opacity-30"
+                    className="gm-cut [--cut:5px] border border-ink-800 px-1.5 py-0.5 text-rose-300 hover:border-rose-300/50 disabled:opacity-30"
                     aria-label={`Remove ${file.filename}`}
                     title="Remove this file"
                   >
-                    ✕
+                    <X aria-hidden className="h-3.5 w-3.5" />
                   </button>
                 </span>
               )}
@@ -247,9 +248,9 @@ function LogFiles({ game, busy, onChanged }: { game: GameControl; busy: boolean;
             type="button"
             disabled={disabled || files.length >= CHAT_LOG_MAX_FILES}
             onClick={() => fileRef.current?.click()}
-            className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs font-bold text-ink-200 hover:border-sky-300/40 hover:text-white disabled:opacity-50"
+            className="flex items-center gap-1.5 gm-cut [--cut:7px] border border-ink-800 bg-ink-800 px-2.5 py-1.5 text-xs font-bold text-ink-200 hover:border-sky-300/40 hover:text-ink-100 disabled:opacity-50"
           >
-            {working ? <Spinner className="h-3 w-3 text-sky-300" /> : "📁"} {files.length ? "Add more files" : "Add .txt files"}
+            {working ? <Spinner className="h-3 w-3 text-sky-300" /> : <FolderUp aria-hidden className="h-3.5 w-3.5" />} {files.length ? "Add more files" : "Add .txt files"}
           </button>
           <span className="text-[11px] text-ink-500">
             or drop them here · {files.length}/{CHAT_LOG_MAX_FILES} files · {size(total)} of {CHAT_LOG_MAX_BYTES / 1024 / 1024} MB
@@ -283,12 +284,13 @@ export default function ChatLogCard({ game, onChanged }: { game: GameControl; on
   );
 
   return (
-    <section data-tour="games.chatlog" className={`rounded-3xl p-4 sm:p-6 ${GLASS}`}>
+    <section data-tour="games.chatlog" className="gm-plate p-4 sm:p-[18px]">
       <div className="flex flex-wrap items-baseline gap-2">
-        <p className="text-[11px] font-black uppercase tracking-[0.18em] text-sky-300">Chat log & AI analysis</p>
+        <CardTitle icon={FileText} title="Chat log and AI analysis" />
         {result && (
           <Link href={`/roleplay/${game.id}`} className="ml-auto text-[11px] font-bold text-sky-300 hover:text-sky-200">
-            🎭 Public roleplay page ↗
+            <Drama aria-hidden className="h-3.5 w-3.5" />
+            Public roleplay page
           </Link>
         )}
       </div>
@@ -306,19 +308,19 @@ export default function ChatLogCard({ game, onChanged }: { game: GameControl; on
             type="button"
             disabled={game.chat_logs.length === 0 || analysis.busy}
             onClick={() => void analysis.submit({ action: "game_log_analysis", payload: { thread_id: game.id } })}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-sky-400 px-4 py-2.5 text-sm font-black text-ink-950 hover:bg-sky-300 disabled:cursor-not-allowed disabled:opacity-40"
+            className="gm-btn gm-btn-primary h-11 w-full [--cut:10px]"
           >
             {analysis.busy && <Spinner className="h-4 w-4" />}
-            {analysis.busy ? "The AI is reading the log…" : result ? "🤖 Run the AI analysis again" : "🤖 Run the AI analysis"}
+            {analysis.busy ? "The AI is reading the log…" : result ? "Run the AI analysis again" : "Run the AI analysis"}
           </button>
         )}
         {analysis.busy && <p className="text-center text-[11px] text-ink-400">Long logs can take a minute or two.</p>}
         {analysis.state.phase === "error" && (
-          <p className="rounded-xl border border-rose-400/40 bg-rose-500/10 px-3 py-2 text-xs text-rose-100">{analysis.state.message.replace(/^❌\s*/, "")}</p>
+          <p className="gm-cut [--cut:9px] border border-rose-400/40 bg-rose-500/10 px-3 py-2 text-xs text-rose-100">{analysis.state.message.replace(/^❌\s*/, "")}</p>
         )}
         {outcome && "title" in outcome && (
-          <div className="rounded-xl border border-emerald-400/40 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-50">
-            <p className="font-black">
+          <div className="gm-cut [--cut:9px] border border-emerald-400/40 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-50">
+            <p className="font-bold">
               {outcome.title} — {outcome.summary}
             </p>
             {outcome.notes.map((note) => (
@@ -332,11 +334,11 @@ export default function ChatLogCard({ game, onChanged }: { game: GameControl; on
           <p className="text-[11px] text-brand-300">The log files changed after this analysis. Run it again to grade them.</p>
         )}
 
-        <button type="button" onClick={() => setShowRules((value) => !value)} className="text-[11px] font-bold text-ink-400 hover:text-white">
+        <button type="button" onClick={() => setShowRules((value) => !value)} className="text-[11px] font-bold text-ink-400 hover:text-ink-100">
           {showRules ? "Hide the rules" : "How the AI grades (strict rules)"}
         </button>
         {showRules && (
-          <ul className="space-y-1 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-[11px] text-ink-300">
+          <ul className="space-y-1 gm-cut [--cut:9px] border border-ink-800 bg-ink-950 px-3 py-2 text-[11px] text-ink-300">
             {rulesSummary(result?.rules ?? DEFAULT_AI_RULES, result?.merit_enabled ?? true).map((line) => (
               <li key={line}>• {line}</li>
             ))}
@@ -345,17 +347,17 @@ export default function ChatLogCard({ game, onChanged }: { game: GameControl; on
         )}
 
         {result?.game_summary && (
-          <p className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs italic leading-relaxed text-ink-300">
-            📜 {result.game_summary}
+          <p className="gm-cut [--cut:9px] border border-ink-800 bg-ink-950 px-3 py-2 text-xs italic leading-relaxed text-ink-300">
+            {result.game_summary}
           </p>
         )}
         {result && (
           <div>
-            <p className="mb-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-ink-400">
+            <p className="mb-1.5 text-xs font-semibold text-ink-400">
               Results · {rewarded.length} of {players.length} recommended · graded {dateTime(result.at)}
               {result.by_name ? ` (run by ${result.by_name})` : ""}
             </p>
-            <ul className="divide-y divide-white/5 overflow-hidden rounded-xl border border-white/10">
+            <ul className="divide-y divide-white/5 overflow-hidden gm-cut [--cut:9px] border border-ink-800">
               {players.map((player) => (
                 <PlayerRow key={`${player.tag}-${player.user_id ?? "none"}`} game={game} player={player} onChanged={onChanged} />
               ))}

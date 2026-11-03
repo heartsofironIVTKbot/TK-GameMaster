@@ -523,7 +523,7 @@ const GAME_SETUP: Tour = {
 
 const GAMES: Tour = {
   id: "games",
-  version: 1,
+  version: 2,
   title: "Games page",
   summary: "Start, end and cancel games; access, reminders and messages.",
   paths: ["/games"],
@@ -553,6 +553,16 @@ const GAMES: Tour = {
         "The cards change as the game moves on: announced, running, ended.",
     },
     {
+      target: "games.tabs",
+      placement: "bottom",
+      title: "The game's tabs",
+      body:
+        "**Overview**: start or end the game, the players, and cancelling. **Players**: the draft, hot-join requests and late join. " +
+        "**Messages**: reminders and messages to the players. **Nations and rules**: who can reserve, locked nations, rules and mods. " +
+        "**Chat log**: the log and the AI analysis, once the game is running.\n\n" +
+        "The tabs change as the game moves on: a finished game keeps Overview, Messages and the chat log.",
+    },
+    {
       target: "games.start",
       placement: "left",
       title: "Start the game",
@@ -567,7 +577,7 @@ const GAMES: Tour = {
       placement: "left",
       title: "Ending it",
       body:
-        "**🏁 End game** (click twice) finishes attendance, removes the voice channels and the Gamer Pass, " +
+        "**End game** (click twice) finishes attendance, removes the voice channels and the Gamer Pass, " +
         "posts the rating poll and DMs you a link to correct attendance.",
     },
     {

@@ -1,10 +1,11 @@
 "use client";
 
+import { BellRing } from "lucide-react";
 import type { GameControl, ReminderKind } from "@/lib/gameControlTypes";
 import { formatRelative } from "@/lib/timeEngine";
-import { GLASS, Spinner } from "@/components/schedule/ui";
+import { Spinner } from "@/components/schedule/ui";
 import { RequestResult } from "./AccessCard";
-import { clockTime, dateTime } from "./labels";
+import { clockTime, dateTime, CardTitle } from "./labels";
 import { useBotRequest } from "./useBotRequest";
 
 /**
@@ -30,10 +31,10 @@ export default function RemindersCard({ game, now, onChanged }: { game: GameCont
   }
 
   return (
-    <section data-tour="games.reminders" className={`rounded-3xl p-4 sm:p-6 ${GLASS}`}>
+    <section data-tour="games.reminders" className="gm-plate p-4 sm:p-[18px]">
       <div className="flex flex-wrap items-start gap-4">
         <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-brand-300">Reminders</p>
+          <CardTitle icon={BellRing} title="Reminders" />
           <p className="mt-1 text-sm text-ink-300">{status}</p>
           {kind === "early" && (
             <p className="mt-1 text-[11px] text-ink-500">
@@ -53,10 +54,10 @@ export default function RemindersCard({ game, now, onChanged }: { game: GameCont
             type="button"
             disabled={request.busy || game.players === 0}
             onClick={() => void request.submit({ action: "game_remind", payload: { thread_id: game.id, kind } })}
-            className="flex shrink-0 items-center gap-2 rounded-xl border border-brand-300/50 bg-brand-400/15 px-4 py-2.5 text-sm font-black text-brand-100 transition hover:bg-brand-400/25 disabled:cursor-not-allowed disabled:opacity-40"
+            className="gm-btn gm-btn-secondary h-9 shrink-0 px-4 text-[13px]"
           >
             {request.busy && <Spinner className="h-4 w-4" />}
-            {kind === "early" ? `⏰ Send early reminder (${game.players})` : "🔔 Send late reminder"}
+            {kind === "early" ? `Send early reminder (${game.players})` : "Send late reminder"}
           </button>
         )}
       </div>

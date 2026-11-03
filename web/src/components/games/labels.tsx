@@ -1,36 +1,58 @@
 "use client";
 
+import { Flag, Play, Trash2, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import type { GamePhase, LifecycleAction } from "@/lib/gameControlTypes";
+import type { GameState } from "@/lib/scheduleOptions";
 
-/** Shared wording and colours for the Games page. */
+/**
+ * Shared wording and colours for the Games page. A game's phase uses the
+ * calendar's status colours (GameState, .gm-state-tag in globals.css):
+ * announced green, starting / on-going / ending blue, ended grey, cancelled red.
+ */
 
-export const PHASE: Record<GamePhase, { label: string; className: string; dot: string }> = {
-  announced: { label: "Announced", className: "border-sky-400/40 bg-sky-500/10 text-sky-200", dot: "bg-sky-400" },
-  starting: { label: "Starting", className: "border-brand-400/50 bg-brand-500/15 text-brand-100", dot: "bg-brand-400 animate-pulse" },
-  live: { label: "Live", className: "border-rose-400/50 bg-rose-500/15 text-rose-200", dot: "bg-rose-400 animate-pulse" },
-  ending: { label: "Ending", className: "border-brand-400/50 bg-brand-500/15 text-brand-100", dot: "bg-brand-400" },
-  ended: { label: "Ended", className: "border-white/15 bg-white/5 text-ink-300", dot: "bg-ink-400" },
-  cancelled: { label: "Cancelled", className: "border-rose-400/30 bg-rose-500/5 text-rose-300/80", dot: "bg-rose-400/60" },
+export const PHASE: Record<GamePhase, { label: string; state: GameState }> = {
+  announced: { label: "Announced", state: "announced" },
+  starting: { label: "Starting", state: "live" },
+  live: { label: "On-going", state: "live" },
+  ending: { label: "Ending", state: "live" },
+  ended: { label: "Ended", state: "ended" },
+  cancelled: { label: "Cancelled", state: "cancelled" },
 };
 
-export const ACTION_LABEL: Record<LifecycleAction, { running: string; done: string; icon: string }> = {
-  game_start: { running: "Starting the game", done: "Game started", icon: "🎮" },
-  game_end: { running: "Ending the game", done: "Game ended", icon: "🏁" },
-  game_cancel: { running: "Cancelling the game", done: "Game cancelled", icon: "🗑️" },
+export const ACTION_LABEL: Record<LifecycleAction, { running: string; done: string; icon: LucideIcon }> = {
+  game_start: { running: "Starting the game", done: "Game started", icon: Play },
+  game_end: { running: "Ending the game", done: "Game ended", icon: Flag },
+  game_cancel: { running: "Cancelling the game", done: "Game cancelled", icon: Trash2 },
 };
 
-export function PhaseBadge({ phase, size = "sm" }: { phase: GamePhase; size?: "sm" | "md" }) {
+export function PhaseBadge({ phase }: { phase: GamePhase }) {
   const meta = PHASE[phase];
   return (
-    <span
-      className={`flex shrink-0 items-center gap-1.5 rounded-full border font-black uppercase ${meta.className} ${
-        size === "md" ? "px-2.5 py-0.5 text-[11px]" : "px-2 py-0.5 text-[10px]"
-      }`}
-    >
-      <span className={`h-1.5 w-1.5 rounded-full ${meta.dot}`} />
+    <span data-game-state={meta.state} className="gm-tag gm-tag-dot gm-state-tag shrink-0 font-sans normal-case">
       {meta.label}
     </span>
+  );
+}
+
+/** A card's heading: a green line icon and the display title. */
+export function CardTitle({
+  icon: Icon,
+  title,
+  tone = "brand",
+  children,
+}: {
+  icon: LucideIcon;
+  title: string;
+  tone?: "brand" | "danger";
+  children?: ReactNode;
+}) {
+  return (
+    <div className="mb-1 flex items-center gap-2.5">
+      <Icon aria-hidden className={`h-[18px] w-[18px] shrink-0 ${tone === "danger" ? "text-rose-300" : "text-brand-400"}`} strokeWidth={1.75} />
+      <h2 className="gm-title text-[22px]">{title}</h2>
+      {children && <div className="ml-auto flex items-center gap-2">{children}</div>}
+    </div>
   );
 }
 
@@ -57,11 +79,11 @@ export function BotText({ text }: { text: string }) {
     if (match.index > last) parts.push(clean.slice(last, match.index));
     parts.push(
       match[1] !== undefined ? (
-        <b key={match.index} className="font-bold text-white">
+        <b key={match.index} className="font-semibold text-ink-100">
           {match[1]}
         </b>
       ) : (
-        <code key={match.index} className="rounded bg-white/10 px-1 text-[0.95em] text-brand-100">
+        <code key={match.index} className="bg-ink-800 px-1 text-[0.95em] text-ink-100">
           {match[2]}
         </code>
       ),

@@ -29,11 +29,7 @@ export function Segmented<T extends string>({
   size?: "sm" | "md";
 }) {
   return (
-    <div
-      role="radiogroup"
-      aria-label={ariaLabel}
-      className="flex w-full rounded-xl border border-white/10 bg-ink-950/60 p-1"
-    >
+    <div role="radiogroup" aria-label={ariaLabel} className="gm-cut flex w-full gap-0.5 bg-ink-950 p-0.5 shadow-[inset_0_0_0_1px_var(--color-ink-700)] [--cut:8px]">
       {options.map((option) => {
         const active = option.value === value;
         return (
@@ -45,12 +41,8 @@ export function Segmented<T extends string>({
             disabled={option.disabled}
             title={option.title}
             onClick={() => onChange(option.value)}
-            className={`flex-1 rounded-lg font-semibold transition-all ${
-              size === "sm" ? "px-2 py-1.5 text-xs" : "px-3 py-2 text-sm"
-            } ${
-              active
-                ? "bg-brand-400 text-ink-950 shadow-lg shadow-brand-500/20"
-                : "text-ink-300 hover:bg-white/5 hover:text-white"
+            className={`gm-cut flex-1 font-semibold transition-colors [--cut:6px] ${size === "sm" ? "px-2 py-1.5 text-xs" : "px-3 py-2 text-sm"} ${
+              active ? "bg-brand-400 text-brand-950" : "text-ink-300 hover:bg-ink-900 hover:text-ink-100"
             } disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent`}
           >
             {option.label}

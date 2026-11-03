@@ -1,11 +1,12 @@
 "use client";
 
+import { Send } from "lucide-react";
 import { useState } from "react";
 import type { GameControl } from "@/lib/gameControlTypes";
 import { HOST_MESSAGE_MAX_LEN } from "@/lib/messageTypes";
-import { GLASS, Spinner } from "@/components/schedule/ui";
+import { Spinner } from "@/components/schedule/ui";
 import { RequestResult } from "./AccessCard";
-import { dateTime } from "./labels";
+import { dateTime, CardTitle } from "./labels";
 import { useBotRequest } from "./useBotRequest";
 
 /**
@@ -57,8 +58,8 @@ export default function MessagePlayersCard({ game, onChanged }: { game: GameCont
   };
 
   return (
-    <section data-tour="games.message" className={`rounded-3xl p-4 sm:p-6 ${GLASS}`}>
-      <p className="text-[11px] font-black uppercase tracking-[0.18em] text-brand-300">Message players</p>
+    <section data-tour="games.message" className="gm-plate p-4 sm:p-[18px]">
+      <CardTitle icon={Send} title="Message players" />
       <p className="mt-1 text-sm text-ink-300">
         {everyone.length === 0
           ? "Nobody has signed up yet — once players reserve, you can DM them here."
@@ -67,7 +68,7 @@ export default function MessagePlayersCard({ game, onChanged }: { game: GameCont
 
       {game.can_manage && everyone.length > 0 && (
         <div className="mt-4 space-y-3">
-          <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+          <div className="gm-cut [--cut:9px] border border-ink-800 bg-ink-950 px-3 py-2">
             <div className="flex flex-wrap items-center gap-2 text-xs">
               <span className="font-bold text-ink-100">
                 To: {excluded.size === 0 ? `everyone (${everyone.length})` : `${picked.length} of ${everyone.length} players`}
@@ -75,14 +76,14 @@ export default function MessagePlayersCard({ game, onChanged }: { game: GameCont
               <button
                 type="button"
                 onClick={() => setChoosing((value) => !value)}
-                className="ml-auto rounded-md border border-white/10 px-2 py-0.5 text-[11px] font-bold text-ink-300 hover:border-brand-300/40 hover:text-white"
+                className="ml-auto gm-cut [--cut:5px] border border-ink-800 px-2 py-0.5 text-[11px] font-bold text-ink-300 hover:border-brand-300/40 hover:text-ink-100"
                 aria-expanded={choosing}
               >
                 {choosing ? "Done" : "Choose players…"}
               </button>
             </div>
             {choosing && (
-              <div className="mt-2 border-t border-white/10 pt-2">
+              <div className="mt-2 border-t border-ink-800 pt-2">
                 <div className="mb-1.5 flex gap-1.5 text-[11px]">
                   <button
                     type="button"
@@ -90,7 +91,7 @@ export default function MessagePlayersCard({ game, onChanged }: { game: GameCont
                       setArmed(false);
                       setExcluded(new Set());
                     }}
-                    className="rounded-md bg-white/5 px-2 py-0.5 font-bold text-ink-300 hover:text-white"
+                    className="gm-cut [--cut:5px] bg-ink-800 px-2 py-0.5 font-bold text-ink-300 hover:text-ink-100"
                   >
                     All
                   </button>
@@ -100,7 +101,7 @@ export default function MessagePlayersCard({ game, onChanged }: { game: GameCont
                       setArmed(false);
                       setExcluded(new Set(everyone.map((entry) => entry.user_id)));
                     }}
-                    className="rounded-md bg-white/5 px-2 py-0.5 font-bold text-ink-300 hover:text-white"
+                    className="gm-cut [--cut:5px] bg-ink-800 px-2 py-0.5 font-bold text-ink-300 hover:text-ink-100"
                   >
                     None
                   </button>
@@ -108,7 +109,7 @@ export default function MessagePlayersCard({ game, onChanged }: { game: GameCont
                 <ul className="roster-scroll max-h-60 space-y-0.5 overflow-y-auto pr-1">
                   {everyone.map((entry) => (
                     <li key={entry.user_id}>
-                      <label className="flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-1 text-xs hover:bg-white/5">
+                      <label className="flex cursor-pointer items-center gap-2 gm-cut [--cut:5px] px-1.5 py-1 text-xs hover:bg-ink-900">
                         <input
                           type="checkbox"
                           checked={!excluded.has(entry.user_id)}
@@ -137,7 +138,7 @@ export default function MessagePlayersCard({ game, onChanged }: { game: GameCont
               disabled={request.busy}
               placeholder="e.g. The game is moved to 20:00 — same lobby, same checksum."
               aria-label="Message to the players"
-              className="w-full resize-y rounded-xl border border-white/10 bg-ink-900/80 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:border-brand-300/50 focus:outline-none disabled:opacity-60"
+              className="w-full resize-y gm-input w-full text-sm  disabled:opacity-60"
             />
             <p className={`text-right text-[10px] ${text.length > HOST_MESSAGE_MAX_LEN - 100 ? "text-brand-300" : "text-ink-500"}`}>
               {text.length} / {HOST_MESSAGE_MAX_LEN}
@@ -145,10 +146,10 @@ export default function MessagePlayersCard({ game, onChanged }: { game: GameCont
           </div>
 
           {trimmed && (
-            <div className="rounded-xl border border-white/10 bg-[#2b2d31] p-3">
-              <p className="mb-1.5 text-[10px] font-black uppercase tracking-wider text-ink-400">What they&apos;ll see</p>
+            <div className="gm-cut [--cut:9px] border border-ink-800 bg-[#2b2d31] p-3">
+              <p className="mb-1.5 text-xs font-semibold text-ink-400">What they&apos;ll see</p>
               <div className="border-l-4 border-brand-400 pl-3">
-                <p className="text-sm font-bold text-white">📢 Message from the host of your {game.mode} game</p>
+                <p className="text-sm font-bold text-ink-100">📢 Message from the host of your {game.mode} game</p>
                 <p className="mt-1 max-h-40 overflow-y-auto whitespace-pre-wrap break-words text-xs text-ink-200">{trimmed}</p>
                 <p className="mt-1.5 text-[11px] text-ink-400">
                   {game.discord_url && game.has_thread ? "Game thread · " : ""}On the website (link to this game)
@@ -161,14 +162,14 @@ export default function MessagePlayersCard({ game, onChanged }: { game: GameCont
             type="button"
             disabled={!canSend}
             onClick={send}
-            className={`flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-40 ${
+            className={`flex w-full items-center justify-center gap-2 gm-cut [--cut:9px] px-4 py-2.5 text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-40 ${
               armed ? "animate-pulse bg-brand-300 text-ink-950" : "bg-brand-400 text-ink-950 hover:bg-brand-300"
             }`}
           >
             {request.busy && <Spinner className="h-4 w-4" />}
             {armed
               ? `Click again to DM ${picked.length} player${picked.length === 1 ? "" : "s"}`
-              : `📢 Send to ${picked.length} player${picked.length === 1 ? "" : "s"}`}
+              : `Send to ${picked.length} player${picked.length === 1 ? "" : "s"}`}
           </button>
         </div>
       )}
@@ -179,11 +180,11 @@ export default function MessagePlayersCard({ game, onChanged }: { game: GameCont
       <RequestResult state={request.state} onDismiss={request.reset} />
 
       {game.messages.length > 0 && (
-        <div className="mt-4 border-t border-white/10 pt-3">
-          <p className="mb-2 text-[10px] font-black uppercase tracking-[0.18em] text-ink-400">Sent before</p>
+        <div className="mt-4 border-t border-ink-800 pt-3">
+          <p className="mb-2 text-xs font-semibold text-ink-400">Sent before</p>
           <ul className="space-y-2">
             {game.messages.map((entry) => (
-              <li key={`${entry.ts}-${entry.text.slice(0, 20)}`} className="rounded-lg border border-white/5 bg-white/[0.03] px-2.5 py-2">
+              <li key={`${entry.ts}-${entry.text.slice(0, 20)}`} className="gm-cut [--cut:7px] border border-ink-800 bg-ink-950 px-2.5 py-2">
                 <p className="text-[11px] text-ink-400">
                   {dateTime(entry.ts)}
                   {entry.by_name ? ` · ${entry.by_name}` : ""} · DMed {entry.sent} of {entry.total}
