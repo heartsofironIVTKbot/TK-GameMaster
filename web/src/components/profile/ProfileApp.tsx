@@ -86,7 +86,7 @@ export default function ProfileApp() {
 
   return (
     <div className="gm-backdrop min-h-screen w-full text-ink-100">
-      <SiteHeader page="profile" icon="👤" title="My profile" subtitle={`GameMaster · ${server.name ?? "Your stats"}`} gradient="from-sky-300 to-indigo-600"></SiteHeader>
+      <SiteHeader page="profile" title="My profile" subtitle={`GameMaster · ${server.name ?? "Your stats"}`}></SiteHeader>
 
       <main className="mx-auto max-w-[1300px] space-y-4 px-4 py-5 sm:px-6">
         <section

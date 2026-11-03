@@ -34,7 +34,7 @@ export default function StatusPage() {
 
   return (
     <div className="gm-backdrop min-h-screen w-full text-ink-100">
-      <SiteHeader page="status" icon="📡" title="Status" subtitle="GameMaster" gradient="from-emerald-300 to-teal-600"></SiteHeader>
+      <SiteHeader page="status" title="Status" subtitle="GameMaster"></SiteHeader>
 
       <main className="mx-auto max-w-3xl space-y-4 px-4 py-6 sm:px-6">
         {!status && !error && (

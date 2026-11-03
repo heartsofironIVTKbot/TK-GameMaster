@@ -207,7 +207,7 @@ export default function DatabaseApp({ host }: { host: HostProfile }) {
 
   return (
     <div className="gm-backdrop min-h-screen w-full text-ink-100">
-      <SiteHeader page="database" icon="🗂️" title="Database" subtitle="GameMaster · User records" gradient="from-brand-300 to-orange-600">
+      <SiteHeader page="database" title="Database" subtitle="GameMaster · User records">
           {host.demo && (
             <span className="rounded-full border border-fuchsia-400/40 bg-fuchsia-500/15 px-3 py-1 text-[11px] font-bold text-fuchsia-200">
               PREVIEW MODE · sample data

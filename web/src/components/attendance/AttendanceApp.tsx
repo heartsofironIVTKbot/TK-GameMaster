@@ -74,7 +74,7 @@ export default function AttendanceApp({ host }: { host: HostProfile }) {
 
   return (
     <div className="gm-backdrop min-h-screen w-full text-ink-100">
-      <SiteHeader page="attendance" icon="🎯" title="Attendance" subtitle="GameMaster · Live game attendance" gradient="from-emerald-300 to-teal-600">
+      <SiteHeader page="attendance" title="Attendance" subtitle="GameMaster · Live game attendance">
           {host.demo && (
             <span className="rounded-full border border-fuchsia-400/40 bg-fuchsia-500/15 px-3 py-1 text-[11px] font-bold text-fuchsia-200">
               PREVIEW MODE · sample data

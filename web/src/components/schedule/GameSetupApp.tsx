@@ -411,7 +411,7 @@ export default function GameSetupApp({
   }
 
   return (
-    <div className="relative h-screen w-screen overflow-hidden bg-[#0b1322] text-ink-100">
+    <div className="relative h-screen w-screen overflow-hidden bg-ink-950 text-ink-100">
       {/* Map (or a backdrop for modes without one) */}
       <div className="absolute inset-0 z-0">
         {scenarioId ? (

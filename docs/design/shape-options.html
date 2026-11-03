@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GameMaster Shape Options</title>
+<!-- Design sample for the redesign (docs/branding.md). Not part of the app:
+     the same slice of GameMaster in five shape languages, to pick one. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+<style>
+  :root {
+    --ink-950: oklch(11.8% 0.009 152);
+    --ink-900: oklch(19.2% 0.011 152);
+    --ink-850: oklch(22.8% 0.012 152);
+    --ink-800: oklch(26.6% 0.012 152);
+    --ink-700: oklch(36.2% 0.013 152);
+    --ink-500: oklch(55.4% 0.015 152);
+    --ink-400: oklch(70.4% 0.015 152);
+    --ink-300: oklch(86.4% 0.012 152);
+    --ink-100: oklch(96.6% 0.006 152);
+    --brand-300: oklch(83.2% 0.158 146);
+    --brand-400: oklch(76.4% 0.186 146);
+    --brand-950: oklch(19.4% 0.046 146);
+    --good: oklch(79.4% 0.118 174);
+    --good-bg: oklch(23.4% 0.038 174);
+    --pending: oklch(85% 0.15 90);
+    --pending-bg: oklch(25% 0.045 90);
+    --danger: oklch(71% 0.17 18);
+    --danger-bg: oklch(24% 0.06 18);
+    --roleplay: oklch(72% 0.15 300);
+    --display: "Big Shoulders Display", "Arial Narrow", sans-serif;
+    --body: "Public Sans", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: oklch(8% 0.006 152); color: var(--ink-300); font: 400 15px/1.5 var(--body); font-variant-numeric: tabular-nums; }
+  a { color: inherit; text-decoration: none; cursor: pointer; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--brand-400); outline-offset: 2px; }
+  svg.lucide { width: 16px; height: 16px; stroke-width: 1.75; flex: none; }
+
+  .page { max-width: 1240px; margin: 0 auto; padding: 40px 24px 64px; }
+  .page > h1 { margin: 0; font: 800 44px/.95 var(--display); color: var(--ink-100); text-transform: uppercase; }
+  .page > p { margin: 10px 0 32px; max-width: 64ch; color: var(--ink-400); }
+  .board { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 540px), 1fr)); gap: 40px 32px; }
+  .opt h2 { margin: 0; font-size: 17px; font-weight: 700; color: var(--ink-100); }
+  .opt h2 span { display: inline-grid; place-items: center; width: 24px; height: 24px; margin-right: 8px; border-radius: 50%; background: var(--ink-800); font-size: 13px; }
+  .opt > p { margin: 4px 0 14px; color: var(--ink-400); font-size: 14px; min-height: 3em; }
+
+  /* ================= the scene (shape-neutral base) ================= */
+  .scene { background: var(--ink-950); border: 1px solid var(--ink-800); border-radius: 6px; overflow: hidden; }
+  .s-nav { display: flex; align-items: stretch; gap: 4px; height: 48px; padding: 0 14px; border-bottom: 1px solid var(--ink-800); }
+  .s-nav a { display: flex; align-items: center; gap: 7px; padding: 0 11px; font-size: 13px; font-weight: 500; color: var(--ink-400); }
+  .s-nav a.on { color: var(--ink-100); }
+  .s-nav a.on svg { color: var(--brand-400); }
+  .s-av { margin: auto 0 auto auto; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--ink-800); color: var(--ink-100); font-size: 12px; font-weight: 600; }
+  .s-body { padding: 20px 14px 18px; display: grid; gap: 16px; }
+  .s-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .s-head h3 { margin: 0; font: 800 34px/1 var(--display); color: var(--ink-100); text-transform: uppercase; }
+
+  .panel { background: var(--ink-900); border: 1px solid var(--ink-800); }
+  .tab { grid-column: 1 / -1; padding: 10px 12px; font: 800 17px/1 var(--display); color: var(--ink-100); text-transform: uppercase; border-bottom: 1px solid var(--ink-800); }
+  .s-week { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .cell { min-height: 104px; padding: 8px; display: flex; flex-direction: column; gap: 6px; border-right: 1px solid var(--ink-800); }
+  .cell:last-child { border-right: 0; }
+  .num { font: 600 17px/1 var(--display); color: var(--ink-400); align-self: flex-start; }
+  .today .num { color: var(--brand-950); background: var(--brand-400); width: 24px; height: 24px; display: grid; place-items: center; }
+  .locked { background: repeating-linear-gradient(135deg, transparent 0 7px, oklch(100% 0 0 / .035) 7px 14px); }
+  .game { display: block; padding: 5px 7px; background: var(--ink-850); border-left: 3px solid var(--ink-400); font-size: 12px; line-height: 1.3; }
+  .game b { display: block; color: var(--ink-100); font-weight: 600; }
+  .game i { font-style: normal; color: var(--ink-400); }
+  .game.rp { border-left-color: var(--roleplay); }
+
+  .s-up { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; align-items: center; column-gap: 12px; }
+  .s-up > :not(.tab) { margin: 12px 0; }
+  .s-up .when { margin-left: 12px !important; text-align: center; }
+  .s-up > .chip { margin-right: 12px; }
+  .when strong { display: block; font: 800 26px/1 var(--display); color: var(--ink-100); }
+  .when small { font-size: 11px; font-weight: 600; color: var(--ink-500); }
+  .s-up h4 { margin: 0; font-size: 14px; font-weight: 600; color: var(--ink-100); }
+  .s-up p { margin: 1px 0 0; font-size: 13px; color: var(--ink-400); }
+  .soon { color: var(--brand-400); font-weight: 600; }
+  .bar { height: 4px; margin-top: 8px; background: var(--ink-800); border-radius: 2px; overflow: hidden; }
+  .bar span { display: block; width: 57%; height: 100%; background: var(--ink-400); }
+
+  .s-kit { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .btn { display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 14px; font-size: 13px; font-weight: 600; border: 1px solid transparent; background: none; white-space: nowrap; }
+  .btn-primary { background: var(--brand-400); color: var(--brand-950); }
+  .btn-primary:hover { background: var(--brand-300); }
+  .btn-secondary { border-color: var(--ink-700); color: var(--ink-100); }
+  .chip { display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 9px; font-size: 12px; font-weight: 600; }
+  .chip::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .chip-open { color: var(--good); background: var(--good-bg); }
+  .chip-pending { color: var(--pending); background: var(--pending-bg); }
+  .chip-taken { color: var(--danger); background: var(--danger-bg); }
+  .field { flex: 1 1 160px; display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 11px; border: 1px solid var(--ink-700); background: var(--ink-950); color: var(--ink-500); font-size: 13px; }
+  .field:focus-within { border-color: var(--brand-400); }
+  .field input { flex: 1; min-width: 0; background: none; border: 0; outline: 0; color: var(--ink-100); font: inherit; }
+
+  /* ================= A. Plotting sheet (today) ================= */
+  .a .s-nav a { border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .a .s-nav a.on { border-bottom-color: var(--brand-400); }
+  .a .panel { border-radius: 8px; overflow: hidden; }
+  .a .btn, .a .field, .a .game, .a .today .num { border-radius: 4px; }
+  .a .chip { border-radius: 999px; }
+
+  /* ================= B. Field kit: soft and round ================= */
+  .b .s-nav { align-items: center; }
+  .b .s-nav a { height: 32px; border-radius: 999px; }
+  .b .s-nav a.on { background: var(--ink-800); }
+  .b .panel { border-radius: 18px; }
+  .b .tab { border-bottom: 0; padding: 14px 14px 4px; }
+  .b .s-week { gap: 6px; padding: 0 6px 6px; }
+  .b .cell { border: 0; border-radius: 12px; background: var(--ink-850); }
+  .b .game { border-left: 0; border-radius: 8px; background: var(--ink-800); }
+  .b .game b::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 5px; border-radius: 50%; background: var(--ink-400); vertical-align: 1px; }
+  .b .game.rp b::before { background: var(--roleplay); }
+  .b .today .num { border-radius: 50%; }
+  .b .s-up .when { padding: 6px 0; border-radius: 12px; background: var(--ink-850); }
+  .b .btn, .b .field, .b .chip { border-radius: 999px; }
+  .b .btn { padding: 0 16px; }
+
+  /* ================= C. Cut plate: clipped corners ================= */
+  /* A cut corner top-left and bottom-right. Borders are drawn by filling the
+     box with the line colour and laying the fill 1px inside it. */
+  .c .cut, .c .panel, .c .btn, .c .field, .c .game, .c .today .num {
+    clip-path: polygon(var(--c) 0, 100% 0, 100% calc(100% - var(--c)), calc(100% - var(--c)) 100%, 0 100%, 0 var(--c));
+  }
+  .c .panel { --c: 14px; border: 0; padding: 1px; background: var(--ink-800); position: relative; isolation: isolate; }
+  .c .panel::before, .c .btn-secondary::before, .c .field::before {
+    content: ""; position: absolute; inset: 1px; z-index: -1; background: var(--fill);
+    --ci: calc(var(--c) - .6px);
+    clip-path: polygon(var(--ci) 0, 100% 0, 100% calc(100% - var(--ci)), calc(100% - var(--ci)) 100%, 0 100%, 0 var(--ci));
+  }
+  .c .panel { --fill: var(--ink-900); }
+  .c .btn { --c: 8px; padding: 0 16px; }
+  .c .btn-secondary { --fill: var(--ink-950); border: 0; background: var(--ink-700); position: relative; isolation: isolate; }
+  .c .field { --c: 8px; --fill: var(--ink-950); border: 0; background: var(--ink-700); position: relative; isolation: isolate; }
+  .c .field:focus-within { background: var(--brand-400); }
+  .c .game { --c: 6px; }
+  .c .today .num { --c: 6px; }
+  .c .chip { padding: 0 12px; clip-path: polygon(7px 0, calc(100% - 7px) 0, 100% 50%, calc(100% - 7px) 100%, 7px 100%, 0 50%); }
+  .c .s-nav a { position: relative; }
+  .c .s-nav a.on::after { content: ""; position: absolute; left: 4px; right: 4px; bottom: -1px; height: 4px; background: var(--brand-400);
+    clip-path: polygon(4px 0, calc(100% - 4px) 0, 100% 100%, 0 100%); }
+
+  /* ================= D. Dossier: folder tabs ================= */
+  .d .s-nav { align-items: flex-end; }
+  .d .s-nav a { height: 38px; border: 1px solid transparent; border-bottom: 0; border-radius: 8px 8px 0 0; margin-bottom: -1px; }
+  .d .s-nav a.on { background: var(--ink-950); border-color: var(--ink-800); }
+  .d .panel { position: relative; margin-top: 27px; border-radius: 0 10px 10px 10px; }
+  .d .tab { position: absolute; bottom: calc(100% - 1px); left: -1px; height: 28px; display: flex; align-items: center; padding: 0 14px; font-size: 15px;
+    background: var(--ink-900); border: 1px solid var(--ink-800); border-bottom: 0; border-radius: 8px 8px 0 0; }
+  .d .s-up > :not(.tab) { margin: 14px 0; }
+  .d .btn, .d .field, .d .game { border-radius: 6px; }
+  .d .chip { border-radius: 4px; }
+  .d .chip-open { box-shadow: inset 0 0 0 1px oklch(79.4% 0.118 174 / .35); }
+  .d .chip-pending { box-shadow: inset 0 0 0 1px oklch(85% 0.15 90 / .35); }
+  .d .chip-taken { box-shadow: inset 0 0 0 1px oklch(71% 0.17 18 / .35); }
+  .d .today .num { background: none; color: var(--brand-400); border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--brand-400); }
+
+  /* ================= E. Lean forward: what you press slants ================= */
+  .e .btn, .e .s-nav a.on::before, .e .chip, .e .today .num {
+    clip-path: polygon(var(--s) 0, 100% 0, calc(100% - var(--s)) 100%, 0 100%);
+  }
+  .e .btn { --s: 9px; padding: 0 20px; }
+  .e .btn-secondary { --fill: var(--ink-950); border: 0; background: var(--ink-700); position: relative; isolation: isolate; }
+  .e .btn-secondary::before { content: ""; position: absolute; inset: 1px; z-index: -1; background: var(--fill); clip-path: polygon(var(--s) 0, 100% 0, calc(100% - var(--s)) 100%, 0 100%); }
+  .e .s-nav { align-items: center; }
+  .e .s-nav a { position: relative; isolation: isolate; height: 32px; padding: 0 16px; }
+  .e .s-nav a.on::before { --s: 7px; content: ""; position: absolute; inset: 0; z-index: -1; background: var(--ink-800); }
+  .e .chip { --s: 5px; padding: 0 12px; }
+  .e .today .num { --s: 4px; width: 30px; }
+  .e .panel { border-radius: 6px; overflow: hidden; }
+  .e .field, .e .game { border-radius: 3px; }
+
+  @media (max-width: 560px) {
+    .page { padding: 28px 16px 48px; }
+    .page > h1 { font-size: 36px; }
+    .s-nav a { padding: 0 8px; }
+    .s-nav a svg { display: none; }
+    .game i { display: none; }
+    .cell { min-height: 84px; padding: 6px; }
+    .s-head h3 { font-size: 28px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Shape options</h1>
+  <p>The same slice of GameMaster five ways: the menu, a calendar week, the next game, buttons, nation status and search. Colours and type are the same in all five; only the shapes change. People (avatars) stay round in every option.</p>
+
+  <div class="board">
+    <section class="opt a">
+      <h2><span>A</span>Plotting sheet (today's sample)</h2>
+      <p>Squares everywhere. Precise and calm, but flat: a button, a game and a panel all have the same shape.</p>
+      <div class="slot"></div>
+    </section>
+    <section class="opt b">
+      <h2><span>B</span>Field kit</h2>
+      <p>Soft and round, close to Discord. Friendly and easy to read, but it's the shape most apps already have.</p>
+      <div class="slot"></div>
+    </section>
+    <section class="opt c">
+      <h2><span>C</span>Cut plate</h2>
+      <p>Corners clipped like stencilled equipment plates. The most specific to a war game, without being a costume.</p>
+      <div class="slot"></div>
+    </section>
+    <section class="opt d">
+      <h2><span>D</span>Dossier</h2>
+      <p>Panels are file folders with their title on a tab; the open page is a tab too, and today is circled. Reads as staff paperwork.</p>
+      <div class="slot"></div>
+    </section>
+    <section class="opt e">
+      <h2><span>E</span>Lean forward</h2>
+      <p>Anything you press slants; boxes that only hold things stay calm. Fast and game-like, the closest to an esports look.</p>
+      <div class="slot"></div>
+    </section>
+  </div>
+</div>
+
+<template id="scene">
+  <div class="scene">
+    <nav class="s-nav" aria-label="Pages">
+      <a><i data-lucide="map"></i>Map</a>
+      <a class="on" aria-current="page"><i data-lucide="calendar-days"></i>Calendar</a>
+      <a><i data-lucide="swords"></i>Games</a>
+      <span class="s-av">D</span>
+    </nav>
+    <div class="s-body">
+      <div class="s-head">
+        <h3>Calendar</h3>
+        <button class="btn btn-primary"><i data-lucide="plus"></i>Schedule game</button>
+      </div>
+      <div class="panel s-week">
+        <span class="tab">November 2026</span>
+        <div class="cell today"><span class="num">3</span><a class="game rp"><b>14:00 Roleplay</b><i>34 of 60</i></a></div>
+        <div class="cell"><span class="num">4</span><a class="game rp"><b>23:00 Roleplay</b><i>12 of 60</i></a></div>
+        <div class="cell"><span class="num">5</span><a class="game"><b>22:00 Their Finest Hour</b><i>Historical</i></a></div>
+        <div class="cell locked"><span class="num">7</span><a class="game"><b>20:00 Kaiserreich</b><i>Mod</i></a></div>
+      </div>
+      <div class="panel s-up">
+        <span class="tab">Next game</span>
+        <div class="when"><strong>3</strong><small>Tue</small></div>
+        <div>
+          <h4>Roleplay</h4>
+          <p>14:00, <span class="soon">starts in 23 minutes</span></p>
+          <div class="bar"><span></span></div>
+        </div>
+        <span class="chip chip-open">Open</span>
+      </div>
+      <div class="s-kit">
+        <button class="btn btn-primary">Reserve nation</button>
+        <button class="btn btn-secondary">Edit game</button>
+        <span class="chip chip-open">Open</span>
+        <span class="chip chip-pending">Pending</span>
+        <span class="chip chip-taken">Taken</span>
+        <label class="field"><i data-lucide="search"></i><input placeholder="Search players" aria-label="Search players"></label>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+  const scene = document.getElementById("scene");
+  document.querySelectorAll(".slot").forEach((slot) => slot.replaceWith(scene.content.cloneNode(true)));
+  lucide.createIcons();
+</script>
+</body>
+</html>

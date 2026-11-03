@@ -262,7 +262,7 @@ export default function CalendarApp({ host }: { host: HostProfile }) {
   return (
     <div className="gm-backdrop min-h-screen w-full text-ink-100">
       {/* Header */}
-      <SiteHeader page="calendar" icon="🗓️" title="Host Calendar" subtitle="GameMaster · Calendar" gradient="from-brand-300 to-orange-600">
+      <SiteHeader page="calendar" title="Host Calendar" subtitle="GameMaster · Calendar">
         <span
           className="flex items-center gap-2 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-[11px] font-bold text-emerald-200"
           title="The calendar refreshes automatically"

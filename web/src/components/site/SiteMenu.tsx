@@ -1,6 +1,25 @@
 "use client";
 
 import Link from "next/link";
+import {
+  Activity,
+  CalendarDays,
+  ClipboardCheck,
+  Database,
+  History,
+  Layers,
+  Map as MapIcon,
+  Menu,
+  Plus,
+  ScrollText,
+  ServerCog,
+  Swords,
+  Ticket,
+  TriangleAlert,
+  UserRound,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useViewer, type Viewer } from "./viewer";
@@ -27,35 +46,52 @@ export type SitePage =
   | "invite"
   | "crash";
 
+/** Every page's icon: one line-icon set, one colour (green on the page you're on). */
+export const PAGE_ICONS: Record<SitePage, LucideIcon> = {
+  map: MapIcon,
+  roleplay: ScrollText,
+  profile: UserRound,
+  tickets: Ticket,
+  calendar: CalendarDays,
+  games: Swords,
+  attendance: ClipboardCheck,
+  database: Database,
+  presets: Layers,
+  servers: ServerCog,
+  audit: History,
+  status: Activity,
+  invite: Plus,
+  crash: TriangleAlert,
+};
+
 export interface SiteLink {
   page: SitePage;
   href: string;
   label: string;
-  icon: string;
   hint: string;
 }
 
 const PLAYER_LINKS: SiteLink[] = [
-  { page: "map", href: "/", label: "Map", icon: "🗺️", hint: "Reserve your nation" },
-  { page: "roleplay", href: "/roleplay", label: "Roleplay archive", icon: "🎭", hint: "Every game's story and roleplay" },
-  { page: "profile", href: "/profile", label: "My profile", icon: "👤", hint: "Your games, commends and roles" },
-  { page: "tickets", href: "/tickets", label: "My tickets", icon: "🎫", hint: "Closed tickets you can read" },
+  { page: "map", href: "/", label: "Map", hint: "Reserve your nation" },
+  { page: "roleplay", href: "/roleplay", label: "Roleplay archive", hint: "Every game's story and roleplay" },
+  { page: "profile", href: "/profile", label: "My profile", hint: "Your games, commends and roles" },
+  { page: "tickets", href: "/tickets", label: "My tickets", hint: "Closed tickets you can read" },
 ];
 
 const HOST_LINKS: SiteLink[] = [
-  { page: "calendar", href: "/schedule", label: "Calendar", icon: "🗓️", hint: "Schedule games" },
-  { page: "games", href: "/games", label: "Games", icon: "🎮", hint: "Start, end and manage games" },
-  { page: "attendance", href: "/attendance", label: "Attendance", icon: "🎯", hint: "Who showed up" },
-  { page: "database", href: "/database", label: "Database", icon: "🗂️", hint: "Player records" },
-  { page: "presets", href: "/presets", label: "Presets", icon: "🧩", hint: "Saved game setups" },
+  { page: "calendar", href: "/schedule", label: "Calendar", hint: "Schedule games" },
+  { page: "games", href: "/games", label: "Games", hint: "Start, end and manage games" },
+  { page: "attendance", href: "/attendance", label: "Attendance", hint: "Who showed up" },
+  { page: "database", href: "/database", label: "Database", hint: "Player records" },
+  { page: "presets", href: "/presets", label: "Presets", hint: "Saved game setups" },
 ];
 
-const STAFF_LINKS: SiteLink[] = [{ page: "audit", href: "/audit", label: "Audit log", icon: "📜", hint: "Everything that happened" }];
+const STAFF_LINKS: SiteLink[] = [{ page: "audit", href: "/audit", label: "Audit log", hint: "Everything that happened" }];
 
 const SERVER_LINKS: SiteLink[] = [
-  { page: "servers", href: "/servers", label: "Your servers", icon: "⚙️", hint: "Set up GameMaster" },
-  { page: "invite", href: "/invite", label: "Add GameMaster", icon: "➕", hint: "To another Discord server" },
-  { page: "status", href: "/status", label: "Status", icon: "🟢", hint: "Is GameMaster up?" },
+  { page: "servers", href: "/servers", label: "Your servers", hint: "Set up GameMaster" },
+  { page: "invite", href: "/invite", label: "Add GameMaster", hint: "To another Discord server" },
+  { page: "status", href: "/status", label: "Status", hint: "Is GameMaster up?" },
 ];
 
 /** The menu's groups for this viewer. */
@@ -93,11 +129,9 @@ export function MenuButton({
         aria-haspopup="dialog"
         aria-expanded={open}
         data-tour="site.menu"
-        className={`flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs font-bold text-ink-200 transition hover:border-brand-300/50 hover:text-white ${className}`}
+        className={`gm-btn gm-btn-quiet h-9 px-2.5 ${className}`}
       >
-        <span aria-hidden className="text-base leading-none">
-          ☰
-        </span>
+        <Menu aria-hidden />
         {label && <span className="hidden sm:inline">Menu</span>}
         <span className="sr-only">Open the menu</span>
       </button>
@@ -128,54 +162,46 @@ function MenuPanel({ current, onClose }: { current: SitePage | null; onClose: ()
 
   return (
     <div className="fixed inset-0 z-[5950]" role="dialog" aria-modal="true" aria-label="Menu">
-      <button type="button" aria-label="Close the menu" onClick={onClose} className="gm-menu-scrim absolute inset-0 bg-ink-950/70 backdrop-blur-sm" />
+      <button type="button" aria-label="Close the menu" onClick={onClose} className="gm-menu-scrim absolute inset-0 bg-ink-950/75" />
       <div
         ref={panelRef}
-        className="gm-menu-panel absolute bottom-0 right-0 top-0 flex w-[min(340px,88vw)] flex-col border-l border-white/10 bg-ink-950/95 shadow-2xl shadow-black/60"
+        className="gm-menu-panel absolute bottom-0 right-0 top-0 flex w-[min(340px,88vw)] flex-col border-l border-ink-800 bg-ink-950"
       >
-        <div className="flex items-center gap-3 border-b border-white/10 px-4 py-3.5">
+        <div className="flex h-14 items-center gap-3 border-b border-ink-800 px-4">
           <Link href="/" onClick={onClose} className="flex items-center gap-2.5">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-brand-300 to-brand-700 text-lg shadow-lg shadow-brand-500/30">
-              🎖️
-            </span>
+            <BrandMark />
             <span className="leading-tight">
-              <span className="block text-sm font-black tracking-tight text-white">GameMaster</span>
-              <span className="block text-[11px] font-semibold text-ink-400">Hearts of Iron IV multiplayer</span>
+              <span className="gm-title block text-xl">GameMaster</span>
+              <span className="block text-[11px] text-ink-400">Hearts of Iron IV multiplayer</span>
             </span>
           </Link>
-          <button
-            type="button"
-            onClick={onClose}
-            className="ml-auto rounded-lg px-2 py-1 text-sm text-ink-400 transition hover:bg-white/5 hover:text-white"
-            aria-label="Close the menu"
-          >
-            ✕
+          <button type="button" onClick={onClose} className="gm-btn gm-btn-quiet ml-auto h-8 w-8 p-0" aria-label="Close the menu">
+            <X aria-hidden />
           </button>
         </div>
 
         <nav className="flex-1 overflow-y-auto px-3 py-3" aria-label="Site">
           {menuGroups(viewer).map((group) => (
             <div key={group.title} className="mb-4">
-              <p className="px-2 pb-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-ink-500">{group.title}</p>
+              <p className="px-2.5 pb-1 text-xs font-semibold text-ink-500">{group.title}</p>
               <ul className="space-y-0.5">
                 {group.links.map((link) => {
                   const active = link.page === current;
+                  const Icon = PAGE_ICONS[link.page];
                   return (
                     <li key={link.page}>
                       <Link
                         href={link.href}
                         onClick={onClose}
                         aria-current={active ? "page" : undefined}
-                        className={`flex items-center gap-3 rounded-xl px-2.5 py-2 transition ${
-                          active ? "bg-brand-400/15 text-white ring-1 ring-brand-300/40" : "text-ink-200 hover:bg-white/5 hover:text-white"
+                        className={`gm-cut flex items-center gap-3 px-2.5 py-2 transition-colors ${
+                          active ? "bg-ink-900 text-ink-100" : "text-ink-300 hover:bg-ink-900 hover:text-ink-100"
                         }`}
                       >
-                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/5 text-base" aria-hidden>
-                          {link.icon}
-                        </span>
+                        <Icon aria-hidden className={`h-[18px] w-[18px] shrink-0 ${active ? "text-brand-400" : "text-ink-400"}`} strokeWidth={1.75} />
                         <span className="min-w-0">
-                          <span className="block text-sm font-bold">{link.label}</span>
-                          <span className="block truncate text-[11px] text-ink-400">{link.hint}</span>
+                          <span className="block text-sm font-semibold">{link.label}</span>
+                          <span className="block truncate text-xs text-ink-400">{link.hint}</span>
                         </span>
                       </Link>
                     </li>
@@ -186,20 +212,17 @@ function MenuPanel({ current, onClose }: { current: SitePage | null; onClose: ()
           ))}
         </nav>
 
-        <div className="border-t border-white/10 px-4 py-3">
+        <div className="border-t border-ink-800 px-4 py-3">
           {!viewer ? (
             <p className="text-xs text-ink-500">…</p>
           ) : viewer.loggedIn ? (
             <div className="flex items-center gap-2.5">
               <ViewerAvatar viewer={viewer} />
               <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink-200">{viewer.name}</span>
-              {viewer.demo && <span className="rounded-full bg-fuchsia-500/15 px-2 py-0.5 text-[10px] font-bold text-fuchsia-200">PREVIEW</span>}
+              {viewer.demo && <span className="gm-tag bg-fuchsia-500/15 text-fuchsia-200">Preview</span>}
             </div>
           ) : (
-            <a
-              href="/api/auth/login"
-              className="flex w-full items-center justify-center rounded-xl bg-[#5865F2] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#4752c4]"
-            >
+            <a href="/api/auth/login" className="gm-btn w-full bg-[#5865F2] text-white hover:bg-[#4752c4]">
               Log in with Discord
             </a>
           )}
@@ -209,13 +232,26 @@ function MenuPanel({ current, onClose }: { current: SitePage | null; onClose: ()
   );
 }
 
+/** The GameMaster mark: "GM" in stencil on a green cut plate (until the real logo). */
+export function BrandMark({ size = 32 }: { size?: number }) {
+  return (
+    <span
+      aria-hidden
+      className="gm-cut flex shrink-0 items-center justify-center bg-brand-400 font-stencil font-extrabold leading-none text-brand-950"
+      style={{ width: size, height: size, fontSize: size * 0.56, ["--cut" as string]: `${Math.round(size / 4.5)}px` }}
+    >
+      GM
+    </span>
+  );
+}
+
 export function ViewerAvatar({ viewer, size = 28 }: { viewer: Viewer; size?: number }) {
   return viewer.avatarUrl ? (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={viewer.avatarUrl} alt="" width={size} height={size} className="shrink-0 rounded-full ring-2 ring-brand-400/40" />
+    <img src={viewer.avatarUrl} alt="" width={size} height={size} className="shrink-0 rounded-full" />
   ) : (
     <span
-      className="flex shrink-0 items-center justify-center rounded-full bg-ink-700 text-xs font-black text-ink-200"
+      className="flex shrink-0 items-center justify-center rounded-full bg-ink-800 text-xs font-semibold text-ink-100"
       style={{ width: size, height: size }}
     >
       {(viewer.name ?? "?").charAt(0).toUpperCase()}

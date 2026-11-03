@@ -25,7 +25,7 @@ const STAGES = [
 export default function InviteLanding() {
   return (
     <div className="gm-backdrop min-h-screen w-full pb-16 text-ink-100">
-      <SiteHeader page="invite" icon="🎖️" title="GameMaster" subtitle="Hearts of Iron IV multiplayer" />
+      <SiteHeader page="invite" title="GameMaster" subtitle="Hearts of Iron IV multiplayer" />
       <div className="px-4 sm:px-6">
 
       <section className="mx-auto max-w-3xl pt-8 text-center sm:pt-14">

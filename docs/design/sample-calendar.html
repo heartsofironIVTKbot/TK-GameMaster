@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GameMaster Sample</title>
+<!-- Design sample for the redesign (docs/branding.md). Not part of the app:
+     open this file in a browser. Map-room direction: two radii, one icon set,
+     green only for "do this" and "you are here", no decorative motion. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Big+Shoulders+Stencil+Display:wght@800&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+<style>
+  :root {
+    /* The same scales as web/src/app/globals.css */
+    --ink-950: oklch(11.8% 0.009 152);
+    --ink-900: oklch(19.2% 0.011 152);
+    --ink-850: oklch(22.8% 0.012 152);
+    --ink-800: oklch(26.6% 0.012 152);
+    --ink-700: oklch(36.2% 0.013 152);
+    --ink-500: oklch(55.4% 0.015 152);
+    --ink-400: oklch(70.4% 0.015 152);
+    --ink-300: oklch(86.4% 0.012 152);
+    --ink-100: oklch(96.6% 0.006 152);
+    --brand-300: oklch(83.2% 0.158 146);
+    --brand-400: oklch(76.4% 0.186 146);
+    --brand-500: oklch(67.2% 0.178 146);
+    --brand-800: oklch(37.4% 0.096 146);
+    --brand-950: oklch(19.4% 0.046 146);
+    --good: oklch(79.4% 0.118 174);
+    --good-bg: oklch(23.4% 0.038 174);
+    --pending: oklch(85% 0.15 90);
+    --pending-bg: oklch(25% 0.045 90);
+    --danger: oklch(71% 0.17 18);
+    --danger-bg: oklch(24% 0.06 18);
+    --roleplay: oklch(72% 0.15 300);
+
+    --r-control: 4px;
+    --r-panel: 8px;
+    --display: "Big Shoulders Display", "Arial Narrow", sans-serif;
+    --stencil: "Big Shoulders Stencil Display", var(--display);
+    --body: "Public Sans", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--ink-950); color: var(--ink-300);
+    font: 400 15px/1.5 var(--body); font-variant-numeric: tabular-nums;
+    /* the plotting sheet: one faint grid, nothing else behind the page */
+    background-image:
+      linear-gradient(oklch(100% 0 0 / .025) 1px, transparent 1px),
+      linear-gradient(90deg, oklch(100% 0 0 / .025) 1px, transparent 1px);
+    background-size: 48px 48px;
+  }
+  a { color: inherit; text-decoration: none; }
+  button { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--brand-400); outline-offset: 2px; }
+  [data-lucide], svg.lucide { width: 18px; height: 18px; stroke-width: 1.75; flex: none; }
+
+  /* ---------- header ---------- */
+  .top { position: sticky; top: 0; z-index: 10; background: var(--ink-950); border-bottom: 1px solid var(--ink-800); }
+  .top-in { display: flex; align-items: stretch; gap: 24px; height: 56px; padding: 0 24px; max-width: 1360px; margin: 0 auto; }
+  .mark { display: flex; align-items: center; gap: 10px; }
+  .mark-tile { width: 30px; height: 30px; display: grid; place-items: center; background: var(--brand-400); color: var(--brand-950);
+    font: 800 17px/1 var(--stencil); border-radius: var(--r-control); letter-spacing: .02em; }
+  .mark-name { font: 800 21px/1 var(--display); color: var(--ink-100); letter-spacing: .01em; text-transform: uppercase; }
+  .nav { display: flex; align-items: stretch; gap: 4px; margin-left: 8px; }
+  .nav a { display: flex; align-items: center; gap: 8px; padding: 0 12px; color: var(--ink-400); font-weight: 500; font-size: 14px;
+    border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .nav a:hover { color: var(--ink-100); }
+  .nav a[aria-current="page"] { color: var(--ink-100); border-bottom-color: var(--brand-400); }
+  .nav a[aria-current="page"] svg { color: var(--brand-400); }
+  .top-end { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+  .server { display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 10px; border: 1px solid var(--ink-800);
+    border-radius: var(--r-control); font-size: 13px; color: var(--ink-300); background: none; cursor: pointer; }
+  .server svg { width: 15px; height: 15px; color: var(--ink-500); }
+  .avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--ink-800); color: var(--ink-100); display: grid; place-items: center;
+    font-weight: 600; font-size: 13px; }
+
+  /* ---------- buttons, chips ---------- */
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 36px; padding: 0 14px; border-radius: var(--r-control);
+    font-weight: 600; font-size: 14px; border: 1px solid transparent; cursor: pointer; background: none; white-space: nowrap; }
+  .btn svg { width: 16px; height: 16px; }
+  .btn-primary { background: var(--brand-400); color: var(--brand-950); }
+  .btn-primary:hover { background: var(--brand-300); }
+  .btn-secondary { border-color: var(--ink-700); color: var(--ink-100); }
+  .btn-secondary:hover { border-color: var(--ink-500); }
+  .btn-quiet { color: var(--ink-400); padding: 0 8px; }
+  .btn-quiet:hover { color: var(--ink-100); background: var(--ink-900); }
+  .btn-danger { border-color: oklch(71% 0.17 18 / .45); color: var(--danger); }
+  .btn-danger:hover { background: var(--danger-bg); }
+  .btn-icon { width: 32px; height: 32px; padding: 0; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 9px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+  .chip::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .chip-open { color: var(--good); background: var(--good-bg); }
+  .chip-pending { color: var(--pending); background: var(--pending-bg); }
+  .chip-taken { color: var(--danger); background: var(--danger-bg); }
+  .chip-locked { color: var(--ink-400); background: var(--ink-850); }
+
+  /* ---------- page ---------- */
+  main { max-width: 1360px; margin: 0 auto; padding: 32px 24px 64px; }
+  .head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+  h1 { margin: 0; font: 800 48px/.9 var(--display); color: var(--ink-100); text-transform: uppercase; letter-spacing: .005em; }
+  .head p { margin: 8px 0 0; color: var(--ink-400); max-width: 60ch; }
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 24px; align-items: start; }
+
+  .panel { background: var(--ink-900); border: 1px solid var(--ink-800); border-radius: var(--r-panel); }
+
+  /* the month: a plotting sheet, hairlines not cards */
+  .month-bar { display: flex; align-items: center; gap: 8px; padding: 12px 12px 12px 16px; border-bottom: 1px solid var(--ink-800); }
+  .month-name { font: 800 26px/1 var(--display); color: var(--ink-100); text-transform: uppercase; margin-right: 8px; }
+  .legend { margin-left: auto; display: flex; gap: 16px; font-size: 12px; color: var(--ink-400); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .key { width: 10px; height: 10px; border-radius: 2px; background: var(--ink-400); }
+  .key-rp { background: var(--roleplay); }
+  .key-lock { background: repeating-linear-gradient(135deg, var(--ink-700) 0 2px, transparent 2px 4px); outline: 1px solid var(--ink-700); }
+  .grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+  .dow { padding: 8px 10px; font-size: 12px; font-weight: 600; color: var(--ink-500); border-bottom: 1px solid var(--ink-800); }
+  .day { min-height: 112px; padding: 8px; border-right: 1px solid var(--ink-800); border-bottom: 1px solid var(--ink-800); display: flex; flex-direction: column; gap: 6px; }
+  .day:nth-child(7n) { border-right: 0; }
+  .grid .day:nth-last-child(-n+7) { border-bottom: 0; }
+  .num { font: 600 18px/1 var(--display); color: var(--ink-400); }
+  .out .num { color: var(--ink-700); }
+  .today .num { color: var(--brand-950); background: var(--brand-400); width: 24px; height: 24px; display: grid; place-items: center; border-radius: var(--r-control); }
+  .locked { background: repeating-linear-gradient(135deg, transparent 0 7px, oklch(100% 0 0 / .035) 7px 14px); }
+  .lock-note { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--ink-500); font-weight: 600; }
+  .lock-note svg { width: 12px; height: 12px; }
+  .game { display: block; padding: 5px 7px; border-radius: var(--r-control); background: var(--ink-850); border-left: 3px solid var(--ink-400); font-size: 12px; line-height: 1.3; }
+  .game:hover { background: var(--ink-800); }
+  .game b { display: block; color: var(--ink-100); font-weight: 600; }
+  .game i { font-style: normal; color: var(--ink-400); }
+  .game.rp { border-left-color: var(--roleplay); }
+  .game.done { opacity: .5; }
+  .add { margin-top: auto; align-self: flex-start; display: none; }
+  .day:hover .add { display: inline-flex; }
+
+  /* upcoming: rows on one panel */
+  .side h2 { margin: 0; padding: 16px 16px 12px; font: 800 22px/1 var(--display); color: var(--ink-100); text-transform: uppercase; }
+  .row { display: grid; grid-template-columns: 56px 1fr; gap: 12px; padding: 14px 16px; border-top: 1px solid var(--ink-800); }
+  .row:hover { background: var(--ink-850); }
+  .when { text-align: center; border-right: 1px solid var(--ink-800); padding-right: 12px; }
+  .when strong { display: block; font: 800 28px/1 var(--display); color: var(--ink-100); }
+  .when small { font-size: 11px; font-weight: 600; color: var(--ink-500); }
+  .row h3 { margin: 0; font-size: 15px; font-weight: 600; color: var(--ink-100); }
+  .meta { margin: 2px 0 8px; font-size: 13px; color: var(--ink-400); }
+  .soon { color: var(--brand-400); font-weight: 600; }
+  .bar { height: 4px; background: var(--ink-800); border-radius: 2px; overflow: hidden; margin-top: 8px; }
+  .bar > span { display: block; height: 100%; background: var(--ink-400); }
+  .seats { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-400); }
+
+  /* ---------- parts sheet ---------- */
+  .parts { margin-top: 48px; padding-top: 24px; border-top: 1px solid var(--ink-800); }
+  .parts h2 { margin: 0 0 4px; font: 800 26px/1 var(--display); color: var(--ink-100); text-transform: uppercase; }
+  .parts > p { margin: 0 0 20px; color: var(--ink-400); }
+  .sheet { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+  .sheet .panel { padding: 16px; }
+  .sheet h3 { margin: 0 0 12px; font-size: 13px; font-weight: 600; color: var(--ink-400); }
+  .stack { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .icons { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px 8px; }
+  .icons span { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-400); }
+  .icons svg { width: 22px; height: 22px; color: var(--ink-300); }
+  .field { display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 10px; border: 1px solid var(--ink-700); border-radius: var(--r-control); background: var(--ink-950); color: var(--ink-500); font-size: 14px; }
+  .field:focus-within { border-color: var(--brand-400); }
+  .field input { flex: 1; min-width: 0; background: none; border: 0; outline: 0; color: var(--ink-100); font: inherit; }
+  .type-sample b { display: block; font: 800 40px/1 var(--display); color: var(--ink-100); text-transform: uppercase; }
+  .type-sample em { display: block; font: 800 40px/1 var(--stencil); color: var(--brand-400); font-style: normal; text-transform: uppercase; margin: 4px 0 8px; }
+
+  /* ---------- phones ---------- */
+  @media (max-width: 1100px) {
+    .nav span { display: none; }
+    .layout { grid-template-columns: minmax(0, 1fr); }
+  }
+  @media (max-width: 720px) {
+    .top-in { gap: 12px; padding: 0 16px; }
+    .nav, .server { display: none; }
+    main { padding: 24px 16px 48px; }
+    h1 { font-size: 40px; }
+    .legend { display: none; }
+    .day { min-height: 64px; padding: 6px 4px; }
+    .dow { padding: 8px 4px; text-align: center; }
+    .num { text-align: center; }
+    .today .num { margin: 0 auto; }
+    .game { padding: 0; height: 6px; border-left: 0; background: var(--ink-400); font-size: 0; }
+    .game.rp { background: var(--roleplay); }
+    .lock-note span { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-in">
+    <a class="mark" href="#"><span class="mark-tile">GM</span><span class="mark-name">GameMaster</span></a>
+    <nav class="nav" aria-label="Pages">
+      <a href="#"><i data-lucide="map"></i><span>Map</span></a>
+      <a href="#" aria-current="page"><i data-lucide="calendar-days"></i><span>Calendar</span></a>
+      <a href="#"><i data-lucide="swords"></i><span>Games</span></a>
+      <a href="#"><i data-lucide="database"></i><span>Database</span></a>
+      <a href="#"><i data-lucide="scroll-text"></i><span>Roleplay archive</span></a>
+    </nav>
+    <div class="top-end">
+      <button class="server"><i data-lucide="server"></i>Tbilisi HOI4 <i data-lucide="chevrons-up-down"></i></button>
+      <span class="avatar">D</span>
+      <button class="btn btn-quiet"><i data-lucide="menu"></i>Menu</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="head">
+    <div>
+      <h1>Calendar</h1>
+      <p>Pick a day to schedule a game. GameMaster announces it, opens reservations and reminds players.</p>
+    </div>
+    <button class="btn btn-primary"><i data-lucide="plus"></i>Schedule game</button>
+  </div>
+
+  <div class="layout">
+    <section class="panel" aria-label="November 2026">
+      <div class="month-bar">
+        <button class="btn btn-quiet btn-icon" aria-label="Previous month"><i data-lucide="chevron-left"></i></button>
+        <span class="month-name">November 2026</span>
+        <button class="btn btn-quiet btn-icon" aria-label="Next month"><i data-lucide="chevron-right"></i></button>
+        <button class="btn btn-secondary" style="height:30px;margin-left:4px">Today</button>
+        <div class="legend">
+          <span><i class="key key-rp"></i>Roleplay</span>
+          <span><i class="key"></i>Other modes</span>
+          <span><i class="key key-lock"></i>Staff lock</span>
+        </div>
+      </div>
+      <div class="grid">
+        <div class="dow">Mon</div><div class="dow">Tue</div><div class="dow">Wed</div><div class="dow">Thu</div><div class="dow">Fri</div><div class="dow">Sat</div><div class="dow">Sun</div>
+
+        <div class="day out"><span class="num">26</span></div>
+        <div class="day out"><span class="num">27</span></div>
+        <div class="day out"><span class="num">28</span></div>
+        <div class="day out"><span class="num">29</span></div>
+        <div class="day out"><span class="num">30</span></div>
+        <div class="day out"><span class="num">31</span></div>
+        <div class="day"><span class="num">1</span><a class="game done" href="#"><b>20:00 Road to 56</b><i>Ended</i></a></div>
+
+        <div class="day"><span class="num">2</span></div>
+        <div class="day today"><span class="num">3</span><a class="game rp" href="#"><b>14:00 Roleplay</b><i>34 of 60</i></a></div>
+        <div class="day"><span class="num">4</span><a class="game rp" href="#"><b>23:00 Roleplay</b><i>12 of 60</i></a></div>
+        <div class="day"><span class="num">5</span><a class="game" href="#"><b>22:00 Their Finest Hour</b><i>Historical</i></a></div>
+        <div class="day"><span class="num">6</span><a class="game" href="#"><b>21:00 Millennium Dawn</b><i>Mod</i></a></div>
+        <div class="day locked"><span class="num">7</span><span class="lock-note"><i data-lucide="lock"></i><span>Staff lock</span></span><a class="game" href="#"><b>20:00 Kaiserreich</b><i>Mod</i></a></div>
+        <div class="day"><span class="num">8</span></div>
+
+        <div class="day"><span class="num">9</span><a class="game" href="#"><b>20:00 Hearts of Oak</b><i>Historical</i></a></div>
+        <div class="day"><span class="num">10</span></div>
+        <div class="day"><span class="num">11</span><button class="btn btn-secondary btn-icon add" aria-label="Schedule a game on 11 November"><i data-lucide="plus"></i></button></div>
+        <div class="day"><span class="num">12</span></div>
+        <div class="day"><span class="num">13</span></div>
+        <div class="day"><span class="num">14</span></div>
+        <div class="day"><span class="num">15</span></div>
+
+        <div class="day"><span class="num">16</span></div>
+        <div class="day"><span class="num">17</span></div>
+        <div class="day"><span class="num">18</span></div>
+        <div class="day"><span class="num">19</span></div>
+        <div class="day"><span class="num">20</span></div>
+        <div class="day"><span class="num">21</span></div>
+        <div class="day"><span class="num">22</span></div>
+
+        <div class="day"><span class="num">23</span></div>
+        <div class="day"><span class="num">24</span></div>
+        <div class="day"><span class="num">25</span></div>
+        <div class="day"><span class="num">26</span></div>
+        <div class="day"><span class="num">27</span></div>
+        <div class="day"><span class="num">28</span></div>
+        <div class="day"><span class="num">29</span></div>
+      </div>
+    </section>
+
+    <aside class="panel side">
+      <h2>Upcoming games</h2>
+      <a class="row" href="#">
+        <div class="when"><strong>3</strong><small>Tue</small></div>
+        <div>
+          <h3>Roleplay</h3>
+          <p class="meta">14:00, <span class="soon">starts in 23 minutes</span></p>
+          <div class="seats"><span class="chip chip-open">Reservations open</span>34 of 60</div>
+          <div class="bar"><span style="width:57%"></span></div>
+        </div>
+      </a>
+      <a class="row" href="#">
+        <div class="when"><strong>4</strong><small>Wed</small></div>
+        <div>
+          <h3>Roleplay</h3>
+          <p class="meta">23:00, tomorrow</p>
+          <div class="seats"><span class="chip chip-open">Reservations open</span>12 of 60</div>
+          <div class="bar"><span style="width:20%"></span></div>
+        </div>
+      </a>
+      <a class="row" href="#">
+        <div class="when"><strong>5</strong><small>Thu</small></div>
+        <div>
+          <h3>Their Finest Hour</h3>
+          <p class="meta">22:00, in 2 days</p>
+          <div class="seats"><span class="chip chip-pending">Opens at 18:00</span>0 of 48</div>
+          <div class="bar"><span style="width:0"></span></div>
+        </div>
+      </a>
+    </aside>
+  </div>
+
+  <section class="parts">
+    <h2>Parts</h2>
+    <p>Every page is built from these. Two corner sizes, one icon set, green only for the main action and where you are.</p>
+    <div class="sheet">
+      <div class="panel">
+        <h3>Buttons</h3>
+        <div class="stack">
+          <button class="btn btn-primary">Reserve nation</button>
+          <button class="btn btn-secondary">Edit game</button>
+          <button class="btn btn-quiet">Cancel</button>
+          <button class="btn btn-danger"><i data-lucide="ban"></i>Ban player</button>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>Nation status</h3>
+        <div class="stack">
+          <span class="chip chip-open">Open</span>
+          <span class="chip chip-pending">Pending</span>
+          <span class="chip chip-taken">Taken</span>
+          <span class="chip chip-locked">Locked</span>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>Search</h3>
+        <label class="field"><i data-lucide="search"></i><input placeholder="Name, @handle or Discord ID"></label>
+      </div>
+      <div class="panel">
+        <h3>Icons, one set, one colour</h3>
+        <div class="icons">
+          <span><i data-lucide="map"></i>Map</span>
+          <span><i data-lucide="calendar-days"></i>Calendar</span>
+          <span><i data-lucide="swords"></i>Games</span>
+          <span><i data-lucide="clipboard-check"></i>Attendance</span>
+          <span><i data-lucide="database"></i>Database</span>
+          <span><i data-lucide="layers"></i>Presets</span>
+          <span><i data-lucide="scroll-text"></i>Roleplay</span>
+          <span><i data-lucide="ticket"></i>Tickets</span>
+        </div>
+      </div>
+      <div class="panel type-sample">
+        <h3>Type</h3>
+        <b>Page titles</b>
+        <em>Logo and hero only</em>
+        <p style="margin:0">Public Sans for everything you read: rules, records, buttons and numbers like 34 of 60.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>lucide.createIcons();</script>
+</body>
+</html>

@@ -135,7 +135,7 @@ export default function CrashReportApp() {
 
   return (
     <div className="gm-backdrop min-h-screen w-full text-ink-100">
-      <SiteHeader page="crash" icon="🚨" title="Report a crash" subtitle={`GameMaster · ${game?.name ?? "Crash logs"}`} gradient="from-rose-400 to-orange-600"></SiteHeader>
+      <SiteHeader page="crash" title="Report a crash" subtitle={`GameMaster · ${game?.name ?? "Crash logs"}`}></SiteHeader>
 
       <main className="mx-auto max-w-[900px] space-y-4 px-4 py-5 sm:px-6">
         {!game ? (

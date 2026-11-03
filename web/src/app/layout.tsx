@@ -1,11 +1,25 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Big_Shoulders, Big_Shoulders_Stencil, Geist_Mono, Public_Sans } from "next/font/google";
 import TutorialProvider from "@/components/tutorial/TutorialProvider";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// Public Sans for everything you read; Big Shoulders (condensed) for page
+// titles; its stencil cut for the logo only. See docs/branding.md.
+const publicSans = Public_Sans({
+  variable: "--font-public-sans",
   subsets: ["latin"],
+});
+
+const bigShoulders = Big_Shoulders({
+  variable: "--font-big-shoulders",
+  subsets: ["latin"],
+  axes: ["opsz"],
+});
+
+const bigShouldersStencil = Big_Shoulders_Stencil({
+  variable: "--font-big-shoulders-stencil",
+  subsets: ["latin"],
+  axes: ["opsz"],
 });
 
 const geistMono = Geist_Mono({
@@ -22,7 +36,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${publicSans.variable} ${bigShoulders.variable} ${bigShouldersStencil.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <TutorialProvider>{children}</TutorialProvider>

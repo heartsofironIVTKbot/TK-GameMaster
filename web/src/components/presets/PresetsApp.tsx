@@ -137,7 +137,7 @@ export default function PresetsApp({ host }: { host: HostProfile }) {
 
   return (
     <div className="gm-backdrop min-h-screen w-full text-ink-100">
-      <SiteHeader page="presets" icon="🧩" title="Presets" subtitle="GameMaster · Game mode presets" gradient="from-teal-300 to-emerald-600">
+      <SiteHeader page="presets" title="Presets" subtitle="GameMaster · Game mode presets">
           {host.demo && (
             <span className="rounded-full border border-fuchsia-400/40 bg-fuchsia-500/15 px-3 py-1 text-[11px] font-bold text-fuchsia-200">
               PREVIEW MODE · sample data

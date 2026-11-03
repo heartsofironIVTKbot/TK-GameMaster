@@ -1,9 +1,9 @@
 # Branding — where GameMaster's look lives
 
-GameMaster's visual identity (logo, colours, fonts) is being designed in a
-later phase. Until then the site and the bot keep today's look, but every
-place the look is decided is now in one spot, so a new identity is a small
-change.
+GameMaster's identity: black and field green (IronLegion is black and red),
+a "cut plate" shape language, one line-icon set, and condensed titles. Every
+place the look is decided is in one spot. Samples of the direction are in
+`docs/design/` (open the .html files in a browser).
 
 ## Website
 
@@ -11,8 +11,8 @@ change.
 
 | Scale | What it is | Today |
 | --- | --- | --- |
-| `brand-50` … `brand-950` | The identity colour: buttons, highlights, the tour's lit ring | Tailwind amber |
-| `ink-50` … `ink-950` | Backgrounds, panels, borders and text | Tailwind slate |
+| `brand-50` … `brand-950` | The identity colour: buttons, highlights, the tour's lit ring | Field green (hue 146), GameMaster's answer to IronLegion's red |
+| `ink-50` … `ink-950` | Backgrounds, panels, borders and text | Near-black with a faint green cast (hue 152) |
 
 Components only use `brand-*` and `ink-*` (`bg-brand-400`, `text-ink-300`…),
 never `amber-*` or `slate-*`, and the hand-written colours in `globals.css`
@@ -20,18 +20,36 @@ use `var(--color-brand-…)` / `var(--color-ink-…)`. Change the two scales and
 the whole site follows.
 
 Status colours keep their meaning everywhere and aren't part of the brand:
-emerald = good, rose = danger, sky = info, violet / fuchsia = roleplay.
+emerald = good (re-tinted mint-jade in `globals.css` so it never matches the brand green), rose = danger, sky = info, violet / fuchsia = roleplay.
 
-**Font:** `web/src/app/layout.tsx` loads it (Geist today) and `globals.css`
-sets it on `body` (`--font-sans`).
+**Fonts:** `web/src/app/layout.tsx` loads them, `globals.css` names them.
+Public Sans (`font-sans`) for everything you read; Big Shoulders
+(`font-display`, through `gm-title`) for page titles; Big Shoulders Stencil
+(`font-stencil`) for the logo only.
 
-**Logo:** the 🎖️ tile in the site menu (`web/src/components/site/SiteMenu.tsx`)
-and the page icons passed to `SiteHeader` on each page.
+**Shapes: cut plate.** Two opposite corners clipped, like a stencilled
+equipment plate (`docs/design/shape-options.html`, option C). The pieces are
+in `globals.css` (`@layer components`): `gm-btn` (+ `-primary`, `-secondary`,
+`-quiet`, `-danger`), `gm-plate` (panel), `gm-field` (input box), `gm-tag`
+(status chip), `gm-cut` (the bare shape), `gm-title`, `gm-nav-on` (the page
+you're on in a row of links). Controls cut 8px, panels 14px; people
+(avatars) stay round. `clip-path` clips anything that sticks out of a plate,
+so popovers inside one must be portalled.
+
+**Icons:** `lucide-react`, line icons in one colour: grey, green on the page
+you're on. No emoji in the interface. Each page's icon is `PAGE_ICONS` in
+`web/src/components/site/SiteMenu.tsx`; the header picks it from `page`.
+
+**Green means "do this" or "you are here"** (main button, current page).
+No gradient washes, glows, glass blur or decorative motion.
+
+**Logo:** `BrandMark` in `SiteMenu.tsx`, "GM" in stencil on a green cut
+plate, a stand-in until the real logo.
 
 ## The shared menu and header
 
 - `web/src/components/site/SiteHeader.tsx`: the header on every page. A page
-  passes its name, icon and its own controls; the most used pages show in the
+  passes its `page`, name and its own controls; the most used pages show in the
   header on wide screens.
 - `web/src/components/site/SiteMenu.tsx`: **☰ Menu**, every page grouped (Play,
   Host, Servers), shown to who can use it. The map's top bar uses the same

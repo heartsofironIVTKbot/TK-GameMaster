@@ -161,14 +161,14 @@ GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
 # brand and ink, plus the same status colours).
 # ==========================================================================
 class EmbedColor:
-    BRAND = 0xFBBF24      # the identity colour (website brand-400): rewards, highlights
-    SUCCESS = 0x22C55E    # done, approved, present
+    BRAND = 0x3FBF5A      # the identity colour (website brand-400): rewards, highlights
+    SUCCESS = 0x45C4A2    # done, approved, present (website emerald-500, mint-jade)
     DANGER = 0xEF4444     # refused, removed, bans, errors
     WARNING = 0xF97316    # needs a look, reminders
     INFO = 0x38BDF8       # neutral news: mods, logs, requests
     ROLEPLAY = 0xA855F7   # roleplay, Fortunes, the AI
-    NEUTRAL = 0x64748B    # finished, archived (website ink-500)
-    INK = 0x1E293B        # dark cards: the casino panel (website ink-800)
+    NEUTRAL = 0x6A726C    # finished, archived (website ink-500)
+    INK = 0x1A1F1B        # dark cards: the casino panel (website ink-800)
 
 # Host-log webhook (separate Discord rate-limit bucket, keeps the bot's global
 # bucket free). Sanitized at load: whitespace-only / empty values become None so

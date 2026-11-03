@@ -498,10 +498,8 @@ function Shell({
     <div className="gm-backdrop min-h-screen w-full text-ink-100">
       <SiteHeader
         page="servers"
-        icon="⚙️"
         title={server?.name ?? "Server setup"}
         subtitle="GameMaster · server settings"
-        gradient="from-ink-300 to-ink-600"
       >
         <Link
           href="/servers"

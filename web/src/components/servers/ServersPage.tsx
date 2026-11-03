@@ -74,7 +74,7 @@ function ServersIndex({ cancelled }: { cancelled: boolean }) {
 
   return (
     <div className="gm-backdrop min-h-screen w-full text-ink-100">
-      <SiteHeader page="servers" icon="⚙️" title="Your servers" subtitle="GameMaster · set up and settings" gradient="from-ink-300 to-ink-600" />
+      <SiteHeader page="servers" title="Your servers" subtitle="GameMaster · set up and settings" />
       <div className="px-4 py-6 sm:px-6">
       {cancelled && (
         <p className="mx-auto mb-4 max-w-5xl rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-ink-300">

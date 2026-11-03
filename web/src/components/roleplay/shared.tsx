@@ -9,7 +9,7 @@ import type { RpVerdict } from "@/lib/rpArchiveTypes";
 
 export function RpHeader({ children }: { children?: ReactNode }) {
   return (
-    <SiteHeader page="roleplay" icon="🎭" title="Roleplay Archive" subtitle="GameMaster · every game's story" gradient="from-violet-300 to-fuchsia-700">
+    <SiteHeader page="roleplay" title="Roleplay Archive" subtitle="GameMaster · every game's story">
       {children}
     </SiteHeader>
   );
