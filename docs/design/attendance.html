@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GameMaster Attendance Mock-up</title>
+<!-- Design mock-up of the Attendance page in the cut-plate style (docs/branding.md).
+     Not part of the app. Drawn at 1440x900 (desktop) or 390x844 (phone),
+     with the sample data of the local preview. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Big+Shoulders+Stencil+Display:wght@800&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+<style>
+  :root {
+    --ink-950: oklch(11.8% 0.009 152); --ink-900: oklch(19.2% 0.011 152); --ink-850: oklch(22.8% 0.012 152); --ink-800: oklch(26.6% 0.012 152);
+    --ink-700: oklch(36.2% 0.013 152); --ink-600: oklch(44.4% 0.014 152); --ink-500: oklch(55.4% 0.015 152); --ink-400: oklch(70.4% 0.015 152);
+    --ink-300: oklch(86.4% 0.012 152); --ink-100: oklch(96.6% 0.006 152);
+    --brand-400: oklch(76.4% 0.186 146); --brand-950: oklch(19.4% 0.046 146);
+    /* Voice states and results: mint in voice / counted, yellow lobby / at risk, orange no Gamer Pass,
+       red offline / absent, blue excused, grey unknown. */
+    --v-present: oklch(79.4% 0.118 174); --v-lobby: oklch(86% 0.15 95); --v-nopass: oklch(75% 0.15 55); --v-offline: oklch(68% 0.18 22);
+    --v-excused: oklch(76% 0.11 235); --v-unknown: oklch(58% 0.015 152); --s-live: oklch(74% 0.13 240);
+    --display: "Big Shoulders Display", "Arial Narrow", sans-serif; --stencil: "Big Shoulders Stencil Display", var(--display); --body: "Public Sans", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: oklch(8% 0.006 152); color: var(--ink-300); font: 400 14px/1.45 var(--body); font-variant-numeric: tabular-nums; display: flex; flex-direction: column; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
+  svg.lucide { width: 16px; height: 16px; stroke-width: 1.75; flex: none; }
+  .switches { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; padding: 10px 16px; border-bottom: 1px solid var(--ink-800); background: var(--ink-950); }
+  .switches h1 { margin: 0 6px 0 0; font: 800 22px/1 var(--display); text-transform: uppercase; color: var(--ink-100); }
+  .seg { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-500); }
+  .seg div { display: flex; border: 1px solid var(--ink-700); border-radius: 4px; overflow: hidden; }
+  .seg button { padding: 5px 10px; font-size: 12px; font-weight: 600; color: var(--ink-400); }
+  .seg button + button { border-left: 1px solid var(--ink-700); }
+  .seg button[aria-pressed="true"] { background: var(--ink-800); color: var(--ink-100); }
+  .seg.off { opacity: .35; pointer-events: none; }
+  .viewport { flex: 1; min-height: 0; display: grid; place-items: center; padding: 16px; overflow: hidden; }
+  .frame { position: relative; overflow: hidden; outline: 1px solid var(--ink-800); }
+  .stage { position: absolute; left: 0; top: 0; transform-origin: 0 0; overflow: hidden; background: var(--ink-950); }
+  .stage.desk { width: 1440px; height: 900px; } .stage.phone { width: 390px; height: 844px; }
+  [hidden] { display: none !important; }
+  .cut, .btn, .plate, .field { clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut)); }
+  .cut, .btn, .field { --cut: 8px; }
+  .plate { --cut: 14px; --line: var(--ink-800); background-color: var(--ink-900); }
+  .plate, .field, .btn-secondary, .btn-danger { border: 1px solid var(--line);
+    background-image: linear-gradient(135deg, var(--line) calc(var(--cut) * .7071 + 1px), transparent 0), linear-gradient(315deg, var(--line) calc(var(--cut) * .7071 + 1px), transparent 0); background-origin: border-box; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; height: 34px; padding: 0 13px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+  .btn-primary { background-color: var(--brand-400); color: var(--brand-950); }
+  .btn-secondary { --line: var(--ink-700); color: var(--ink-100); background-color: var(--ink-950); }
+  .btn-quiet { color: var(--ink-300); } .btn-icon { width: 32px; padding: 0; }
+  .btn-red { background-color: oklch(64% 0.2 22); color: #fff; }
+  .field { --line: var(--ink-700); display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 10px; background-color: var(--ink-950); color: var(--ink-500); font-size: 13px; }
+  .tag { display: inline-flex; align-items: center; gap: 6px; height: 21px; padding: 0 11px; font-size: 11.5px; font-weight: 600; white-space: nowrap; clip-path: polygon(7px 0, calc(100% - 7px) 0, 100% 50%, calc(100% - 7px) 100%, 7px 100%, 0 50%); }
+  .tag svg { width: 12px; height: 12px; }
+  .dot::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .t { color: var(--c); background: color-mix(in oklab, var(--c) 16%, var(--ink-950)); }
+  .t-ink { color: var(--ink-300); background: var(--ink-800); }
+  .title { font-family: var(--display); font-weight: 800; text-transform: uppercase; line-height: .95; color: var(--ink-100); }
+  .mark { width: 30px; height: 30px; --cut: 7px; display: grid; place-items: center; background: var(--brand-400); color: var(--brand-950); font: 800 17px/1 var(--stencil); }
+  .avatar { border-radius: 50%; display: grid; place-items: center; flex: none; background: var(--ink-800); color: var(--ink-100); font-weight: 700; }
+  .small { font-size: 12px; color: var(--ink-400); }
+  .h { display: flex; align-items: center; gap: 9px; margin: 0 0 4px; } .h .title { font-size: 22px; } .h > svg { color: var(--brand-400); width: 18px; height: 18px; } .h .right { margin-left: auto; }
+  .sub { margin: 0 0 12px; font-size: 13px; color: var(--ink-400); }
+  .card { padding: 16px 18px; }
+  [data-v="present"] { --c: var(--v-present); } [data-v="lobby"] { --c: var(--v-lobby); } [data-v="nopass"] { --c: var(--v-nopass); }
+  [data-v="offline"] { --c: var(--v-offline); } [data-v="excused"] { --c: var(--v-excused); } [data-v="unknown"] { --c: var(--v-unknown); }
+  [data-v="live"] { --c: var(--s-live); } [data-v="ended"] { --c: var(--v-unknown); }
+
+  .top { height: 56px; display: flex; align-items: center; gap: 12px; padding: 0 20px; border-bottom: 1px solid var(--ink-800); background: var(--ink-950); }
+  .top .title { font-size: 26px; } .top small { display: block; font-size: 12px; color: var(--ink-400); }
+  .top-end { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  .page { display: grid; grid-template-columns: 310px minmax(0, 1fr); gap: 20px; padding: 20px; height: calc(100% - 56px); }
+  .list { padding: 12px; align-self: start; }
+  .grow { position: relative; padding: 10px 11px; margin-bottom: 5px; --cut: 9px; border-left: 3px solid var(--c); background: color-mix(in oklab, var(--c) 10%, var(--ink-900)); }
+  .grow.on { background: color-mix(in oklab, var(--c) 22%, var(--ink-800)); }
+  .grow strong { display: flex; align-items: center; gap: 6px; font-size: 13.5px; color: var(--ink-100); font-weight: 600; } .grow strong span { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .grow .tag { height: 19px; padding: 0 9px; font-size: 10.5px; }
+  .grow small { display: block; font-size: 12px; color: var(--ink-400); }
+  .track { display: flex; align-items: center; gap: 8px; margin-top: 8px; } .track > span:first-child { flex: 1; display: flex; gap: 3px; }
+  .track i { flex: 1; height: 5px; background: var(--ink-800); } .track i.on { background: var(--v-present); }
+  .track b { font-size: 12px; color: var(--ink-300); } .review { display: grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; --cut: 4px; background: var(--v-lobby); color: var(--ink-950); font-size: 11px; font-weight: 700; }
+  .main { min-width: 0; overflow: hidden; display: grid; gap: 14px; align-content: start; }
+  .ghead .title { font-size: 32px; display: flex; align-items: center; gap: 12px; } .ghead .title .tag { font-family: var(--body); text-transform: none; }
+  .meta { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 6px; font-size: 13px; color: var(--ink-400); } .meta span { display: inline-flex; align-items: center; gap: 6px; } .meta svg { width: 14px; height: 14px; color: var(--ink-500); } .meta b { color: var(--ink-100); font-weight: 600; }
+  .gtop { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px; }
+  .acts { display: flex; gap: 6px; align-self: start; }
+  .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 14px; }
+  .stat { padding: 10px 12px; --cut: 10px; background: var(--ink-950); box-shadow: inset 0 2px 0 var(--c, transparent); }
+  .stat span { display: block; font-size: 12px; color: var(--ink-400); } .stat strong { display: block; margin-top: 3px; font: 800 30px/1 var(--display); color: var(--c, var(--ink-100)); } .stat strong small { font-size: 20px; color: var(--ink-500); } .stat em { display: block; margin-top: 3px; font-style: normal; font-size: 11.5px; color: var(--ink-500); }
+  .two { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 18px; }
+  .samples { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; }
+  .smp { padding: 10px 11px; --cut: 9px; background: color-mix(in oklab, var(--v-present) 10%, var(--ink-950)); box-shadow: inset 0 2px 0 var(--v-present); }
+  .smp span { display: block; font-size: 12px; color: var(--ink-400); } .smp strong { display: block; margin-top: 3px; font: 800 26px/1 var(--display); color: var(--ink-100); } .smp strong small { font: 500 12px var(--body); color: var(--ink-400); } .smp em { display: block; margin-top: 3px; font-style: normal; font-size: 11.5px; color: var(--ink-500); }
+  .smp.next { background: var(--ink-950); box-shadow: inset 0 2px 0 var(--v-lobby); } .smp.next strong { font-size: 22px; color: var(--v-lobby); }
+  .smp.later { background: transparent; box-shadow: inset 0 0 0 1px var(--ink-800); } .smp.later strong { color: var(--ink-500); font-size: 20px; }
+  .action { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 10px; padding: 10px 11px; --cut: 10px; background: var(--ink-950); margin-bottom: 6px; text-align: left; width: 100%; }
+  .action .ico { width: 30px; height: 30px; --cut: 6px; display: grid; place-items: center; background: var(--ink-800); color: var(--ink-100); } .action .ico svg { width: 16px; height: 16px; }
+  .action strong { display: block; font-size: 13.5px; color: var(--ink-100); } .action span span { font-size: 12px; color: var(--ink-400); }
+  .final { padding: 11px; --cut: 10px; background: var(--ink-950); } .final p { margin: 0 0 8px; font-size: 12.5px; color: var(--ink-400); } .final b { color: var(--ink-100); }
+  .filters { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; margin-top: 10px; }
+  .chip { display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 10px; --cut: 6px; background: var(--ink-950); box-shadow: inset 0 0 0 1px var(--ink-800); font-size: 12px; font-weight: 600; color: var(--ink-300); } .chip small { color: var(--ink-500); font-weight: 500; }
+  .chip.on { background: var(--brand-400); box-shadow: none; color: var(--brand-950); } .chip.on small { color: var(--brand-950); opacity: .7; }
+  table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
+  th { text-align: left; padding: 7px 10px 7px 0; font-size: 12px; font-weight: 600; color: var(--ink-500); border-bottom: 1px solid var(--ink-800); }
+  td { padding: 8px 10px 8px 0; border-bottom: 1px solid var(--ink-800); color: var(--ink-300); vertical-align: middle; }
+  tr.rev td { background: color-mix(in oklab, var(--v-lobby) 5%, transparent); }
+  .who { display: flex; align-items: center; gap: 10px; } .who strong { display: flex; align-items: center; gap: 6px; font-size: 13.5px; color: var(--ink-100); font-weight: 600; } .who small { display: block; font-size: 12px; color: var(--ink-500); }
+  .mini { display: inline-flex; align-items: center; height: 17px; padding: 0 6px; --cut: 4px; font-size: 10.5px; font-weight: 700; }
+  .nation { display: flex; align-items: center; gap: 7px; color: var(--ink-100); } .nation img { width: 22px; height: 15px; object-fit: cover; outline: 1px solid oklch(100% 0 0 / .12); }
+  .marks { display: flex; gap: 4px; }
+  .marks i { width: 14px; height: 14px; border-radius: 50%; background: var(--c); }
+  .marks i.none { background: transparent; box-shadow: inset 0 0 0 1px var(--ink-600); }
+  .marks i.wait { background: transparent; box-shadow: inset 0 0 0 1px var(--ink-700); outline: 1px dashed var(--ink-700); outline-offset: -1px; }
+  .squares .marks i { border-radius: 0; width: 15px; clip-path: polygon(4px 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%, 0 4px); }
+  .squares .marks i.none { background: var(--ink-800); box-shadow: none; } .squares .marks i.wait { background: transparent; box-shadow: none; outline: 0; border: 0; background-image: repeating-linear-gradient(135deg, var(--ink-700) 0 2px, transparent 2px 4px); }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 12px; font-size: 12px; color: var(--ink-400); } .legend span { display: inline-flex; align-items: center; gap: 6px; } .legend .marks i { width: 11px; height: 11px; }
+  .log { margin-top: 2px; } .lrow { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--ink-800); font-size: 13px; color: var(--ink-300); }
+  .lrow .ico { width: 28px; height: 28px; --cut: 6px; display: grid; place-items: center; } .lrow .ico svg { width: 15px; height: 15px; } .lrow b { color: var(--ink-100); font-weight: 600; } .lrow .when { font-size: 12px; color: var(--ink-500); }
+  .pcard { padding: 10px 12px; --cut: 10px; background: var(--ink-950); margin-bottom: 6px; }
+  .pcard .row1 { display: flex; align-items: center; gap: 10px; } .pcard .row2 { display: flex; align-items: center; gap: 10px; margin-top: 8px; font-size: 12px; color: var(--ink-400); }
+  .pcard.rev { box-shadow: inset 3px 0 0 var(--v-lobby); }
+  /* phone */
+  .phone .top { padding: 0 10px; gap: 10px; } .phone .top .title { font-size: 21px; }
+  .p-body { padding: 10px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; height: calc(100% - 56px); overflow: hidden; align-content: start; }
+  .phone .gtop { grid-template-columns: 1fr; } .phone .ghead .title { font-size: 24px; flex-wrap: wrap; } .phone .stats { grid-template-columns: repeat(3, 1fr); } .phone .stat strong { font-size: 24px; }
+  .phone .card { padding: 14px; } .phone .two { grid-template-columns: 1fr; } .phone .samples { grid-template-columns: repeat(3, 1fr); }
+  .phone .tablewrap { overflow-x: auto; } .phone table { min-width: 760px; }
+</style>
+</head>
+<body>
+<div class="switches">
+  <h1>Attendance mock-up</h1>
+  <div class="seg">Game <div data-k="game"><button data-v="live">On-going</button><button data-v="final">Finalized</button></div></div>
+  <div class="seg">Sample marks <div data-k="marks"><button data-v="dots">Round dots (now)</button><button data-v="squares">Cut squares</button></div></div>
+  <div class="seg">Size <div data-k="size"><button data-v="desk">Desktop</button><button data-v="phone">Phone</button></div></div>
+  <div class="seg" data-only="phone">Roster on phones <div data-k="proster"><button data-v="table">Scroll the table (now)</button><button data-v="cards">Player cards</button></div></div>
+</div>
+<div class="viewport"><div class="frame" id="frame">
+  <div class="stage desk" id="desk">
+    <header class="top"><span class="mark cut">GM</span><div><div class="title">Attendance</div><small>TommyKay HOI4</small></div>
+      <span class="tag" style="color:oklch(80% 0.12 330);background:oklch(24% 0.06 330)">Preview: sample data</span>
+      <div class="top-end"><span class="avatar" style="width:28px;height:28px;font-size:12px">D</span><button class="btn btn-quiet"><i data-lucide="menu"></i>Menu</button></div></header>
+    <div class="page"><aside class="list plate" data-list></aside><main class="main" data-main></main></div>
+  </div>
+  <div class="stage phone" id="phone" hidden>
+    <header class="top"><span class="mark cut">GM</span><div class="title">Attendance</div><div class="top-end"><button class="btn btn-quiet btn-icon"><i data-lucide="menu"></i></button></div></header>
+    <div class="p-body" data-phone></div>
+  </div>
+</div></div>
+<script>
+  const state = { game: "live", marks: "dots", size: "desk", proster: "cards" };
+  const flag = (t) => `<img src="../../web/public/assets_rt56/flags/${t}.png" alt="">`;
+  // [avatar, name, handle, tag, nation, reply, samples (voice state or null = not seen, "wait" = not taken), seen, result, warnings, flags]
+  const P = [
+    ["C", "Carl", "@cooldown_carl", "FRA", "France", "No", ["offline", "present", "offline", "wait", "wait"], "1/3", "lobby:At risk", "+2 if absent", [], true],
+    ["O", "Otto", "@bismarck_fan", "ITA", "Italy", "Yes", ["present", "present", "present", "wait", "wait"], "3/3", "present:On track", "—", []],
+    ["W", "Wilhelm", "@kaiser_bill", "GER", "Germany", "Yes", ["present", "present", "present", "wait", "wait"], "3/3", "present:On track", "VIP", ["VIP"]],
+    ["P", "Pieter", "@dutch_trader", "POL", "Poland", "No reply", ["nopass", "offline", "offline", "wait", "wait"], "0/3", "offline:Absent", "+1 if absent", []],
+    ["L", "Lena", "@lena_hoi", "HUN", "Hungary", "Excused", ["excused", "excused", "excused", "wait", "wait"], "0/3", "excused:Excused", "—", []],
+    ["J", "Jan", "@winged_hussar", "ROM", "Romania", "Yes", ["lobby", "present", "present", "wait", "wait"], "2/3", "present:On track", "—", ["Late join"]],
+  ];
+  const final = () => state.game === "final";
+  function list() {
+    const row = (name, mode, s, label, on, n, of, done, rev) => `<div class="grow cut ${on ? "on" : ""}" data-v="${s}"><strong><span>${name}</span><span class="tag dot t" data-v="${s}" style="flex:none">${label}</span></strong>
+      <small>${mode}</small><div class="track"><span>${[0, 1, 2, 3, 4].map((i) => `<i class="${i < done ? "on" : ""}"></i>`).join("")}</span><b>${n}/${of}</b>${rev ? `<span class="review cut">${rev}</span>` : ""}</div></div>`;
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:0 2px 10px;border-bottom:1px solid var(--ink-800)"><span class="small" style="font-weight:600;color:var(--ink-500)">Started games</span><button class="btn btn-quiet btn-icon" style="height:28px"><i data-lucide="refresh-cw"></i></button></div>
+      <div style="margin-top:8px">${row("Roleplay #87: Road to 56", "Roleplay, Demo Host, 1 hour ago", "live", "On-going", !final(), 8, 11, 3, 3)}${row("Historical #41: Vanilla 1936", "Historical (Vanilla), Otto, yesterday", "ended", "Finalized", final(), 7, 8, 5, 1)}</div>`;
+  }
+  function header() {
+    const f = final();
+    return `<section class="plate card ghead"><div class="gtop"><div style="min-width:0"><div class="title">${f ? "Historical #41: Vanilla 1936" : "Roleplay #87: Road to 56"}<span class="tag dot t" data-v="${f ? "ended" : "live"}">${f ? "Finalized" : "On-going"}</span></div>
+        <div class="meta"><span><i data-lucide="user-round"></i>Hosted by <b>Demo Host</b></span><span><i data-lucide="clipboard-list"></i>Strict logging</span><span><i data-lucide="clock"></i>Started Nov 3, 18:24</span></div></div>
+        <div class="acts"><button class="btn btn-secondary"><i data-lucide="gamepad-2"></i>Game controls</button><button class="btn btn-secondary"><i data-lucide="download"></i>Export CSV</button><button class="btn btn-quiet btn-icon"><i data-lucide="refresh-cw"></i></button></div></div>
+      <div class="stats"><div class="stat cut" data-v="present"><span>${f ? "Present" : "On track"}</span><strong>${f ? "7<small>/8</small>" : "8<small>/11</small>"}</strong></div>
+        <div class="stat cut" data-v="lobby"><span>At risk</span><strong>${f ? "0" : "3"}</strong><em>${f ? "" : "Can still be counted"}</em></div>
+        <div class="stat cut" data-v="offline"><span>Absent</span><strong>${f ? "1" : "0"}</strong></div>
+        <div class="stat cut" data-v="excused"><span>Excused</span><strong>${f ? "0" : "1"}</strong></div>
+        <div class="stat cut"><span>${f ? "No-show warnings" : "Warnings if absent"}</span><strong>${f ? "1" : "5"}</strong><em>${f ? "Given at finalize" : "If nothing changes"}</em></div></div></section>`;
+  }
+  function samples() {
+    const f = final();
+    const done = f ? 5 : 3;
+    const cards = [0, 1, 2, 3, 4].map((i) => i < done ? `<div class="smp cut"><span>Sample ${i + 1}</span><strong>${[7, 9, 9, 8, 8][i]} <small>in voice</small></strong><em>${["18:44", "19:04", "19:24", "19:44", "20:04"][i]}</em></div>`
+      : i === done ? `<div class="smp cut next"><span>Sample ${i + 1}, next</span><strong>in 6:05</strong><em>at 19:44</em></div>` : `<div class="smp cut later"><span>Sample ${i + 1}</span><strong>~20:04</strong><em>planned</em></div>`).join("");
+    return `<section class="plate card"><div class="two"><div style="min-width:0"><div class="h"><i data-lucide="audio-lines"></i><span class="title">Voice samples</span></div>
+        <p class="sub">The bot checks voice every <b style="color:var(--ink-100)">20 min</b>. Seen in <b style="color:var(--ink-100)">2 of 5</b> samples (in a game voice channel with the Gamer Pass) counts as present. VIPs never get no-show warnings.</p>
+        <div class="samples">${cards}</div></div>
+      <div><div class="h"><i data-lucide="wrench"></i><span class="title">Host actions</span></div>
+        ${f ? `<div class="final cut"><p>Attendance is final. Use <b>Change</b> on a player to correct it. Warnings, attended games and bans are adjusted and the player gets a DM.</p></div>` : `
+        <button class="action cut"><span class="ico cut"><i data-lucide="headphones"></i></span><span><strong>Check voice now</strong><span>See who's in voice right now. Doesn't count as a sample.</span></span></button>
+        <button class="action cut"><span class="ico cut"><i data-lucide="camera"></i></span><span><strong>Take sample now</strong><span>Counts as the next sample; the one after is due one interval later.</span></span></button>
+        <div class="final cut"><p><b>Finalize now</b>: stop sampling and give no-show warnings from the 3 samples taken. Use it when the game ended early.</p><button class="btn btn-red" style="width:100%;height:40px">Finalize attendance</button></div>`}</div></div></section>`;
+  }
+  const marks = (list) => `<span class="marks">${list.map((v) => v === "wait" ? (final() ? `<i class="none"></i>` : `<i class="wait"></i>`) : `<i data-v="${v}" title="${v}"></i>`).join("")}</span>`;
+  const result = (r) => { const [v, l] = r.split(":"); return `<span class="tag t" data-v="${v}">${l}</span>`; };
+  const replyColor = (r) => r === "Yes" ? "var(--v-present)" : r === "No" ? "var(--v-offline)" : r === "Excused" ? "var(--v-excused)" : "var(--ink-500)";
+  const minis = (f) => f.map((x) => `<span class="mini cut" style="${x === "VIP" ? "background:oklch(26% 0.06 330);color:oklch(82% 0.12 330)" : "background:color-mix(in oklab, var(--v-excused) 16%, var(--ink-950));color:var(--v-excused)"}">${x}</span>`).join("");
+  function roster(phone) {
+    const chips = `<div class="filters">${[["All", 6, 1], ["Needs review", 1], ["Present", 3], ["Absent", 1], ["Excused", 1], ["No reply", 1]].map(([t, n, on]) => `<button class="chip cut ${on ? "on" : ""}">${t}<small>${n}</small></button>`).join("")}
+      ${phone ? "" : `<label class="field" style="margin-left:auto;width:220px"><i data-lucide="search"></i><span>Find player or nation</span></label>`}</div>`;
+    const legend = `<div class="legend">${[["present", "In voice with the Gamer Pass"], ["lobby", "In the lobby (doesn't count)"], ["nopass", "In voice without the Gamer Pass"], ["offline", "Not in voice"], ["excused", "Excused"], ["unknown", "Not in the server"]]
+      .map(([v, t]) => `<span><span class="marks"><i data-v="${v}"></i></span>${t}</span>`).join("")}<span><span class="marks"><i class="wait"></i></span>Not taken yet</span></div>`;
+    let body;
+    if (phone && state.proster === "cards") {
+      body = `<div style="margin-top:10px">${P.slice(0, 4).map(([a, n, u, t, c, r, s, seen, res, w, f, rev]) => `<div class="pcard cut ${rev ? "rev" : ""}"><div class="row1"><span class="avatar" style="width:30px;height:30px;font-size:12px">${a}</span>
+        <span style="flex:1;min-width:0"><strong style="display:flex;gap:6px;align-items:center;font-size:13.5px;color:var(--ink-100)">${n}${minis(f)}</strong><span class="nation" style="font-size:12px;color:var(--ink-400)">${flag(t)}${c}</span></span>${result(res)}</div>
+        <div class="row2">${marks(s)}<span>${seen} seen</span><span style="color:${replyColor(r)}">${r}</span><button class="btn btn-secondary" style="margin-left:auto;height:28px;font-size:12px">Change</button></div></div>`).join("")}</div>`;
+    } else {
+      body = `<div class="tablewrap"><table><thead><tr><th>Player</th><th>Nation</th><th>Reply</th><th>Samples</th><th>Seen</th><th>Now</th><th>Result</th><th>Warnings</th><th></th></tr></thead><tbody>
+        ${P.map(([a, n, u, t, c, r, s, seen, res, w, f, rev], i) => `<tr class="${rev ? "rev" : ""}"><td><span class="who"><span class="avatar" style="width:32px;height:32px;font-size:12px">${a}</span><span><strong>${n}${minis(f)}</strong><small>${u}</small></span></span></td>
+          <td><span class="nation">${flag(t)}${c}</span></td><td style="color:${replyColor(r)};font-weight:600">${r}</td><td>${marks(s)}</td><td style="font-weight:600;color:${seen.startsWith("0") ? "var(--ink-400)" : "var(--v-present)"}">${seen}</td>
+          <td style="color:${["var(--v-offline)", "var(--v-present)", "var(--v-present)", "var(--v-nopass)", "var(--v-excused)", "var(--v-present)"][i]}">${final() ? "—" : ["Offline", "In voice", "In voice", "No pass", "Excused", "In voice"][i]}</td>
+          <td>${final() && res.startsWith("lobby") ? result("offline:Absent") : result(res)}</td><td style="color:${w.startsWith("+") ? "var(--ink-400)" : "var(--ink-500)"}">${w}</td><td><button class="btn btn-secondary" style="height:28px;font-size:12px">Change</button></td></tr>`).join("")}</tbody></table></div>`;
+    }
+    return `<section class="plate card ${state.marks === "squares" ? "squares" : ""}"><div class="h"><i data-lucide="users"></i><span class="title">Roster</span><span class="right tag t-ink"><i data-lucide="headphones"></i>Voice check 2 min ago: 8/11 in voice</span></div>${chips}${body}${legend}</section>`;
+  }
+  function log() {
+    return `<section class="plate card"><div class="h"><i data-lucide="history"></i><span class="title">Event log</span></div>
+      ${[["camera", "present", "Sample 3 taken", "9 of 11 in voice", "19:24"], ["headphones", "unknown", "Voice check by <b>Demo Host</b>", "8 of 11 in voice", "19:30"], ["pencil", "lobby", "<b>Lena</b> set to Excused by Demo Host", "“Had to leave for work”", "19:12"]]
+        .map(([i, v, a, b, t]) => `<div class="lrow"><span class="ico cut t" data-v="${v}"><i data-lucide="${i}"></i></span><span>${a}<span class="small" style="display:block">${b}</span></span><span class="when">${t}</span></div>`).join("")}</section>`;
+  }
+  function render() {
+    document.querySelectorAll(".seg > div").forEach((seg) => seg.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(state[seg.dataset.k] === b.dataset.v))));
+    document.querySelector('[data-only="phone"]').classList.toggle("off", state.size !== "phone");
+    document.querySelector("[data-list]").innerHTML = list();
+    document.querySelector("[data-main]").innerHTML = header() + samples() + roster(false) + log();
+    document.querySelector("[data-phone]").innerHTML = `<button class="btn btn-quiet" style="justify-self:start;height:30px;padding:0 6px"><i data-lucide="chevron-left"></i>Games</button>` + header() + roster(true) + samples();
+    document.getElementById("desk").hidden = state.size !== "desk";
+    document.getElementById("phone").hidden = state.size !== "phone";
+    lucide.createIcons();
+    fit();
+  }
+  function fit() {
+    const stage = document.getElementById(state.size);
+    const w = state.size === "desk" ? 1440 : 390, h = state.size === "desk" ? 900 : 844;
+    const vp = document.querySelector(".viewport");
+    const s = Math.min((vp.clientWidth - 32) / w, (vp.clientHeight - 32) / h, state.size === "desk" ? 1 : 1.2);
+    stage.style.transform = `scale(${s})`;
+    const frame = document.getElementById("frame"); frame.style.width = `${w * s}px`; frame.style.height = `${h * s}px`;
+  }
+  document.querySelectorAll(".seg > div").forEach((seg) => seg.addEventListener("click", (e) => { const v = e.target.closest("button")?.dataset.v; if (v) { state[seg.dataset.k] = v; render(); } }));
+  addEventListener("resize", fit);
+  render();
+</script>
+</body>
+</html>

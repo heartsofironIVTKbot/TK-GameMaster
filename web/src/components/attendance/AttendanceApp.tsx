@@ -7,7 +7,8 @@ import type { AttendanceGameSummary } from "@/lib/attendanceTypes";
 import { ATTENDANCE_SAMPLE_COUNT } from "@/lib/attendanceTypes";
 import type { HostProfile } from "@/lib/scheduleTypes";
 import { formatRelative } from "@/lib/timeEngine";
-import { GLASS, Spinner } from "@/components/schedule/ui";
+import { RefreshCw } from "lucide-react";
+import { Spinner } from "@/components/schedule/ui";
 import GameAttendance from "./GameAttendance";
 import { PHASE, useNow, useRefreshTick } from "./labels";
 
@@ -72,42 +73,31 @@ export default function AttendanceApp({ host }: { host: HostProfile }) {
   }, []);
   const onChanged = useCallback(() => setNonce((value) => value + 1), []);
 
+  const serverName = host.servers.find((server) => server.id === host.guild_id)?.name;
+
   return (
-    <div className="gm-backdrop min-h-screen w-full text-ink-100">
-      <SiteHeader page="attendance" title="Attendance" subtitle="GameMaster · Live game attendance">
-          {host.demo && (
-            <span className="rounded-full border border-fuchsia-400/40 bg-fuchsia-500/15 px-3 py-1 text-[11px] font-bold text-fuchsia-200">
-              PREVIEW MODE · sample data
-            </span>
-          )}
-          <ServerSwitcher host={host} />
+    <div className="min-h-screen w-full bg-ink-950 text-ink-100">
+      <SiteHeader page="attendance" title="Attendance" subtitle={serverName}>
+        {host.demo && <span className="gm-tag bg-fuchsia-500/15 text-fuchsia-200">Preview: sample data</span>}
+        <ServerSwitcher host={host} />
       </SiteHeader>
 
-      <div className="mx-auto grid max-w-[1700px] gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+      <div className="mx-auto grid max-w-[1700px] gap-5 px-3 py-4 sm:px-6 sm:py-5 lg:grid-cols-[310px_minmax(0,1fr)]">
         <aside
           data-tour="attendance.list"
-          className={`flex flex-col rounded-3xl p-3 sm:p-4 lg:sticky lg:top-[76px] lg:max-h-[calc(100vh-96px)] ${GLASS} ${
-            picked ? "hidden lg:flex" : ""
-          }`}
+          className={`gm-plate flex flex-col p-3 lg:sticky lg:top-[72px] lg:max-h-[calc(100vh-92px)] ${picked ? "hidden lg:flex" : ""}`}
         >
-          <div className="flex items-center justify-between gap-2 px-1">
-            <p className="text-[11px] font-black uppercase tracking-[0.18em] text-emerald-300">Started games</p>
-            <button
-              type="button"
-              onClick={refresh}
-              className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[11px] font-bold text-ink-400 hover:bg-white/5 hover:text-white"
-              aria-label="Refresh the game list"
-            >
-              {list?.key !== key && <Spinner className="h-3 w-3" />}↻
+          <div className="flex items-center justify-between gap-2 border-b border-ink-800 px-0.5 pb-2.5">
+            <p className="text-xs font-semibold text-ink-500">Started games</p>
+            <button type="button" onClick={refresh} className="gm-btn gm-btn-quiet h-7 w-7 p-0" aria-label="Refresh the game list" title="Refresh">
+              {list?.key !== key ? <Spinner className="h-3.5 w-3.5" /> : <RefreshCw aria-hidden />}
             </button>
           </div>
           <div className="roster-scroll -mx-1 mt-2 min-h-[160px] flex-1 overflow-y-auto px-1">
-            {list?.error && (
-              <p className="rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-100">{list.error}</p>
-            )}
+            {list?.error && <p className="gm-cut bg-rose-950 px-3 py-2 text-xs text-rose-200 [--cut:8px]">{list.error}</p>}
             {!list && (
               <div className="flex items-center gap-2 px-2 py-6 text-xs text-ink-400">
-                <Spinner className="h-3.5 w-3.5 text-emerald-300" /> Loading…
+                <Spinner className="h-3.5 w-3.5 text-brand-300" /> Loading…
               </div>
             )}
             {games && games.length === 0 && (
@@ -115,7 +105,7 @@ export default function AttendanceApp({ host }: { host: HostProfile }) {
                 No started games yet. A game shows up here as soon as its host starts it on the Games page.
               </p>
             )}
-            <ul className="space-y-1.5">
+            <ul className="space-y-[5px]">
               {games?.map((game) => (
                 <GameRow key={game.id} game={game} active={game.id === activeId} now={now} onOpen={() => openGame(game.id)} />
               ))}
@@ -127,8 +117,8 @@ export default function AttendanceApp({ host }: { host: HostProfile }) {
           {activeId ? (
             <GameAttendance key={activeId} gameId={activeId} host={host} onBack={picked ? closeGame : null} onChanged={onChanged} />
           ) : (
-            <section className={`rounded-3xl p-6 text-sm text-ink-400 ${GLASS}`}>
-              {games ? "Pick a game on the left." : <Spinner className="h-4 w-4 text-emerald-300" />}
+            <section className="gm-plate p-6 text-sm text-ink-400">
+              {games ? "Pick a game on the left." : <Spinner className="h-4 w-4 text-brand-300" />}
             </section>
           )}
         </main>
@@ -155,36 +145,34 @@ function GameRow({
         type="button"
         onClick={onOpen}
         aria-current={active ? "true" : undefined}
-        className={`w-full rounded-xl border px-3 py-2.5 text-left transition ${
-          active ? "border-emerald-300/60 bg-emerald-400/10" : "border-white/5 bg-white/[0.02] hover:border-white/15 hover:bg-white/[0.05]"
+        data-game-state={phase.state}
+        className={`gm-game gm-cut block w-full px-2.5 py-2.5 text-left [--cut:9px] ${
+          active ? "[--tint:color-mix(in_oklab,var(--s)_22%,var(--color-ink-800))]" : "[--tint:color-mix(in_oklab,var(--s)_10%,var(--color-ink-900))]"
         }`}
       >
         <span className="flex items-center gap-2">
-          <span className="min-w-0 flex-1 truncate text-sm font-bold text-white">{game.name}</span>
-          <span className={`flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-black uppercase ${phase.className}`}>
-            <span className={`h-1.5 w-1.5 rounded-full ${phase.dot}`} />
+          <span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold text-ink-100">{game.name}</span>
+          <span data-game-state={phase.state} className="gm-tag gm-tag-dot gm-state-tag h-[19px] shrink-0 px-2 text-[10.5px]">
             {phase.label}
           </span>
         </span>
-        <span className="mt-0.5 block truncate text-[11px] text-ink-400">
-          {game.mode} · {game.host_name ?? "Unknown host"}
-          {game.started_at ? ` · ${formatRelative(game.started_at * 1000, now)}` : ""}
+        <span className="mt-0.5 block truncate text-xs text-ink-400">
+          {[game.mode, game.host_name ?? "Unknown host", game.started_at ? formatRelative(game.started_at * 1000, now) : null]
+            .filter(Boolean)
+            .join(", ")}
         </span>
         <span className="mt-2 flex items-center gap-2">
-          <span className="flex flex-1 gap-0.5" aria-label={`${game.samples_done} of ${ATTENDANCE_SAMPLE_COUNT} samples`}>
+          <span className="flex flex-1 gap-[3px]" aria-label={`${game.samples_done} of ${ATTENDANCE_SAMPLE_COUNT} samples`}>
             {Array.from({ length: ATTENDANCE_SAMPLE_COUNT }, (_, index) => (
-              <span
-                key={index}
-                className={`h-1.5 flex-1 rounded-full ${index < game.samples_done ? "bg-emerald-400" : "bg-white/10"}`}
-              />
+              <span key={index} className={`h-[5px] flex-1 ${index < game.samples_done ? "bg-emerald-300" : "bg-ink-800"}`} />
             ))}
           </span>
-          <span className="shrink-0 text-[11px] font-bold text-ink-300">
+          <span className="shrink-0 text-xs font-semibold text-ink-300">
             {game.present}/{game.players}
           </span>
           {game.needs_review > 0 && (
             <span
-              className="shrink-0 rounded-full bg-brand-400 px-1.5 text-[10px] font-black text-ink-950"
+              className="gm-cut grid h-[18px] min-w-[18px] shrink-0 place-items-center bg-yellow-300 px-1 text-[11px] font-bold text-ink-950 [--cut:4px]"
               title={`${game.needs_review} player(s) to look at`}
             >
               {game.needs_review}

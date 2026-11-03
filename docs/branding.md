@@ -70,6 +70,12 @@ Moderate, Roles, Host (hosts only), Message. The portfolio view
 (`PlayerPortfolioModal.tsx`) uses mode icons and is shared with the map and
 the profile page.
 
+**Attendance page** (`docs/design/attendance.html`): voice states and results
+have one colour each: mint in voice / counted, yellow lobby / at risk, orange
+no Gamer Pass, red offline / absent, blue excused, grey not in the server
+(`components/attendance/labels.ts`). Per-sample marks stay round dots; on
+phones the roster is player cards instead of the wide table.
+
 **The calendars** (`docs/design/calendar.html`): a game's colour is its
 status and nothing else: yellow scheduled, green announced, blue on-going,
 grey ended, red cancelled (`GameState` in `web/src/lib/scheduleOptions.ts`,

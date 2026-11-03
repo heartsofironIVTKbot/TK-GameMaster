@@ -1,8 +1,9 @@
 "use client";
 
+import { Camera, Check, Flag, Headphones, History, MessageSquare, Pencil, Play, Trash2, TriangleAlert, Undo2, UserPlus, X, type LucideIcon } from "lucide-react";
+import { CardTitle } from "@/components/games/labels";
 import { useState, type ReactNode } from "react";
 import type { AttendanceEvent } from "@/lib/attendanceTypes";
-import { GLASS } from "@/components/schedule/ui";
 import { formatRelative } from "@/lib/timeEngine";
 import { dateTime, plural } from "./labels";
 
@@ -26,20 +27,21 @@ const GROUPS: { value: Group; label: string; kinds: string[] | null }[] = [
   { value: "players", label: "Player replies", kinds: ["participation_yes", "participation_no", "late_join", "chatlog_hint"] },
 ];
 
-const ICON: Record<string, string> = {
-  game_started: "🚀",
-  sample: "📸",
-  live_check: "🎧",
-  participation_yes: "✅",
-  participation_no: "🙅",
-  late_join: "➕",
-  override: "✎",
-  warning_reverted: "↩️",
-  no_show_warning: "⚠️",
-  finalized: "🏁",
-  chatlog_hint: "💬",
-  game_ended: "🏁",
-  game_cancelled: "🗑️",
+/** Each event's icon and colour: mint good, yellow worth a look, red a warning, grey the rest. */
+const ICON: Record<string, [LucideIcon, string]> = {
+  game_started: [Play, "bg-sky-950 text-sky-300"],
+  sample: [Camera, "bg-emerald-950 text-emerald-300"],
+  live_check: [Headphones, "bg-ink-800 text-ink-300"],
+  participation_yes: [Check, "bg-emerald-950 text-emerald-300"],
+  participation_no: [X, "bg-ink-800 text-ink-300"],
+  late_join: [UserPlus, "bg-sky-950 text-sky-300"],
+  override: [Pencil, "bg-yellow-950 text-yellow-300"],
+  warning_reverted: [Undo2, "bg-ink-800 text-ink-300"],
+  no_show_warning: [TriangleAlert, "bg-rose-950 text-rose-300"],
+  finalized: [Flag, "bg-ink-800 text-ink-300"],
+  chatlog_hint: [MessageSquare, "bg-yellow-950 text-yellow-300"],
+  game_ended: [Flag, "bg-ink-800 text-ink-300"],
+  game_cancelled: [Trash2, "bg-rose-950 text-rose-300"],
 };
 
 const VERDICT: Record<string, string> = {
@@ -62,7 +64,7 @@ function prettySlotLabel(key: string): string {
 }
 
 function Who({ children }: { children: ReactNode }) {
-  return <b className="font-bold text-white">{children}</b>;
+  return <b className="font-bold text-ink-100">{children}</b>;
 }
 
 function describe(event: AttendanceEvent): { text: ReactNode; quote: string | null } {
@@ -184,11 +186,11 @@ export default function EventLog({ events, now }: { events: AttendanceEvent[]; n
   const kinds = GROUPS.find((option) => option.value === group)?.kinds ?? null;
   const shown = kinds ? events.filter((event) => kinds.includes(event.kind)) : events;
   return (
-    <section data-tour="attendance.log" className={`rounded-3xl p-4 sm:p-6 ${GLASS}`}>
+    <section data-tour="attendance.log" className="gm-plate p-4 sm:p-[18px]">
       <div className="flex flex-wrap items-center gap-2">
         <div className="mr-auto">
-          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-emerald-300">Audit log</p>
-          <p className="mt-0.5 text-xs text-ink-400">Everything that happened to this game&apos;s attendance, and who did it.</p>
+          <CardTitle icon={History} title="Event log" />
+          <p className="text-[13px] text-ink-400">Everything that happened to this game&apos;s attendance, and who did it.</p>
         </div>
         <div className="flex flex-wrap gap-1">
           {GROUPS.map((option) => (
@@ -196,11 +198,7 @@ export default function EventLog({ events, now }: { events: AttendanceEvent[]; n
               key={option.value}
               type="button"
               onClick={() => setGroup(option.value)}
-              className={`rounded-lg border px-2 py-1 text-[11px] font-bold transition ${
-                option.value === group
-                  ? "border-emerald-300 bg-emerald-400 text-ink-950"
-                  : "border-white/10 bg-white/[0.03] text-ink-300 hover:border-white/25 hover:text-white"
-              }`}
+              className={`gm-cut [--cut:7px] border px-2 py-1 text-[11px] font-bold transition ${ option.value === group ? "border-brand-400 bg-brand-400 text-brand-950" : "border-ink-800 bg-ink-950 text-ink-300 hover:border-ink-600 hover:text-ink-100" }`}
             >
               {option.label}
             </button>
@@ -214,12 +212,12 @@ export default function EventLog({ events, now }: { events: AttendanceEvent[]; n
             : "Nothing of this kind yet."}
         </p>
       ) : (
-        <ol className="mt-4 divide-y divide-white/5">
+        <ol className="mt-4 divide-y divide-ink-800">
           {shown.map((event) => {
             const { text, quote } = describe(event);
             return (
               <li key={event.id} className="flex gap-3 py-2.5">
-                <span className="mt-0.5 w-6 shrink-0 text-center text-base">{ICON[event.kind] ?? "•"}</span>
+                <EventIcon kind={event.kind} />
                 <div className="min-w-0 flex-1 text-sm text-ink-300">
                   <p>{text}</p>
                   {quote && <p className="mt-0.5 line-clamp-2 text-xs text-ink-400">“{quote}”</p>}
@@ -227,11 +225,11 @@ export default function EventLog({ events, now }: { events: AttendanceEvent[]; n
                     {event.actor_name
                       ? `by ${event.actor_name}`
                       : event.kind.startsWith("participation_")
-                        ? "💬 Player's reply to the DM"
+                        ? "Player's reply to the DM"
                         : event.kind === "late_join"
-                          ? "➕ Hot join"
-                          : "🤖 Automatic"}{" "}
-                    ·{" "}
+                          ? "Hot join"
+                          : "Automatic"}
+                    {", "}
                     <span title={dateTime(event.created_at)}>
                       {formatRelative(Math.min(event.created_at * 1000, now), now)}
                     </span>
@@ -243,5 +241,14 @@ export default function EventLog({ events, now }: { events: AttendanceEvent[]; n
         </ol>
       )}
     </section>
+  );
+}
+
+function EventIcon({ kind }: { kind: string }) {
+  const [Icon, tone] = ICON[kind] ?? [History, "bg-ink-800 text-ink-300"];
+  return (
+    <span className={`gm-cut mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center [--cut:6px] ${tone}`}>
+      <Icon aria-hidden className="h-[15px] w-[15px]" strokeWidth={1.75} />
+    </span>
   );
 }
