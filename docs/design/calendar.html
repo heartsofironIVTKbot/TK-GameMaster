@@ -1,0 +1,566 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GameMaster Calendar Mock-up</title>
+<!-- Design mock-up of the host calendar and the Shared Calendar in the
+     cut-plate style (docs/branding.md). Not part of the app. Drawn at 1440x900
+     (desktop) or 390x844 (phone), with made-up sample data. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Big+Shoulders+Stencil+Display:wght@800&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+<style>
+  :root {
+    --ink-950: oklch(11.8% 0.009 152);
+    --ink-900: oklch(19.2% 0.011 152);
+    --ink-850: oklch(22.8% 0.012 152);
+    --ink-800: oklch(26.6% 0.012 152);
+    --ink-700: oklch(36.2% 0.013 152);
+    --ink-600: oklch(44.4% 0.014 152);
+    --ink-500: oklch(55.4% 0.015 152);
+    --ink-400: oklch(70.4% 0.015 152);
+    --ink-300: oklch(86.4% 0.012 152);
+    --ink-100: oklch(96.6% 0.006 152);
+    --brand-300: oklch(83.2% 0.158 146);
+    --brand-400: oklch(76.4% 0.186 146);
+    --brand-950: oklch(19.4% 0.046 146);
+    /* Colour = the game's status, nothing else. */
+    --s-scheduled: oklch(86% 0.15 95);
+    --s-announced: oklch(79.4% 0.118 174);
+    --s-live: oklch(74% 0.13 240);
+    --s-ended: oklch(62% 0.015 152);
+    --s-cancelled: oklch(68% 0.18 22);
+    /* an add-on (Casino, Fortunes of War) blends purple into the status colour */
+    --addon: oklch(66% 0.2 312);
+    --display: "Big Shoulders Display", "Arial Narrow", sans-serif;
+    --stencil: "Big Shoulders Stencil Display", var(--display);
+    --body: "Public Sans", system-ui, sans-serif;
+  }
+  .ended-violet { --s-ended: oklch(72% 0.12 300); }
+  .ended-bronze { --s-ended: oklch(70% 0.09 60); }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: oklch(8% 0.006 152); color: var(--ink-300); font: 400 14px/1.45 var(--body); font-variant-numeric: tabular-nums; display: flex; flex-direction: column; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
+  svg.lucide { width: 16px; height: 16px; stroke-width: 1.75; flex: none; }
+
+  /* ---------- design switches (not part of the design) ---------- */
+  .switches { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; padding: 10px 16px; border-bottom: 1px solid var(--ink-800); background: var(--ink-950); }
+  .switches h1 { margin: 0 6px 0 0; font: 800 22px/1 var(--display); text-transform: uppercase; color: var(--ink-100); }
+  .seg { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-500); }
+  .seg div { display: flex; border: 1px solid var(--ink-700); border-radius: 4px; overflow: hidden; }
+  .seg button { padding: 5px 10px; font-size: 12px; font-weight: 600; color: var(--ink-400); }
+  .seg button + button { border-left: 1px solid var(--ink-700); }
+  .seg button[aria-pressed="true"] { background: var(--ink-800); color: var(--ink-100); }
+  .seg.off { opacity: .35; pointer-events: none; }
+  .viewport { flex: 1; min-height: 0; display: grid; place-items: center; padding: 16px; overflow: hidden; }
+  .frame { position: relative; overflow: hidden; outline: 1px solid var(--ink-800); }
+  .stage { position: absolute; left: 0; top: 0; transform-origin: 0 0; overflow: hidden; background: var(--ink-950); }
+  .stage.desk { width: 1440px; height: 900px; }
+  .stage.phone { width: 390px; height: 844px; }
+  [hidden] { display: none !important; }
+
+  /* ---------- cut-plate pieces (same as web/src/app/globals.css) ---------- */
+  .cut, .btn, .plate, .field { clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut)); }
+  .cut, .btn, .field { --cut: 8px; }
+  .plate { --cut: 14px; --line: var(--ink-800); background-color: var(--ink-900); }
+  .plate, .field, .btn-secondary, .btn-danger {
+    border: 1px solid var(--line);
+    background-image: linear-gradient(135deg, var(--line) calc(var(--cut) * .7071 + 1px), transparent 0), linear-gradient(315deg, var(--line) calc(var(--cut) * .7071 + 1px), transparent 0);
+    background-origin: border-box;
+  }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; height: 36px; padding: 0 14px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+  .btn-primary { background-color: var(--brand-400); color: var(--brand-950); }
+  .btn-secondary { --line: var(--ink-700); color: var(--ink-100); background-color: var(--ink-950); }
+  .btn-quiet { color: var(--ink-300); }
+  .btn-danger { --line: oklch(71% 0.17 18 / .45); color: oklch(80% 0.12 18); }
+  .btn-icon { width: 34px; padding: 0; }
+  .tag { display: inline-flex; align-items: center; gap: 6px; height: 21px; padding: 0 11px; font-size: 11.5px; font-weight: 600; white-space: nowrap;
+    clip-path: polygon(7px 0, calc(100% - 7px) 0, 100% 50%, calc(100% - 7px) 100%, 7px 100%, 0 50%); }
+  .tag svg { width: 12px; height: 12px; }
+  .tag-ink { color: var(--ink-300); background: var(--ink-800); }
+  .dot::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  /* a status tag: its colour on a dark tint of itself */
+  .st { color: var(--s); background: color-mix(in oklab, var(--s) 16%, var(--ink-950)); }
+  .title { font-family: var(--display); font-weight: 800; text-transform: uppercase; line-height: .95; color: var(--ink-100); }
+  .mark { width: 30px; height: 30px; --cut: 7px; display: grid; place-items: center; background: var(--brand-400); color: var(--brand-950); font: 800 17px/1 var(--stencil); }
+  [data-s="scheduled"] { --s: var(--s-scheduled); }
+  [data-s="announced"] { --s: var(--s-announced); }
+  [data-s="live"] { --s: var(--s-live); }
+  [data-s="ended"] { --s: var(--s-ended); }
+  [data-s="cancelled"] { --s: var(--s-cancelled); }
+
+  /* ---------- site header ---------- */
+  .top { height: 56px; display: flex; align-items: center; gap: 14px; padding: 0 20px; border-bottom: 1px solid var(--ink-800); background: var(--ink-950); }
+  .top .title { font-size: 26px; }
+  .top small { display: block; font-size: 12px; color: var(--ink-400); }
+  .top-end { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  .avatar { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--ink-800); color: var(--ink-100); font-size: 12px; font-weight: 600; }
+  .tz { display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px; font-size: 12.5px; color: var(--ink-100); --line: var(--ink-700); --cut: 7px; background-color: var(--ink-950); }
+  .tz small { display: inline; color: var(--ink-500); }
+  /* the calendar's two tabs */
+  .tabs { display: flex; align-self: stretch; margin-left: 10px; }
+  .tabs button { display: flex; align-items: center; gap: 7px; padding: 0 14px; font-size: 13.5px; font-weight: 600; color: var(--ink-400); box-shadow: inset 0 -2px 0 transparent; }
+  .tabs button[aria-current] { color: var(--ink-100); box-shadow: inset 0 -2px 0 var(--brand-400); }
+  .tabs button[aria-current] svg { color: var(--brand-400); }
+
+  /* ---------- page ---------- */
+  .page { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 20px; padding: 20px; height: calc(100% - 56px); }
+  .month { display: flex; flex-direction: column; overflow: hidden; }
+  .month-bar { display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--ink-800); }
+  .month-bar .title { font-size: 28px; margin: 0 6px; }
+  .month .grid, .wgrid { background: var(--ink-950); }
+  .grid { flex: 1; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); grid-template-rows: auto repeat(6, minmax(0, 1fr)); }
+  .dow { padding: 8px 10px; font-size: 12px; font-weight: 600; color: var(--ink-500); border-bottom: 1px solid var(--ink-800); }
+  .day { position: relative; padding: 7px; border-right: 1px solid var(--ink-800); border-bottom: 1px solid var(--ink-800); display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+  .day:nth-child(7n) { border-right: 0; }
+  .day.lastrow { border-bottom: 0; }
+  .num { height: 24px; font: 600 18px/1 var(--display); color: var(--ink-400); display: flex; align-items: center; gap: 6px; }
+  .out .num, .closed .num { color: var(--ink-700); }
+  .closed { background: oklch(0% 0 0 / .18); }
+  .today .num b { width: 24px; height: 24px; display: grid; place-items: center; background: var(--brand-400); color: var(--brand-950); clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px); }
+  .num b { font-weight: inherit; }
+  .picked { background: var(--ink-900); box-shadow: inset 0 2px 0 var(--brand-400); }
+  .picked .add { display: inline-flex; }
+  .add { display: none; margin-left: auto; width: 22px; height: 22px; --cut: 5px; background: var(--brand-400); color: var(--brand-950); align-items: center; justify-content: center; }
+  .add svg { width: 14px; height: 14px; stroke-width: 2.5; }
+  .locked { background: repeating-linear-gradient(135deg, transparent 0 7px, oklch(100% 0 0 / .04) 7px 14px); }
+  .lock-tag { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; font: 600 11px/1 var(--body); color: var(--ink-400); }
+  .lock-tag svg { width: 12px; height: 12px; }
+
+  /* a game: its status on the left edge and a faint tint; the mode as an icon; yours = the cut corner filled green */
+  .game { position: relative; display: block; padding: 5px 8px 5px 9px; --cut: 7px; border-left: 3px solid var(--s); --tint: color-mix(in oklab, var(--s) 24%, var(--ink-800)); background: var(--tint); font-size: 12px; line-height: 1.25; }
+  .game b { display: flex; align-items: center; gap: 5px; color: var(--ink-100); font-weight: 700; }
+  .game b svg { width: 13px; height: 13px; color: var(--ink-300); stroke-width: 2; }
+  .game span { display: block; color: var(--ink-400); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .game[data-s="ended"] b, .game[data-s="cancelled"] b { color: var(--ink-400); }
+  .game[data-s="cancelled"] b em { text-decoration: line-through; }
+  .game em { font-style: normal; }
+  .game.addon, .sgame.addon { background: linear-gradient(in oklab 100deg, var(--tint) 25%, color-mix(in oklab, var(--addon) 38%, var(--ink-800))); }
+  .addon::before { content: ""; position: absolute; left: -3px; top: 0; bottom: 0; width: 3px; background: linear-gradient(in oklab, var(--s) 30%, var(--addon) 70%); }
+  .gcard.addon { position: relative; isolation: isolate; }
+  .gcard.addon::after { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(in oklab 100deg, transparent 35%, color-mix(in oklab, var(--addon) 22%, transparent)); }
+  .legend i.addon-key { width: 3px; height: 12px; background: linear-gradient(var(--s-announced) 30%, var(--addon) 70%); }
+  .tag-addon { color: oklch(80% 0.13 305); background: color-mix(in oklab, var(--addon) 18%, var(--ink-950)); }
+  .game.mine::after { content: ""; position: absolute; right: 0; bottom: 0; width: 11px; height: 11px; background: var(--brand-400); clip-path: polygon(100% 0, 100% 100%, 0 100%); }
+  .month-foot { display: flex; align-items: center; gap: 16px; padding: 9px 14px; border-top: 1px solid var(--ink-800); font-size: 12px; color: var(--ink-400); }
+  .month-foot .note { margin-left: auto; color: var(--ink-500); }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i.bar { width: 3px; height: 12px; background: var(--s); }
+  .legend svg { width: 13px; height: 13px; }
+  .legend .sep { width: 1px; height: 14px; background: var(--ink-700); }
+  .key-yours { width: 10px; height: 10px; background: linear-gradient(135deg, var(--ink-700) 50%, var(--brand-400) 50%); }
+  .key-lock { width: 10px; height: 10px; background: repeating-linear-gradient(135deg, var(--ink-600) 0 2px, transparent 2px 4px); outline: 1px solid var(--ink-700); }
+
+  /* ---------- side panel ---------- */
+  .side { align-self: start; padding: 18px; }
+  .side .eyebrow { font-size: 12px; color: var(--ink-400); }
+  .side h2 { margin: 2px 0 4px; font-size: 26px; }
+  .side > p { margin: 0 0 14px; font-size: 13px; color: var(--ink-400); }
+  .up { display: grid; grid-template-columns: 40px 1fr auto; gap: 12px; align-items: center; padding: 11px 12px; margin-top: 8px; --cut: 10px; background-color: var(--ink-950); --line: var(--ink-800); }
+  .mode-ico { width: 40px; height: 40px; --cut: 8px; display: grid; place-items: center; background: var(--ink-850); color: var(--ink-100); }
+  .mode-ico svg { width: 20px; height: 20px; }
+  .up strong { display: block; color: var(--ink-100); font-weight: 600; }
+  .up small { font-size: 12.5px; color: var(--ink-400); }
+  .head-row { display: flex; align-items: flex-start; justify-content: space-between; }
+  .staff { margin: 14px 0; padding: 10px 12px; --cut: 10px; background-color: var(--ink-950); }
+  .staff p { margin: 0 0 8px; font-size: 12px; color: var(--ink-500); }
+  .staff .btn { width: 100%; height: 34px; }
+  .setup { width: 100%; height: 50px; --cut: 11px; font: 800 20px/1 var(--display); text-transform: uppercase; letter-spacing: .02em; }
+  .side h3 { margin: 20px 0 8px; font-size: 12px; font-weight: 600; color: var(--ink-500); }
+  .gcard { padding: 14px; --cut: 12px; background-color: var(--ink-950); border-left: 3px solid var(--s) !important; }
+  .gcard-top { display: grid; grid-template-columns: 40px 1fr auto; gap: 12px; align-items: start; }
+  .gcard .time { font: 800 30px/1 var(--display); color: var(--ink-100); }
+  .gcard .name { margin-top: 2px; font-size: 14px; font-weight: 600; color: var(--ink-100); }
+  .gcard .host { margin-top: 2px; display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ink-400); }
+  .gcard .when { font-size: 12px; color: var(--ink-500); }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0; }
+  .gcard-actions { display: flex; justify-content: space-between; }
+
+  /* ---------- shared calendar (week by hour) ---------- */
+  .week { display: flex; flex-direction: column; overflow: hidden; }
+  .filter { margin-left: auto; display: flex; }
+  .filter button { height: 30px; padding: 0 12px; font-size: 12.5px; font-weight: 600; color: var(--ink-400); border: 1px solid var(--ink-700); display: inline-flex; align-items: center; gap: 6px; }
+  .filter button + button { border-left: 0; }
+  .filter button[aria-pressed="true"] { background: var(--ink-800); color: var(--ink-100); }
+  .wgrid { flex: 1; display: grid; grid-template-columns: 54px repeat(7, minmax(0, 1fr)); grid-template-rows: 34px 1fr; min-height: 0; }
+  .wgrid .dow { display: flex; align-items: baseline; gap: 6px; padding: 8px 10px; border-left: 1px solid var(--ink-800); }
+  .wgrid .dow b { font: 600 17px/1 var(--display); color: var(--ink-300); }
+  .wgrid .dow.today b { color: var(--brand-400); }
+  .hours { position: relative; border-right: 0; }
+  .hours span { position: absolute; right: 8px; font-size: 11px; color: var(--ink-500); transform: translateY(-50%); }
+  .col { position: relative; border-left: 1px solid var(--ink-800); background-image: linear-gradient(var(--ink-800) 1px, transparent 1px); background-size: 100% calc(100% / var(--hours)); }
+  .col.past { background-color: oklch(0% 0 0 / .18); }
+  .col.today { background-color: oklch(76.4% 0.186 146 / .035); }
+  .now { position: absolute; left: 0; right: 0; height: 2px; background: var(--brand-400); }
+  .now::before { content: ""; position: absolute; left: -4px; top: -3px; width: 8px; height: 8px; background: var(--brand-400); clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); }
+  .sgame { position: absolute; box-shadow: 0 0 0 1px var(--ink-950); padding: 4px 7px 4px 8px; --cut: 7px; border-left: 3px solid var(--s); --tint: color-mix(in oklab, var(--s) 24%, var(--ink-800)); background: var(--tint); font-size: 11.5px; line-height: 1.25; overflow: hidden; }
+  .sgame .srv em { font-style: normal; }
+  .sgame .srv { display: flex; align-items: center; gap: 6px; color: var(--ink-100); font-weight: 700; white-space: nowrap; }
+  .sgame .line { display: flex; align-items: center; gap: 5px; color: var(--ink-400); white-space: nowrap; overflow: hidden; }
+  .sgame .line svg { width: 12px; height: 12px; color: var(--ink-300); stroke-width: 2; }
+  .sgame.mine::after { content: ""; position: absolute; right: 0; bottom: 0; width: 11px; height: 11px; background: var(--brand-400); clip-path: polygon(100% 0, 100% 100%, 0 100%); }
+  .sgame .cl { margin-left: auto; width: 13px; height: 13px; color: var(--ink-100); }
+  .sgame[data-s="cancelled"] .srv em { text-decoration: line-through; }
+  .sgame em { font-style: normal; }
+  .badge { width: 18px; height: 18px; flex: none; --cut: 4px; display: grid; place-items: center; background: var(--ink-700); color: var(--ink-100); font: 800 10px/1 var(--body); }
+  .badge.lg { width: 30px; height: 30px; --cut: 7px; font-size: 12px; }
+  .badge.home { background: var(--brand-400); color: var(--brand-950); }
+  .clash-row { display: grid; grid-template-columns: 20px 1fr; gap: 10px; padding: 11px 12px; margin-top: 8px; --cut: 10px; background-color: var(--ink-950); font-size: 12.5px; color: var(--ink-400); }
+  .clash-row > svg { color: var(--ink-100); margin-top: 1px; }
+  .clash-row strong { display: block; font-size: 13px; color: var(--ink-100); font-weight: 600; }
+  .srv-row { display: grid; grid-template-columns: 30px 1fr auto; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--ink-800); }
+  .srv-row:first-of-type { border-top: 0; }
+  .srv-row strong { display: block; font-size: 13px; color: var(--ink-100); font-weight: 600; }
+  .srv-row small { font-size: 12px; color: var(--ink-500); }
+  .check { width: 18px; height: 18px; --cut: 4px; display: grid; place-items: center; background: var(--brand-400); color: var(--brand-950); }
+  .check svg { width: 13px; height: 13px; stroke-width: 3; }
+  .check.no { background: transparent; outline: 1px solid var(--ink-600); outline-offset: -1px; }
+  .fine { margin: 14px 0 0; font-size: 12px; color: var(--ink-500); }
+
+  /* ---------- server setting ---------- */
+  .setting-page { padding: 32px 0; display: grid; justify-content: center; }
+  .setting-col { width: 720px; }
+  .setting-col .eyebrow { font-size: 12px; color: var(--ink-400); }
+  .setting-col h2 { margin: 2px 0 18px; font-size: 32px; }
+  .card { padding: 18px 20px; margin-bottom: 16px; }
+  .card h3 { display: flex; align-items: center; gap: 9px; margin: 0 0 12px; font: 800 20px/1 var(--display); text-transform: uppercase; color: var(--ink-100); }
+  .card h3 svg { color: var(--brand-400); width: 18px; height: 18px; }
+  .toggle { display: grid; grid-template-columns: 1fr auto; gap: 18px; padding: 12px 0; border-top: 1px solid var(--ink-800); }
+  .toggle:first-of-type { border-top: 0; padding-top: 0; }
+  .toggle strong { display: block; font-size: 14px; color: var(--ink-100); font-weight: 600; }
+  .toggle p { margin: 3px 0 0; font-size: 13px; color: var(--ink-400); max-width: 560px; }
+  .switch { width: 40px; height: 22px; --cut: 5px; background: var(--ink-700); position: relative; }
+  .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; background: var(--ink-300); clip-path: polygon(4px 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%, 0 4px); }
+  .switch.on { background: var(--brand-400); }
+  .switch.on::after { left: 21px; background: var(--brand-950); }
+  .shares { margin-top: 12px; padding: 12px 14px; --cut: 10px; background-color: var(--ink-950); font-size: 13px; }
+  .shares b { display: block; margin-bottom: 6px; font-size: 12px; font-weight: 600; color: var(--ink-500); }
+  .shares ul { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 5px 18px; }
+  .shares li { display: flex; align-items: center; gap: 7px; color: var(--ink-300); }
+  .shares li svg { width: 14px; height: 14px; }
+  .shares .yes svg { color: var(--brand-400); }
+  .shares .no { color: var(--ink-500); }
+
+  /* ---------- phone ---------- */
+  .phone .top { padding: 0 10px; gap: 10px; }
+  .phone .top .title { font-size: 21px; }
+  .p-tabs { display: flex; border-bottom: 1px solid var(--ink-800); }
+  .p-tabs button { flex: 1; height: 42px; display: flex; align-items: center; justify-content: center; gap: 7px; font-size: 13px; font-weight: 600; color: var(--ink-400); box-shadow: inset 0 -2px 0 transparent; }
+  .p-tabs button[aria-current] { color: var(--ink-100); box-shadow: inset 0 -2px 0 var(--brand-400); }
+  .p-body { padding: 12px; display: grid; gap: 12px; height: calc(100% - 56px - 43px); overflow: hidden; align-content: start; }
+  .phone .month-bar { padding: 10px; }
+  .phone .month-bar .title { font-size: 22px; }
+  .phone .grid { flex: none; grid-template-rows: auto repeat(6, 46px); }
+  .phone .day { padding: 4px; gap: 3px; align-items: center; }
+  .phone .num { font-size: 16px; justify-content: center; }
+  .pips { display: flex; gap: 3px; }
+  .pips i { width: 14px; height: 4px; background: var(--s); }
+  .pips i.addon { background: linear-gradient(90deg, var(--s) 50%, var(--addon) 50%); }
+  .phone .side { padding: 14px; }
+  .phone .side h2 { font-size: 22px; }
+  .agenda h4 { margin: 14px 0 6px; font-size: 12px; font-weight: 600; color: var(--ink-500); }
+  .agenda h4:first-child { margin-top: 0; }
+  .arow.addon { background: linear-gradient(in oklab 100deg, color-mix(in oklab, var(--s) 9%, var(--ink-900)) 30%, color-mix(in oklab, var(--addon) 26%, var(--ink-900))); }
+  .arow { display: grid; grid-template-columns: 44px 18px 1fr auto; gap: 9px; align-items: center; padding: 8px 10px 8px 9px; margin-bottom: 6px; --cut: 8px; border-left: 3px solid var(--s); background: color-mix(in oklab, var(--s) 9%, var(--ink-900)); font-size: 12.5px; position: relative; }
+  .arow time { font: 700 16px/1 var(--display); color: var(--ink-100); }
+  .arow strong { display: block; font-size: 12.5px; color: var(--ink-100); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .arow small { display: flex; align-items: center; gap: 5px; color: var(--ink-400); }
+  .arow small svg { width: 12px; height: 12px; }
+  .arow.mine::after { content: ""; position: absolute; right: 0; bottom: 0; width: 10px; height: 10px; background: var(--brand-400); clip-path: polygon(100% 0, 100% 100%, 0 100%); }
+  .arow .tag { height: 19px; padding: 0 9px; font-size: 11px; }
+</style>
+</head>
+<body>
+
+<div class="switches">
+  <h1>Calendar mock-up</h1>
+  <div class="seg">Page <div data-k="page"><button data-v="host">Calendar</button><button data-v="shared">Shared calendar</button><button data-v="setting">Server setting</button></div></div>
+  <div class="seg" data-only="host">State <div data-k="state"><button data-v="overview">Overview</button><button data-v="day">Day picked</button></div></div>
+  <div class="seg">Ended colour <div data-k="ended"><button data-v="grey">Grey</button><button data-v="violet">Violet</button><button data-v="bronze">Bronze</button></div></div>
+  <div class="seg">Historical icon <div data-k="hicon"><button data-v="tank">Tank</button><button data-v="medal">Medal</button></div></div>
+  <div class="seg">Size <div data-k="size"><button data-v="desk">Desktop</button><button data-v="phone">Phone</button></div></div>
+</div>
+
+<div class="viewport"><div class="frame" id="frame">
+
+  <!-- ===================== DESKTOP ===================== -->
+  <div class="stage desk" id="desk">
+    <header class="top">
+      <span class="mark cut">GM</span>
+      <div><div class="title">Calendar</div><small>TommyKay HOI4</small></div>
+      <nav class="tabs" data-tabs></nav>
+      <span class="tz plate" style="margin-left:8px"><i data-lucide="globe" style="width:14px;height:14px;color:var(--ink-400)"></i>Tbilisi <small>UTC+04:00</small><i data-lucide="chevron-down" style="width:14px;height:14px;color:var(--ink-500)"></i></span>
+      <div class="top-end"><span class="avatar">D</span><button class="btn btn-quiet"><i data-lucide="menu"></i>Menu</button></div>
+    </header>
+
+    <div class="page" data-view="host">
+      <section class="month plate" style="--cut:14px">
+        <div class="month-bar">
+          <button class="btn btn-secondary btn-icon" style="height:32px" aria-label="Previous month"><i data-lucide="chevron-left"></i></button>
+          <span class="title">November 2026</span>
+          <button class="btn btn-secondary btn-icon" style="height:32px" aria-label="Next month"><i data-lucide="chevron-right"></i></button>
+          <button class="btn btn-secondary" style="height:32px">Today</button>
+        </div>
+        <div class="grid" id="grid"></div>
+        <div class="month-foot"><div class="legend" data-legend></div><span class="note">Bookable until Sunday 15 November</span></div>
+      </section>
+      <aside class="side plate" data-panel></aside>
+    </div>
+
+    <div class="page" data-view="shared">
+      <section class="week plate" style="--cut:14px">
+        <div class="month-bar">
+          <button class="btn btn-secondary btn-icon" style="height:32px" aria-label="Previous week"><i data-lucide="chevron-left"></i></button>
+          <span class="title">2 – 8 November</span>
+          <button class="btn btn-secondary btn-icon" style="height:32px" aria-label="Next week"><i data-lucide="chevron-right"></i></button>
+          <button class="btn btn-secondary" style="height:32px">This week</button>
+          <div class="filter"><button aria-pressed="true">All modes</button><button data-icon="rp">Roleplay</button><button data-icon="hist">Historical</button></div>
+        </div>
+        <div class="wgrid" id="wgrid"></div>
+        <div class="month-foot"><div class="legend" data-legend></div><span class="note">Times in Asia/Tbilisi</span></div>
+      </section>
+      <aside class="side plate" data-shared-panel></aside>
+    </div>
+
+    <div data-view="setting" class="setting-page" data-setting></div>
+  </div>
+
+  <!-- ===================== PHONE ===================== -->
+  <div class="stage phone" id="phone" hidden>
+    <header class="top">
+      <span class="mark cut">GM</span>
+      <div><div class="title">Calendar</div></div>
+      <div class="top-end"><span class="tz plate"><i data-lucide="globe" style="width:14px;height:14px;color:var(--ink-400)"></i>UTC+4</span><button class="btn btn-quiet btn-icon" aria-label="Menu"><i data-lucide="menu"></i></button></div>
+    </header>
+    <nav class="p-tabs" data-tabs></nav>
+    <div class="p-body" data-view="host">
+      <section class="month plate" style="--cut:12px">
+        <div class="month-bar">
+          <button class="btn btn-secondary btn-icon" style="height:30px;width:30px" aria-label="Previous month"><i data-lucide="chevron-left"></i></button>
+          <span class="title">November 2026</span>
+          <button class="btn btn-secondary btn-icon" style="height:30px;width:30px" aria-label="Next month"><i data-lucide="chevron-right"></i></button>
+          <button class="btn btn-secondary" style="height:30px;margin-left:auto;padding:0 10px">Today</button>
+        </div>
+        <div class="grid" id="pgrid"></div>
+      </section>
+      <aside class="side plate" data-panel></aside>
+    </div>
+    <div class="p-body" data-view="shared">
+      <section class="plate side" style="--cut:12px">
+        <div class="head-row" style="align-items:center;margin-bottom:10px">
+          <span class="title" style="font-size:22px">2 – 8 November</span>
+          <span style="display:flex;gap:6px"><button class="btn btn-secondary btn-icon" style="height:30px;width:30px" aria-label="Previous week"><i data-lucide="chevron-left"></i></button><button class="btn btn-secondary btn-icon" style="height:30px;width:30px" aria-label="Next week"><i data-lucide="chevron-right"></i></button></span>
+        </div>
+        <div class="agenda" id="agenda"></div>
+      </section>
+    </div>
+    <div class="p-body" data-view="setting" data-setting-phone></div>
+  </div>
+
+</div></div>
+
+<script>
+  const TANK = '<svg class="lucide" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="14" width="20" height="6" rx="3"/><path d="M5 14v-2h14v2"/><path d="M8 12V9.5A1.5 1.5 0 0 1 9.5 8h4A1.5 1.5 0 0 1 15 9.5V12"/><path d="M15 10h7"/></svg>';
+  const state = { page: "host", state: "overview", ended: "grey", hicon: "tank", size: "desk" };
+  const icon = (kind) => kind === "hist" ? (state.hicon === "tank" ? TANK : '<i data-lucide="medal"></i>') : '<i data-lucide="drama"></i>';
+  const STATUS = { scheduled: "Scheduled", announced: "Announced", live: "On-going", ended: "Ended", cancelled: "Cancelled" };
+
+  /* ---------- host calendar (November; today = Tue 3) ---------- */
+  const GAMES = {
+    1: [["22:00", "Vanilla", "hist", "ended", false]],
+    2: [["21:00", "Kaiserreich FFA", "rp", "cancelled", false]],
+    3: [["14:03", "Roleplay", "rp", "live", true]],
+    4: [["23:00", "Roleplay", "rp", "scheduled", true, "Casino"]],
+    5: [["22:00", "Their Finest Bruh", "hist", "announced", true, "Fortunes of War"]],
+    6: [["21:00", "Millennium Dawn", "rp", "scheduled", false]],
+    8: [["20:00", "Novum Vexillum", "rp", "scheduled", false]],
+    9: [["20:00", "Hearts of Oak", "hist", "scheduled", false]],
+  };
+  const LOCKED = 7, TODAY = 3, PICKED = 4, LAST_BOOKABLE = 15;
+  const cells = [];
+  for (let i = 0; i < 42; i++) {
+    const d = i - 5; // index 6 = 1 November (the grid starts Monday 26 October)
+    const inMonth = d >= 1 && d <= 30;
+    cells.push({ d, inMonth, num: inMonth ? d : d < 1 ? 31 + d : d - 30, last: i >= 35 });
+  }
+  const dayClass = (c) => ["day", c.inMonth ? "" : "out", c.inMonth && c.d > LAST_BOOKABLE ? "closed" : "", c.d === TODAY ? "today" : "", c.d === LOCKED ? "locked" : "", state.state === "day" && c.d === PICKED ? "picked" : "", c.last ? "lastrow" : ""].join(" ");
+  function gameHtml([time, name, kind, status, mine, addon]) {
+    return `<div class="game cut ${mine ? "mine" : ""} ${addon ? "addon" : ""}" data-s="${status}" title="${STATUS[status]}${addon ? `, ${addon}` : ""}"><b>${icon(kind)}<em>${time}</em></b><span>${name}</span></div>`;
+  }
+  function deskGrid() {
+    return ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => `<div class="dow">${d}</div>`).join("") +
+      cells.map((c) => {
+        const lock = c.d === LOCKED ? '<span class="lock-tag"><i data-lucide="lock"></i>Locked</span>' : "";
+        const add = c.inMonth && c.d >= TODAY && c.d <= LAST_BOOKABLE ? '<span class="add cut"><i data-lucide="plus"></i></span>' : "";
+        return `<div class="${dayClass(c)}"><span class="num"><b>${c.num}</b>${lock}${add}</span>${c.inMonth ? (GAMES[c.d] || []).map(gameHtml).join("") : ""}</div>`;
+      }).join("");
+  }
+  function phoneGrid() {
+    return ["M", "T", "W", "T", "F", "S", "S"].map((d) => `<div class="dow" style="text-align:center;padding:6px 0">${d}</div>`).join("") +
+      cells.map((c) => {
+        const pips = c.inMonth && GAMES[c.d] ? `<span class="pips">${GAMES[c.d].map((g) => `<i data-s="${g[3]}" class="${g[5] ? "addon" : ""}"></i>`).join("")}</span>` : "";
+        return `<div class="${dayClass(c)}"><span class="num"><b>${c.num}</b></span>${pips}</div>`;
+      }).join("");
+  }
+  function legend(withLock) {
+    const statuses = Object.entries(STATUS).map(([k, v]) => `<span><i class="bar" data-s="${k}"></i>${v}</span>`).join("") + '<span><i class="addon-key"></i>Add-on</span>';
+    return `${statuses}<span class="sep"></span><span>${icon("rp")}Roleplay</span><span>${icon("hist")}Historical</span><span class="sep"></span><span><i class="key-yours"></i>${withLock ? "Yours" : "Your server"}</span>${withLock ? '<span><i class="key-lock"></i>Staff lock</span>' : '<span><i data-lucide="triangle-alert"></i>Possible clash</span>'}`;
+  }
+  const overview = () => `
+    <div class="eyebrow">Your schedule</div>
+    <h2 class="title">Upcoming games</h2>
+    <p>Pick a day on the calendar to see its games or set up a new one.</p>
+    ${[["rp", "Roleplay", "Tue 3 Nov, 14:03", "live"], ["rp", "Roleplay", "Wed 4 Nov, 23:00, Casino", "scheduled"], ["hist", "Their Finest Bruh", "Thu 5 Nov, 22:00, Fortunes of War", "announced"]]
+      .map(([k, n, w, s]) => `<div class="up plate"><span class="mode-ico cut">${icon(k)}</span><div><strong>${n}</strong><small>${w}</small></div><span class="tag dot st" data-s="${s}">${STATUS[s]}</span></div>`).join("")}`;
+  const day = () => `
+    <div class="head-row"><div><div class="eyebrow">Tomorrow</div><h2 class="title">Wednesday 4 November</h2></div><button class="btn btn-quiet btn-icon" style="height:32px" aria-label="Close"><i data-lucide="x"></i></button></div>
+    <div class="staff plate"><p>Staff</p><button class="btn btn-secondary"><i data-lucide="lock"></i>Lock this day</button></div>
+    <button class="btn btn-primary setup"><i data-lucide="plus" style="width:20px;height:20px;stroke-width:2.5"></i>Set up a game this day</button>
+    <h3>Games on this day (1)</h3>
+    <div class="gcard plate addon" data-s="scheduled">
+      <div class="gcard-top">
+        <span class="mode-ico cut">${icon("rp")}</span>
+        <div><div class="time">23:00</div><div class="name">Roleplay</div><div class="host">Host @demo_host <span class="tag" style="color:var(--brand-400);background:var(--brand-950);height:19px">You</span></div></div>
+        <span class="when">tomorrow</span>
+      </div>
+      <div class="tags">
+        <span class="tag dot st" data-s="scheduled">Scheduled</span>
+        <span class="tag tag-addon"><i data-lucide="dices"></i>Casino</span>
+        <span class="tag tag-ink"><i data-lucide="megaphone"></i>Announces Tue 3 Nov, 19:38</span>
+        <span class="tag tag-ink"><i data-lucide="lock"></i>3 nations locked</span>
+      </div>
+      <div class="gcard-actions">
+        <button class="btn btn-secondary" style="height:32px"><i data-lucide="pencil"></i>Edit</button>
+        <button class="btn btn-danger" style="height:32px">Cancel game</button>
+      </div>
+    </div>`;
+
+  /* ---------- shared calendar (week of 2 November) ---------- */
+  const SERVERS = {
+    TK: { name: "TommyKay HOI4", home: true },
+    IF: { name: "Iron Front" },
+    RD: { name: "Red Dawn" },
+    OC: { name: "Ostfront Community" },
+  };
+  // [weekday 0=Mon, "HH:MM", server, mode, kind, status, clash]
+  const SHARED = [
+    [0, "20:00", "IF", "Vanilla", "hist", "ended"],
+    [0, "22:00", "OC", "Horstorical", "hist", "ended"],
+    [1, "14:03", "TK", "Roleplay", "rp", "live"],
+    [1, "18:00", "RD", "Roleplay", "rp", "live"],
+    [2, "22:30", "RD", "Roleplay", "rp", "announced", true],
+    [2, "23:00", "TK", "Roleplay", "rp", "scheduled", true, "Casino"],
+    [3, "21:30", "IF", "Vanilla", "hist", "announced", true],
+    [3, "22:00", "TK", "Their Finest Bruh", "hist", "announced", true, "Fortunes of War"],
+    [4, "18:00", "OC", "Hearts of Oak", "hist", "scheduled"],
+    [4, "21:00", "TK", "Millennium Dawn", "rp", "scheduled"],
+    [5, "19:00", "IF", "Kaiserreich FFA", "rp", "scheduled", false, "Casino"],
+    [5, "21:00", "RD", "Millennium Dawn", "rp", "cancelled"],
+    [6, "16:00", "OC", "Vanilla", "hist", "scheduled"],
+    [6, "20:00", "TK", "Novum Vexillum", "rp", "scheduled"],
+  ];
+  const FROM = 14, TO = 24, BLOCK = 40;
+  const minutes = (t) => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
+  function weekGrid() {
+    const days = ["Mon 2", "Tue 3", "Wed 4", "Thu 5", "Fri 6", "Sat 7", "Sun 8"];
+    let html = `<div></div>` + days.map((d, i) => { const [w, n] = d.split(" "); return `<div class="dow ${i === 1 ? "today" : ""}"><b>${n}</b>${w}</div>`; }).join("");
+    html += `<div class="hours">${Array.from({ length: TO - FROM }, (_, i) => i ? `<span style="top:${i / (TO - FROM) * 100}%">${String(FROM + i).padStart(2, "0")}:00</span>` : "").join("")}</div>`;
+    for (let d = 0; d < 7; d++) {
+      const games = SHARED.filter((g) => g[0] === d).sort((a, b) => minutes(a[1]) - minutes(b[1]));
+      // games starting less than 45 minutes apart overlap
+      const groups = [];
+      for (const g of games) {
+        const last = groups[groups.length - 1];
+        if (last && minutes(g[1]) - minutes(last[last.length - 1][1]) < 45) last.push(g); else groups.push([g]);
+      }
+      // a game that starts while another's block still shows cascades over it
+      const blocks = groups.flatMap((group) => group.map((g, i) => {
+        const [, time, srv, mode, kind, status, clash, addon] = g;
+        const top = (minutes(time) - FROM * 60) / ((TO - FROM) * 60) * 100;
+        return `<div class="sgame cut ${SERVERS[srv].home ? "mine" : ""} ${clash ? "clash" : ""} ${addon ? "addon" : ""}" data-s="${status}" title="${SERVERS[srv].name}, ${STATUS[status]}${addon ? `, ${addon}` : ""}" style="top:calc(${top}% + 1px);height:${BLOCK}px;left:${3 + i * 16}px;right:3px;z-index:${i + 1}">
+          <div class="srv"><span class="badge cut ${SERVERS[srv].home ? "home" : ""}">${srv}</span><em>${time}</em>${clash ? '<i data-lucide="triangle-alert" class="cl"></i>' : ""}</div>
+          <div class="line">${icon(kind)}${mode}</div></div>`;
+      })).join("");
+      const now = d === 1 ? `<div class="now" style="top:${(minutes("15:00") - FROM * 60) / ((TO - FROM) * 60) * 100}%"></div>` : "";
+      html += `<div class="col ${d === 0 ? "past" : d === 1 ? "today" : ""}">${blocks}${now}</div>`;
+    }
+    return html;
+  }
+  const sharedPanel = () => `
+    <div class="eyebrow">This week</div>
+    <h2 class="title">Possible clashes</h2>
+    <p>The same kind of game on two servers less than two hours apart.</p>
+    <div class="clash-row plate"><i data-lucide="triangle-alert"></i><div><strong>Wed 4 Nov, Roleplay</strong>Yours at 23:00, Red Dawn's at 22:30</div></div>
+    <div class="clash-row plate"><i data-lucide="triangle-alert"></i><div><strong>Thu 5 Nov, Historical</strong>Yours at 22:00, Iron Front's at 21:30</div></div>
+    <h3>Servers sharing their calendar (4)</h3>
+    ${Object.entries(SERVERS).map(([k, s]) => `<div class="srv-row"><span class="badge lg cut ${s.home ? "home" : ""}">${k}</span><div><strong>${s.name}</strong><small>${SHARED.filter((g) => g[2] === k).length} games this week${s.home ? ", your server" : ""}</small></div><span class="check cut ${k === "OC" ? "no" : ""}">${k === "OC" ? "" : '<i data-lucide="check"></i>'}</span></div>`).join("")}
+    <p class="fine">Only servers that turn on sharing in their setup are listed, and only their hosts can see this page.</p>`;
+  function agenda() {
+    const names = ["Monday 2", "Tuesday 3 (today)", "Wednesday 4", "Thursday 5", "Friday 6"];
+    return names.map((n, d) => `<h4>${n}</h4>` + SHARED.filter((g) => g[0] === d).map(([, time, srv, mode, kind, status, clash, addon]) =>
+      `<div class="arow cut ${SERVERS[srv].home ? "mine" : ""} ${addon ? "addon" : ""}" data-s="${status}"><time>${time}</time><span class="badge cut ${SERVERS[srv].home ? "home" : ""}">${srv}</span><div style="min-width:0"><strong>${SERVERS[srv].name}</strong><small>${icon(kind)}${mode}</small></div>${clash ? '<span class="tag tag-ink"><i data-lucide="triangle-alert"></i>Clash</span>' : `<span class="tag st" data-s="${status}">${STATUS[status]}</span>`}</div>`).join("")).join("");
+  }
+
+  /* ---------- the server setting ---------- */
+  const setting = (phone) => `
+    <div class="setting-col" style="${phone ? "width:auto" : ""}">
+      <div class="eyebrow">Server setup, Features</div>
+      <h2 class="title" style="${phone ? "font-size:24px" : ""}">Other servers</h2>
+      <div class="card plate">
+        <div class="toggle"><div><strong>Alerts for players banned on other servers</strong><p>When someone joins who is game-banned on another server that uses GameMaster, staff get a notice. Records stay separate.</p></div><span class="switch cut on"></span></div>
+        <div class="toggle"><div><strong>Share our calendar with other servers</strong><p>Our games appear on the Shared Calendar, and our hosts can see the games of every other server that shares. It helps hosts avoid running the same kind of game at the same hour.</p>
+          <div class="shares plate"><b>What other servers see</b><ul>
+            <li class="yes"><i data-lucide="check"></i>Server name and icon</li>
+            <li class="yes"><i data-lucide="check"></i>Game day, time and mode</li>
+            <li class="yes"><i data-lucide="check"></i>Status (scheduled, announced…)</li>
+            <li class="no"><i data-lucide="x"></i>Host names, players, nations</li>
+          </ul></div></div><span class="switch cut on"></span></div>
+      </div>
+    </div>`;
+
+  function render() {
+    document.querySelectorAll(".seg > div").forEach((seg) =>
+      seg.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(state[seg.dataset.k] === b.dataset.v))));
+    document.querySelector('[data-only="host"]').classList.toggle("off", state.page !== "host");
+    document.body.classList.remove("ended-violet", "ended-bronze");
+    if (state.ended !== "grey") document.body.classList.add(`ended-${state.ended}`);
+    document.querySelectorAll("[data-tabs]").forEach((t) => (t.innerHTML =
+      `<button ${state.page === "host" ? "aria-current" : ""}><i data-lucide="calendar-days"></i>Our calendar</button><button ${state.page === "shared" ? "aria-current" : ""}><i data-lucide="share-2"></i>Shared calendar</button>`));
+    document.querySelectorAll("[data-view]").forEach((v) => (v.hidden = v.dataset.view !== state.page));
+    document.getElementById("grid").innerHTML = deskGrid();
+    document.getElementById("pgrid").innerHTML = phoneGrid();
+    document.querySelectorAll("[data-panel]").forEach((p) => (p.innerHTML = state.state === "day" ? day() : overview()));
+    document.querySelectorAll("[data-legend]").forEach((l, i) => (l.innerHTML = legend(i === 0)));
+    document.getElementById("wgrid").innerHTML = weekGrid();
+    document.getElementById("wgrid").style.setProperty("--hours", TO - FROM);
+    document.querySelector("[data-shared-panel]").innerHTML = sharedPanel();
+    document.getElementById("agenda").innerHTML = agenda();
+    document.querySelector("[data-setting]").innerHTML = setting(false);
+    document.querySelector("[data-setting-phone]").innerHTML = setting(true);
+    document.querySelectorAll(".filter [data-icon]").forEach((b) => (b.innerHTML = icon(b.dataset.icon) + (b.dataset.icon === "rp" ? "Roleplay" : "Historical")));
+    document.getElementById("desk").hidden = state.size !== "desk";
+    document.getElementById("phone").hidden = state.size !== "phone";
+    lucide.createIcons();
+    fit();
+  }
+  function fit() {
+    const stage = document.getElementById(state.size);
+    const w = state.size === "desk" ? 1440 : 390, h = state.size === "desk" ? 900 : 844;
+    const vp = document.querySelector(".viewport");
+    const s = Math.min((vp.clientWidth - 32) / w, (vp.clientHeight - 32) / h, state.size === "desk" ? 1 : 1.2);
+    stage.style.transform = `scale(${s})`;
+    const frame = document.getElementById("frame");
+    frame.style.width = `${w * s}px`; frame.style.height = `${h * s}px`;
+  }
+  document.querySelectorAll(".seg > div").forEach((seg) =>
+    seg.addEventListener("click", (e) => { const v = e.target.closest("button")?.dataset.v; if (v) { state[seg.dataset.k] = v; render(); } }));
+  addEventListener("resize", fit);
+  render();
+</script>
+</body>
+</html>

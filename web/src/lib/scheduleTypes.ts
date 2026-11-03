@@ -23,6 +23,11 @@ export interface HostProfile {
   branches: HostBranch[];
   /** Game modes the server turned off in its settings (hidden on the calendar). */
   disabled_modes: string[];
+  /**
+   * How far ahead they may schedule, per branch, in days (null in a branch = no limit).
+   * null = the weekly window: the server doesn't limit by rank (lib/bookingWindow.ts).
+   */
+  booking_days: Record<HostBranch, number | null> | null;
   /** The server the host pages are on (header server switcher). */
   guild_id: string;
   /** Every server the viewer hosts in (the switcher's list). */
@@ -67,6 +72,8 @@ export interface CalendarSlot {
   announced: boolean;
   /** scheduled | announced | cancelled | ended (bot lifecycle). */
   status: string | null;
+  /** The host started the game (games.game_started): it's on-going until it ends. */
+  started: boolean;
   add_on: string | null;
   /** Bot day/week the slot was booked under (host's calendar day). */
   day: string | null;
@@ -76,6 +83,37 @@ export interface CalendarSlot {
   mine: boolean;
   /** The game's reservation thread once announced (its Games page id). */
   thread_id: string | null;
+}
+
+/** A game on the Shared Calendar: day, time, mode and status only (no hosts or players). */
+export interface SharedGame {
+  id: string;
+  guild_id: string;
+  mode: string;
+  game_timestamp: number;
+  status: string | null;
+  announced: boolean;
+  started: boolean;
+  add_on: string | null;
+}
+
+/** A server that shares its calendar. */
+export interface SharedServer {
+  id: string;
+  name: string;
+  icon_url: string | null;
+  /** The server the viewer is working on. */
+  is_yours: boolean;
+}
+
+export interface SharedCalendarResponse {
+  /** The viewer's server shares its calendar (only then can its hosts see the others). */
+  sharing: boolean;
+  /** Host Management / admins of the viewer's server (they can turn sharing on). */
+  can_enable: boolean;
+  servers: SharedServer[];
+  games: SharedGame[];
+  server_time: number;
 }
 
 /** A staff day lock (/lock_day). */

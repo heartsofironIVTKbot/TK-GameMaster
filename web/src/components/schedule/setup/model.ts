@@ -2,12 +2,12 @@ import {
   ADD_ON_VALUES,
   addOnOption,
   categoryOfMode,
-  isBookableDate,
   isLockLevel,
   type LockLevel,
   type LoggingMode,
 } from "@/lib/scheduleOptions";
 import type { GamePreset, PresetGroup, ResourceEntry } from "@/lib/presetTypes";
+import { bookingTimeIssue, canBookDay, type BookingDays } from "@/lib/bookingWindow";
 import type {
   CalendarDayLock,
   CalendarSlot,
@@ -329,6 +329,8 @@ export interface SetupContext {
   slots: CalendarSlot[];
   locks: CalendarDayLock[];
   editing: EditTarget | null;
+  /** How far ahead the host may book (HostProfile.booking_days). */
+  booking: BookingDays;
 }
 
 export interface DerivedSetup {
@@ -441,8 +443,12 @@ export function deriveSetup(form: SetupForm, context: SetupContext): DerivedSetu
       section: "game",
       message: `Staff locked ${weekdayName(form.date)}${lockedDay.reason ? ` (${lockedDay.reason})` : ""} — pick another day.`,
     });
-  } else if (!keepsDay && !isBookableDate(form.date, today)) {
+  } else if (!keepsDay && !canBookDay(context.booking, form.date, today, nowSec * 1000, timeZone, form.mode || null)) {
     issues.unshift({ section: "game", message: "That day isn't open for booking — pick another day." });
+  } else if (gameSec !== editing?.originalGameSec) {
+    // The last bookable day ends mid-day: the exact hour counts (the bot checks the same).
+    const tooFar = bookingTimeIssue(context.booking, form.mode, gameSec, nowSec);
+    if (tooFar) issues.unshift({ section: "game", message: tooFar });
   }
 
   const sameDay = context.slots.filter(

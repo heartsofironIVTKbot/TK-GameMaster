@@ -4,13 +4,12 @@ import { useMemo } from "react";
 import {
   CATEGORY_META,
   SCHEDULE_MODES,
-  isBookableDate,
-  lastBookableDate,
   modeOption,
   type ScheduleCategory,
 } from "@/lib/scheduleOptions";
 import type { CalendarDayLock, HostOption } from "@/lib/scheduleTypes";
 import { branchOfMode, type HostBranch } from "@/lib/hostBranches";
+import { canBookDay, lastBookableDay, type BookingDays } from "@/lib/bookingWindow";
 import {
   DAY_NAMES,
   addDays,
@@ -60,6 +59,8 @@ export default function GameTab({
   hosts,
   branches,
   disabledModes,
+  booking,
+  nowMs,
 }: {
   form: SetupForm;
   update: (patch: Partial<SetupForm>) => void;
@@ -75,17 +76,23 @@ export default function GameTab({
   branches: HostBranch[];
   /** Modes the server turned off in its settings. */
   disabledModes: string[];
+  /** How far ahead the host may book (HostProfile.booking_days). */
+  booking: BookingDays;
+  nowMs: number;
 }) {
+  // No limit (staff): four weeks of buttons, and a date field for anything later.
+  const lastDay = lastBookableDay(booking, today, nowMs, timeZone, form.mode || null);
   const bookableDays = useMemo(() => {
     const days: string[] = [];
-    for (let date = today; date <= lastBookableDate(today); date = addDays(date, 1)) days.push(date);
+    const last = lastDay ?? addDays(today, 27);
+    for (let date = today; date <= last; date = addDays(date, 1)) days.push(date);
     // An edited game may sit outside today's booking window — keep its day.
     if (editing && !days.includes(editing.originalDate) && editing.originalDate >= today) {
       days.push(editing.originalDate);
       days.sort();
     }
     return days;
-  }, [today, editing]);
+  }, [today, editing, lastDay]);
   const timeOnly = editing?.editable === "time_host";
   const lockedDates = useMemo(() => {
     const set = new Set<string>();
@@ -158,7 +165,19 @@ export default function GameTab({
             );
           })}
         </div>
-        {!isBookableDate(form.date, today) && form.date !== editing?.originalDate && (
+        {lastDay === null && (
+          <label className="mt-2 flex items-center gap-2 text-xs text-ink-400">
+            Later date
+            <input
+              type="date"
+              min={today}
+              value={bookableDays.includes(form.date) ? "" : form.date}
+              onChange={(event) => event.target.value && update({ date: event.target.value })}
+              className="rounded-lg border border-white/10 bg-ink-950/70 px-2 py-1 text-xs text-ink-100 [color-scheme:dark]"
+            />
+          </label>
+        )}
+        {!canBookDay(booking, form.date, today, nowMs, timeZone, form.mode || null) && form.date !== editing?.originalDate && (
           <p className="mt-2 text-xs text-rose-300">
             {form.date} isn&apos;t bookable any more — pick one of the days above.
           </p>

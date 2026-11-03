@@ -47,6 +47,21 @@ breathing out in turn (`gm-reserve` in `globals.css`; it keeps running with
 reduced motion on). Nation panel number boxes use muted game tints (brown
 civilian, green military / army, blue naval, red air).
 
+**The calendars** (`docs/design/calendar.html`): a game's colour is its
+status and nothing else: yellow scheduled, green announced, blue on-going,
+grey ended, red cancelled (`GameState` in `web/src/lib/scheduleOptions.ts`,
+`.gm-game` / `[data-game-state]` in `globals.css`). An add-on blends purple
+into the status colour. The mode is an icon: masks for Roleplay, a tank for
+Historical (`ModeIcon.tsx`; Lucide has no tank). Yours is the bottom-right
+corner filled green. Other tags (announce time, locked nations) stay grey so
+they don't read as a status. Mix colours with `color-mix(in oklab, …)`: in
+oklch, mixing into the near-black ink swings the hue (purple turns blue, red
+turns olive). The **Shared Calendar** (`/schedule/shared`,
+`web/src/lib/sharedCalendar.ts`) shows one week by hour for every server
+that turns on "Share our calendar with other servers" (server setup,
+Features); only those servers' hosts see it, and it never shows hosts,
+players or nations.
+
 **Green means "do this" or "you are here"** (main button, current page).
 No gradient washes, glows, glass blur or decorative motion.
 

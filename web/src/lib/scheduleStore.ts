@@ -29,6 +29,7 @@ import {
   applyDemoRemind,
   applyDemoResources,
   applyDemoLogAnalysis,
+  demoControlRaw,
   markDemoAiReward,
 } from "@/lib/gameControlDemo";
 import { applyDemoModeration } from "@/lib/databaseDemo";
@@ -285,6 +286,7 @@ function slotFromRow(row: SlotRow, viewerId: string): CalendarSlot {
     announce_timestamp: toInt(row.announce_timestamp),
     announced: Boolean(row.announced) || Boolean(data.announced),
     status: row.status ?? str(data.status),
+    started: false,
     add_on: currentAddOn(str(data.add_on)),
     day: row.day,
     week: row.week ? row.week.slice(0, 10) : null,
@@ -416,13 +418,25 @@ async function mysqlCalendar(fromSec: number, toSec: number, viewerId: string, g
     if ((error as { code?: string } | null)?.code !== "ER_NO_SUCH_TABLE") throw error;
   }
   return {
-    slots: slotRows.map((row) => slotFromRow(row, viewerId)),
+    slots: await withStarted(slotRows.map((row) => slotFromRow(row, viewerId))),
     locks: lockRows.map((row) => ({
       week: String(row.week).slice(0, 10),
       day: row.day,
       reason: str(parseJson(row.lock_data).reason)?.trim() || null,
     })),
   };
+}
+
+/** Mark the games whose host pressed Start (the `games` row of their reservation thread). */
+export async function withStarted<T extends { thread_id: string | null; started: boolean }>(slots: T[]): Promise<T[]> {
+  const threads = [...new Set(slots.map((slot) => slot.thread_id).filter((id): id is string => Boolean(id)))];
+  if (threads.length === 0) return slots;
+  const [rows] = await getPool().query<(GameStateRow & { thread_id: string })[]>(
+    "SELECT CAST(thread_id AS CHAR) AS thread_id, game_started, status FROM games WHERE thread_id IN (?)",
+    [threads],
+  );
+  const started = new Set(rows.filter((row) => Boolean(row.game_started)).map((row) => String(row.thread_id)));
+  return slots.map((slot) => (slot.thread_id && started.has(slot.thread_id) ? { ...slot, started: true } : slot));
 }
 
 async function mysqlSlotDetails(slotId: string, viewerId: string, guildId: string): Promise<SlotDetails | null> {
@@ -523,6 +537,7 @@ export const DEMO_HOST: HostProfile = {
   rate_branches: ["RP", "HIST"],
   branches: ["RP", "HIST"],
   disabled_modes: [],
+  booking_days: null,
   guild_id: HOME_GUILD_ID,
   servers: [],
   demo: true,
@@ -577,6 +592,7 @@ function demoSlot(
     announce_timestamp: null,
     announced: false,
     status: "scheduled",
+    started: false,
     add_on: null,
     day: weekdayName(date),
     week: mondayOf(date),
@@ -899,6 +915,7 @@ function processDemoRequests(): void {
       announce_timestamp: toInt(payload.announce_timestamp),
       announced: false,
       status: "scheduled",
+      started: false,
       add_on: str(payload.add_on),
       day,
       week,
@@ -924,6 +941,7 @@ function publicSlot(slot: DemoSlot, viewerId: string): CalendarSlot {
     announce_timestamp: slot.announce_timestamp,
     announced: slot.announced,
     status: slot.status,
+    started: slot.game_started || demoGameStarted(slot.thread_id),
     add_on: slot.add_on,
     day: slot.day,
     week: slot.week,
@@ -932,6 +950,12 @@ function publicSlot(slot: DemoSlot, viewerId: string): CalendarSlot {
     mine: slot.host_id === viewerId,
     thread_id: slot.thread_id,
   };
+}
+
+/** Preview: the Games page's sample game was started there. */
+function demoGameStarted(threadId: string | null): boolean {
+  if (!threadId) return false;
+  return Boolean(demoControlRaw().find((raw) => raw.storage_key === threadId)?.data.game_started);
 }
 
 function publicRequest(request: DemoRequest): ScheduleRequestStatus {

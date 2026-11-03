@@ -63,6 +63,36 @@ export const CATEGORY_META: Record<
   },
 };
 
+/**
+ * Where a game stands, as the calendars colour it (globals.css .gm-game):
+ * yellow scheduled, green announced, blue on-going, grey ended, red cancelled.
+ */
+export type GameState = "scheduled" | "announced" | "live" | "ended" | "cancelled";
+
+export const GAME_STATES: { value: GameState; label: string }[] = [
+  { value: "scheduled", label: "Scheduled" },
+  { value: "announced", label: "Announced" },
+  { value: "live", label: "On-going" },
+  { value: "ended", label: "Ended" },
+  { value: "cancelled", label: "Cancelled" },
+];
+
+export function gameStateLabel(state: GameState): string {
+  return GAME_STATES.find((entry) => entry.value === state)?.label ?? state;
+}
+
+export function gameState(
+  game: { status: string | null; announced: boolean; started: boolean; game_timestamp: number },
+  nowSec: number,
+): GameState {
+  if (game.status === "cancelled") return "cancelled";
+  if (game.status === "ended") return "ended";
+  if (game.started) return "live";
+  // Never started and long past: the bot never marked it, but it's over.
+  if (game.game_timestamp < nowSec - 6 * 3600) return "ended";
+  return game.announced ? "announced" : "scheduled";
+}
+
 export interface AddOnOption {
   value: string | null;
   label: string;

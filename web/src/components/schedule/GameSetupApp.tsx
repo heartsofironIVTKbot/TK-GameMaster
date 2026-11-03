@@ -7,7 +7,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { boardDisplayName, canonicalName, nationMatchKeys } from "@/data/nationCategories";
 import { usePresetDefaults } from "@/components/presets/usePresetDefaults";
 import { notPlayableNations, type GamePreset } from "@/lib/presetTypes";
-import { CATEGORY_META, lastBookableDate, lockLevelLabel, modeOption } from "@/lib/scheduleOptions";
+import { CATEGORY_META, lockLevelLabel, modeOption } from "@/lib/scheduleOptions";
+import { lastBookableDay } from "@/lib/bookingWindow";
 import type {
   CalendarDayLock,
   CalendarResponse,
@@ -188,7 +189,9 @@ export default function GameSetupApp({
   useEffect(() => {
     let cancelled = false;
     const from = Math.floor(Date.parse(`${addDays(today, -1)}T00:00:00Z`) / 1000);
-    const to = Math.floor(Date.parse(`${addDays(lastBookableDate(today), 1)}T23:59:59Z`) / 1000);
+    // No limit (staff): the next 60 days (the calendar API serves 70 at most).
+    const last = lastBookableDay(host.booking_days, today, Date.now(), timeZone) ?? addDays(today, 60);
+    const to = Math.floor(Date.parse(`${addDays(last, 1)}T23:59:59Z`) / 1000);
     const load = async () => {
       try {
         const response = await fetch(`/api/schedule/calendar?from=${from}&to=${to}`, { cache: "no-store" });
@@ -207,13 +210,22 @@ export default function GameSetupApp({
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [today]);
+  }, [today, timeZone, host.booking_days]);
 
   const mode = modeOption(form.mode);
   const scenarioId = mode?.scenarioId ?? null;
   const derived = useMemo(
-    () => deriveSetup(form, { timeZone, nowSec, today, slots: board.slots, locks: board.locks, editing }),
-    [form, timeZone, nowSec, today, board, editing],
+    () =>
+      deriveSetup(form, {
+        timeZone,
+        nowSec,
+        today,
+        slots: board.slots,
+        locks: board.locks,
+        editing,
+        booking: host.booking_days,
+      }),
+    [form, timeZone, nowSec, today, board, editing, host.booking_days],
   );
   const timeOnly = editing?.editable === "time_host";
   const tabs = timeOnly ? TABS.filter((entry) => TIME_HOST_TABS.includes(entry.id)) : TABS;
@@ -570,6 +582,8 @@ export default function GameSetupApp({
               hosts={hosts}
               branches={host.branches}
               disabledModes={host.disabled_modes}
+              booking={host.booking_days}
+              nowMs={nowMs}
             />
           )}
           {tab === "announce" && (

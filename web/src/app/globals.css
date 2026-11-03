@@ -191,6 +191,88 @@
     background: var(--color-brand-400);
     clip-path: polygon(4px 0, calc(100% - 4px) 0, 100% 100%, 0 100%);
   }
+
+  /* Calendar games: the colour is the game's status (GameState in
+     lib/scheduleOptions.ts), nothing else. An add-on blends purple in.
+     Mixes go through oklab: in oklch the hue would swing through blue. */
+  [data-game-state] {
+    --addon: oklch(66% 0.2 312);
+  }
+  [data-game-state="scheduled"] {
+    --s: oklch(86% 0.15 95);
+  }
+  [data-game-state="announced"] {
+    --s: oklch(79.4% 0.118 174);
+  }
+  [data-game-state="live"] {
+    --s: oklch(74% 0.13 240);
+  }
+  [data-game-state="ended"] {
+    --s: oklch(62% 0.015 152);
+  }
+  [data-game-state="cancelled"] {
+    --s: oklch(68% 0.18 22);
+  }
+  .gm-game {
+    --cut: 7px;
+    --tint: color-mix(in oklab, var(--s) 24%, var(--color-ink-800));
+    position: relative;
+    border-left: 3px solid var(--s);
+    background: var(--tint);
+  }
+  .gm-game.gm-addon {
+    background: linear-gradient(in oklab 100deg, var(--tint) 25%, color-mix(in oklab, var(--addon) 38%, var(--color-ink-800)));
+  }
+  .gm-game.gm-addon::before {
+    content: "";
+    position: absolute;
+    left: -3px;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: linear-gradient(in oklab, var(--s) 30%, var(--addon) 70%);
+  }
+  /* Yours (or your server's): the bottom-right cut corner filled green. */
+  .gm-game.gm-mine::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 11px;
+    height: 11px;
+    background: var(--color-brand-400);
+    clip-path: polygon(100% 0, 100% 100%, 0 100%);
+  }
+  .gm-state-tag {
+    color: var(--s);
+    background: color-mix(in oklab, var(--s) 16%, var(--color-ink-950));
+  }
+  .gm-addon-tag {
+    color: oklch(80% 0.13 312);
+    background: color-mix(in oklab, oklch(66% 0.2 312) 18%, var(--color-ink-950));
+  }
+  /* Small swatches: legend bars and the phone grid's pips. */
+  .gm-state-bar {
+    background: var(--s);
+  }
+  .gm-state-bar.gm-addon {
+    background: linear-gradient(90deg, var(--s) 50%, var(--addon) 50%);
+  }
+  /* A bigger game card (the day panel) with an add-on: a purple wash and edge. */
+  .gm-addon-wash {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background: linear-gradient(in oklab 100deg, transparent 35%, color-mix(in oklab, var(--addon) 22%, transparent));
+  }
+  .gm-addon-edge {
+    background: linear-gradient(in oklab, var(--s) 30%, var(--addon) 70%);
+  }
+  /* A staff-locked day on the calendar (faint diagonal lines). */
+  .gm-hatch-faint {
+    background-image: repeating-linear-gradient(135deg, transparent 0 7px, rgb(255 255 255 / 0.04) 7px 14px);
+  }
 }
 
 /* ==========================================================================

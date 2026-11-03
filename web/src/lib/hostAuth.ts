@@ -1,10 +1,10 @@
 import { DatabaseConfigError } from "@/lib/db";
-import { HOST_BRANCH_VALUES, type HostBranch } from "@/lib/hostBranches";
+import { HOST_BRANCH_VALUES, type HostBranch, type HostRank } from "@/lib/hostBranches";
 import { hostRanksOf, memberRoleIds } from "@/lib/playerProfile";
 import { getSession } from "@/lib/session";
 import { currentGuildId, hostServersOf } from "@/lib/currentGuild";
 import { settingsOf } from "@/lib/serverSettings";
-import { disabledModes } from "@/lib/serverSettingsTypes";
+import { disabledModes, type ServerSettings } from "@/lib/serverSettingsTypes";
 import {
   DEMO_HOST,
   SchedulerSetupError,
@@ -23,13 +23,15 @@ import type { HostProfile, HostStatusResponse } from "@/lib/scheduleTypes";
 export async function getHostStatus(): Promise<HostStatusResponse> {
   if (isSchedulerDemo()) {
     const guildId = await currentGuildId();
+    const settings = await settingsOf(guildId);
     return {
       status: "ok",
       host: {
         ...DEMO_HOST,
         guild_id: guildId,
         servers: await hostServersOf(DEMO_HOST.discord_id),
-        disabled_modes: disabledModes(await settingsOf(guildId)),
+        disabled_modes: disabledModes(settings),
+        booking_days: bookingDays(settings, DEMO_HOST.is_staff, null),
       },
     };
   }
@@ -74,6 +76,7 @@ export async function getHostStatus(): Promise<HostStatusResponse> {
       rate_branches: rateBranches,
       branches,
       disabled_modes: disabledModes(settings),
+      booking_days: bookingDays(settings, entry.is_staff, ranks),
       guild_id: guildId,
       servers: await hostServersOf(session.discord_id),
       demo: false,
@@ -86,6 +89,25 @@ export async function getHostStatus(): Promise<HostStatusResponse> {
     console.error("[schedule] host roster lookup failed:", error);
     return { status: "unavailable", message: "The database is unavailable — try again shortly." };
   }
+}
+
+/**
+ * How far ahead this host may schedule (mirrors the bot's _booking_window_error):
+ * by their rank in each branch, no rank counting as Assistant; staff no limit.
+ * Roles not mirrored yet (ranks null): no limit here, the bot still checks live roles.
+ */
+function bookingDays(
+  settings: ServerSettings | null,
+  isStaff: boolean,
+  ranks: Record<HostBranch, HostRank | null> | null,
+): HostProfile["booking_days"] {
+  if (!settings?.features.booking_limits) return null;
+  const days = (branch: HostBranch) => {
+    if (isStaff || !ranks) return null;
+    const rank = ranks?.[branch] ?? "Assistant";
+    return settings.rules[rank === "Senior" ? "book_days_senior" : rank === "Full" ? "book_days_full" : "book_days_assistant"];
+  };
+  return { RP: days("RP"), HIST: days("HIST") };
 }
 
 /** JSON error for a non-host status (used by every calendar API route). */

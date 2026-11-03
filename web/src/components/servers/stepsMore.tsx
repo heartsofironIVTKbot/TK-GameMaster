@@ -644,12 +644,33 @@ export function FeaturesStep({ ctx }: { ctx: StepContext }) {
           <RuleNumber ctx={ctx} rule="hosting_success_avg" />
         </div>
       </Card>
+      <Card icon="📅" title="How far ahead hosts can schedule">
+        <Toggle
+          checked={draft.features.booking_limits}
+          onChange={(checked) => ctx.update((s) => void (s.features.booking_limits = checked))}
+          label="Limit by host rank"
+          description="Each rank can schedule games only so many days ahead, counted from now. A host's rank in the game's branch counts (RP for Roleplay, HIST for Historical). Host Management and admins have no limit. Off: every host can book this week and next week, plus the week after from Friday."
+        />
+        {draft.features.booking_limits && (
+          <div className="grid gap-3 sm:grid-cols-3">
+            <RuleNumber ctx={ctx} rule="book_days_assistant" />
+            <RuleNumber ctx={ctx} rule="book_days_full" />
+            <RuleNumber ctx={ctx} rule="book_days_senior" />
+          </div>
+        )}
+      </Card>
       <Card icon="🚨" title="Other servers">
         <Toggle
           checked={draft.features.cross_server_ban_alerts}
           onChange={(checked) => ctx.update((s) => void (s.features.cross_server_ban_alerts = checked))}
           label="Alerts for players banned on other servers"
           description="When someone joins who is game-banned on another server that uses GameMaster, staff get a notice in the staff notices channel (or the audit log). Records stay separate: nothing changes here automatically."
+        />
+        <Toggle
+          checked={draft.features.share_calendar}
+          onChange={(checked) => ctx.update((s) => void (s.features.share_calendar = checked))}
+          label="Share our calendar with other servers"
+          description="Our games appear on the Shared Calendar, and our hosts can see the games of every other server that shares. It helps hosts avoid running the same kind of game at the same hour. Other servers see the server's name and icon, each game's day, time, mode and status. They never see hosts, players or nations."
         />
       </Card>
       <Card icon="🛡️" title="IronLegion Steam authentication">

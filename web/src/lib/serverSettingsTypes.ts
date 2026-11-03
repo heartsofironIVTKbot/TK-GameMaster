@@ -114,6 +114,9 @@ export const RULE_FIELDS = [
   { key: "valor_merit", label: "Merit for Hearts of Valor", min: 1, max: 1000, step: 1, hint: "Merit points needed." },
   { key: "valor_games", label: "Attended games for Hearts of Valor", min: 0, max: 1000, step: 1, hint: "Games the player was marked present in." },
   { key: "hosting_success_avg", label: "Rating that counts as successful hosting", min: 1, max: 5, step: 0.1, hint: "Average player feedback rating out of 5 star system." },
+  { key: "book_days_assistant", label: "Tier 1: Assistant hosts", min: 1, max: 90, step: 1, hint: "Days ahead they can schedule (RP Assistant, HIST Assistant / Trainee)." },
+  { key: "book_days_full", label: "Tier 2: Full hosts", min: 1, max: 90, step: 1, hint: "Days ahead they can schedule (RP Full, HIST Full / Seasoned)." },
+  { key: "book_days_senior", label: "Tier 3: Senior hosts", min: 1, max: 90, step: 1, hint: "Days ahead they can schedule (RP Senior, HIST Senior / Veteran)." },
 ] as const;
 export type RuleKey = (typeof RULE_FIELDS)[number]["key"];
 export const RULE_DEFAULTS: Record<RuleKey, number> = {
@@ -125,6 +128,9 @@ export const RULE_DEFAULTS: Record<RuleKey, number> = {
   valor_merit: 25,
   valor_games: 50,
   hosting_success_avg: 3.0,
+  book_days_assistant: 3,
+  book_days_full: 5,
+  book_days_senior: 14,
 };
 
 export interface ServerSettings {
@@ -179,6 +185,10 @@ export interface ServerSettings {
     ticket_inactivity_close: boolean;
     /** Every game requires IronLegion Steam verification unless the game says otherwise (lib/ironlegion.ts). */
     ironlegion: boolean;
+    /** List this server's games on the Shared Calendar, and let its hosts see the other servers' (lib/sharedCalendar.ts). */
+    share_calendar: boolean;
+    /** Hosts schedule only rules.book_days_<rank> days ahead, by their rank in the game's branch; staff any time (lib/bookingWindow.ts). */
+    booking_limits: boolean;
   };
   /** TommyKay only (CASINO_GUILD_IDS): the casino panel channel. */
   addons: { casino_panel_channel: string | null };
@@ -384,6 +394,8 @@ export function defaultSettings(name = ""): ServerSettings {
       cross_server_ban_alerts: true,
       ticket_inactivity_close: true,
       ironlegion: false,
+      share_calendar: false,
+      booking_limits: false,
     },
     addons: { casino_panel_channel: null },
   };
@@ -493,7 +505,7 @@ export function normalizeSettings(raw: unknown, name = ""): ServerSettings {
     s.rules[field.key] = Math.min(field.max, Math.max(field.min, rounded));
   }
   const features = obj(source.features);
-  for (const key of ["valor_merit", "daily_role_check", "vip_auto_carry_over", "cross_server_ban_alerts", "ticket_inactivity_close", "ironlegion"] as const) {
+  for (const key of ["valor_merit", "daily_role_check", "vip_auto_carry_over", "cross_server_ban_alerts", "ticket_inactivity_close", "ironlegion", "share_calendar", "booking_limits"] as const) {
     if (key in features) s.features[key] = Boolean(features[key]);
   }
   const addons = obj(source.addons);
