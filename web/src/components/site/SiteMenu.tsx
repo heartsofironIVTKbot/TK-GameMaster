@@ -8,6 +8,7 @@ import {
   Database,
   History,
   Layers,
+  LogOut,
   Map as MapIcon,
   Menu,
   Plus,
@@ -220,6 +221,12 @@ function MenuPanel({ current, onClose }: { current: SitePage | null; onClose: ()
               <ViewerAvatar viewer={viewer} />
               <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink-200">{viewer.name}</span>
               {viewer.demo && <span className="gm-tag bg-fuchsia-500/15 text-fuchsia-200">Preview</span>}
+              <form action="/api/auth/logout" method="post">
+                <button type="submit" className="gm-btn gm-btn-quiet h-8 px-2.5 text-xs" title="Log out of this browser">
+                  <LogOut aria-hidden />
+                  Log out
+                </button>
+              </form>
             </div>
           ) : (
             <a href="/api/auth/login" className="gm-btn w-full bg-[#5865F2] text-white hover:bg-[#4752c4]">

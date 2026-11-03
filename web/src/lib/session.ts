@@ -30,8 +30,12 @@ export interface SessionUser {
 }
 
 const COOKIE_NAME = "gm_session";
-/** You stay logged in for 30 days after you last used the site (renewSession). */
-const SESSION_TTL_SEC = 60 * 60 * 24 * 30;
+/**
+ * You stay logged in for 400 days after you last used the site (renewSession):
+ * in practice for good, until you press Log out. 400 days is the longest a
+ * browser keeps a cookie.
+ */
+const SESSION_TTL_SEC = 60 * 60 * 24 * 400;
 /** Renew at most once a day. */
 const RENEW_AFTER_SEC = 60 * 60 * 24;
 const IV_LENGTH = 12;
@@ -114,6 +118,12 @@ export async function renewSession(user: SessionUser): Promise<void> {
     return;
   }
   await createSession(user);
+}
+
+/** Log out: forget this browser's session. */
+export async function destroySession(): Promise<void> {
+  const store = await cookies();
+  store.delete(COOKIE_NAME);
 }
 
 export async function getSession(): Promise<SessionUser | null> {

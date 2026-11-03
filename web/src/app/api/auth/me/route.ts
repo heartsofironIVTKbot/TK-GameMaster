@@ -35,7 +35,7 @@ export async function GET() {
   if (!session) {
     return NextResponse.json({ authenticated: false }, { status: 401 });
   }
-  // Every visit keeps you logged in (30 days from your last one).
+  // Every visit keeps you logged in (400 days from your last one).
   await renewSession(session);
 
   let profile: MeProfile | null = null;
