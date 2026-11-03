@@ -158,6 +158,15 @@
     white-space: nowrap;
     clip-path: polygon(7px 0, calc(100% - 7px) 0, 100% 50%, calc(100% - 7px) 100%, 7px 100%, 0 50%);
   }
+  /* A status tag with a dot in front (Open, Pending). */
+  .gm-tag-dot::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    flex: none;
+    border-radius: 50%;
+    background: currentColor;
+  }
 
   .gm-title {
     font-family: var(--font-display);
@@ -366,85 +375,8 @@ body {
   }
 }
 
-/* ==========================================================================
-   Top bar Rules/Mods breathing glow (see components/TopBar.tsx)
-
-   Continuous, subtle box-shadow + border-color pulses. These animate only
-   two tiny button elements (never the map), so the paint cost is negligible.
-   The two durations differ slightly so the buttons don't pulse in lockstep.
-   ========================================================================== */
-@keyframes topbarButtonGlowBlue {
-  0%,
-  100% {
-    border-color: color-mix(in oklab, var(--color-ink-700) 90%, transparent); /* ink-700 */
-    box-shadow: 0 0 6px 0 rgba(56, 189, 248, 0);
-  }
-  50% {
-    border-color: rgba(56, 189, 248, 0.75); /* sky-400 */
-    box-shadow: 0 0 16px 3px rgba(56, 189, 248, 0.4);
-  }
-}
-@keyframes topbarButtonGlowAmber {
-  0%,
-  100% {
-    border-color: color-mix(in oklab, var(--color-ink-700) 90%, transparent); /* ink-700 */
-    box-shadow: 0 0 6px 0 color-mix(in oklab, var(--color-brand-400) 0%, transparent);
-  }
-  50% {
-    border-color: color-mix(in oklab, var(--color-brand-400) 70%, transparent); /* brand-400 */
-    box-shadow: 0 0 16px 3px color-mix(in oklab, var(--color-brand-400) 35%, transparent);
-  }
-}
-.topbar-btn-rules {
-  animation: topbarButtonGlowBlue 3.2s ease-in-out infinite;
-}
-.topbar-btn-mods {
-  animation: topbarButtonGlowAmber 3.6s ease-in-out infinite;
-}
-/* A light sweep across Rules / Mods every few seconds, on top of the glow. */
-.topbar-btn-shine {
-  position: relative;
-  overflow: hidden;
-  isolation: isolate;
-}
-.topbar-btn-shine::after {
-  content: "";
-  position: absolute;
-  inset: -2px auto -2px -60%;
-  width: 45%;
-  background: linear-gradient(100deg, transparent 0%, rgba(255, 255, 255, 0.32) 50%, transparent 100%);
-  transform: skewX(-18deg);
-  pointer-events: none;
-  animation: topbarButtonShine 4.2s ease-in-out infinite;
-  z-index: -1;
-}
-.topbar-btn-mods.topbar-btn-shine::after {
-  animation-delay: 0.6s;
-}
-.topbar-btn-shine:hover {
-  transform: translateY(-1px);
-}
-@keyframes topbarButtonShine {
-  0%,
-  55% {
-    left: -60%;
-  }
-  85%,
-  100% {
-    left: 130%;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .topbar-btn-rules,
-  .topbar-btn-mods,
-  .topbar-btn-shine::after {
-    animation: none;
-  }
-}
-
-/* Bottom-center "Reserve Nation" CTA: a slow breathing brand glow that
-   draws the eye without repainting the map (box-shadow only, compositor
-   friendly). */
+/* A slow breathing brand glow for the other call-to-action buttons (draft,
+   hot-join, calendar). Box-shadow only, compositor friendly. */
 @keyframes reserveCtaGlow {
   0%,
   100% {
@@ -464,6 +396,76 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .reserve-cta-glow {
     animation: none;
+  }
+}
+
+/* The map's reserve button (MapViewer): three blurred copies of its cut plate
+   breathe out one after another behind it, so the glow pops in and out, and
+   the button swells slightly with each beat. It keeps running with reduced
+   motion on: it is the map's one call to action, like the pending highlight.
+   Markup: <div class="gm-reserve"><span class="gm-reserve-halo"/> x3 <button class="gm-btn …"/></div> */
+.gm-reserve {
+  --cut: 15px;
+  position: relative;
+  isolation: isolate;
+}
+.gm-reserve-halo {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  filter: blur(14px);
+  pointer-events: none;
+  animation: gmReserveHalo 2.6s ease-in-out infinite;
+}
+.gm-reserve-halo::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--color-brand-400);
+  clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut));
+}
+.gm-reserve-halo:nth-of-type(1) {
+  --lo: 1.02;
+  --hi: 1.1;
+  --a-lo: 0.22;
+  --a-hi: 0.42;
+}
+.gm-reserve-halo:nth-of-type(2) {
+  --lo: 1.08;
+  --hi: 1.22;
+  --a-lo: 0.1;
+  --a-hi: 0.26;
+  animation-delay: 0.32s;
+}
+.gm-reserve-halo:nth-of-type(3) {
+  --lo: 1.16;
+  --hi: 1.38;
+  --a-lo: 0.03;
+  --a-hi: 0.14;
+  animation-delay: 0.64s;
+}
+@keyframes gmReserveHalo {
+  0%,
+  100% {
+    transform: scale(var(--lo));
+    opacity: var(--a-lo);
+  }
+  45% {
+    transform: scale(var(--hi));
+    opacity: var(--a-hi);
+  }
+}
+.gm-reserve > .gm-btn {
+  --cut: inherit;
+  animation: gmReservePop 2.6s ease-in-out infinite;
+}
+@keyframes gmReservePop {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.025);
   }
 }
 

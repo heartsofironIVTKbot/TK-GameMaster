@@ -11,6 +11,7 @@ import { recordAudit } from "@/lib/auditLog";
 import { lobbySnapshot, lobbyVersion, versionOf } from "@/lib/lobbySnapshot";
 import { memberRoleIds } from "@/lib/memberRoles";
 import { ironLegionRequired, ironLegionVerifyUrl, parseRequireIronLegion } from "@/lib/ironlegion";
+import { ironLegionMemberVerified } from "@/lib/ironlegionMember";
 import { settingsOf } from "@/lib/serverSettings";
 import { categoryOfMode } from "@/lib/scheduleOptions";
 import { isSchedulerDemo } from "@/lib/scheduleStore";
@@ -65,10 +66,6 @@ interface UserRow extends RowDataPacket {
   banned: number | boolean;
 }
 
-interface DirectoryFlag extends RowDataPacket {
-  verified: number | boolean;
-}
-
 /**
  * IronLegion Steam authentication, when the game (or its server) requires it.
  * The bot keeps each member's `verified` flag in web_member_directory: they
@@ -79,18 +76,9 @@ interface DirectoryFlag extends RowDataPacket {
 async function ironLegionRefusal(connection: PoolConnection, guildId: string, userId: string, game: GameDataDocument): Promise<string | null> {
   const server = Boolean((await settingsOf(guildId))?.features.ironlegion);
   if (!ironLegionRequired(parseRequireIronLegion(game.require_ironlegion), server)) return null;
-  try {
-    const [rows] = await connection.query<DirectoryFlag[]>(
-      "SELECT verified FROM web_member_directory WHERE guild_id = ? AND user_id = CAST(? AS UNSIGNED)",
-      [guildId, userId],
-    );
-    if (rows[0] && !Number(rows[0].verified)) {
-      const url = ironLegionVerifyUrl(guildId, (await memberRoleIds(guildId).catch(() => null))?.ironlegion_verify_channel);
-      return `This game requires IronLegion Steam authentication. Press Authenticate ${url ? `in ${url}` : "on the server's IronLegion panel in Discord"}; once you're authenticated it can take a few minutes before you can reserve here.`;
-    }
-  } catch (error) {
-    const code = (error as { code?: string }).code;
-    if (code !== "ER_NO_SUCH_TABLE" && code !== "ER_BAD_FIELD_ERROR") throw error;
+  if ((await ironLegionMemberVerified(connection, guildId, userId)) === false) {
+    const url = ironLegionVerifyUrl(guildId, (await memberRoleIds(guildId).catch(() => null))?.ironlegion_verify_channel);
+    return `This game requires IronLegion Steam authentication. Press Authenticate ${url ? `in ${url}` : "on the server's IronLegion panel in Discord"}; once you're authenticated it can take a few minutes before you can reserve here.`;
   }
   return null;
 }

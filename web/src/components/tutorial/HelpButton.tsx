@@ -1,5 +1,6 @@
 "use client";
 
+import { CircleHelp } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { anchorOf, targetVisible } from "./dom";
 import { hasSeen } from "./progress";
@@ -9,8 +10,9 @@ import { useTutorialActions, useTutorialState } from "./TutorialProvider";
  * The Help button on every page: replay this page's tours, switch automatic
  * tours on or off, or reset them all. It sits bottom right, where page
  * content scrolls away from under it. Pages can move it with facts:
- * `helpLeft` (left side), `helpTop` (just under an 80px top bar; the menu
- * opens downwards) and `helpBesideLeftPanel` (right of the map's 400px roster).
+ * `helpLeft` (left side), `helpTop` (just under the map's 56px top bar; the
+ * menu opens downwards) and `helpBesideLeftPanel` (right of the map's 340px
+ * reservations list).
  * The map uses the top: its bottom edge is for reserving.
  */
 export default function HelpButton() {
@@ -49,7 +51,7 @@ export default function HelpButton() {
     <div
       ref={rootRef}
       data-tour="help.button"
-      className={`fixed z-[5900] transition-[left] ${top ? "top-24" : "bottom-4"} ${right ? "right-4" : "left-4"} ${besidePanel ? "sm:left-[416px]" : ""} ${activeTourId ? "pointer-events-none" : ""}`}
+      className={`fixed z-[5900] transition-[left] ${top ? "top-[106px] sm:top-[70px]" : "bottom-4"} ${right ? "right-4" : "left-4"} ${besidePanel ? "sm:left-[354px]" : ""} ${activeTourId ? "pointer-events-none" : ""}`}
       // In development, Next.js puts its own badge in the bottom-right corner.
       style={right && process.env.NODE_ENV === "development" ? { right: 68 } : undefined}
     >
@@ -145,20 +147,9 @@ export default function HelpButton() {
         aria-expanded={open}
         aria-label="Tutorials and help"
         title="Tutorials and help"
-        className={`flex h-11 items-center gap-2 rounded-full border pl-1.5 pr-4 text-sm font-black shadow-xl shadow-black/40 backdrop-blur-md transition hover:scale-105 ${
-          open
-            ? "border-brand-300 bg-brand-400 text-ink-950"
-            : "border-white/15 bg-ink-900/85 text-ink-100 hover:border-brand-300/60"
-        }`}
+        className={`gm-btn gm-btn-primary h-9 px-3.5 shadow-lg shadow-black/40 ${open ? "bg-brand-300" : ""}`}
       >
-        <span
-          className={`flex h-8 w-8 items-center justify-center rounded-full text-base ${
-            open ? "bg-ink-950/15" : "bg-brand-400 text-ink-950"
-          }`}
-          aria-hidden
-        >
-          ?
-        </span>
+        <CircleHelp aria-hidden />
         Help
       </button>
     </div>

@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GameMaster Map Mock-up</title>
+<!-- Design mock-up of the map page in the cut-plate style (docs/branding.md).
+     Not part of the app: open this file in a browser. The map itself is a
+     capture of the real local map (assets/map-*.jpg); everything on top is
+     the proposed interface, drawn at 1440x900 (desktop) or 390x844 (phone).
+     Motion always runs here, even with reduced motion on. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Big+Shoulders+Stencil+Display:wght@800&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+<style>
+  :root {
+    --ink-950: oklch(11.8% 0.009 152);
+    --ink-900: oklch(19.2% 0.011 152);
+    --ink-850: oklch(22.8% 0.012 152);
+    --ink-800: oklch(26.6% 0.012 152);
+    --ink-700: oklch(36.2% 0.013 152);
+    --ink-600: oklch(44.4% 0.014 152);
+    --ink-500: oklch(55.4% 0.015 152);
+    --ink-400: oklch(70.4% 0.015 152);
+    --ink-300: oklch(86.4% 0.012 152);
+    --ink-100: oklch(96.6% 0.006 152);
+    --brand-300: oklch(83.2% 0.158 146);
+    --brand-400: oklch(76.4% 0.186 146);
+    --brand-950: oklch(19.4% 0.046 146);
+    --good: oklch(79.4% 0.118 174);
+    --good-bg: oklch(23.4% 0.038 174);
+    --pending: oklch(85% 0.15 90);
+    --pending-bg: oklch(25% 0.045 90);
+    --danger: oklch(71% 0.17 18);
+    --danger-bg: oklch(24% 0.06 18);
+    --info: oklch(78% 0.11 230);
+    --sky: oklch(80% 0.1 225);
+    --earth: oklch(66% 0.09 60);
+    /* Muted tints for the nation panel's number boxes: game data, not status. */
+    --brown-bg: oklch(24% 0.035 60);   --brown-line: oklch(40% 0.06 60);   --brown-text: oklch(80% 0.07 65);
+    --green-bg: oklch(23% 0.04 145);   --green-line: oklch(40% 0.07 145);  --green-text: oklch(82% 0.09 145);
+    --blue-bg: oklch(23% 0.04 245);    --blue-line: oklch(40% 0.07 245);   --blue-text: oklch(80% 0.08 240);
+    --red-bg: oklch(23% 0.045 20);     --red-line: oklch(41% 0.08 20);     --red-text: oklch(80% 0.09 20);
+    --display: "Big Shoulders Display", "Arial Narrow", sans-serif;
+    --stencil: "Big Shoulders Stencil Display", var(--display);
+    --body: "Public Sans", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: oklch(8% 0.006 152); color: var(--ink-300); font: 400 14px/1.45 var(--body); font-variant-numeric: tabular-nums; display: flex; flex-direction: column; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
+  svg.lucide { width: 16px; height: 16px; stroke-width: 1.75; flex: none; }
+
+  /* ---------- design switches (not part of the design) ---------- */
+  .switches { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px; padding: 10px 16px; border-bottom: 1px solid var(--ink-800); background: var(--ink-950); }
+  .switches h1 { margin: 0 8px 0 0; font: 800 22px/1 var(--display); text-transform: uppercase; color: var(--ink-100); }
+  .seg { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-500); }
+  .seg div { display: flex; border: 1px solid var(--ink-700); border-radius: 4px; overflow: hidden; }
+  .seg button { padding: 5px 10px; font-size: 12px; font-weight: 600; color: var(--ink-400); }
+  .seg button + button { border-left: 1px solid var(--ink-700); }
+  .seg button[aria-pressed="true"] { background: var(--ink-800); color: var(--ink-100); }
+  .viewport { flex: 1; min-height: 0; display: grid; place-items: center; padding: 16px; overflow: hidden; }
+  .frame { position: relative; overflow: hidden; outline: 1px solid var(--ink-800); }
+  .stage { position: absolute; left: 0; top: 0; transform-origin: 0 0; overflow: hidden; background: #0f1d21; }
+  .stage.desk { width: 1440px; height: 900px; }
+  .stage.phone { width: 390px; height: 844px; }
+  [hidden] { display: none !important; }
+
+  /* ---------- the cut-plate pieces (same as web/src/app/globals.css) ---------- */
+  .cut, .btn, .plate { clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut)); }
+  .cut, .btn { --cut: 8px; }
+  .plate { --cut: 12px; --line: var(--ink-800); background-color: var(--ink-950); }
+  .plate, .btn-secondary {
+    border: 1px solid var(--line);
+    background-image: linear-gradient(135deg, var(--line) calc(var(--cut) * .7071 + 1px), transparent 0), linear-gradient(315deg, var(--line) calc(var(--cut) * .7071 + 1px), transparent 0);
+    background-origin: border-box;
+  }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; height: 36px; padding: 0 14px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+  .btn-primary { background-color: var(--brand-400); color: var(--brand-950); }
+  .btn-secondary { --line: var(--ink-700); color: var(--ink-100); background-color: var(--ink-950); }
+  .btn-quiet { color: var(--ink-300); }
+  .btn-quiet:hover { background: var(--ink-900); color: var(--ink-100); }
+  .btn-icon { width: 34px; padding: 0; }
+  .btn-discord { background: #5865F2; color: #fff; }
+  .tag { display: inline-flex; align-items: center; gap: 6px; height: 21px; padding: 0 11px; font-size: 11.5px; font-weight: 600; white-space: nowrap;
+    clip-path: polygon(7px 0, calc(100% - 7px) 0, 100% 50%, calc(100% - 7px) 100%, 7px 100%, 0 50%); }
+  .tag::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .tag-open { color: var(--good); background: var(--good-bg); }
+  .tag-pending { color: var(--pending); background: var(--pending-bg); }
+  .tag-locked { color: var(--ink-400); background: var(--ink-850); }
+  .tag-plain { color: var(--ink-300); background: var(--ink-850); }
+  .tag-plain::before { display: none; }
+  .title { font-family: var(--display); font-weight: 800; text-transform: uppercase; line-height: .95; color: var(--ink-100); }
+  .mark { width: 30px; height: 30px; --cut: 7px; display: grid; place-items: center; background: var(--brand-400); color: var(--brand-950); font: 800 17px/1 var(--stencil); }
+
+  /* ---------- map ---------- */
+  .map { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .phone .map { object-position: 49% 30%; }
+  .map-label { position: absolute; transform: translate(-50%, -100%); padding: 3px 10px; font-size: 12px; font-weight: 600; color: var(--ink-100); --cut: 5px; background: var(--ink-950); border: 1px solid var(--pending); }
+
+  /* ---------- top bar ---------- */
+  .top { position: absolute; left: 0; right: 0; top: 0; height: 56px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 0 12px; background: var(--ink-950); border-bottom: 1px solid var(--ink-800); z-index: 3; }
+  .top-l, .top-r { display: flex; align-items: center; gap: 6px; }
+  .top-r { justify-self: end; }
+  .sep { width: 1px; height: 24px; background: var(--ink-800); margin: 0 6px; }
+  .game { text-align: center; }
+  .game .title { font-size: 22px; }
+  .game-sub { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 3px; font-size: 12px; color: var(--ink-400); }
+
+  /* ---------- reservations (left) ---------- */
+  .roster { position: absolute; left: 0; top: 56px; bottom: 0; width: 340px; display: flex; flex-direction: column; background: var(--ink-950); border-right: 1px solid var(--ink-800); z-index: 2; }
+  .r-head { padding: 14px 14px 14px; border-bottom: 1px solid var(--ink-800); }
+  .r-head-row { display: flex; align-items: center; justify-content: space-between; }
+  .r-head .title { font-size: 26px; }
+  /* the counts: one small cell each, so nothing is crammed into a sentence */
+  .counts { display: grid; grid-template-columns: 1.25fr 1fr 1fr 1fr 1fr; margin-top: 12px; --cut: 10px; }
+  .counts div { padding: 7px 4px 6px; text-align: center; }
+  .counts div + div { border-left: 1px solid var(--ink-800); }
+  .counts strong { display: block; font: 800 20px/1 var(--display); color: var(--ink-100); }
+  .counts strong small { font-size: 14px; color: var(--ink-500); }
+  .counts span { display: block; margin-top: 3px; font-size: 11px; color: var(--ink-400); }
+  .counts .taken strong { color: var(--brand-400); }
+  /* Only shown when the player isn't authenticated yet: one line in the
+     header; "How" opens the steps. */
+  .notice { margin-top: 10px; --cut: 8px; --line: oklch(78% 0.11 230 / .35); background-color: oklch(22% 0.03 230); font-size: 12.5px; color: var(--ink-300); }
+  .notice summary { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 10px; cursor: pointer; list-style: none; color: var(--ink-100); font-weight: 600; }
+  .notice summary::-webkit-details-marker { display: none; }
+  .notice summary svg { color: var(--info); }
+  .notice summary em { margin-left: auto; font-style: normal; font-weight: 600; font-size: 12px; color: var(--info); }
+  .notice p { margin: 0; padding: 0 10px 10px 34px; }
+  .list { flex: 1; overflow: hidden; padding: 4px 6px 12px; }
+  .list h3 { margin: 12px 8px 4px; font-size: 12px; font-weight: 600; color: var(--ink-500); }
+  .row { position: relative; display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 8px; --cut: 6px; }
+  .row:hover { background: var(--ink-900); }
+  .row.sel { background: var(--ink-900); }
+  .row.sel::before { content: ""; position: absolute; left: 0; top: 7px; bottom: 7px; width: 3px; background: var(--brand-400); }
+  .flag { width: 24px; height: 16px; object-fit: cover; outline: 1px solid oklch(100% 0 0 / .12); flex: none; }
+  .row .name { flex: 1; min-width: 0; font-size: 13.5px; font-weight: 500; color: var(--ink-100); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* Who holds a taken nation: their name in the red "taken" tag. */
+  .who-tag { color: var(--danger); background: var(--danger-bg); }
+  .coop { display: flex; align-items: center; gap: 6px; height: 24px; padding: 0 8px 0 42px; font-size: 12px; color: var(--ink-400); }
+  .coop svg { width: 13px; height: 13px; color: var(--info); }
+  .coop b { color: var(--ink-300); font-weight: 600; }
+
+  /* ---------- nation panel (right): the old layout, cut-plate shapes ---------- */
+  .nation { position: absolute; right: 0; top: 56px; bottom: 0; width: 380px; display: flex; flex-direction: column; background: var(--ink-950); border-left: 1px solid var(--ink-800); z-index: 2; }
+  .n-head { display: flex; align-items: center; gap: 12px; padding: 14px 10px 14px 16px; border-bottom: 1px solid var(--ink-800); }
+  .n-flag { width: 56px; height: 36px; object-fit: cover; --cut: 6px; flex: none; }
+  .n-head .title { font-size: 26px; }
+  .n-head p { margin: 6px 0 0; display: flex; align-items: center; gap: 6px; }
+  .n-tools { margin-left: auto; align-self: flex-start; display: flex; gap: 2px; }
+  .n-body { flex: 1; overflow: hidden; padding: 14px 16px; display: grid; gap: 18px; align-content: start; }
+  .n-body h4 { margin: 0 0 8px; font-size: 12px; font-weight: 600; color: var(--ink-500); }
+  .leader { padding: 12px; }
+  .leader-top { display: flex; align-items: center; gap: 12px; }
+  .portrait { width: 56px; height: 70px; object-fit: cover; --cut: 7px; background: var(--ink-850); flex: none; }
+  .leader small { display: block; font-size: 11.5px; color: var(--ink-500); }
+  .leader strong { display: block; font-size: 15px; font-weight: 600; color: var(--ink-100); line-height: 1.25; }
+  .leader span { font-size: 12.5px; color: var(--ink-400); }
+  .donut { position: relative; flex: none; display: grid; place-items: center; }
+  .donut svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+  .donut-mid { position: relative; text-align: center; line-height: 1; }
+  .donut-mid strong { display: block; font: 800 20px/1 var(--display); color: var(--ink-100); }
+  .donut-mid span { font-size: 10.5px; color: var(--ink-400); }
+  .bars { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 12px; }
+  .meter div { display: flex; justify-content: space-between; font-size: 12px; color: var(--ink-400); }
+  .meter div b { color: var(--ink-100); font-weight: 600; }
+  .meter .bar { height: 5px; margin-top: 5px; background: var(--ink-800); border-radius: 3px; overflow: hidden; }
+  .meter .bar > span { display: block; height: 100%; border-radius: 3px; }
+  .spirits { display: flex; gap: 8px; }
+  .spirits img { width: 48px; height: 48px; object-fit: contain; padding: 4px; --cut: 8px; background: var(--ink-850); }
+  .boxes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .box { --cut: 10px; padding: 10px 6px 9px; text-align: center; }
+  .box strong { display: block; font: 800 30px/1 var(--display); color: var(--ink-100); }
+  .box span { display: block; margin-top: 3px; font-size: 12px; font-weight: 600; }
+  .box em { display: block; font-style: normal; font-size: 11px; color: var(--ink-500); }
+  .box.brown { --line: var(--brown-line); background-color: var(--brown-bg); } .box.brown span { color: var(--brown-text); }
+  .box.green { --line: var(--green-line); background-color: var(--green-bg); } .box.green span { color: var(--green-text); }
+  .box.blue  { --line: var(--blue-line);  background-color: var(--blue-bg); }  .box.blue span  { color: var(--blue-text); }
+  .box.red   { --line: var(--red-line);   background-color: var(--red-bg); }   .box.red span   { color: var(--red-text); }
+  .resources { display: flex; align-items: center; gap: 18px; }
+  .res { flex: 1; display: grid; gap: 4px; font-size: 12.5px; margin: 0; padding: 0; list-style: none; }
+  .res li { display: flex; align-items: center; gap: 8px; color: var(--ink-300); }
+  .res i { width: 9px; height: 9px; border-radius: 50%; }
+  .res b { margin-left: auto; color: var(--ink-100); font-weight: 600; }
+
+  /* ---------- on the map ---------- */
+  .help { position: absolute; top: 70px; left: 354px; z-index: 2; }
+  .hint { position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 16px; font-size: 14px; color: var(--ink-100); z-index: 2; white-space: nowrap; }
+  .hint svg { color: var(--brand-400); width: 18px; height: 18px; }
+
+  /* The reserve button: three halos behind it breathe out one after the
+     other, so the glow pops in and out. Each halo is a blurred copy of the
+     cut-plate shape (the blur sits on the wrapper, outside the clip). */
+  .cta-wrap { position: absolute; bottom: 30px; left: 700px; transform: translateX(-50%); z-index: 2; }
+  .cta { position: relative; height: 70px; padding: 0 52px; --cut: 15px; font: 800 32px/1 var(--display); text-transform: uppercase; letter-spacing: .03em; }
+  .halo { position: absolute; inset: 0; filter: blur(14px); pointer-events: none; animation: haloBreathe 2.6s ease-in-out infinite; }
+  .halo::before { content: ""; position: absolute; inset: 0; background: var(--brand-400); --cut: 15px;
+    clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut)); }
+  .halo.h1 { --lo: 1.02; --hi: 1.10; --a-lo: .22; --a-hi: .42; }
+  .halo.h2 { --lo: 1.08; --hi: 1.22; --a-lo: .10; --a-hi: .26; animation-delay: .32s; }
+  .halo.h3 { --lo: 1.16; --hi: 1.38; --a-lo: .03; --a-hi: .14; animation-delay: .64s; }
+  @keyframes haloBreathe {
+    0%, 100% { transform: scale(var(--lo)); opacity: var(--a-lo); }
+    45% { transform: scale(var(--hi)); opacity: var(--a-hi); }
+  }
+  .cta-wrap .cta { animation: ctaPop 2.6s ease-in-out infinite; }
+  @keyframes ctaPop { 0%, 100% { transform: scale(1); } 45% { transform: scale(1.025); } }
+
+  /* ---------- phone ---------- */
+  .phone .top { height: 52px; grid-template-columns: auto 1fr auto; gap: 8px; padding: 0 8px; }
+  .p-game { position: absolute; top: 52px; left: 0; right: 0; height: 40px; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 12px; background: var(--ink-950); border-bottom: 1px solid var(--ink-800); z-index: 3; }
+  .p-game .title { font-size: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .p-game span { font-size: 11.5px; color: var(--ink-400); white-space: nowrap; }
+  .p-help { position: absolute; top: 104px; right: 12px; z-index: 2; height: 32px; padding: 0 10px; }
+  .p-hint { position: absolute; left: 12px; right: 12px; bottom: 76px; display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 14px; font-size: 13px; color: var(--ink-100); z-index: 2; }
+  .p-hint svg { color: var(--brand-400); }
+  .p-hint .btn { margin-left: auto; height: 32px; }
+  .p-roster { position: absolute; left: 0; right: 0; bottom: 0; height: 64px; display: flex; align-items: center; gap: 12px; padding: 0 16px; background: var(--ink-950); border-top: 1px solid var(--ink-800); z-index: 2; }
+  .p-roster .title { font-size: 20px; }
+  .p-roster small { font-size: 12px; color: var(--ink-400); }
+  .p-roster .btn { margin-left: auto; }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; background: var(--ink-950); border-top: 1px solid var(--ink-800); z-index: 3; }
+  .grip { width: 40px; height: 4px; border-radius: 2px; background: var(--ink-700); margin: 8px auto 0; }
+  .sheet .n-head { border-bottom: 0; padding-top: 8px; padding-bottom: 10px; }
+  .sheet .more { align-self: flex-start; margin: 0 0 8px 10px; padding: 0 8px; height: 32px; color: var(--ink-300); }
+  .sheet-cta { position: relative; padding: 14px 16px 18px; border-top: 1px solid var(--ink-800); }
+  .sheet-cta .cta-wrap { position: relative; left: auto; bottom: auto; transform: none; }
+  .sheet-cta .cta { width: 100%; height: 58px; padding: 0; font-size: 26px; --cut: 12px; }
+  .sheet-cta .halo::before { --cut: 12px; }
+  .sheet-cta .halo.h3 { display: none; }
+</style>
+</head>
+<body>
+
+<div class="switches">
+  <h1>Map mock-up</h1>
+  <div class="seg">State <div data-k="state"><button data-v="browse">Browsing</button><button data-v="selected">Nation selected</button></div></div>
+  <div class="seg">Sea <div data-k="sea"><button data-v="navy">Navy (today)</button><button data-v="teal">Teal-black</button><button data-v="ink">Green-black</button></div></div>
+  <div class="seg">IronLegion <div data-k="auth"><button data-v="no">Not authenticated</button><button data-v="yes">Authenticated</button></div></div>
+  <div class="seg">Size <div data-k="size"><button data-v="desk">Desktop</button><button data-v="phone">Phone</button></div></div>
+</div>
+
+<div class="viewport"><div class="frame" id="frame">
+
+  <!-- ===================== DESKTOP 1440 x 900 ===================== -->
+  <div class="stage desk" id="desk">
+    <img class="map" alt="">
+    <span class="map-label cut" data-show="selected" style="left:691px;top:282px">Spain</span>
+
+    <header class="top">
+      <div class="top-l">
+        <span class="mark cut">GM</span>
+        <button class="btn btn-quiet"><i data-lucide="menu"></i>Menu</button>
+        <span class="sep"></span>
+        <button class="btn btn-secondary"><i data-lucide="scroll-text"></i>Rules</button>
+        <button class="btn btn-secondary"><i data-lucide="puzzle"></i>Mods</button>
+        <button class="btn btn-quiet"><i data-lucide="wrench"></i>Host tool</button>
+      </div>
+      <div class="game">
+        <div class="title">Roleplay Game - Preview Lobby</div>
+        <div class="game-sub"><span class="tag tag-plain">Road to 56</span>Starts Wednesday 11:58 UTC</div>
+      </div>
+      <div class="top-r">
+        <button class="btn btn-discord" style="height:32px">Log in</button>
+      </div>
+    </header>
+
+    <aside class="roster">
+      <div class="r-head">
+        <div class="r-head-row">
+          <span class="title">Reservations</span>
+          <button class="btn btn-quiet btn-icon" aria-label="Fold the list"><i data-lucide="panel-left-close"></i></button>
+        </div>
+        <div class="counts plate">
+          <div class="taken"><strong>6<small>/100</small></strong><span>Taken</span></div>
+          <div><strong>4<small>/7</small></strong><span>Majors</span></div>
+          <div><strong>2<small>/93</small></strong><span>Minors</span></div>
+          <div><strong>1</strong><span>Co-op</span></div>
+          <div><strong>1</strong><span>Filler</span></div>
+        </div>
+        <details class="notice plate" data-auth="no">
+          <summary><i data-lucide="shield-check"></i>Steam authentication needed<em>How</em></summary>
+          <p>This game needs IronLegion's authenticated role. Press Authenticate on the server's IronLegion panel in Discord.</p>
+        </details>
+      </div>
+      <div class="list" id="list"></div>
+    </aside>
+
+    <button class="btn btn-primary help" style="height:32px"><i data-lucide="circle-help"></i>Help</button>
+
+    <div class="hint plate" data-show="browse"><i data-lucide="mouse-pointer-click"></i>Click a nation on the map to reserve it<button class="btn btn-secondary" style="height:32px">Show me how</button></div>
+
+    <div class="cta-wrap" data-show="selected">
+      <span class="halo h3"></span><span class="halo h2"></span><span class="halo h1"></span>
+      <button class="btn btn-primary cta">Log in and reserve</button>
+    </div>
+
+    <aside class="nation" data-show="selected">
+      <div class="n-head">
+        <img class="n-flag cut" src="../../web/public/assets_rt56/flags/SPR.png" alt="">
+        <div>
+          <div class="title">Spanish Republic</div>
+          <p><span class="tag tag-plain">Minor nation</span><span class="tag tag-pending">Pending claim</span></p>
+        </div>
+        <div class="n-tools">
+          <button class="btn btn-quiet btn-icon" aria-label="Fold the panel"><i data-lucide="panel-right-close"></i></button>
+          <button class="btn btn-quiet btn-icon" aria-label="Close"><i data-lucide="x"></i></button>
+        </div>
+      </div>
+      <div class="n-body">
+        <div class="leader plate">
+          <div class="leader-top">
+            <img class="portrait cut" src="../../web/public/assets_rt56/portraits/SPR.png" alt="">
+            <div style="flex:1;min-width:0">
+              <small>Leader</small>
+              <strong>Manuel Portela Valladares</strong>
+              <span>Democracy</span>
+            </div>
+            <div class="donut" data-donut="ideology" data-size="76" data-thick="9"><div class="donut-mid"><strong>41%</strong><span>ruling</span></div></div>
+          </div>
+          <div class="bars">
+            <div class="meter"><div>Stability <b>36%</b></div><div class="bar"><span style="width:36%;background:var(--sky)"></span></div></div>
+            <div class="meter"><div>War support <b>55%</b></div><div class="bar"><span style="width:55%;background:var(--earth)"></span></div></div>
+          </div>
+        </div>
+        <div>
+          <h4>National spirits</h4>
+          <div class="spirits">
+            <img class="cut" src="../../web/public/assets_rt56/spirits/SPA_carlism_1.png" alt="Carlism" title="Carlism">
+            <img class="cut" src="../../web/public/assets_rt56/spirits/SPR_military_disloyalty.png" alt="Military disloyalty" title="Military disloyalty">
+            <img class="cut" src="../../web/public/assets_rt56/spirits/SPR_political_violence.png" alt="Political violence" title="Political violence">
+            <img class="cut" src="../../web/public/assets_rt56/spirits/SPR_national_strikes_3.png" alt="National strikes" title="National strikes">
+          </div>
+        </div>
+        <div>
+          <h4>Industrial capacity</h4>
+          <div class="boxes">
+            <div class="box plate brown"><strong>16</strong><span>Civilian</span><em>factories</em></div>
+            <div class="box plate green"><strong>7</strong><span>Military</span><em>factories</em></div>
+            <div class="box plate blue"><strong>4</strong><span>Dockyards</span><em>naval</em></div>
+          </div>
+        </div>
+        <div>
+          <h4>Resources</h4>
+          <div class="resources">
+            <div class="donut" data-donut="resources" data-size="112" data-thick="15"><div class="donut-mid"><span>Total</span><strong>149</strong></div></div>
+            <ul class="res" id="res"></ul>
+          </div>
+        </div>
+        <div>
+          <h4>Armed forces</h4>
+          <div class="boxes">
+            <div class="box plate green"><strong>17</strong><span>Divisions</span><em>army</em></div>
+            <div class="box plate blue"><strong>32</strong><span>Warships</span><em>navy</em></div>
+            <div class="box plate red"><strong>87</strong><span>Aircraft</span><em>air force</em></div>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ===================== PHONE 390 x 844 ===================== -->
+  <div class="stage phone" id="phone" hidden>
+    <img class="map" alt="">
+    <header class="top">
+      <div class="top-l"><span class="mark cut">GM</span></div>
+      <div class="top-l" style="justify-self:center">
+        <button class="btn btn-secondary btn-icon" aria-label="Rules"><i data-lucide="scroll-text"></i></button>
+        <button class="btn btn-secondary btn-icon" aria-label="Mods"><i data-lucide="puzzle"></i></button>
+      </div>
+      <div class="top-r"><button class="btn btn-quiet btn-icon" aria-label="Menu"><i data-lucide="menu"></i></button></div>
+    </header>
+    <div class="p-game"><span class="title">Roleplay Game - Preview Lobby</span><span>Road to 56, Wed 11:58</span></div>
+    <button class="btn btn-primary p-help"><i data-lucide="circle-help"></i>Help</button>
+
+    <div class="p-hint plate" data-show="browse"><i data-lucide="mouse-pointer-click"></i>Tap a nation to reserve it<button class="btn btn-secondary">Show me</button></div>
+    <div class="p-roster" data-show="browse"><span class="title">Reservations</span><small>6 of 100 taken</small><button class="btn btn-secondary btn-icon" aria-label="Open the list"><i data-lucide="chevron-up"></i></button></div>
+
+    <div class="sheet" data-show="selected">
+      <div class="grip"></div>
+      <div class="n-head">
+        <img class="n-flag cut" src="../../web/public/assets_rt56/flags/SPR.png" alt="">
+        <div>
+          <div class="title" style="font-size:24px">Spanish Republic</div>
+          <p><span class="tag tag-plain">Minor nation</span><span class="tag tag-pending">Pending claim</span></p>
+        </div>
+        <div class="n-tools"><button class="btn btn-quiet btn-icon" aria-label="Close"><i data-lucide="x"></i></button></div>
+      </div>
+      <button class="btn btn-quiet more">More about Spain<i data-lucide="chevron-up"></i></button>
+      <div class="sheet-cta">
+        <div class="cta-wrap">
+          <span class="halo h2"></span><span class="halo h1"></span>
+          <button class="btn btn-primary cta">Log in and reserve</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div></div>
+
+<script>
+  const F = "../../web/public/assets_rt56/flags/";
+  const rows = [
+    ["Majors"],
+    ["FRA", "France", "open"], ["GER", "Germany", "taken", "Otto", "Erwin"], ["ITA", "Italy", "open"], ["JAP", "Japan", "taken", "Isoroku"],
+    ["SOV", "Soviet Union", "taken", "Nikolai"], ["ENG", "United Kingdom", "taken", "Winston"], ["USA", "United States", "open"],
+    ["Europe"],
+    ["ALB", "Albania", "open"], ["AUS", "Austria", "open"], ["BEL", "Belgium", "open"], ["BUL", "Bulgaria", "open"],
+    ["CZE", "Czechoslovakia", "open"], ["DEN", "Denmark", "open"], ["EST", "Estonia", "locked"], ["FIN", "Finland", "open"],
+    ["GRE", "Greece", "open"], ["HUN", "Hungary", "open"], ["SPR", "Spanish Republic", "pending"],
+  ];
+  const tag = { open: '<span class="tag tag-open">Open</span>', pending: '<span class="tag tag-pending">Pending</span>', locked: '<span class="tag tag-locked">Locked</span>' };
+  document.getElementById("list").innerHTML = rows.map(([tagOrHead, name, status, who, coop]) => {
+    if (!name) return `<h3>${tagOrHead}</h3>`;
+    const right = status === "taken" ? `<span class="tag who-tag">${who}</span>` : tag[status];
+    const row = `<div class="row cut" data-tag="${tagOrHead}"><img class="flag" src="${F}${tagOrHead}.png" alt=""><span class="name">${name}</span>${right}</div>`;
+    return coop ? row + `<div class="coop"><i data-lucide="users"></i>Co-op <b>@${coop}</b></div>` : row;
+  }).join("");
+
+  // The two pies, as in the old panel: ideology (ruling share) and resources.
+  const DATA = {
+    ideology: [["Democratic", 41, "#3b82f6"], ["Fascism", 37, "#b45309"], ["Communism", 7, "#dc2626"], ["Non-aligned", 15, "#6b7280"]],
+    resources: [["Oil", 1, "#38bdf8"], ["Aluminium", 1, "#cbd5e1"], ["Rubber", 0, "#4ade80"], ["Tungsten", 49, "#a78bfa"], ["Steel", 75, "#facc15"], ["Chromium", 0, "#fb7185"], ["Coal", 23, "#71717a"]],
+  };
+  document.getElementById("res").innerHTML = DATA.resources.map(([n, v, c]) => `<li><i style="background:${c}"></i>${n}<b>${v}</b></li>`).join("");
+  document.querySelectorAll("[data-donut]").forEach((el) => {
+    const size = +el.dataset.size, thick = +el.dataset.thick, r = (size - thick) / 2, C = 2 * Math.PI * r;
+    const segs = DATA[el.dataset.donut].filter(([, v]) => v > 0), total = segs.reduce((s, [, v]) => s + v, 0), gap = 2;
+    let at = 0;
+    const arcs = segs.map(([, v, c]) => {
+      const len = (v / total) * C, dash = Math.max(len - gap, 1);
+      const arc = `<circle r="${r}" cx="${size / 2}" cy="${size / 2}" fill="none" stroke="${c}" stroke-width="${thick}" stroke-dasharray="${dash} ${C - dash}" stroke-dashoffset="${-at}"/>`;
+      at += len; return arc;
+    }).join("");
+    el.style.width = el.style.height = size + "px";
+    el.insertAdjacentHTML("afterbegin", `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><circle r="${r}" cx="${size / 2}" cy="${size / 2}" fill="none" stroke="var(--ink-800)" stroke-width="${thick}"/>${arcs}</svg>`);
+  });
+
+  const state = { state: "selected", sea: "teal", auth: "no", size: "desk" };
+  function render() {
+    document.querySelectorAll(".seg > div").forEach((seg) =>
+      seg.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(state[seg.dataset.k] === b.dataset.v))));
+    document.querySelectorAll(".map").forEach((img) => (img.src = `assets/map-${state.sea}${state.state === "selected" ? "-selected" : ""}.jpg`));
+    document.querySelectorAll("[data-show]").forEach((n) => (n.hidden = n.dataset.show !== state.state));
+    document.querySelectorAll("[data-auth]").forEach((n) => (n.hidden = n.dataset.auth !== state.auth));
+    const spain = document.querySelector('.row[data-tag="SPR"]');
+    spain.classList.toggle("sel", state.state === "selected");
+    const list = document.getElementById("list");
+    // Show Spain at the bottom when selected, starting the list on a whole row.
+    const first = [...list.querySelectorAll(".row")].find((r) => r.offsetTop + r.offsetHeight > spain.offsetTop + spain.offsetHeight - list.clientHeight + 12);
+    list.scrollTop = state.state === "selected" && list.scrollHeight > list.clientHeight ? Math.max(0, first.offsetTop - list.offsetTop) : 0;
+    document.getElementById("desk").hidden = state.size !== "desk";
+    document.getElementById("phone").hidden = state.size !== "phone";
+    fit();
+  }
+  function fit() {
+    const stage = document.getElementById(state.size);
+    const w = state.size === "desk" ? 1440 : 390, h = state.size === "desk" ? 900 : 844;
+    const vp = document.querySelector(".viewport");
+    const s = Math.min((vp.clientWidth - 32) / w, (vp.clientHeight - 32) / h, state.size === "desk" ? 1 : 1.2);
+    stage.style.transform = `scale(${s})`;
+    const frame = document.getElementById("frame");
+    frame.style.width = `${w * s}px`; frame.style.height = `${h * s}px`;
+  }
+  document.querySelectorAll(".seg > div").forEach((seg) =>
+    seg.addEventListener("click", (e) => { const v = e.target.closest("button")?.dataset.v; if (v) { state[seg.dataset.k] = v; render(); } }));
+  addEventListener("resize", fit);
+  lucide.createIcons();
+  render();
+</script>
+</body>
+</html>

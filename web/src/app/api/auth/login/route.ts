@@ -83,6 +83,9 @@ export async function GET(request: NextRequest) {
     authorizeUrl.searchParams.set("scope", "identify guilds");
   } else {
     authorizeUrl.searchParams.set("scope", "identify");
+    // Someone who already approved GameMaster goes straight back, without
+    // Discord's approval screen again.
+    authorizeUrl.searchParams.set("prompt", "none");
   }
 
   return NextResponse.redirect(authorizeUrl.toString());

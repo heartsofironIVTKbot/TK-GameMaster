@@ -30,7 +30,10 @@ export interface SessionUser {
 }
 
 const COOKIE_NAME = "gm_session";
-const SESSION_TTL_SEC = 60 * 60 * 24 * 7; // 7 days
+/** You stay logged in for 30 days after you last used the site (renewSession). */
+const SESSION_TTL_SEC = 60 * 60 * 24 * 30;
+/** Renew at most once a day. */
+const RENEW_AFTER_SEC = 60 * 60 * 24;
 const IV_LENGTH = 12;
 const TAG_LENGTH = 16;
 
@@ -92,6 +95,25 @@ export async function createSession(user: SessionUser): Promise<void> {
     path: "/",
     maxAge: SESSION_TTL_SEC,
   });
+}
+
+/**
+ * Keep a signed-in player signed in: push the session's expiry back to 30
+ * days from now (at most once a day). Call it from a route handler; reading
+ * a page never writes cookies.
+ */
+export async function renewSession(user: SessionUser): Promise<void> {
+  const store = await cookies();
+  const token = store.get(COOKIE_NAME)?.value;
+  const plaintext = token ? unseal(token) : null;
+  if (!plaintext) return;
+  try {
+    const exp = (JSON.parse(plaintext) as { exp?: unknown }).exp;
+    if (typeof exp === "number" && exp - Date.now() / 1000 > SESSION_TTL_SEC - RENEW_AFTER_SEC) return;
+  } catch {
+    return;
+  }
+  await createSession(user);
 }
 
 export async function getSession(): Promise<SessionUser | null> {

@@ -46,13 +46,12 @@ import type {
   MeProfile,
   NationFeatureProps,
   RosterNation,
-  SelectionKind,
 } from "@/lib/types";
 
 const MapViewer = dynamic(() => import("@/components/MapViewer"), {
   ssr: false,
   loading: () => (
-    <div className="flex h-full w-full items-center justify-center bg-[#16283b] text-zinc-400">
+    <div className="flex h-full w-full items-center justify-center bg-[#0f1d21] text-zinc-400">
       Loading map…
     </div>
   ),
@@ -73,14 +72,7 @@ function formatSessionTime(timestamp?: number | null): string {
     hour12: false,
     timeZone: "UTC",
   });
-  return `Session Start: ${weekday} ${time} UTC`;
-}
-
-/** Minimal selection info the top bar chip needs (reported by the map). */
-export interface SelectionSummary {
-  nationName: string;
-  kind: SelectionKind;
-  ownerLabel: string | null;
+  return `Starts ${weekday} ${time} UTC`;
 }
 
 export default function Home() {
@@ -101,8 +93,6 @@ export default function Home() {
   // bar renders the "Pending claim" chip + drawer minimize/close controls on
   // the same row as the Rules/Mods buttons, above the drawer.
   const [selected, setSelected] = useState<NationFeatureProps | null>(null);
-  const [selectionSummary, setSelectionSummary] =
-    useState<SelectionSummary | null>(null);
   const [drawerMinimized, setDrawerMinimized] = useState(false);
 
   // Authenticated user + database profile (hoisted: the map, the roster and
@@ -199,11 +189,6 @@ export default function Home() {
     if (nation) setDrawerMinimized(false);
   }, []);
 
-  const handleSelectionSummaryChange = useCallback(
-    (summary: SelectionSummary | null) => setSelectionSummary(summary),
-    [],
-  );
-
   const handleToggleDrawer = useCallback(
     () => setDrawerMinimized((current) => !current),
     [],
@@ -223,7 +208,6 @@ export default function Home() {
       // Nations/slot keys differ between scenarios — drop any stale selection
       // so the drawer never inspects a nation from the previous map.
       setSelected(null);
-      setSelectionSummary(null);
       setDrawerMinimized(false);
       setFocusRequest(null);
     }
@@ -561,9 +545,7 @@ export default function Home() {
   const activeGame =
     games.find((game) => game.thread_id === selectedThread) ?? null;
   const lobbyName = activeGame?.thread_name?.trim() || "GameMaster · HOI4";
-  const sessionTime = `${activeGame?.game_started ? "🔴 In progress · " : ""}${
-    formatSessionTime(activeGame?.start_timestamp) || "Session Start: TBA"
-  }`;
+  const sessionTime = formatSessionTime(activeGame?.start_timestamp) || "Start time to be announced";
 
   // What the guided tours need to know (docs/tutorial.md).
   useTutorialFacts({
@@ -592,7 +574,7 @@ export default function Home() {
     !nicknameDismissed;
 
   return (
-    <div className="relative h-screen w-screen overflow-hidden bg-[#16283b]">
+    <div className="relative h-screen w-screen overflow-hidden bg-[#0f1d21]">
       {/* Map fills the full viewport edge-to-edge. */}
       <MapViewer
         scenarioId={scenarioId}
@@ -603,7 +585,7 @@ export default function Home() {
         onSelectNation={handleSelectNation}
         drawerMinimized={drawerMinimized}
         onToggleDrawer={handleToggleDrawer}
-        onSelectionSummaryChange={handleSelectionSummaryChange}
+        onCloseDrawer={handleCloseDrawer}
         authUser={authUser}
         onNationsChange={handleNationsChange}
         onReservationsChange={handleReservationsChange}
@@ -739,22 +721,12 @@ export default function Home() {
         onDismiss={() => setNicknameDismissed(true)}
       />
 
-      {/* Frosted header floats over the top 80px of the map canvas. */}
+      {/* The top bar sits over the top of the map (56px; 96px on phones with the game strip). */}
       <TopBar
         lobbyName={lobbyName}
         scenarioName={SCENARIOS[scenarioId].label}
         sessionTime={sessionTime}
-        selection={
-          selectionSummary
-            ? {
-                nationName: selectionSummary.nationName,
-                kind: selectionSummary.kind,
-              }
-            : null
-        }
-        drawerMinimized={drawerMinimized}
-        onToggleDrawer={handleToggleDrawer}
-        onCloseDrawer={handleCloseDrawer}
+        inProgress={Boolean(activeGame?.game_started)}
         hostTools={
           host.isHost
             ? {

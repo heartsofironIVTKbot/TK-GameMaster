@@ -40,6 +40,13 @@ so popovers inside one must be portalled.
 you're on. No emoji in the interface. Each page's icon is `PAGE_ICONS` in
 `web/src/components/site/SiteMenu.tsx`; the header picks it from `page`.
 
+**The map** (`docs/design/map.html` is the approved mock-up): teal-black sea
+(`OCEAN` in `MapViewer.tsx`), solid black panels, taken nations show the
+player's name in a red tag, and the reserve button glows with three halos
+breathing out in turn (`gm-reserve` in `globals.css`; it keeps running with
+reduced motion on). Nation panel number boxes use muted game tints (brown
+civilian, green military / army, blue naval, red air).
+
 **Green means "do this" or "you are here"** (main button, current page).
 No gradient washes, glows, glass blur or decorative motion.
 

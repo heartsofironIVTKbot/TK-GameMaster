@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { RowDataPacket } from "mysql2";
-import { getSession, publicSessionUser } from "@/lib/session";
+import { getSession, publicSessionUser, renewSession } from "@/lib/session";
 import { getPool } from "@/lib/db";
 
 /**
@@ -35,6 +35,8 @@ export async function GET() {
   if (!session) {
     return NextResponse.json({ authenticated: false }, { status: 401 });
   }
+  // Every visit keeps you logged in (30 days from your last one).
+  await renewSession(session);
 
   let profile: MeProfile | null = null;
   try {

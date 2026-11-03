@@ -7,8 +7,10 @@ import {
   useMemo,
   useRef,
   useState,
+  type ReactNode,
   type RefObject,
 } from "react";
+import { MousePointerClick } from "lucide-react";
 import L from "leaflet";
 import { GeoJSON, MapContainer, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
@@ -69,12 +71,8 @@ interface MapViewerProps {
   drawerMinimized: boolean;
   /** Toggle the drawer collapse state (owned by the page). */
   onToggleDrawer: () => void;
-  /** Reports the chip metadata (name + selection kind + owner) upward. */
-  onSelectionSummaryChange: (summary: {
-    nationName: string;
-    kind: SelectionKind;
-    ownerLabel: string | null;
-  } | null) => void;
+  /** Close the nation panel (clears the selection). */
+  onCloseDrawer: () => void;
   /** Authenticated user, hoisted to the page (drives the nickname modal + the
       reservation roster). Falls back to null (anonymous) when not logged in. */
   authUser?: AuthUser | null;
@@ -128,7 +126,8 @@ const DEFAULT_STROKE = "#101827";
 // needs a higher fill zoom, so the world always touches the viewport edges.
 export const MAX_ZOOM = 2;
 // Authentic HOI4 tactical map ocean blue (also the map background).
-export const OCEAN_BLUE = "#16283b";
+/** The sea behind the nations: teal-black. */
+export const OCEAN = "#0f1d21";
 // Hover debounce: the highlight only applies once the cursor has rested on a
 // nation this long, so fast sweeps across dense regions don't flash.
 const HOVER_DEBOUNCE_MS = 100;
@@ -772,7 +771,7 @@ export default function MapViewer({
   onSelectNation,
   drawerMinimized,
   onToggleDrawer,
-  onSelectionSummaryChange,
+  onCloseDrawer,
   authUser = null,
   onNationsChange,
   onReservationsChange,
@@ -1266,20 +1265,6 @@ export default function MapViewer({
       `Discord user ${selectedReservation.user_id}`)
     : null;
 
-  // Report the chip metadata to the page so the top bar can render the
-  // selection status + drawer controls on the Rules/Mods row.
-  useEffect(() => {
-    onSelectionSummaryChange(
-      selected && selectionKind
-        ? {
-            nationName: selected.name,
-            kind: selectionKind,
-            ownerLabel,
-          }
-        : null,
-    );
-  }, [selected, selectionKind, ownerLabel, onSelectionSummaryChange]);
-
   // Other players' live selections: free nations only (a nation that just got
   // taken drops its glow), never the viewer's own.
   const liveSelections = live.selections;
@@ -1371,14 +1356,14 @@ export default function MapViewer({
 
   if (error) {
     return (
-      <div className="flex h-screen w-screen items-center justify-center bg-[#16283b] p-4 text-red-400">
+      <div className="flex h-screen w-screen items-center justify-center bg-[#0f1d21] p-4 text-red-400">
         {error}
       </div>
     );
   }
   if (loadedUrl !== geoJsonUrl || data === null || world === null) {
     return (
-      <div className="flex h-screen w-screen items-center justify-center bg-[#16283b] text-zinc-400">
+      <div className="flex h-screen w-screen items-center justify-center bg-[#0f1d21] text-zinc-400">
         Loading map…
       </div>
     );
@@ -1405,7 +1390,7 @@ export default function MapViewer({
   );
 
   return (
-    <div data-tour="map.canvas" className={className ?? "h-screen w-screen relative overflow-hidden bg-[#16283b]"}>
+    <div data-tour="map.canvas" className={className ?? "h-screen w-screen relative overflow-hidden bg-[#0f1d21]"}>
       <div
         className="relative h-full w-full"
         onDragEnter={() => {
@@ -1439,6 +1424,8 @@ export default function MapViewer({
           center={initialCenter}
           zoom={initialZoom}
           maxZoom={MAX_ZOOM}
+          // No +/- buttons: the wheel and pinch zoom (they sat under the top bar).
+          zoomControl={false}
           maxBoundsViscosity={1.0}
           worldCopyJump={true}
           zoomSnap={0.01}
@@ -1449,7 +1436,7 @@ export default function MapViewer({
           wheelDebounceTime={10}
           attributionControl={false}
           className="h-full w-full"
-          style={{ background: OCEAN_BLUE }}
+          style={{ background: OCEAN }}
         >
           <MapSetup
             world={world}
@@ -1527,12 +1514,13 @@ export default function MapViewer({
             scenarioId={scenarioId}
             onSelectThread={onSelectThread}
             onToggleMinimized={onToggleDrawer}
+            onClose={onCloseDrawer}
           />
         )}
 
-        {/* Bottom-center reserve CTA: appears whenever a nation is selected.
-            Glowing gold for a free nation, red for unreserving your own,
-            locked/co-op states show a disabled notice. */}
+        {/* Bottom-centre reserve button: appears whenever a nation is
+            selected. Glowing green for a free nation, red outline for
+            unreserving your own; locked / co-op show a disabled notice. */}
         {/* A running game: hot-join requests + crash reports instead of reserving. */}
         {gameRunning && (
           <HotJoinBar
@@ -1547,72 +1535,70 @@ export default function MapViewer({
         {showReserveHint && (
           <div
             data-tour="map.reserveHint"
-            className="absolute bottom-6 left-1/2 z-[900] flex w-max max-w-[calc(100vw-1.5rem)] -translate-x-1/2 items-center gap-3 rounded-2xl border border-brand-300/30 bg-ink-950/85 py-2 pl-4 pr-2 shadow-2xl backdrop-blur-md"
+            className="gm-plate absolute bottom-[76px] left-1/2 z-[900] flex w-max max-w-[calc(100vw-1.5rem)] -translate-x-1/2 items-center gap-3 bg-ink-950 py-2 pl-4 pr-2 sm:bottom-6"
           >
-            <span className="text-xs font-bold text-brand-100 sm:text-sm">👆 Click a nation on the map to reserve it</span>
+            <MousePointerClick aria-hidden className="h-[18px] w-[18px] shrink-0 text-brand-400" />
+            <span className="text-[13px] text-ink-100 sm:text-sm">
+              <span className="sm:hidden">Tap a nation to reserve it</span>
+              <span className="hidden sm:inline">Click a nation on the map to reserve it</span>
+            </span>
             {tutorial && (
               <button
                 type="button"
                 onClick={() => tutorial.start("map-player")}
-                className="shrink-0 whitespace-nowrap rounded-xl bg-brand-400 px-3 py-1.5 text-xs font-black text-ink-950 transition hover:bg-brand-300"
+                className="gm-btn gm-btn-secondary h-8 shrink-0 px-3 text-xs"
               >
                 Show me how
               </button>
             )}
           </div>
         )}
-        {/* Draft games: nations are handed out by the captains — no direct reserving. */}
+        {/* Draft games: nations are handed out by the captains, no direct reserving. */}
         {selected && selectionKind && lobbyLock?.draft && !gameRunning && (
-          <div data-tour="map.draftJoin" className="absolute bottom-6 left-1/2 z-[1010] flex -translate-x-1/2 flex-col items-center gap-2">
-            <p className="rounded-xl border border-brand-300/30 bg-ink-950/80 px-4 py-2 text-center text-xs font-semibold text-brand-100 shadow-xl backdrop-blur-md">
-              🎯 Draft game — the team captains place players on nations.
+          <div data-tour="map.draftJoin" className="absolute inset-x-4 bottom-5 z-[1010] flex flex-col items-center gap-3 sm:inset-x-auto sm:bottom-7 sm:left-1/2 sm:-translate-x-1/2">
+            <p className="gm-plate bg-ink-950 px-4 py-2 text-center text-xs font-semibold text-ink-200">
+              Draft game: the team captains place players on nations.
             </p>
             {lobbyLock.draft.phase === "ENLISTING" && onJoinDraft && (
-              <button
-                type="button"
-                onClick={onJoinDraft}
-                className="reserve-cta-glow rounded-xl bg-brand-400 px-8 py-3 text-base font-black uppercase tracking-wider text-ink-950 shadow-2xl transition-transform hover:scale-105"
-              >
-                Join the draft
-              </button>
+              <ReserveGlow>
+                <button type="button" onClick={onJoinDraft} className={RESERVE_BUTTON}>
+                  Join the draft
+                </button>
+              </ReserveGlow>
             )}
           </div>
         )}
         {selected && selectionKind && !lobbyLock?.draft && !gameRunning && (
-          <div data-tour="map.reserve" className="absolute bottom-6 left-1/2 z-[1010] flex -translate-x-1/2 flex-col items-center gap-2">
+          <div data-tour="map.reserve" className="absolute inset-x-4 bottom-5 z-[1010] flex flex-col items-center gap-2 sm:inset-x-auto sm:bottom-7 sm:left-1/2 sm:-translate-x-1/2">
             {selectionKind === "pending" &&
               (authUser ? (
-                <button
-                  type="button"
-                  className="reserve-cta-glow rounded-xl bg-brand-400 px-10 py-3.5 text-lg font-black uppercase tracking-wider text-ink-950 shadow-2xl transition-transform hover:scale-105 disabled:opacity-60"
-                  disabled={!selectedThread || reserving}
-                  onClick={handleReserve}
-                >
-                  {reserving ? "Reserving…" : "Reserve Nation"}
-                </button>
+                <ReserveGlow>
+                  <button type="button" className={RESERVE_BUTTON} disabled={!selectedThread || reserving} onClick={handleReserve}>
+                    {reserving ? "Reserving…" : "Reserve nation"}
+                  </button>
+                </ReserveGlow>
               ) : (
-                <a
-                  href="/api/auth/login"
-                  className="reserve-cta-glow rounded-xl bg-brand-400 px-10 py-3.5 text-lg font-black uppercase tracking-wider text-ink-950 shadow-2xl transition-transform hover:scale-105"
-                >
-                  Login &amp; Reserve
-                </a>
+                <ReserveGlow>
+                  <a href={`/api/auth/login?next=${encodeURIComponent(selectedThread ? `/?game=${selectedThread}` : "/")}`} className={RESERVE_BUTTON}>
+                    Log in and reserve
+                  </a>
+                </ReserveGlow>
               ))}
             {selectionKind === "self" && (
               <button
                 type="button"
-                className="reserve-cta-glow rounded-xl bg-red-500 px-10 py-3.5 text-lg font-black uppercase tracking-wider text-white shadow-2xl transition-transform hover:scale-105 disabled:opacity-60"
+                className="gm-btn gm-btn-danger h-14 w-full bg-ink-950 px-10 font-display text-2xl font-extrabold uppercase tracking-[0.03em] [--cut:12px] sm:w-auto"
                 disabled={reserving}
                 onClick={handleUnreserve}
               >
-                {reserving ? "Unreserving…" : "Unreserve Nation"}
+                {reserving ? "Unreserving…" : "Unreserve nation"}
               </button>
             )}
             {selectionKind === "locked" && (
               <button
                 type="button"
                 disabled
-                className="cursor-not-allowed rounded-xl border border-rose-400/40 bg-rose-950/70 px-8 py-3 text-sm font-bold uppercase tracking-wide text-rose-200/70"
+                className="gm-btn h-12 w-full cursor-not-allowed bg-ink-950 px-6 text-rose-300/80 sm:w-auto"
               >
                 Reserved by {ownerLabelText(ownerLabel)}
               </button>
@@ -1621,18 +1607,18 @@ export default function MapViewer({
               <button
                 type="button"
                 disabled
-                title="Co-Op requests are coming soon"
-                className="cursor-not-allowed rounded-xl border border-sky-300/40 bg-sky-950/70 px-8 py-3 text-sm font-bold uppercase tracking-wide text-sky-100/60"
+                title="Co-op requests are coming soon"
+                className="gm-btn h-12 w-full cursor-not-allowed bg-ink-950 px-6 text-sky-200/70 sm:w-auto"
               >
-                Request Co-Op
+                Request co-op
               </button>
             )}
             {reserveMessage && (
               <p
-                className={`rounded-md bg-ink-950/70 px-3 py-1.5 text-xs ${
+                className={`gm-cut bg-ink-950 px-3 py-1.5 text-xs [--cut:6px] ${
                   reserveMessage.kind === "success"
-                    ? "text-emerald-400"
-                    : "text-red-400"
+                    ? "text-emerald-300"
+                    : "text-rose-300"
                 }`}
               >
                 {reserveMessage.text}
@@ -1641,6 +1627,22 @@ export default function MapViewer({
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+/** The big reserve button's look (inside ReserveGlow). Full width on phones. */
+const RESERVE_BUTTON =
+  "gm-btn gm-btn-primary h-[58px] w-full px-0 font-display text-[26px] font-extrabold uppercase tracking-[0.03em] disabled:opacity-60 sm:h-[70px] sm:w-auto sm:px-[52px] sm:text-[32px]";
+
+/** Three halos breathing behind the reserve button (globals.css, gm-reserve). */
+function ReserveGlow({ children }: { children: ReactNode }) {
+  return (
+    <div className="gm-reserve w-full sm:w-auto">
+      <span aria-hidden className="gm-reserve-halo" />
+      <span aria-hidden className="gm-reserve-halo" />
+      <span aria-hidden className="gm-reserve-halo hidden sm:block" />
+      {children}
     </div>
   );
 }

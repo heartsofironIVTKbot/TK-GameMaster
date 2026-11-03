@@ -61,14 +61,20 @@ export default function HostToolsPanel({
   const panelRef = useRef<HTMLElement>(null);
   const [position, setPosition] = useState<{ left: number; top: number } | null>(null);
 
-  // Spawn just below the top bar, under its Host Tool button, never over the roster.
+  // Spawn just below the top bar, under its Host Tool button, never over the
+  // reservations list, and below the Help button when it's in the way.
   useLayoutEffect(() => {
     const buttonEl = document.querySelector("[data-host-tool-button]");
     const button = buttonEl?.getBoundingClientRect();
-    const roster = document.querySelector('aside[aria-label="Reservation roaster"]')?.getBoundingClientRect();
+    const roster = document.querySelector('aside[aria-label="Reservations"]')?.getBoundingClientRect();
     const minLeft = roster ? roster.right + PANEL_GAP : PANEL_GAP;
     const left = Math.max(button?.left ?? minLeft, minLeft);
-    setPosition(clampToViewport(left, topBarBottom() + SPAWN_GAP, panelRef.current));
+    let top = topBarBottom() + SPAWN_GAP;
+    const help = document.querySelector('[data-tour="help.button"]')?.getBoundingClientRect();
+    if (help && help.width > 0 && help.left < left + PANEL_WIDTH && help.right > left && help.top < top + 48) {
+      top = help.bottom + PANEL_GAP;
+    }
+    setPosition(clampToViewport(left, top, panelRef.current));
   }, []);
 
   // Keep the panel on screen when the window shrinks.

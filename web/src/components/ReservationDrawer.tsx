@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronRight, GripVertical, Lock, PanelLeftClose, ShieldCheck, Users, X } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import PlayerProfilePopover, {
   reservationBadges,
@@ -100,35 +101,13 @@ export interface DrawerHostTools {
   manage: boolean;
 }
 
-const STATUS_META: Record<
-  NationRowStatus,
-  { badge: string; badgeClass: string; boxClass: string }
-> = {
-  available: {
-    badge: "Open",
-    badgeClass: "border-emerald-400/60 bg-emerald-400/20 text-emerald-200",
-    boxClass: "border-emerald-400/40 bg-emerald-400/10 hover:bg-emerald-400/20",
-  },
-  pending: {
-    badge: "Pending",
-    badgeClass: "border-yellow-300/60 bg-yellow-300/20 text-yellow-100",
-    boxClass: "border-yellow-300/50 bg-yellow-300/10 hover:bg-yellow-300/20",
-  },
-  self: {
-    badge: "Yours",
-    badgeClass: "border-emerald-300/70 bg-emerald-400/25 text-emerald-100",
-    boxClass: "border-emerald-300/60 bg-emerald-400/15 hover:bg-emerald-400/25",
-  },
-  reserved: {
-    badge: "Taken",
-    badgeClass: "border-rose-400/60 bg-rose-400/20 text-rose-200",
-    boxClass: "border-rose-400/40 bg-rose-400/10 hover:bg-rose-400/20",
-  },
-  locked: {
-    badge: "Locked",
-    badgeClass: "border-ink-500/70 bg-ink-600/30 text-ink-300",
-    boxClass: "border-ink-600/60 bg-ink-800/40 hover:bg-ink-700/50",
-  },
+/** Each row's status tag (the right-hand slot). Taken rows show the player's name instead. */
+const STATUS_META: Record<NationRowStatus, { badge: string; tagClass: string }> = {
+  available: { badge: "Open", tagClass: "gm-tag gm-tag-dot bg-emerald-950/80 text-emerald-300" },
+  pending: { badge: "Pending", tagClass: "gm-tag gm-tag-dot bg-yellow-950/80 text-yellow-200" },
+  self: { badge: "Yours", tagClass: "gm-tag bg-emerald-950/80 text-emerald-300" },
+  reserved: { badge: "Taken", tagClass: "gm-tag bg-rose-950/80 text-rose-300" },
+  locked: { badge: "Locked", tagClass: "gm-tag bg-ink-800 text-ink-400" },
 };
 
 interface RosterRow {
@@ -187,6 +166,25 @@ export default function ReservationDrawer({
   const [popoverKey, setPopoverKey] = useState<string | null>(null);
   // Host tools: the row a dragged player hovers (drop target highlight).
   const [dropRow, setDropRow] = useState<string | null>(null);
+  // IronLegion games: whether the signed-in viewer already holds the
+  // authenticated role (then the notice is hidden). Per game.
+  const [ironLegion, setIronLegion] = useState<{ thread: string; done: boolean } | null>(null);
+  const ironLegionRequired = Boolean(gameLock?.ironlegion);
+  useEffect(() => {
+    if (!ironLegionRequired || !authUser || !selectedThread) return undefined;
+    let cancelled = false;
+    fetch(`/api/reserve/ironlegion?thread_id=${encodeURIComponent(selectedThread)}`, { cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((reply: { needs_authentication?: boolean | null } | null) => {
+        if (!cancelled) setIronLegion({ thread: selectedThread, done: reply?.needs_authentication === false });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [ironLegionRequired, authUser, selectedThread]);
+  const showIronLegion =
+    ironLegionRequired && !(authUser && ironLegion?.thread === selectedThread && ironLegion.done);
 
   // A nation's reservation and its co-op players (listed under the major) —
   // also when the bot names it differently ("Germany" from a draft pick vs
@@ -473,21 +471,40 @@ export default function ReservationDrawer({
   // Reserved players become draggable chips only with the full Host Tool.
   const manageTools = hostTools?.manage ? hostTools : null;
 
-  // Collapsed: a slim toggle tab on the left edge. `open` null = the first
-  // visit: open on wide screens, collapsed on phones (CSS decides).
+  // Collapsed: a tab on the left edge (a bar along the bottom on phones).
+  // `open` null = the first visit: open on wide screens, collapsed on phones
+  // (CSS decides).
   const tab = (
-    <button
-      type="button"
-      onClick={onToggle}
-      aria-label="Open reservation roaster"
-      data-tour="map.roster"
-      className={`absolute left-0 top-1/2 z-[950] -translate-y-1/2 rounded-r-lg border border-l-0 border-ink-700 bg-ink-900/90 px-1.5 py-4 text-[10px] font-black uppercase tracking-widest text-ink-300 shadow-lg backdrop-blur-md transition-colors hover:bg-ink-800 ${
-        open === null ? "sm:hidden" : ""
-      }`}
-      style={{ writingMode: "vertical-rl" }}
-    >
-      Roaster ▸
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-label="Open the reservations"
+        data-tour="map.roster"
+        className={`gm-cut absolute left-0 top-1/2 z-[950] hidden -translate-y-1/2 items-center gap-1.5 bg-ink-950 px-2 py-4 text-xs font-semibold text-ink-300 transition-colors [--cut:6px] hover:bg-ink-900 hover:text-ink-100 ${
+          open === null ? "" : "sm:flex"
+        }`}
+        style={{ writingMode: "vertical-rl" }}
+      >
+        Reservations
+        <ChevronRight aria-hidden className="h-4 w-4" />
+      </button>
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-label="Open the reservations"
+        data-tour="map.roster"
+        className="absolute inset-x-0 bottom-0 z-[950] flex h-16 items-center gap-3 border-t border-ink-800 bg-ink-950 px-4 text-left sm:hidden"
+      >
+        <span className="gm-title text-xl">Reservations</span>
+        <span className="text-xs text-ink-400">
+          {stats.totalClaimed} of {stats.totalNations} taken
+        </span>
+        <span className="gm-btn gm-btn-secondary ml-auto w-9 px-0" aria-hidden>
+          <ChevronRight className="-rotate-90" />
+        </span>
+      </button>
+    </>
   );
   if (open === false) return tab;
 
@@ -502,18 +519,8 @@ export default function ReservationDrawer({
       authUser &&
       reservation &&
       String(reservation.user_id) === String(authUser.discord_id);
-    const tag =
-      reservation && (isSelf || status === "reserved")
-        ? reservationName(reservation)
-        : status === "pending" && authUser
-          ? (authUser.ingame_nickname?.trim() || `#${authUser.discord_id}`).slice(0, 32)
-          : null;
-    const tagKey =
-      isSelf || status === "pending"
-        ? "self"
-        : reservation
-          ? String(reservation.user_id)
-          : null;
+    const tag = reservation && (isSelf || status === "reserved") ? reservationName(reservation) : null;
+    const tagKey = isSelf ? "self" : reservation ? String(reservation.user_id) : null;
     const popoverOpen = tagKey !== null && popoverKey === tagKey;
     const rowKey = isFiller ? `filler:${row.fillerSlot}` : nation.tag;
     const slot = nation.slot_key ?? "";
@@ -523,13 +530,14 @@ export default function ReservationDrawer({
       (hostTools.pendingSlots.has(slot) ||
         coops.some((coop) => hostTools.pendingSlots.has(coop.slot_key)));
     const isDropRow = dropRow === rowKey;
+    const isSelected = !isFiller && selected?.tag === nation.tag;
 
     return (
       <div key={rowKey}>
         <div
           role="button"
           tabIndex={isFiller ? -1 : 0}
-          aria-label={`${nation.name} — ${meta.badge}`}
+          aria-label={`${nation.name}: ${tag ?? meta.badge}`}
           onClick={(event) => {
             if (isFiller) return;
             if (hostTools?.heldPlayer) {
@@ -569,24 +577,34 @@ export default function ReservationDrawer({
                 },
               }
             : {})}
-          className={`relative flex w-full items-center gap-2 rounded-lg border px-2.5 py-2 text-left shadow-sm transition-colors ${
+          className={`group relative isolate flex h-[34px] w-full items-center gap-2.5 px-2 text-left ${
             isFiller ? "cursor-default" : hostTools?.heldPlayer ? "cursor-copy" : "cursor-pointer"
-          } ${meta.boxClass} ${
-            isDropRow
-              ? "ring-2 ring-yellow-300"
-              : !isFiller && selected?.tag === nation.tag
-                ? "ring-1 ring-yellow-300/60"
-                : ""
           }`}
         >
+          {/* The row's background: a cut plate behind it (on the row itself
+              the clip would cut off the profile popover). */}
+          <span
+            aria-hidden
+            className={`gm-cut absolute inset-0 -z-10 transition-colors [--cut:6px] ${
+              isDropRow
+                ? "bg-yellow-300/15"
+                : isSelected
+                  ? "bg-ink-900"
+                  : isFiller
+                    ? ""
+                    : "group-hover:bg-ink-900"
+            }`}
+          />
+          {isSelected && <span aria-hidden className="absolute bottom-[7px] left-0 top-[7px] w-[3px] bg-brand-400" />}
+
           {/* Flag */}
           {isFiller ? (
-            <div className="h-5 w-8 shrink-0 rounded-[3px] border border-ink-600 bg-ink-700/60" />
+            <div className="h-4 w-6 shrink-0 bg-ink-800 outline outline-1 outline-white/10" />
           ) : (
             <img
               src={data?.flagUrl || `/assets/flags/${nation.tag}.png`}
               alt=""
-              className="h-5 w-8 shrink-0 rounded-[3px] border border-ink-700 object-cover"
+              className="h-4 w-6 shrink-0 object-cover outline outline-1 outline-white/10"
               onError={(event) => {
                 event.currentTarget.src = placeholderFlag(nation.tag);
               }}
@@ -595,7 +613,7 @@ export default function ReservationDrawer({
 
           {/* Nation name (simplified: no Kingdom/Republic prefixes) */}
           <span
-            className="min-w-0 flex-1 truncate text-sm font-semibold text-ink-100"
+            className="min-w-0 flex-1 truncate text-[13.5px] font-medium text-ink-100"
             title={isFiller ? nation.name : boardDisplayName(scenarioId, nation.tag, nation.name)}
           >
             {isFiller
@@ -603,17 +621,8 @@ export default function ReservationDrawer({
               : boardDisplayName(scenarioId, nation.tag, nation.name)}
           </span>
 
-          {/* Status badge: fixed width so every row's badge lines up. */}
-          <span
-            className={`w-16 shrink-0 whitespace-nowrap rounded border py-0.5 text-center text-[10px] font-bold uppercase tracking-wide ${meta.badgeClass}`}
-          >
-            {status === "locked" && <span aria-hidden>🔒 </span>}
-            {meta.badge}
-          </span>
-
-          {/* Player column: fixed width, right-aligned, so a long tag
-              truncates here instead of pushing the badge around. */}
-          <div className="flex w-[92px] shrink-0 items-center justify-end gap-1">
+          {/* One slot on the right: the status, or the player who holds it. */}
+          <div className="flex min-w-0 max-w-[128px] shrink-0 items-center justify-end gap-1.5">
             {pending && (
               <span
                 className="gm-spin inline-block h-3 w-3 shrink-0 rounded-full border-2 border-yellow-300 border-t-transparent"
@@ -622,29 +631,31 @@ export default function ReservationDrawer({
             )}
 
             {/* Host tools: draggable player tag + remove. */}
-            {manageTools && reservation && tag && (
+            {manageTools && reservation && tag ? (
               <HostPlayerTag
                 reservation={reservation}
                 label={tag}
                 held={manageTools.heldPlayer?.user_id === String(reservation.user_id)}
                 hostTools={manageTools}
               />
-            )}
-
-            {/* Player tag (click opens the popover) */}
-            {!(manageTools && reservation) && tag && tagKey && (
+            ) : tag && tagKey ? (
               <button
                 type="button"
                 aria-label={`Open ${tag}'s Discord profile`}
-                title={tag}
+                title={isSelf ? `${tag} (you)` : tag}
                 onClick={(event) => {
                   event.stopPropagation();
                   setPopoverKey((current) => (current === tagKey ? null : tagKey));
                 }}
-                className="min-w-0 max-w-full truncate rounded bg-ink-950/80 px-2 py-0.5 text-[11px] font-bold text-ink-200 transition-colors hover:bg-ink-800 hover:text-white"
+                className={`${meta.tagClass} min-w-0 max-w-full transition-[filter] hover:brightness-125`}
               >
-                {isSelf || status === "pending" ? `${tag} (You)` : `@${tag}`}
+                <span className="truncate">{isSelf ? "You" : tag}</span>
               </button>
+            ) : (
+              <span className={meta.tagClass}>
+                {status === "locked" && <Lock aria-hidden className="h-3 w-3" />}
+                {meta.badge}
+              </span>
             )}
           </div>
 
@@ -665,14 +676,16 @@ export default function ReservationDrawer({
         </div>
         {/* Co-op players of this nation. */}
         {coops.length > 0 && (
-          <div className="relative ml-10 mt-1 flex flex-wrap gap-1">
+          <div className="relative flex flex-wrap items-center gap-x-2 gap-y-1 py-1 pl-[42px] pr-2 text-xs text-ink-400">
+            <Users aria-hidden className="h-3.5 w-3.5 text-sky-300" />
+            Co-op
             {coops.map((coop) => {
               const coopKey = `coop:${String(coop.user_id)}`;
               return manageTools ? (
                 <HostPlayerTag
                   key={coop.slot_key}
                   reservation={coop}
-                  label={`🤝 ${reservationName(coop)}`}
+                  label={reservationName(coop)}
                   held={manageTools.heldPlayer?.user_id === String(coop.user_id)}
                   hostTools={manageTools}
                 />
@@ -685,9 +698,9 @@ export default function ReservationDrawer({
                     event.stopPropagation();
                     setPopoverKey((current) => (current === coopKey ? null : coopKey));
                   }}
-                  className="rounded bg-sky-500/15 px-2 py-0.5 text-[10px] font-bold text-sky-200 transition-colors hover:bg-sky-500/30 hover:text-white"
+                  className="font-semibold text-ink-300 transition-colors hover:text-ink-100"
                 >
-                  🤝 Co-op @{reservationName(coop)}
+                  {reservationName(coop)}
                 </button>
               );
             })}
@@ -711,103 +724,100 @@ export default function ReservationDrawer({
     );
   };
 
+  const counts: { label: string; value: number; of?: number; lead?: boolean }[] = [
+    { label: "Taken", value: stats.totalClaimed, of: stats.totalNations, lead: true },
+    { label: "Majors", value: stats.majorsClaimed, of: stats.majorsTotal },
+    { label: "Minors", value: stats.minorsClaimed, of: stats.minorsTotal },
+    { label: "Co-op", value: stats.coopCount },
+    { label: "Filler", value: stats.fillerCount },
+  ];
+
   return (
     <>
     {open === null && tab}
     <aside
-      aria-label="Reservation roaster"
+      aria-label="Reservations"
       data-tour="map.roster"
-      className={`absolute bottom-0 left-0 top-20 z-[950] w-full flex-col border-r border-ink-800 bg-ink-950/90 shadow-2xl backdrop-blur-md sm:w-[400px] sm:bg-ink-950/70 ${
+      className={`absolute bottom-0 left-0 top-24 z-[950] w-full flex-col border-r border-ink-800 bg-ink-950 sm:top-14 sm:w-[340px] ${
         open === null ? "hidden sm:flex" : "flex"
       }`}
     >
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-ink-800 px-4 py-3">
-        <div>
-          <h2 className="text-base font-black uppercase tracking-wide text-ink-100">
-            Reservation Roaster
-          </h2>
-          <p className="mt-0.5 text-[11px] leading-snug text-ink-400">
-            Majors {stats.majorsClaimed}/{stats.majorsTotal} · Minors{" "}
-            {stats.minorsClaimed}/{stats.minorsTotal} · Total{" "}
-            {stats.totalClaimed}/{stats.totalNations}
-            {(stats.coopCount > 0 || stats.fillerCount > 0) && (
-              <span className="text-ink-500">
-                {" "}
-                + Co-Op {stats.coopCount} · Fillers {stats.fillerCount}
-              </span>
-            )}
-          </p>
+      {/* Header: the title, the counts, and the IronLegion notice when it applies. */}
+      <div className="border-b border-ink-800 p-3.5">
+        <div className="flex items-center justify-between">
+          <h2 className="gm-title text-[26px]">Reservations</h2>
+          <button
+            type="button"
+            onClick={onToggle}
+            aria-label="Fold the reservations"
+            title="Fold the list"
+            className="gm-btn gm-btn-quiet h-8 w-8 p-0"
+          >
+            <PanelLeftClose aria-hidden />
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={onToggle}
-          aria-label="Collapse reservation roaster"
-          title="Collapse roaster"
-          className="rounded-md border border-ink-700 bg-ink-800/80 px-2 py-1 text-xs text-ink-300 transition-colors hover:border-ink-500 hover:text-white"
-        >
-          ◀
-        </button>
-      </div>
-
-      {/* Legend */}
-      <div className="flex flex-wrap gap-x-3 gap-y-1 border-b border-ink-800/70 px-4 py-2 text-[10px] font-semibold uppercase tracking-wide text-ink-500">
-        <span className="flex items-center gap-1">
-          <span className="h-2 w-2 rounded-full bg-emerald-400" /> Open
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="h-2 w-2 rounded-full bg-yellow-300" /> Pending
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="h-2 w-2 rounded-full bg-rose-400" /> Taken
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="h-2 w-2 rounded-full bg-ink-500" /> Locked
-        </span>
+        <div className="gm-plate mt-3 grid grid-cols-[1.25fr_1fr_1fr_1fr_1fr] bg-ink-950 [--cut:10px]">
+          {counts.map((count, index) => (
+            <div key={count.label} className={`px-1 pb-1.5 pt-2 text-center ${index > 0 ? "border-l border-ink-800" : ""}`}>
+              <strong className={`block font-display text-xl font-extrabold leading-none ${count.lead ? "text-brand-400" : "text-ink-100"}`}>
+                {count.value}
+                {count.of !== undefined && <small className="text-sm text-ink-500">/{count.of}</small>}
+              </strong>
+              <span className="mt-1 block text-[11px] text-ink-400">{count.label}</span>
+            </div>
+          ))}
+        </div>
+        {showIronLegion && gameLock?.ironlegion && (
+          <details
+            data-tour="map.ironlegion"
+            className="gm-plate group mt-2.5 bg-sky-950/60 text-[12.5px] text-ink-300 [--cut:8px] [--line:color-mix(in_oklab,var(--color-sky-300)_35%,transparent)]"
+          >
+            <summary className="flex h-[34px] cursor-pointer list-none items-center gap-2 px-2.5 font-semibold text-ink-100 [&::-webkit-details-marker]:hidden">
+              <ShieldCheck aria-hidden className="h-4 w-4 text-sky-300" />
+              Steam authentication needed
+              <span className="ml-auto text-xs font-semibold text-sky-300 group-open:hidden">How</span>
+            </summary>
+            <p className="px-2.5 pb-2.5 pl-[34px] leading-relaxed">
+              This game needs IronLegion&apos;s authenticated role to reserve.{" "}
+              {gameLock.ironlegion.verify_url ? (
+                <a
+                  href={gameLock.ironlegion.verify_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold text-sky-300 underline underline-offset-2 hover:text-sky-200"
+                >
+                  Authenticate in Discord
+                </a>
+              ) : (
+                <>Press Authenticate on the server&apos;s IronLegion panel in Discord.</>
+              )}
+            </p>
+          </details>
+        )}
       </div>
 
       {/* Sections + rows */}
-      <div className="roster-scroll flex-1 overflow-y-auto px-2 pb-3">
+      <div className="roster-scroll flex-1 overflow-y-auto px-1.5 pb-3">
         {/* Draft games: the shared pool, teams and whose pick it is. */}
-        {draftPanel && <div className="-mx-2 pt-3">{draftPanel}</div>}
-        {gameLock?.ironlegion && (
-          <div data-tour="map.ironlegion" className="mt-3 rounded-lg border border-sky-400/30 bg-sky-500/10 px-3 py-2 text-[11px] leading-relaxed text-sky-100">
-            🛡️ <b>Steam authentication required.</b> This game needs IronLegion&apos;s authenticated role to reserve.{" "}
-            {gameLock.ironlegion.verify_url ? (
-              <a href={gameLock.ironlegion.verify_url} target="_blank" rel="noopener noreferrer" className="font-semibold text-sky-300 underline underline-offset-2 hover:text-sky-200">
-                Authenticate in Discord ↗
-              </a>
-            ) : (
-              <>Press Authenticate on the server&apos;s IronLegion panel in Discord.</>
-            )}
-          </div>
-        )}
+        {draftPanel && <div className="-mx-1.5 pt-3">{draftPanel}</div>}
         {sections.map((section, sectionIndex) => (
           <div key={`${section.title}-${sectionIndex}`}>
-            <h3 className="px-1.5 pb-1 pt-3 text-[11px] font-black uppercase tracking-widest text-brand-300/90">
-              {section.title}
-            </h3>
-            <div className="flex flex-col gap-1.5">
-              {section.rows.map(renderRow)}
-            </div>
+            <h3 className="px-2 pb-1 pt-3 text-xs font-semibold text-ink-500">{section.title}</h3>
+            <div className="flex flex-col">{section.rows.map(renderRow)}</div>
           </div>
         ))}
 
         {fillerRows.length > 0 && (
           <div>
-            <h3 className="px-1.5 pb-1 pt-3 text-[11px] font-black uppercase tracking-widest text-brand-300/90">
-              Fillers
-            </h3>
-            <div className="flex flex-col gap-1.5">{fillerRows.map(renderRow)}</div>
+            <h3 className="px-2 pb-1 pt-3 text-xs font-semibold text-ink-500">Fillers</h3>
+            <div className="flex flex-col">{fillerRows.map(renderRow)}</div>
           </div>
         )}
 
         {lockedRows.length > 0 && (
           <div>
-            <h3 className="px-1.5 pb-1 pt-3 text-[11px] font-black uppercase tracking-widest text-ink-500">
-              Locked Nations
-            </h3>
-            <div className="flex flex-col gap-1.5">{lockedRows.map(renderRow)}</div>
+            <h3 className="px-2 pb-1 pt-3 text-xs font-semibold text-ink-500">Locked nations</h3>
+            <div className="flex flex-col">{lockedRows.map(renderRow)}</div>
           </div>
         )}
       </div>
@@ -830,7 +840,7 @@ function HostPlayerTag({
 }) {
   const player = playerFromReservation(reservation);
   return (
-    <span className="flex min-w-0 max-w-full items-center overflow-hidden rounded bg-ink-950/80">
+    <span className={`gm-tag min-w-0 max-w-full gap-0 px-0 ${held ? "bg-yellow-950/90 text-yellow-100" : "bg-rose-950/80 text-rose-300"}`}>
       <button
         type="button"
         draggable
@@ -842,12 +852,11 @@ function HostPlayerTag({
           event.stopPropagation();
           hostTools.onPickUp(held ? null : player);
         }}
-        title="Drag to another nation or the bin — or click to pick up"
-        className={`min-w-0 cursor-grab truncate px-2 py-0.5 text-[11px] font-bold transition-colors active:cursor-grabbing ${
-          held ? "bg-yellow-300/25 text-yellow-100" : "text-ink-200 hover:bg-ink-800 hover:text-white"
-        }`}
+        title="Drag to another nation or the bin, or click to pick up"
+        className="flex min-w-0 cursor-grab items-center gap-1 py-0.5 pl-2.5 pr-1 active:cursor-grabbing"
       >
-        ⠿ {label}
+        <GripVertical aria-hidden className="h-3 w-3 shrink-0 opacity-70" />
+        <span className="truncate">{label}</span>
       </button>
       <button
         type="button"
@@ -857,9 +866,9 @@ function HostPlayerTag({
         }}
         aria-label={`Remove ${label}`}
         title="Remove from the game"
-        className="shrink-0 px-1.5 py-0.5 text-[11px] text-ink-500 hover:bg-rose-500/20 hover:text-rose-200"
+        className="shrink-0 py-0.5 pl-1 pr-2.5 opacity-70 hover:opacity-100"
       >
-        ✕
+        <X aria-hidden className="h-3 w-3" />
       </button>
     </span>
   );

@@ -5,7 +5,8 @@
 // is intentional here.
 /* eslint-disable @next/next/no-img-element */
 
-import { useMemo, useState, type ReactNode } from "react";
+import { ChevronDown, PanelRightClose, PanelRightOpen, X } from "lucide-react";
+import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import {
   DEFAULT_SCENARIO,
   SCENARIOS,
@@ -38,6 +39,41 @@ interface CountryDetailsDrawerProps {
   scenarioId: ScenarioId;
   onSelectThread: (threadId: string) => void;
   onToggleMinimized: () => void;
+  /** Close the panel (clears the selection). */
+  onClose: () => void;
+}
+
+/** How the selected nation stands for the viewer: the tag in the panel's header. */
+const SELECTION_TAGS: Record<SelectionKind, { label: string; className: string }> = {
+  pending: { label: "Pending claim", className: "bg-yellow-950/80 text-yellow-200" },
+  self: { label: "Your nation", className: "bg-emerald-950/80 text-emerald-300" },
+  locked: { label: "Reserved", className: "bg-rose-950/80 text-rose-300" },
+  coop: { label: "Co-op available", className: "bg-sky-950/80 text-sky-200" },
+};
+
+/** Muted tints for the number boxes: game data, not status (brown civilian,
+ *  green military / army, blue naval, red air). */
+const TONES: Record<"brown" | "green" | "blue" | "red", { bg: string; line: string; text: string }> = {
+  brown: { bg: "oklch(24% 0.035 60)", line: "oklch(40% 0.06 60)", text: "oklch(80% 0.07 65)" },
+  green: { bg: "oklch(23% 0.04 145)", line: "oklch(40% 0.07 145)", text: "oklch(82% 0.09 145)" },
+  blue: { bg: "oklch(23% 0.04 245)", line: "oklch(40% 0.07 245)", text: "oklch(80% 0.08 240)" },
+  red: { bg: "oklch(23% 0.045 20)", line: "oklch(41% 0.08 20)", text: "oklch(80% 0.09 20)" },
+};
+
+function NumberBox({ value, label, note, tone }: { value: number; label: string; note: string; tone: keyof typeof TONES }) {
+  const colors = TONES[tone];
+  return (
+    <div
+      className="gm-plate px-1.5 pb-2 pt-2.5 text-center [--cut:10px]"
+      style={{ backgroundColor: colors.bg, "--line": colors.line } as CSSProperties}
+    >
+      <p className="font-display text-[30px] font-extrabold leading-none text-ink-100">{value.toLocaleString()}</p>
+      <p className="mt-1 text-xs font-semibold" style={{ color: colors.text }}>
+        {label}
+      </p>
+      <p className="text-[11px] text-ink-500">{note}</p>
+    </div>
+  );
 }
 
 /** The seven HOI4 major powers: USA, UK, SOV, FRA, GER, ITA, JAP. */
@@ -78,11 +114,14 @@ function Donut({
   segments,
   size = 112,
   thickness = 14,
+  hole = "bg-ink-950",
   children,
 }: {
   segments: Segment[];
   size?: number;
   thickness?: number;
+  /** The centre's colour: the same as what the pie sits on. */
+  hole?: string;
   children?: ReactNode;
 }) {
   const total = segments.reduce((sum, segment) => sum + segment.value, 0);
@@ -92,7 +131,7 @@ function Donut({
       style={{ width: size, height: size, background: conicGradient(segments) }}
     >
       <div
-        className="absolute flex flex-col items-center justify-center rounded-full bg-ink-900"
+        className={`absolute flex flex-col items-center justify-center rounded-full ${hole}`}
         style={{
           top: thickness,
           right: thickness,
@@ -123,7 +162,7 @@ function LeaderPortrait({ scenario }: { scenario: CountryScenarioData }) {
   const failed = failedSource === source;
   if (!source || failed) {
     return (
-      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-md border border-ink-700 bg-ink-800">
+      <div className="gm-cut flex h-[70px] w-14 shrink-0 items-center justify-center bg-ink-800 [--cut:7px]">
         <svg
           viewBox="0 0 24 24"
           className="h-8 w-8 text-ink-500"
@@ -139,7 +178,7 @@ function LeaderPortrait({ scenario }: { scenario: CountryScenarioData }) {
     <img
       src={source}
       alt={scenario.leader.name}
-      className="h-16 w-16 shrink-0 rounded-md border border-ink-700 object-cover"
+      className="gm-cut h-[70px] w-14 shrink-0 object-cover [--cut:7px]"
       onError={() => setFailedSource(source)}
     />
   );
@@ -249,10 +288,10 @@ function SpiritDetailCard({ spirit }: { spirit: NationalSpirit | null }) {
   );
   const traits = spirit.traits ?? [];
   return (
-    <div className="mt-2 rounded-lg border border-brand-400/25 bg-ink-950/90 p-3 shadow-xl">
+    <div className="gm-plate mt-2 p-3">
       <div className="flex items-center gap-2.5">
-        <SpiritIcon spirit={spirit} className="h-8 w-8 rounded-sm object-cover" />
-        <p className="text-sm font-semibold leading-snug text-brand-300">
+        <SpiritIcon spirit={spirit} className="h-8 w-8 object-contain" />
+        <p className="text-sm font-semibold leading-snug text-ink-100">
           {spirit.name}
         </p>
       </div>
@@ -281,7 +320,7 @@ function SpiritDetailCard({ spirit }: { spirit: NationalSpirit | null }) {
       )}
       {traits.map((trait) => (
         <div key={trait.id} className="mt-2.5">
-          <p className="text-xs font-bold uppercase tracking-wide text-ink-200">
+          <p className="text-xs font-semibold text-ink-200">
             {trait.name}
           </p>
           <ul className="mt-1 space-y-1">
@@ -323,36 +362,16 @@ function SpiritDetailCard({ spirit }: { spirit: NationalSpirit | null }) {
   );
 }
 
-function StatBar({
-  icon,
-  label,
-  value,
-  barClass,
-}: {
-  icon: string;
-  label: string;
-  value: number;
-  barClass: string;
-}) {
+function StatBar({ label, value, barClass }: { label: string; value: number; barClass: string }) {
   const clamped = Math.max(0, Math.min(100, Math.round(value)));
   return (
-    <div className="rounded-lg border border-ink-800 bg-ink-950/60 px-2.5 py-2">
-      <div className="flex items-center justify-between gap-1 text-xs">
-        <span className="font-medium text-ink-300">
-          <span aria-hidden="true" className="mr-1">
-            {icon}
-          </span>
-          {label}
-        </span>
-        <span className="font-mono font-semibold tabular-nums text-ink-100">
-          {clamped}%
-        </span>
+    <div>
+      <div className="flex items-center justify-between gap-1 text-xs text-ink-400">
+        {label}
+        <span className="font-semibold tabular-nums text-ink-100">{clamped}%</span>
       </div>
-      <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-ink-800">
-        <div
-          className={`h-full rounded-full ${barClass}`}
-          style={{ width: `${clamped}%` }}
-        />
+      <div className="mt-1.5 h-[5px] w-full overflow-hidden rounded-full bg-ink-800">
+        <div className={`h-full rounded-full ${barClass}`} style={{ width: `${clamped}%` }} />
       </div>
     </div>
   );
@@ -370,6 +389,7 @@ export default function CountryDetailsDrawer({
   scenarioId = DEFAULT_SCENARIO,
   onSelectThread,
   onToggleMinimized,
+  onClose,
 }: CountryDetailsDrawerProps) {
   const scenario: CountryScenarioData = useMemo(
     () => getCountryData(selected.tag, selected.name, scenarioId),
@@ -377,6 +397,8 @@ export default function CountryDetailsDrawer({
   );
 
   const [hoveredSpiritId, setHoveredSpiritId] = useState<string | null>(null);
+  // Phones: which nation's full details are open ("More about").
+  const [expandedFor, setExpandedFor] = useState<string | null>(null);
 
   const isMajor = MAJOR_TAGS.has(scenario.tag);
 
@@ -404,113 +426,118 @@ export default function CountryDetailsDrawer({
     label: meta.label,
   }));
 
+  const status = SELECTION_TAGS[selectionKind];
+  const flag = (
+    <img
+      src={scenario.flagUrl || `/assets/flags/${scenario.tag}.png`}
+      alt={`${scenario.name} flag`}
+      className="gm-cut h-9 w-14 shrink-0 object-cover [--cut:6px]"
+      onError={(event) => {
+        event.currentTarget.src = placeholderFlag(scenario.tag);
+      }}
+    />
+  );
+
   if (minimized) {
     return (
-      <aside className="country-drawer absolute right-0 top-20 z-[1000] flex w-12 flex-col items-center gap-3 border-l border-ink-800 bg-ink-900/95 py-3 text-ink-100 shadow-2xl backdrop-blur-md">
+      <aside className="country-drawer absolute right-0 top-14 z-[1000] hidden w-12 flex-col items-center gap-3 border-l border-ink-800 bg-ink-950 py-3 text-ink-100 sm:flex">
         <button
           type="button"
-          aria-label="Expand country details"
-          title="Expand country details"
-          className="rounded-md border border-ink-700 bg-ink-800/80 px-2 py-2 text-sm text-ink-300 transition-colors hover:border-ink-500 hover:text-white"
+          aria-label="Open the nation panel"
+          title="Open the nation panel"
+          className="gm-btn gm-btn-quiet h-8 w-8 p-0"
           onClick={onToggleMinimized}
         >
-          ◀
+          <PanelRightOpen aria-hidden />
         </button>
         <img
           src={scenario.flagUrl || `/assets/flags/${scenario.tag}.png`}
           alt={`${scenario.name} flag`}
-          className="h-6 w-9 rounded-sm border border-ink-700 object-cover"
+          className="h-6 w-9 object-cover outline outline-1 outline-white/10"
           onError={(event) => {
             event.currentTarget.src = placeholderFlag(scenario.tag);
           }}
         />
-        <span className="text-[9px] font-semibold uppercase tracking-wide text-ink-400 [writing-mode:vertical-rl]">
-          {scenario.name}
-        </span>
+        <span className="text-[11px] font-semibold text-ink-400 [writing-mode:vertical-rl]">{scenario.name}</span>
       </aside>
     );
   }
 
+  const expanded = expandedFor === scenario.tag;
+  const totalResources = resourceSegments.reduce((sum, segment) => sum + segment.value, 0);
+
   return (
-    <aside data-tour="map.details" className="country-drawer absolute bottom-0 right-0 top-20 z-[1000] flex w-full flex-col pb-24 sm:w-[380px] sm:pb-0 border-l border-ink-800 bg-ink-900/95 text-ink-100 shadow-2xl backdrop-blur-md">
-      {/* Header: flag + name + Major/Minor badge. The selection chip and
-          the minimize/close controls live in the top bar (TopBar.tsx). */}
-      <div className="border-b border-ink-800 p-4">
-        <div className="flex items-center gap-3">
-          <img
-            src={scenario.flagUrl || `/assets/flags/${scenario.tag}.png`}
-            alt={`${scenario.name} flag`}
-            className="h-9 w-14 shrink-0 rounded-sm border border-ink-700 object-cover"
-            onError={(event) => {
-              event.currentTarget.src = placeholderFlag(scenario.tag);
-            }}
-          />
-          <div className="min-w-0 flex-1">
-            <h2 className="truncate text-base font-semibold leading-tight">
-              {scenario.name}
-            </h2>
-            <span
-              className={`mt-0.5 inline-block rounded-full border px-2 py-px text-[10px] font-semibold uppercase tracking-wide ${
-                isMajor
-                  ? "border-brand-400/40 bg-brand-400/10 text-brand-300"
-                  : "border-ink-600 bg-ink-800/70 text-ink-400"
-              }`}
-            >
-              {isMajor ? "Major Power" : "Minor Nation"}
-            </span>
-          </div>
+    <aside
+      data-tour="map.details"
+      className={`country-drawer absolute inset-x-0 bottom-0 z-[1000] flex max-h-[calc(100%-9.5rem)] flex-col border-t border-ink-800 bg-ink-950 pb-28 text-ink-100 sm:inset-x-auto sm:right-0 sm:top-14 sm:max-h-none sm:w-[380px] sm:border-l sm:border-t-0 sm:pb-0`}
+    >
+      {/* Header: flag, name, Major / Minor and how this nation stands for
+          you; fold (wide screens) and close. */}
+      <div className="flex items-center gap-3 border-b border-ink-800 py-3.5 pl-4 pr-2.5">
+        {flag}
+        <div className="min-w-0 flex-1">
+          <h2 className="gm-title truncate text-[26px]">{scenario.name}</h2>
+          <p className="mt-1.5 flex flex-wrap items-center gap-1.5">
+            <span className="gm-tag bg-ink-800 text-ink-300">{isMajor ? "Major power" : "Minor nation"}</span>
+            <span className={`gm-tag gm-tag-dot ${status.className}`}>{status.label}</span>
+          </p>
+        </div>
+        <div className="flex shrink-0 self-start">
+          <button
+            type="button"
+            aria-label="Fold the nation panel"
+            title="Fold the panel"
+            className="gm-btn gm-btn-quiet hidden h-8 w-8 p-0 sm:inline-flex"
+            onClick={onToggleMinimized}
+          >
+            <PanelRightClose aria-hidden />
+          </button>
+          <button type="button" aria-label="Close the nation panel" title="Close" className="gm-btn gm-btn-quiet h-8 w-8 p-0" onClick={onClose}>
+            <X aria-hidden />
+          </button>
         </div>
       </div>
 
+      {/* Phones: the sheet stays short until "More about" opens the rest. */}
+      <button
+        type="button"
+        onClick={() => setExpandedFor(expanded ? null : scenario.tag)}
+        aria-expanded={expanded}
+        className="gm-btn gm-btn-quiet mx-2.5 my-1.5 h-8 self-start px-2 sm:hidden"
+      >
+        {expanded ? "Less" : `More about ${scenario.name}`}
+        <ChevronDown aria-hidden className={expanded ? "rotate-180" : ""} />
+      </button>
+
       {/* Body */}
-      <div className="flex-1 space-y-5 overflow-y-auto p-4">
+      <div className={`${expanded ? "block" : "hidden"} min-h-0 flex-1 space-y-[18px] overflow-y-auto p-4 sm:block`}>
         {/* Leader & ideology */}
-        <section className="rounded-lg border border-ink-800 bg-ink-950/40 p-3">
+        <section className="gm-plate p-3">
           <div className="flex items-center gap-3">
             <LeaderPortrait scenario={scenario} />
             <div className="min-w-0 flex-1">
-              <p className="text-[11px] uppercase tracking-wide text-ink-400">
-                Leader
-              </p>
-              <p className="truncate text-sm font-semibold">
-                {scenario.leader.name}
-              </p>
-              <p className="mt-0.5 text-xs text-ink-400">
-                {scenario.ideology.name}
-              </p>
+              <p className="text-[11.5px] text-ink-500">Leader</p>
+              <p className="text-[15px] font-semibold leading-tight text-ink-100">{scenario.leader.name}</p>
+              <p className="mt-0.5 text-[12.5px] text-ink-400">{scenario.ideology.name}</p>
             </div>
-            <Donut segments={ideologySegments} size={72} thickness={9}>
-              <span className="text-sm font-bold leading-none">
+            <Donut segments={ideologySegments} size={76} thickness={9} hole="bg-ink-900">
+              <span className="font-display text-xl font-extrabold leading-none text-ink-100">
                 {scenario.ideology.rulingPartyShare}%
               </span>
-              <span className="text-[9px] uppercase tracking-wide text-ink-400">
-                Ruling
-              </span>
+              <span className="text-[10.5px] text-ink-400">ruling</span>
             </Donut>
           </div>
 
           {/* Stability & War Support */}
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <StatBar
-              icon="⚖️"
-              label="Stability"
-              value={scenario.stability}
-              barClass="bg-emerald-400"
-            />
-            <StatBar
-              icon="⚔️"
-              label="War Support"
-              value={scenario.warSupport}
-              barClass="bg-brand-400"
-            />
+          <div className="mt-3 grid grid-cols-2 gap-3.5">
+            <StatBar label="Stability" value={scenario.stability} barClass="bg-sky-300" />
+            <StatBar label="War support" value={scenario.warSupport} barClass="bg-[oklch(66%_0.09_60)]" />
           </div>
         </section>
 
         {/* National spirits */}
         <section>
-          <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-ink-400">
-            National Spirits
-          </h3>
+          <h3 className="mb-2 text-xs font-semibold text-ink-500">National spirits</h3>
           {scenario.nationalSpirits.length === 0 ? (
             <p className="text-xs text-ink-500">No national spirits.</p>
           ) : (
@@ -519,10 +546,8 @@ export default function CountryDetailsDrawer({
                 {scenario.nationalSpirits.map((spirit) => (
                   <div
                     key={spirit.id}
-                    className={`h-12 w-12 cursor-help overflow-hidden rounded-md border bg-ink-800/80 shadow-sm transition-colors ${
-                      hoveredSpiritId === spirit.id
-                        ? "border-brand-400/80"
-                        : "border-ink-700"
+                    className={`gm-cut h-12 w-12 cursor-help p-1 transition-colors [--cut:8px] ${
+                      hoveredSpiritId === spirit.id ? "bg-ink-700" : "bg-ink-800"
                     }`}
                     onMouseEnter={() => setHoveredSpiritId(spirit.id)}
                     onMouseLeave={() =>
@@ -531,7 +556,7 @@ export default function CountryDetailsDrawer({
                       )
                     }
                   >
-                    <SpiritIcon spirit={spirit} className="h-full w-full object-cover" />
+                    <SpiritIcon spirit={spirit} className="h-full w-full object-contain" />
                   </div>
                 ))}
               </div>
@@ -550,72 +575,28 @@ export default function CountryDetailsDrawer({
 
         {/* Industrial capacity */}
         <section>
-          <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-ink-400">
-            Industrial Capacity
-          </h3>
+          <h3 className="mb-2 text-xs font-semibold text-ink-500">Industrial capacity</h3>
           <div className="grid grid-cols-3 gap-2">
-            {(
-              [
-                [
-                  "Civilian",
-                  scenario.industry.civilianFactories,
-                  "border-brand-800/70 bg-brand-950/50",
-                ],
-                [
-                  "Military",
-                  scenario.industry.militaryFactories,
-                  "border-green-800/70 bg-green-950/50",
-                ],
-                [
-                  "Dockyards",
-                  scenario.industry.navalDockyards,
-                  "border-blue-800/70 bg-blue-950/50",
-                ],
-              ] as const
-            ).map(([label, value, tone]) => (
-              <div
-                key={label}
-                className={`rounded-lg border p-2.5 text-center ${tone}`}
-              >
-                <p className="text-xl font-bold tabular-nums">{value}</p>
-                <p className="mt-0.5 text-[10px] uppercase tracking-wide text-ink-400">
-                  {label}
-                </p>
-              </div>
-            ))}
+            <NumberBox value={scenario.industry.civilianFactories} label="Civilian" note="factories" tone="brown" />
+            <NumberBox value={scenario.industry.militaryFactories} label="Military" note="factories" tone="green" />
+            <NumberBox value={scenario.industry.navalDockyards} label="Dockyards" note="naval" tone="blue" />
           </div>
         </section>
 
         {/* Resources */}
         <section>
-          <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-ink-400">
-            Resources
-          </h3>
-          <div className="flex items-center gap-4">
-            <Donut segments={resourceSegments} size={112} thickness={16}>
-              <span className="text-[10px] uppercase tracking-wide text-ink-400">
-                Total
-              </span>
-              <span className="text-lg font-bold tabular-nums">
-                {resourceSegments.reduce((sum, segment) => sum + segment.value, 0)}
-              </span>
+          <h3 className="mb-2 text-xs font-semibold text-ink-500">Resources</h3>
+          <div className="flex items-center gap-[18px]">
+            <Donut segments={resourceSegments} size={112} thickness={15}>
+              <span className="text-[10.5px] text-ink-400">Total</span>
+              <span className="font-display text-xl font-extrabold leading-none text-ink-100">{totalResources}</span>
             </Donut>
-            <ul className="flex-1 space-y-1.5">
+            <ul className="flex-1 space-y-1">
               {RESOURCE_META.map((meta) => (
-                <li
-                  key={meta.key}
-                  className="flex items-center justify-between text-xs"
-                >
-                  <span className="flex items-center gap-2 text-ink-300">
-                    <span
-                      className="inline-block h-2.5 w-2.5 rounded-full"
-                      style={{ background: meta.color }}
-                    />
-                    {meta.label}
-                  </span>
-                  <span className="font-mono tabular-nums text-ink-200">
-                    {scenario.resources[meta.key]}
-                  </span>
+                <li key={meta.key} className="flex items-center gap-2 text-[12.5px] text-ink-300">
+                  <span className="inline-block h-[9px] w-[9px] rounded-full" style={{ background: meta.color }} />
+                  {meta.label}
+                  <span className="ml-auto font-semibold tabular-nums text-ink-100">{scenario.resources[meta.key]}</span>
                 </li>
               ))}
             </ul>
@@ -624,97 +605,57 @@ export default function CountryDetailsDrawer({
 
         {/* Armed forces */}
         <section>
-          <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-ink-400">
-            Armed Forces
-          </h3>
+          <h3 className="mb-2 text-xs font-semibold text-ink-500">Armed forces</h3>
           <div className="grid grid-cols-3 gap-2">
-            <div className="rounded-lg border border-green-400/50 bg-green-300/20 p-2.5 text-center">
-              <p className="text-xl font-bold tabular-nums">
-                {scenario.armedForces.divisions.toLocaleString()}
-              </p>
-              <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-green-200">
-                Army
-              </p>
-              <p className="text-[9px] text-green-200/60">Divisions</p>
-            </div>
-            <div className="rounded-lg border border-sky-400/50 bg-sky-300/20 p-2.5 text-center">
-              <p className="text-xl font-bold tabular-nums">
-                {scenario.armedForces.totalWarships.toLocaleString()}
-              </p>
-              <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-200">
-                Navy
-              </p>
-              <p className="text-[9px] text-sky-200/60">Warships</p>
-            </div>
-            <div className="rounded-lg border border-rose-400/50 bg-rose-300/20 p-2.5 text-center">
-              <p className="text-xl font-bold tabular-nums">
-                {scenario.armedForces.totalAircraft.toLocaleString()}
-              </p>
-              <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-rose-200">
-                Air Force
-              </p>
-              <p className="text-[9px] text-rose-200/60">Aircraft</p>
-            </div>
+            <NumberBox value={scenario.armedForces.divisions} label="Divisions" note="army" tone="green" />
+            <NumberBox value={scenario.armedForces.totalWarships} label="Warships" note="navy" tone="blue" />
+            <NumberBox value={scenario.armedForces.totalAircraft} label="Aircraft" note="air force" tone="red" />
           </div>
         </section>
 
         {/* Locked / Co-Op notices */}
         {selectionKind === "locked" && (
-          <p className="rounded-md border border-rose-400/30 bg-rose-400/10 p-2.5 text-xs text-rose-100">
-            This nation is already taken by {ownerHandle(ownerLabel)} in this
-            lobby.
+          <p className="gm-plate bg-rose-950/50 p-2.5 text-xs text-rose-100 [--line:color-mix(in_oklab,var(--color-rose-400)_30%,transparent)]">
+            This nation is already taken by {ownerHandle(ownerLabel)} in this lobby.
           </p>
         )}
         {selectionKind === "coop" && (
-          <p className="rounded-md border border-sky-300/40 bg-sky-300/10 p-2.5 text-xs text-sky-100">
-            This major power is held by {ownerHandle(ownerLabel)}. You can ask
-            to co-op it.
+          <p className="gm-plate bg-sky-950/50 p-2.5 text-xs text-sky-100 [--line:color-mix(in_oklab,var(--color-sky-300)_35%,transparent)]">
+            This major power is held by {ownerHandle(ownerLabel)}. You can ask to co-op it.
           </p>
         )}
       </div>
 
-      {/* Bottom bar: lobby picker only. The reserve / unreserve actions live
-          in the glowing bottom-center button rendered by MapViewer. */}
-      <div data-tour="map.gamePicker" className="border-t border-ink-800 p-4">
-        {authUser ? (
-          <>
-            <label
-              htmlFor="game-select"
-              className="mb-1 block text-xs text-ink-400"
-            >
-              Game lobby
-            </label>
+      {/* Signed in: which lobby the map shows. The reserve / unreserve
+          actions live in the glowing button MapViewer draws over the map. */}
+      {authUser && (
+        <div data-tour="map.gamePicker" className={`${expanded ? "block" : "hidden"} border-t border-ink-800 p-4 sm:block`}>
+          <label htmlFor="game-select" className="mb-1 block text-xs text-ink-400">
+            Game lobby
+          </label>
+          <div className="gm-field">
             <select
               id="game-select"
-              className="w-full rounded border border-ink-700 bg-ink-800 px-2 py-1.5 text-sm text-ink-100"
               value={selectedThread}
               onChange={(event) => onSelectThread(event.target.value)}
               disabled={games.length === 0}
             >
-              {games.length === 0 && (
-                <option value="">No active lobbies</option>
-              )}
+              {games.length === 0 && <option value="">No active lobbies</option>}
               {games.map((game) => (
                 <option key={game.thread_id} value={game.thread_id}>
-                  {game.game_started ? "🔴 In progress · " : ""}
+                  {game.game_started ? "In progress: " : ""}
                   {game.thread_name ?? game.mode ?? game.thread_id}
                 </option>
               ))}
             </select>
-            {selectionKind === "self" && mySlot && (
-              <p className="mt-2 text-xs text-emerald-400">
-                ✓ You hold{" "}
-                <span className="font-medium">{mySlot.slot_key}</span> in this
-                lobby.
-              </p>
-            )}
-          </>
-        ) : (
-          <p className="text-xs text-ink-400">
-            Login with Discord to reserve a nation.
-          </p>
-        )}
-      </div>
+          </div>
+          {selectionKind === "self" && mySlot && (
+            <p className="mt-2 text-xs text-emerald-300">
+              You hold <span className="font-medium">{mySlot.slot_key}</span> in this lobby.
+            </p>
+          )}
+        </div>
+      )}
     </aside>
   );
 }

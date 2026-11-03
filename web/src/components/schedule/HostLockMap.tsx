@@ -9,7 +9,7 @@ import {
   HighlightsBridge,
   MAX_ZOOM,
   MapSetup,
-  OCEAN_BLUE,
+  OCEAN,
   buildRosterNations,
   computePixelWorld,
   createPaddedRenderer,
@@ -194,14 +194,14 @@ export default function HostLockMap({
 
   if (error) {
     return (
-      <div className="flex h-full w-full items-center justify-center bg-[#16283b] p-4 text-sm text-red-300">
+      <div className="flex h-full w-full items-center justify-center bg-[#0f1d21] p-4 text-sm text-red-300">
         {error}
       </div>
     );
   }
   if (!current) {
     return (
-      <div className="flex h-full w-full items-center justify-center bg-[#16283b] text-sm text-ink-400">
+      <div className="flex h-full w-full items-center justify-center bg-[#0f1d21] text-sm text-ink-400">
         Loading map…
       </div>
     );
@@ -231,7 +231,7 @@ export default function HostLockMap({
       attributionControl={false}
       zoomControl={false}
       className="h-full w-full"
-      style={{ background: OCEAN_BLUE, cursor: "pointer" }}
+      style={{ background: OCEAN, cursor: "pointer" }}
     >
       <MapSetup world={world} initialViewRef={viewIntentRef} onViewportChange={handleViewportChange} />
       <FocusController request={focusRequest} geoJsonRef={geoJsonRef} />

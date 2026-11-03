@@ -47,7 +47,7 @@ import { submitScheduleRequest } from "./useRequestPoller";
 const HostLockMap = dynamic(() => import("./HostLockMap"), {
   ssr: false,
   loading: () => (
-    <div className="flex h-full w-full items-center justify-center bg-[#16283b] text-sm text-ink-400">
+    <div className="flex h-full w-full items-center justify-center bg-[#0f1d21] text-sm text-ink-400">
       Loading map…
     </div>
   ),
