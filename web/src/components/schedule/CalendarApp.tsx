@@ -424,8 +424,9 @@ function DayCell({
   const closed = !past && !isOpenDay(date, today, lastDay);
   const bookable = isOpenDay(date, today, lastDay) && !lock;
   const sorted = slots.slice().sort((a, b) => a.game_timestamp - b.game_timestamp);
-  const visible = sorted.slice(0, pending.length > 0 ? 1 : 2);
-  const more = sorted.length - visible.length;
+  // Two or more games share one card's space as slanted slices (three at most, then "+N").
+  const slices = sorted.length > 3 ? sorted.slice(0, 2) : sorted;
+  const extra = sorted.length - slices.length;
 
   return (
     <div
@@ -501,28 +502,19 @@ function DayCell({
         ))}
       </div>
       <div className="hidden min-w-0 flex-col gap-[5px] sm:flex">
-        {visible.map((slot) => {
-          const state = gameState(slot, nowSec);
-          const over = state === "ended" || state === "cancelled";
-          return (
-            <span
-              key={slot.slot_id}
-              data-game-state={state}
-              className={`gm-game gm-cut block min-w-0 py-[5px] pl-2 pr-2 text-xs leading-tight ${slot.add_on ? "gm-addon" : ""} ${
-                slot.mine ? "gm-mine" : ""
-              }`}
-              title={slotTitle(slot, state)}
-            >
-              <span className={`flex items-center gap-1.5 font-bold ${over ? "text-ink-400" : "text-ink-100"}`}>
-                <ModeIcon mode={slot.mode} className="h-[13px] w-[13px] shrink-0 text-ink-300" />
-                <span className={`tabular-nums ${state === "cancelled" ? "line-through" : ""}`}>
-                  {timeInZone(slot.game_timestamp * 1000, timeZone)}
-                </span>
+        {sorted.length === 1 && <GameCard slot={sorted[0]} timeZone={timeZone} nowSec={nowSec} />}
+        {sorted.length > 1 && (
+          <div className={`gm-split ${slices.length + (extra ? 1 : 0) >= 3 ? "gm-split-3" : ""}`}>
+            {slices.map((slot) => (
+              <GameSlice key={slot.slot_id} slot={slot} timeZone={timeZone} nowSec={nowSec} compact={sorted.length > 2} />
+            ))}
+            {extra > 0 && (
+              <span className="gm-slice gm-slice-more font-bold" title={`${extra} more ${extra === 1 ? "game" : "games"}`}>
+                +{extra}
               </span>
-              <span className="block truncate text-ink-400">{modeLabel(slot.mode)}</span>
-            </span>
-          );
-        })}
+            )}
+          </div>
+        )}
         {pending.map((request) => (
           <span
             key={request.request_id}
@@ -538,10 +530,76 @@ function DayCell({
             </span>
           </span>
         ))}
-        {more > 0 && <span className="px-1 text-[11px] font-semibold text-ink-400">+{more} more</span>}
         {loading && inMonth && <span className="h-3 w-3/4 animate-pulse bg-ink-800" />}
       </div>
     </div>
+  );
+}
+
+/** One game in a day square. */
+function GameCard({ slot, timeZone, nowSec }: { slot: CalendarSlot; timeZone: string; nowSec: number }) {
+  const state = gameState(slot, nowSec);
+  const over = state === "ended" || state === "cancelled";
+  return (
+    <span
+      data-game-state={state}
+      className={`gm-game gm-cut block min-w-0 py-[5px] pl-2 pr-2 text-xs leading-tight ${slot.add_on ? "gm-addon" : ""} ${
+        slot.mine ? "gm-mine" : ""
+      }`}
+      title={slotTitle(slot, state)}
+    >
+      <span className={`flex items-center gap-1.5 font-bold ${over ? "text-ink-400" : "text-ink-100"}`}>
+        <ModeIcon mode={slot.mode} className="h-[13px] w-[13px] shrink-0 text-ink-300" />
+        <span className={`tabular-nums ${state === "cancelled" ? "line-through" : ""}`}>
+          {timeInZone(slot.game_timestamp * 1000, timeZone)}
+        </span>
+      </span>
+      <span className="block truncate text-ink-400">{modeLabel(slot.mode)}</span>
+    </span>
+  );
+}
+
+/** One game of a busy day: a slanted slice. `compact` (3 slices): icon and time only. */
+function GameSlice({
+  slot,
+  timeZone,
+  nowSec,
+  compact,
+}: {
+  slot: CalendarSlot;
+  timeZone: string;
+  nowSec: number;
+  compact: boolean;
+}) {
+  const state = gameState(slot, nowSec);
+  const over = state === "ended" || state === "cancelled";
+  const time = (
+    <span className={`tabular-nums font-bold ${state === "cancelled" ? "line-through" : ""}`}>
+      {timeInZone(slot.game_timestamp * 1000, timeZone)}
+    </span>
+  );
+  const icon = <ModeIcon mode={slot.mode} className="h-[13px] w-[13px] shrink-0 text-ink-300" />;
+  return (
+    <span
+      data-game-state={state}
+      className={`gm-slice ${slot.add_on ? "gm-addon" : ""} ${slot.mine ? "gm-mine" : ""} ${over ? "text-ink-400" : "text-ink-100"}`}
+      title={`${timeInZone(slot.game_timestamp * 1000, timeZone)} ${slotTitle(slot, state)}`}
+    >
+      {compact ? (
+        <>
+          {icon}
+          {time}
+        </>
+      ) : (
+        <>
+          <span className="flex min-w-0 items-center gap-1">
+            {icon}
+            {time}
+          </span>
+          <span className="truncate text-ink-400">{modeLabel(slot.mode)}</span>
+        </>
+      )}
+    </span>
   );
 }
 

@@ -619,13 +619,13 @@ function demoSlot(
 }
 
 function demoState(): DemoState {
-  const holder = globalThis as { __gmSchedulerDemoV5?: DemoState };
-  if (!holder.__gmSchedulerDemoV5) {
+  const holder = globalThis as { __gmSchedulerDemoV7?: DemoState };
+  if (!holder.__gmSchedulerDemoV7) {
     const nowSec = Math.floor(Date.now() / 1000);
     const today = utcDate(nowSec);
     const lockDate = addDays(today, 4);
     const soon = nowSec + 25 * 60;
-    holder.__gmSchedulerDemoV5 = {
+    holder.__gmSchedulerDemoV7 = {
       slots: [
         demoSlot(-2, 18, "Historical (Vanilla)", { status: "ended", announced: true }),
         demoSlot(0, 0, "Roleplay", {
@@ -662,12 +662,26 @@ function demoState(): DemoState {
         demoSlot(3, 20, "Kaiserreich (FFA)", { add_on: "randomizer", host_username: "casino_host", host_id: "300000000000000003" }),
         demoSlot(3, 17, "Roleplay (Millennium Dawn)", { host_username: "md_enjoyer", host_id: "400000000000000004" }),
         demoSlot(6, 16, "Historical (Oak)", { host_username: "oak_host" }),
+        demoSlot(1, 14, "Historical (BFFU)", { host_username: "bffu_host", host_id: "700000000000000007" }),
+        // A busy day: three games by different hosts (how a full day stacks).
+        demoSlot(5, 13, "Roleplay", {
+          host_username: "rp_regular",
+          host_id: "500000000000000005",
+          announced: true,
+          status: "announced",
+          add_on: "zombies",
+        }),
+        demoSlot(5, 15, "Historical (Vanilla)", { host_username: "vanilla_host", host_id: "600000000000000006" }),
+        demoSlot(5, 18, "Roleplay (Novum Vexillum)", {
+          host_id: DEMO_HOST.discord_id,
+          host_username: DEMO_HOST.username,
+        }),
       ],
       locks: [{ week: mondayOf(lockDate), day: weekdayName(lockDate), reason: "Server maintenance" }],
       requests: [],
     };
   }
-  return holder.__gmSchedulerDemoV5;
+  return holder.__gmSchedulerDemoV7;
 }
 
 function demoHostName(hostId: string): string {

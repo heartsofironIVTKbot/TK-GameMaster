@@ -53,7 +53,9 @@ grey ended, red cancelled (`GameState` in `web/src/lib/scheduleOptions.ts`,
 `.gm-game` / `[data-game-state]` in `globals.css`). An add-on blends purple
 into the status colour. The mode is an icon: masks for Roleplay, a tank for
 Historical (`ModeIcon.tsx`; Lucide has no tank). Yours is the bottom-right
-corner filled green. Other tags (announce time, locked nations) stay grey so
+corner filled green. A day with two or more games splits one card's space
+into slanted slices (`gm-split` / `gm-slice`; three at most, then "+N"), so
+busy days never make a row taller. Other tags (announce time, locked nations) stay grey so
 they don't read as a status. Mix colours with `color-mix(in oklab, …)`: in
 oklch, mixing into the near-black ink swings the hue (purple turns blue, red
 turns olive). The **Shared Calendar** (`/schedule/shared`,

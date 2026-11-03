@@ -145,6 +145,33 @@
   .gcard.addon::after { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(in oklab 100deg, transparent 35%, color-mix(in oklab, var(--addon) 22%, transparent)); }
   .legend i.addon-key { width: 3px; height: 12px; background: linear-gradient(var(--s-announced) 30%, var(--addon) 70%); }
   .tag-addon { color: oklch(80% 0.13 305); background: color-mix(in oklab, var(--addon) 18%, var(--ink-950)); }
+  .more { padding: 0 2px; font-size: 11px; font-weight: 600; color: var(--ink-400); }
+  /* Busy day, diagonal split: slanted slices in one card's space, 2px diagonal gaps. */
+  .split { display: flex; height: 40px; }
+  .split .sg { --tint: color-mix(in oklab, var(--s) 30%, var(--ink-800)); position: relative; flex: 1 1 0; min-width: 0; margin-left: -7px; padding: 0 9px 0 12px;
+    display: flex; flex-direction: column; justify-content: center; gap: 2px; background: var(--tint); font-size: 11.5px; line-height: 1.15; color: var(--ink-100);
+    clip-path: polygon(9px 0, 100% 0, calc(100% - 9px) 100%, 0 100%); }
+  .split .sg:first-child { margin-left: 0; padding-left: 8px; border-left: 3px solid var(--s); clip-path: polygon(7px 0, 100% 0, calc(100% - 9px) 100%, 0 100%, 0 7px); }
+  .split .sg:last-child { padding-right: 6px; clip-path: polygon(9px 0, 100% 0, 100% calc(100% - 7px), calc(100% - 7px) 100%, 0 100%); }
+  .split .sg:only-child { clip-path: none; }
+  .split .sg b { display: flex; align-items: center; gap: 4px; font-weight: 700; }
+  .split .sg span { color: var(--ink-400); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .split .sg em { font-style: normal; font-weight: 700; }
+  .split .sg svg { width: 13px; height: 13px; color: var(--ink-300); stroke-width: 2; }
+  .split.n3 .sg { align-items: center; padding-left: 10px; padding-right: 8px; }
+  .split.n3 .sg:first-child { padding-left: 5px; }
+  .split .sg.addon { background: linear-gradient(in oklab 100deg, var(--tint) 20%, color-mix(in oklab, var(--addon) 42%, var(--ink-800))); }
+  .split .sg.mine::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: var(--brand-400); }
+  .split .sg:last-child.mine::after { left: auto; right: 0; width: 11px; height: 11px; clip-path: polygon(100% 0, 100% 100%, 0 100%); }
+  .split .sg-more { --s: var(--ink-600); align-items: center; color: var(--ink-300); }
+  /* Busy day, one line each: icon, time, mode. */
+  .lgame { position: relative; display: flex; align-items: center; gap: 5px; height: 21px; padding: 0 6px 0 6px; --cut: 5px; border-left: 3px solid var(--s);
+    --tint: color-mix(in oklab, var(--s) 24%, var(--ink-800)); background: var(--tint); font-size: 11.5px; white-space: nowrap; overflow: hidden; }
+  .lgame em { font-style: normal; font-weight: 700; color: var(--ink-100); }
+  .lgame span { color: var(--ink-400); overflow: hidden; text-overflow: ellipsis; }
+  .lgame svg { width: 12px; height: 12px; flex: none; color: var(--ink-300); stroke-width: 2; }
+  .lgame.addon { background: linear-gradient(in oklab 100deg, var(--tint) 25%, color-mix(in oklab, var(--addon) 38%, var(--ink-800))); }
+  .lgame.mine::after { content: ""; position: absolute; right: 0; bottom: 0; width: 8px; height: 8px; background: var(--brand-400); clip-path: polygon(100% 0, 100% 100%, 0 100%); }
   .game.mine::after { content: ""; position: absolute; right: 0; bottom: 0; width: 11px; height: 11px; background: var(--brand-400); clip-path: polygon(100% 0, 100% 100%, 0 100%); }
   .month-foot { display: flex; align-items: center; gap: 16px; padding: 9px 14px; border-top: 1px solid var(--ink-800); font-size: 12px; color: var(--ink-400); }
   .month-foot .note { margin-left: auto; color: var(--ink-500); }
@@ -282,6 +309,7 @@
   <div class="seg">Page <div data-k="page"><button data-v="host">Calendar</button><button data-v="shared">Shared calendar</button><button data-v="setting">Server setting</button></div></div>
   <div class="seg" data-only="host">State <div data-k="state"><button data-v="overview">Overview</button><button data-v="day">Day picked</button></div></div>
   <div class="seg">Ended colour <div data-k="ended"><button data-v="grey">Grey</button><button data-v="violet">Violet</button><button data-v="bronze">Bronze</button></div></div>
+  <div class="seg" data-only="host">Busy days <div data-k="busy"><button data-v="stack">Stacked (now)</button><button data-v="split">Diagonal split</button><button data-v="lines">One line each</button></div></div>
   <div class="seg">Historical icon <div data-k="hicon"><button data-v="tank">Tank</button><button data-v="medal">Medal</button></div></div>
   <div class="seg">Size <div data-k="size"><button data-v="desk">Desktop</button><button data-v="phone">Phone</button></div></div>
 </div>
@@ -366,7 +394,7 @@
 
 <script>
   const TANK = '<svg class="lucide" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="14" width="20" height="6" rx="3"/><path d="M5 14v-2h14v2"/><path d="M8 12V9.5A1.5 1.5 0 0 1 9.5 8h4A1.5 1.5 0 0 1 15 9.5V12"/><path d="M15 10h7"/></svg>';
-  const state = { page: "host", state: "overview", ended: "grey", hicon: "tank", size: "desk" };
+  const state = { page: "host", state: "overview", ended: "grey", hicon: "tank", size: "desk", busy: "split" };
   const icon = (kind) => kind === "hist" ? (state.hicon === "tank" ? TANK : '<i data-lucide="medal"></i>') : '<i data-lucide="drama"></i>';
   const STATUS = { scheduled: "Scheduled", announced: "Announced", live: "On-going", ended: "Ended", cancelled: "Cancelled" };
 
@@ -375,11 +403,12 @@
     1: [["22:00", "Vanilla", "hist", "ended", false]],
     2: [["21:00", "Kaiserreich FFA", "rp", "cancelled", false]],
     3: [["14:03", "Roleplay", "rp", "live", true]],
-    4: [["23:00", "Roleplay", "rp", "scheduled", true, "Casino"]],
+    4: [["19:00", "Vanilla", "hist", "announced", false], ["23:00", "Roleplay", "rp", "scheduled", true, "Casino"]],
     5: [["22:00", "Their Finest Bruh", "hist", "announced", true, "Fortunes of War"]],
     6: [["21:00", "Millennium Dawn", "rp", "scheduled", false]],
-    8: [["20:00", "Novum Vexillum", "rp", "scheduled", false]],
+    8: [["17:00", "Roleplay", "rp", "announced", false, "Zombies"], ["19:00", "Vanilla", "hist", "scheduled", false], ["22:00", "Novum Vexillum", "rp", "scheduled", true]],
     9: [["20:00", "Hearts of Oak", "hist", "scheduled", false]],
+    13: [["16:00", "Kaiserreich FFA", "rp", "scheduled", false], ["18:00", "Vanilla", "hist", "scheduled", false], ["20:00", "Roleplay", "rp", "scheduled", true], ["22:30", "BFFU 2", "hist", "scheduled", false]],
   };
   const LOCKED = 7, TODAY = 3, PICKED = 4, LAST_BOOKABLE = 15;
   const cells = [];
@@ -392,12 +421,30 @@
   function gameHtml([time, name, kind, status, mine, addon]) {
     return `<div class="game cut ${mine ? "mine" : ""} ${addon ? "addon" : ""}" data-s="${status}" title="${STATUS[status]}${addon ? `, ${addon}` : ""}"><b>${icon(kind)}<em>${time}</em></b><span>${name}</span></div>`;
   }
+  /** A day's games in the chosen busy-day style. Every style keeps the day the same height. */
+  function dayGames(list) {
+    if (list.length <= 1 || state.busy === "stack") {
+      const shown = list.slice(0, 2).map(gameHtml).join("");
+      return shown + (list.length > 2 ? `<span class="more">+${list.length - 2} more</span>` : "");
+    }
+    if (state.busy === "lines") {
+      const shown = list.slice(0, 3).map(([time, name, kind, status, mine, addon]) =>
+        `<div class="lgame cut ${mine ? "mine" : ""} ${addon ? "addon" : ""}" data-s="${status}" title="${name}, ${STATUS[status]}${addon ? `, ${addon}` : ""}">${icon(kind)}<em>${time}</em><span>${name}</span></div>`).join("");
+      return shown + (list.length > 3 ? `<span class="more">+${list.length - 3} more</span>` : "");
+    }
+    // Diagonal split: one card's space, cut into slanted slices (three at most, then "+N").
+    const slices = list.length > 3 ? list.slice(0, 2) : list;
+    const extra = list.length - slices.length;
+    const n = slices.length + (extra ? 1 : 0);
+    return `<div class="split n${n}">${slices.map(([time, name, kind, status, mine, addon]) =>
+      `<div class="sg ${mine ? "mine" : ""} ${addon ? "addon" : ""}" data-s="${status}" title="${time} ${name}, ${STATUS[status]}${addon ? `, ${addon}` : ""}">${n === 2 ? `<b>${icon(kind)}<em>${time}</em></b><span>${name}</span>` : `${icon(kind)}<em>${time}</em>`}</div>`).join("")}${extra ? `<div class="sg sg-more"><em>+${extra}</em></div>` : ""}</div>`;
+  }
   function deskGrid() {
     return ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => `<div class="dow">${d}</div>`).join("") +
       cells.map((c) => {
         const lock = c.d === LOCKED ? '<span class="lock-tag"><i data-lucide="lock"></i>Locked</span>' : "";
         const add = c.inMonth && c.d >= TODAY && c.d <= LAST_BOOKABLE ? '<span class="add cut"><i data-lucide="plus"></i></span>' : "";
-        return `<div class="${dayClass(c)}"><span class="num"><b>${c.num}</b>${lock}${add}</span>${c.inMonth ? (GAMES[c.d] || []).map(gameHtml).join("") : ""}</div>`;
+        return `<div class="${dayClass(c)}"><span class="num"><b>${c.num}</b>${lock}${add}</span>${c.inMonth ? dayGames(GAMES[c.d] || []) : ""}</div>`;
       }).join("");
   }
   function phoneGrid() {
@@ -526,7 +573,7 @@
   function render() {
     document.querySelectorAll(".seg > div").forEach((seg) =>
       seg.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(state[seg.dataset.k] === b.dataset.v))));
-    document.querySelector('[data-only="host"]').classList.toggle("off", state.page !== "host");
+    document.querySelectorAll('[data-only="host"]').forEach((el) => el.classList.toggle("off", state.page !== "host"));
     document.body.classList.remove("ended-violet", "ended-bronze");
     if (state.ended !== "grey") document.body.classList.add(`ended-${state.ended}`);
     document.querySelectorAll("[data-tabs]").forEach((t) => (t.innerHTML =
