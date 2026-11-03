@@ -28898,6 +28898,29 @@ async def _web_resolve_new_host(payload: dict, owner_id: int, requester):
     return new_host, None
 
 
+_BOOKING_RANK_RULES = {"Assistant": "book_days_assistant", "Full": "book_days_full", "Senior": "book_days_senior"}
+
+
+def _booking_window_error(member, mode, game_ts: int) -> str | None:
+    """Server setting (Features → booking limits): a host may schedule only so
+    many days ahead, by their rank in the game's branch. Staff: no limit."""
+    if not SERVER_FEATURES.get("booking_limits", False) or _member_is_staff(member):
+        return None
+    branch = _host_branch_for_mode(mode)
+    rank = _host_rank(member, branch)
+    key = _BOOKING_RANK_RULES.get(rank, "book_days_assistant")
+    rules = (_rt().settings or {}).get("rules") or {}
+    try:
+        days = int(rules.get(key, SETTINGS_RULE_DEFAULTS[key]))
+    except (TypeError, ValueError):
+        days = SETTINGS_RULE_DEFAULTS[key]
+    latest = int(time.time()) + days * 86400
+    if int(game_ts) <= latest:
+        return None
+    who = f"{rank} {branch} hosts" if rank != "None" else "Hosts without a rank"
+    return f"❌ {who} can schedule games up to {days} days ahead — pick a time before <t:{latest}:f>."
+
+
 async def _process_web_schedule_create(req: dict) -> tuple[bool, dict | None, str | None]:
     """Turn one web calendar request into a schedule slot (the /schedule rules)."""
     payload = req.get("payload") or {}
@@ -28921,6 +28944,9 @@ async def _process_web_schedule_create(req: dict) -> tuple[bool, dict | None, st
         return False, None, f"❌ {fields['mode']} is turned off in this server's settings."
     if not _can_host_mode(member, fields["mode"]):
         return False, None, _host_branch_refusal(member, fields["mode"])
+    window_err = _booking_window_error(member, fields["mode"], fields["game_timestamp"])
+    if window_err:
+        return False, None, window_err
     slot = {
         "slot_id": slot_id,
         "guild_id": str(cur_gid()),
@@ -29041,6 +29067,10 @@ async def _web_edit_announced_slot(slot: dict, payload: dict, requester, new_hos
         changes["host"] = {"old": old_host_id, "new": new_host.id}
     if not changes:
         return True, {"slot_id": slot_id}, None
+    if "time" in changes:
+        window_err = _booking_window_error(requester, game.get("mode") or slot.get("mode"), new_ts)
+        if window_err:
+            return False, None, window_err
     if (new_week, new_day) != (_item_week(slot), slot.get("day")):
         lock_err = await _web_day_lock_error(new_week, new_day)
         if lock_err:
@@ -29112,6 +29142,10 @@ async def _process_web_schedule_update(req: dict) -> tuple[bool, dict | None, st
     if game_host is not None and not _can_host_mode(game_host, fields["mode"]):
         who = "You" if game_host.id == requester_id else game_host.display_name
         return False, None, _host_branch_refusal(game_host, fields["mode"], who=who)
+    if int(fields["game_timestamp"]) != int(slot.get("game_timestamp") or 0):
+        window_err = _booking_window_error(requester, fields["mode"], fields["game_timestamp"])
+        if window_err:
+            return False, None, window_err
     async with _schedule_slot_write_lock:
         schedule_data = list(await read_json(SCHEDULE_FILE))
         target = next(
@@ -32342,10 +32376,13 @@ OPTIONAL_HOST_RANKS = ("Assistant", "Senior")
 SETTINGS_RULE_DEFAULTS = {
     "trusted_commends": 5, "warnings_for_ban": 3, "host_full_at": 2, "host_senior_at": 4,
     "host_strip_at": 3, "valor_merit": 25, "valor_games": 50, "hosting_success_avg": 3.0,
+    # How many days ahead each host rank may schedule (features.booking_limits; staff: no limit).
+    "book_days_assistant": 3, "book_days_full": 5, "book_days_senior": 14,
 }
 SETTINGS_RULE_LIMITS = {
     "trusted_commends": (1, 100), "warnings_for_ban": (1, 20), "host_full_at": (1, 50), "host_senior_at": (1, 100),
     "host_strip_at": (1, 20), "valor_merit": (1, 1000), "valor_games": (0, 1000), "hosting_success_avg": (1.0, 5.0),
+    "book_days_assistant": (1, 90), "book_days_full": (1, 90), "book_days_senior": (1, 90),
 }
 # What each server has its own copy of (PER-SERVER RUNTIME).
 _PER_GUILD_DICTS = (
@@ -32369,7 +32406,7 @@ HOME_ONLY_COMMANDS: set[str] = set()
 # Features a server can switch off (server settings → Features).
 SERVER_FEATURES = {
     "valor_merit": True, "daily_role_check": True, "vip_auto_carry_over": True, "cross_server_ban_alerts": True,
-    "ticket_inactivity_close": True, "ironlegion": False,
+    "ticket_inactivity_close": True, "ironlegion": False, "share_calendar": False, "booking_limits": False,
 }
 # The host log webhook (HOST_LOG_WEBHOOK_URL) posts to one fixed channel of the
 # home server — it's only used once the home server has a host log channel.
@@ -32527,7 +32564,7 @@ def _default_guild_settings(name: str = "") -> dict:
         "rules": dict(SETTINGS_RULE_DEFAULTS),
         "features": {
             "valor_merit": True, "daily_role_check": True, "vip_auto_carry_over": True,
-            "cross_server_ban_alerts": True, "ticket_inactivity_close": True, "ironlegion": False,
+            "cross_server_ban_alerts": True, "ticket_inactivity_close": True, "ironlegion": False, "share_calendar": False, "booking_limits": False,
         },
         "addons": {"casino_panel_channel": None},
     }
@@ -32770,7 +32807,7 @@ def _new_runtime(gid: int) -> GuildRuntime:
     rt.dicts["HOST_PROMOTE_AT"] = {"Full": SETTINGS_RULE_DEFAULTS["host_full_at"], "Senior": SETTINGS_RULE_DEFAULTS["host_senior_at"]}
     rt.dicts["SERVER_FEATURES"] = {
         "valor_merit": True, "daily_role_check": True, "vip_auto_carry_over": True, "cross_server_ban_alerts": True,
-        "ticket_inactivity_close": True, "ironlegion": False,
+        "ticket_inactivity_close": True, "ironlegion": False, "share_calendar": False, "booking_limits": False,
     }
     for name in _PER_GUILD_LISTS:
         rt.lists[name] = []
