@@ -672,7 +672,8 @@ export default function Home() {
         />
       )}
 
-      {toolsActive && (
+      {/* On even without a game, so the button never seems to do nothing (the panel says why). */}
+      {host.enabled && (
         <HostToolsPanel
           lobbyName={activeGame?.game_started ? `🔴 In progress · ${lobbyName}` : lobbyName}
           games={games}

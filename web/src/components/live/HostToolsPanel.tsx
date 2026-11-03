@@ -190,7 +190,7 @@ export default function HostToolsPanel({
         <div className="min-w-0 flex-1 leading-tight">
           <p className="gm-title text-xl">Host Tool</p>
           <p className="truncate text-[11.5px] text-ink-400">
-            {lobbyName}
+            {selectedThread ? lobbyName : "No game open"}
             {demo ? " (preview)" : ""}
           </p>
         </div>
@@ -213,7 +213,16 @@ export default function HostToolsPanel({
         </button>
       </header>
 
-      {!collapsed && (
+      {!collapsed && !selectedThread && (
+        <div className="p-3">
+          <p className="gm-cut bg-ink-900 p-3 text-[13px] leading-snug text-ink-300 [--cut:10px]">
+            There&apos;s no game on the map to manage yet. Games show up here once the calendar announces them; then you can
+            add, move and remove players.
+          </p>
+        </div>
+      )}
+
+      {!collapsed && selectedThread && (
         <div className="roster-scroll flex-1 space-y-3 overflow-y-auto p-3">
           {games.length > 1 && (
             <label className="gm-field">
