@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowLeftRight, Bell, BellOff, Handshake, Puzzle, RotateCcw, UserMinus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { DropPoint, HostPlayer } from "./hostTypes";
 
@@ -68,7 +69,9 @@ export default function HostPrompt({
   const top = Math.max(8, Math.min(request.point.y + 8, window.innerHeight - 240));
 
   const button =
-    "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold text-ink-100 transition hover:bg-white/10";
+    "gm-cut flex w-full items-center gap-2.5 px-2.5 py-2 text-left text-[13px] font-semibold text-ink-100 transition-colors [--cut:7px] hover:bg-ink-900";
+  const icon = "h-4 w-4 shrink-0 text-ink-400";
+  const Dm = notify ? Bell : BellOff;
 
   return (
     <div
@@ -76,29 +79,41 @@ export default function HostPrompt({
       role="dialog"
       aria-label="Player action"
       style={{ left, top, width }}
-      className="gm-fade-up fixed z-[1600] rounded-2xl border border-white/15 bg-ink-950/95 p-2 shadow-2xl shadow-black/60 backdrop-blur-xl"
+      className="gm-plate gm-fade-up fixed z-[1600] bg-ink-950 p-1.5 [--cut:12px]"
     >
       {request.type === "occupied" && (
         <>
-          <p className="px-3 pb-1.5 pt-1 text-[11px] text-ink-400">
-            <b className="text-ink-200">{request.nationName}</b> is held by{" "}
-            <b className="text-ink-200">{request.occupant.name}</b>.
+          <p className="px-2 pb-2 pt-1 text-[12.5px] text-ink-400">
+            <b className="font-semibold text-ink-100">{request.nationName}</b> is held by{" "}
+            <b className="font-semibold text-ink-100">{request.occupant.name}</b>.
           </p>
           {request.player.from_slot && (
             <button type="button" className={button} onClick={() => onChoose({ kind: "swap" })}>
-              ⇄ Swap — {request.occupant.name} takes {slotLabel(request.player.from_slot)}
+              <ArrowLeftRight aria-hidden className={icon} />
+              <span className="min-w-0">
+                Swap
+                <span className="block text-[11.5px] font-medium text-ink-500">
+                  {request.occupant.name} gets {slotLabel(request.player.from_slot)}
+                </span>
+              </span>
             </button>
           )}
           <button type="button" className={button} onClick={() => onChoose({ kind: "replace" })}>
-            ↺ Replace — remove {request.occupant.name} from the game
+            <RotateCcw aria-hidden className={icon} />
+            <span className="min-w-0">
+              Replace
+              <span className="block text-[11.5px] font-medium text-ink-500">{request.occupant.name} leaves the game</span>
+            </span>
           </button>
           {request.allowCoop && (
             <button type="button" className={button} onClick={() => onChoose({ kind: "coop" })}>
-              🤝 Add {request.player.name} as co-op
+              <Handshake aria-hidden className={icon} />
+              Add {request.player.name} as co-op
             </button>
           )}
-          <p className="px-3 pb-1 pt-1.5 text-[10px] text-ink-500">
-            {notify ? "🔔 Both players get a DM." : "🔕 Notify players is off: nobody gets a DM."}
+          <p className="flex items-center gap-1.5 px-2 pb-1 pt-1.5 text-[11.5px] text-ink-500">
+            <Dm aria-hidden className="h-3.5 w-3.5" />
+            {notify ? "Both players get a DM." : "Notify players is off: nobody gets a DM."}
           </p>
         </>
       )}
@@ -111,40 +126,46 @@ export default function HostPrompt({
             if (fillerName.trim()) onChoose({ kind: "filler", name: fillerName.trim() });
           }}
         >
-          <p className="px-2 text-[11px] text-ink-400">
-            Add <b className="text-ink-200">{request.player.name}</b> as a filler named:
+          <p className="px-1 text-[12.5px] text-ink-400">
+            Add <b className="font-semibold text-ink-100">{request.player.name}</b> as a filler named:
           </p>
-          <input
-            autoFocus
-            value={fillerName}
-            maxLength={40}
-            onChange={(event) => setFillerName(event.target.value)}
-            className="w-full rounded-lg border border-white/10 bg-ink-900 px-3 py-2 text-sm text-ink-100 focus:border-brand-300/50 focus:outline-none"
-          />
-          <button type="submit" className="w-full rounded-lg bg-sky-500 px-3 py-2 text-xs font-black text-white hover:bg-sky-400">
+          <label className="gm-field">
+            <Puzzle aria-hidden className="h-4 w-4 shrink-0" />
+            <input
+              autoFocus
+              value={fillerName}
+              maxLength={40}
+              onChange={(event) => setFillerName(event.target.value)}
+              aria-label="Filler name"
+            />
+          </label>
+          <button type="submit" className="gm-btn gm-btn-primary h-9 w-full">
             Add filler
           </button>
         </form>
       )}
 
       {request.type === "remove" && (
-        <>
-          <p className="px-3 pb-1.5 pt-1 text-[11px] text-ink-400">
-            Remove <b className="text-ink-200">{request.player.name}</b> from{" "}
-            <b className="text-ink-200">{request.player.from_slot ? slotLabel(request.player.from_slot) : "the game"}</b>?
-            {notify ? " They get a DM." : " Notify players is off, so they won't be told."}
+        <div className="space-y-2 p-1">
+          <p className="px-1 text-[12.5px] text-ink-400">
+            Remove <b className="font-semibold text-ink-100">{request.player.name}</b> from{" "}
+            <b className="font-semibold text-ink-100">
+              {request.player.from_slot ? slotLabel(request.player.from_slot) : "the game"}
+            </b>
+            ?{notify ? " They get a DM." : " Notify players is off, so they won't be told."}
           </p>
-          <button
-            type="button"
-            className="w-full rounded-lg bg-rose-500 px-3 py-2 text-xs font-black text-white hover:bg-rose-400"
-            onClick={() => onChoose({ kind: "remove" })}
-          >
+          <button type="button" className="gm-btn h-9 w-full bg-rose-500 text-white hover:bg-rose-400" onClick={() => onChoose({ kind: "remove" })}>
+            <UserMinus aria-hidden />
             Remove player
           </button>
-        </>
+        </div>
       )}
 
-      <button type="button" className={`${button} mt-1 justify-center text-ink-400`} onClick={onCancel}>
+      <button
+        type="button"
+        className="mt-1 h-8 w-full border-t border-ink-800 text-[12.5px] text-ink-400 transition-colors hover:text-ink-100"
+        onClick={onCancel}
+      >
         Cancel
       </button>
     </div>

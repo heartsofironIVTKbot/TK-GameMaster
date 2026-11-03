@@ -1,5 +1,6 @@
 "use client";
 
+import { Check, Coins, FlagTriangleRight, GripVertical, Hand, Info, Play, Puzzle, Swords, X } from "lucide-react";
 import { useState } from "react";
 import { isPlayerDrag, readDragPlayer, writeDragPlayer, type HostPlayer } from "@/components/live/hostTypes";
 import { draftTeamOf, type DraftPoolEntry, type DraftViewer, type LobbyDraft } from "@/lib/draft";
@@ -7,10 +8,11 @@ import type { LobbyReservation } from "@/lib/types";
 import PreferenceBadge from "./PreferenceBadge";
 import type { DraftRequestState } from "./useDraft";
 
+/** The draft's phase, in the calendar's status colours: open green, running blue, done grey. */
 const PHASE_LABEL = {
-  ENLISTING: { text: "Sign-ups open", tone: "border-sky-400/40 bg-sky-500/15 text-sky-100" },
-  DRAFTING: { text: "Drafting", tone: "border-brand-300/50 bg-brand-400/15 text-brand-100" },
-  COMPLETE: { text: "Complete", tone: "border-emerald-400/40 bg-emerald-500/15 text-emerald-100" },
+  ENLISTING: { text: "Sign-ups open", tone: "bg-emerald-950 text-emerald-300" },
+  DRAFTING: { text: "Drafting", tone: "bg-sky-950 text-sky-300" },
+  COMPLETE: { text: "Complete", tone: "bg-ink-800 text-ink-400" },
 } as const;
 
 /**
@@ -64,79 +66,99 @@ export default function DraftPanel({
   const canPlace = myTurn || canManage;
 
   return (
-    <section data-tour="map.draftPanel" className="mx-3 mb-3 mt-1 rounded-2xl border border-brand-300/20 bg-gradient-to-b from-brand-500/[0.08] to-ink-950/40 p-3">
+    <section data-tour="map.draftPanel" className="gm-plate mx-2.5 mb-3 mt-2 p-3 [--cut:12px]">
       <div className="flex items-center gap-2">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-brand-300">🎯 Draft</p>
-        <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold ${phase.tone}`}>{phase.text}</span>
-        <span className="ml-auto text-[10px] font-semibold text-ink-400">
+        <span className="gm-title flex items-center gap-1.5 text-xl">
+          <Swords aria-hidden className="h-[17px] w-[17px] text-brand-400" strokeWidth={1.75} />
+          Draft
+        </span>
+        <span className={`gm-tag gm-tag-dot ${phase.tone}`}>{phase.text}</span>
+        <span className="ml-auto text-xs text-ink-400">
           {draft.pool.length}
           {draft.pool_cap ? `/${draft.pool_cap}` : ""} in pool
         </span>
       </div>
 
-      <div className="mt-2 grid grid-cols-2 gap-1.5">
-        {draft.teams.map((team) => {
+      <div className="mt-2.5 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-stretch gap-1.5">
+        {draft.teams.map((team, index) => {
           const onClock = draft.phase === "DRAFTING" && team.key === draft.current_turn;
           return (
-            <div
-              key={team.key}
-              className={`rounded-xl border px-2.5 py-1.5 ${
-                onClock ? "border-brand-300/70 bg-brand-400/10 shadow-[0_0_14px_rgba(251,191,36,0.25)]" : "border-white/10 bg-white/[0.03]"
-              }`}
-            >
-              <p className="truncate text-xs font-black text-white">🚩 {team.name}</p>
-              <p className="truncate text-[10px] text-ink-400">
-                {team.captain_name ?? "Captain TBA"}
-                {viewer?.captain_of === team.key && <span className="ml-1 rounded bg-brand-400/25 px-1 font-bold text-brand-100">You</span>}
-              </p>
-              <p className="text-[10px] text-ink-500">{placedCount(team.key)} placed</p>
+            <div key={team.key} className="contents">
+              {index > 0 && <span className="self-center font-display text-sm font-extrabold uppercase text-ink-500">vs</span>}
+              <div
+                className={`gm-cut min-w-0 px-2.5 py-2 [--cut:9px] ${
+                  onClock ? "bg-[oklch(21%_0.03_146)] shadow-[inset_0_2px_0_var(--color-brand-400)]" : "bg-ink-900"
+                }`}
+              >
+                <p className="truncate text-[13.5px] font-semibold text-ink-100">{team.name}</p>
+                <p className="flex min-w-0 items-center gap-1.5 text-[11.5px] text-ink-400">
+                  <span className="truncate">{team.captain_name ?? "Captain to be named"}</span>
+                  {viewer?.captain_of === team.key && (
+                    <span className="gm-tag h-[18px] bg-brand-950 px-2 text-[10.5px] text-brand-400">You</span>
+                  )}
+                </p>
+                <p className="text-[11.5px] text-ink-500">{placedCount(team.key)} placed</p>
+              </div>
             </div>
           );
         })}
       </div>
 
       {draft.phase === "DRAFTING" && turnTeam && (
-        <p className={`mt-2 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold ${myTurn ? "bg-brand-400 text-ink-950" : "bg-white/5 text-ink-200"}`}>
+        <p
+          className={`gm-cut mt-2 flex items-center gap-2 px-2.5 py-2 text-[12.5px] font-semibold [--cut:8px] ${
+            myTurn ? "bg-brand-400 text-brand-950" : "bg-ink-900 text-ink-300"
+          }`}
+        >
+          <Hand aria-hidden className="h-[15px] w-[15px] shrink-0" strokeWidth={2} />
           {myTurn
-            ? `👉 Your turn — pick ${draft.picks_remaining} player${draft.picks_remaining === 1 ? "" : "s"} from the pool below.`
-            : `👉 ${turnTeam.name}'s turn (${turnTeam.captain_name ?? "captain"}) · ${draft.picks_remaining} pick(s) left`}
+            ? `Your turn: pick ${draft.picks_remaining} player${draft.picks_remaining === 1 ? "" : "s"} from the pool`
+            : `${turnTeam.name}'s turn (${turnTeam.captain_name ?? "captain"}), ${draft.picks_remaining} pick${draft.picks_remaining === 1 ? "" : "s"} left`}
         </p>
       )}
       {draft.coin_winner && draft.phase !== "ENLISTING" && (
-        <p className="mt-1 text-[10px] text-ink-500">
-          🪙 {draft.teams.find((team) => team.key === draft.coin_winner)?.name} won the coin toss.
+        <p className="mt-2 flex items-center gap-1.5 text-xs text-ink-400">
+          <Coins aria-hidden className="h-[13px] w-[13px]" />
+          {draft.teams.find((team) => team.key === draft.coin_winner)?.name} won the coin toss.
         </p>
       )}
       {draft.phase === "ENLISTING" && (
-        <p className="mt-2 text-[11px] text-ink-400">The captains pick once the host starts the draft.</p>
+        <p className="mt-2 flex items-center gap-1.5 text-xs text-ink-400">
+          <Info aria-hidden className="h-[13px] w-[13px] shrink-0" />
+          The captains start picking once the host starts the draft.
+        </p>
       )}
       {draft.phase === "COMPLETE" && (
-        <p className="mt-2 text-[11px] text-emerald-200">Everyone is placed — see the nations below.</p>
+        <p className="gm-cut mt-2 flex items-center gap-1.5 bg-emerald-950 px-2.5 py-2 text-xs text-emerald-300 [--cut:8px]">
+          <Check aria-hidden className="h-[13px] w-[13px]" strokeWidth={2.5} />
+          Everyone is placed. See the nations below.
+        </p>
       )}
 
       {draft.phase === "ENLISTING" && !placed && (
         <button
           type="button"
           onClick={onJoin}
-          className={`mt-2 w-full rounded-xl px-3 py-2 text-xs font-black transition ${
-            mine ? "border border-white/10 bg-white/5 text-ink-200 hover:border-white/30" : "reserve-cta-glow bg-brand-400 text-ink-950 hover:bg-brand-300"
+          className={`gm-btn mt-2.5 h-[42px] w-full [--cut:9px] ${
+            mine ? "gm-btn-secondary text-[13px]" : "gm-btn-primary font-display text-lg font-extrabold uppercase tracking-[0.02em]"
           }`}
         >
-          {mine ? `Your entry: ${mine.preference} · change or leave` : "🎯 Join the draft"}
+          {mine ? `You're in as ${mine.preference}: change or leave` : "Join the draft"}
         </button>
       )}
 
       {canManage && draft.phase !== "COMPLETE" && (
-        <div className="mt-2 flex gap-1.5">
+        <div className="mt-2 grid grid-cols-2 gap-1.5">
           {draft.phase === "ENLISTING" && (
             <button
               type="button"
               onClick={onStart}
               disabled={request.busy || draft.pool.length === 0}
-              className="flex-1 rounded-lg bg-sky-500/25 px-2 py-1.5 text-[11px] font-black text-sky-100 hover:bg-sky-500/35 disabled:opacity-40"
+              className="gm-btn gm-btn-secondary h-8 text-[12.5px]"
               title={draft.pool.length === 0 ? "Nobody is in the pool yet" : "Close sign-ups, toss the coin and let the captains pick"}
             >
-              🚨 Start draft
+              <Play aria-hidden />
+              Start draft
             </button>
           )}
           <button
@@ -151,24 +173,25 @@ export default function DraftPanel({
             }}
             onBlur={() => setConfirmFinish(false)}
             disabled={request.busy}
-            className={`flex-1 rounded-lg px-2 py-1.5 text-[11px] font-black disabled:opacity-40 ${
-              confirmFinish ? "bg-rose-500 text-white" : "bg-white/5 text-ink-300 hover:bg-white/10"
+            className={`gm-btn h-8 text-[12.5px] ${draft.phase === "ENLISTING" ? "" : "col-span-2"} ${
+              confirmFinish ? "bg-rose-500 text-white hover:bg-rose-400" : "gm-btn-danger"
             }`}
             title="Clear whoever is left in the pool and mark the draft complete"
           >
-            {confirmFinish ? "Click again — clear the pool" : "🏁 Finish draft"}
+            <FlagTriangleRight aria-hidden />
+            {confirmFinish ? "Click again to clear the pool" : "Finish draft"}
           </button>
         </div>
       )}
 
       {state.phase !== "idle" && (
         <p
-          className={`mt-2 rounded-lg px-2.5 py-1.5 text-[11px] ${
+          className={`gm-cut mt-2 px-2.5 py-2 text-xs [--cut:8px] ${
             state.phase === "error"
-              ? "border border-rose-400/30 bg-rose-500/10 text-rose-100"
+              ? "bg-rose-950 text-rose-200"
               : state.phase === "done"
-                ? "border border-emerald-400/30 bg-emerald-500/10 text-emerald-100"
-                : "bg-white/5 text-ink-300"
+                ? "bg-emerald-950 text-emerald-200"
+                : "bg-ink-900 text-ink-300"
           }`}
         >
           {state.phase === "sending" && "Sending…"}
@@ -176,118 +199,121 @@ export default function DraftPanel({
           {state.phase === "error" && state.message}
           {state.phase === "done" && (
             <>
-              <b>{state.title}</b> — {state.summary}
+              <b>{state.title}</b>: {state.summary}
             </>
           )}
         </p>
       )}
 
-      <div className="mt-3">
-        <p className="mb-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-ink-500">
-          Pool{notes ? " · notes visible to hosts & captains" : ""}
-        </p>
-        {canDrag && draft.pool.length > 0 && (
-          <p className="mb-1.5 text-[10px] leading-snug text-ink-400">
-            ⠿ Drag a player onto a nation on the map or in the list below — onto a taken Major to add them as its co-op — or
-            onto 🧩 Filler.
-          </p>
-        )}
-        {draft.pool.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-white/10 px-3 py-3 text-center text-[11px] text-ink-500">
-            {draft.phase === "ENLISTING" ? "Nobody yet — be the first to join." : "The pool is empty."}
-          </p>
-        ) : (
-          <ul className="space-y-1">
-            {draft.pool.map((entry) => {
-              const note = notes?.[entry.user_id] ?? null;
-              const self = entry.user_id === myUserId;
-              const player: HostPlayer = { user_id: entry.user_id, name: entry.name, avatar_url: entry.avatar_url, from_slot: null };
-              return (
-                <li
-                  key={entry.user_id}
-                  draggable={canDrag}
-                  onDragStart={canDrag ? (event) => writeDragPlayer(event, player) : undefined}
-                  title={canDrag ? "Drag onto a nation, a taken Major (co-op) or Filler" : undefined}
-                  className={`rounded-xl border px-2.5 py-1.5 ${self ? "border-brand-300/40 bg-brand-400/[0.06]" : "border-white/5 bg-white/[0.02]"} ${
-                    canDrag ? "cursor-grab hover:border-brand-300/40 active:cursor-grabbing" : ""
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    {canDrag && <span className="-ml-1 text-[11px] text-ink-500" aria-hidden>⠿</span>}
-                    {entry.avatar_url ? (
-                      // Discord CDN avatar (plain <img>, like the roster).
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={entry.avatar_url} alt="" draggable={false} className="h-6 w-6 shrink-0 rounded-full" />
-                    ) : (
-                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-ink-700 text-[10px] font-black text-ink-200">
-                        {entry.name.charAt(0).toUpperCase()}
-                      </span>
-                    )}
-                    <span className="min-w-0 flex-1 truncate text-xs font-semibold text-ink-100">
-                      {entry.name}
-                      {self && <span className="ml-1 text-[10px] font-bold text-brand-200">(you)</span>}
-                    </span>
-                    <PreferenceBadge preference={entry.preference} size="xs" />
-                    {canPlace && (
-                      <button
-                        type="button"
-                        onClick={() => onPlace(entry)}
-                        disabled={request.busy}
-                        className="shrink-0 rounded-md bg-brand-400 px-2 py-0.5 text-[10px] font-black text-ink-950 hover:bg-brand-300 disabled:opacity-40"
-                        title={
-                          myTurn
-                            ? canManage
-                              ? "Pick for your team, or place them anywhere as the host"
-                              : "Pick for your team"
-                            : "Place them yourself (doesn't use a captain's turn)"
-                        }
-                      >
-                        {myTurn ? "Pick" : "Place"}
-                      </button>
-                    )}
-                    {canManage && (
-                      <button
-                        type="button"
-                        onClick={() => onRemove(entry)}
-                        disabled={request.busy}
-                        className="shrink-0 rounded-md px-1 text-[11px] text-ink-500 hover:text-rose-300 disabled:opacity-40"
-                        aria-label={`Remove ${entry.name} from the pool`}
-                        title="Remove from the pool"
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </div>
-                  {note && <p className="mt-1 pl-8 text-[11px] italic leading-snug text-ink-300">“{note}”</p>}
-                </li>
-              );
-            })}
-          </ul>
-        )}
-        {canDrag && draft.pool.length > 0 && (
-          <div
-            onDragOver={(event) => {
-              if (!isPlayerDrag(event)) return;
-              event.preventDefault();
-              event.dataTransfer.dropEffect = "move";
-              setFillerOver(true);
-            }}
-            onDragLeave={() => setFillerOver(false)}
-            onDrop={(event) => {
-              setFillerOver(false);
-              const player = readDragPlayer(event);
-              if (!player) return;
-              event.preventDefault();
-              onDropFiller(player);
-            }}
-            className={`mt-1.5 flex items-center justify-center gap-1.5 rounded-xl border border-dashed px-3 py-2 text-[11px] font-bold transition ${
-              fillerOver ? "border-emerald-300 bg-emerald-500/20 text-emerald-50" : "border-emerald-400/30 text-emerald-200/80"
-            }`}
-          >
-            🧩 Drop here — Filler (no map nation, still plays and gets the game details)
+      {draft.phase !== "COMPLETE" && (
+        <div className="mt-3.5">
+          <div className="mb-1.5 flex items-baseline justify-between px-0.5">
+            <p className="text-xs font-semibold text-ink-500">Pool ({draft.pool.length})</p>
+            {notes && <p className="text-[11px] text-ink-500">Notes: hosts and captains only</p>}
           </div>
-        )}
-      </div>
+          {canDrag && draft.pool.length > 0 && (
+            <p className="mb-1.5 px-0.5 text-[11.5px] leading-snug text-ink-400">
+              Drag a player onto a nation on the map or in the list (onto a taken Major to make them its co-op), or onto Filler.
+            </p>
+          )}
+          {draft.pool.length === 0 ? (
+            <p className="gm-cut bg-ink-900 px-3 py-3 text-center text-xs text-ink-400 [--cut:8px]">
+              {draft.phase === "ENLISTING" ? "Nobody yet. Be the first to join." : "The pool is empty."}
+            </p>
+          ) : (
+            <ul className="space-y-1">
+              {draft.pool.map((entry) => {
+                const note = notes?.[entry.user_id] ?? null;
+                const self = entry.user_id === myUserId;
+                const player: HostPlayer = { user_id: entry.user_id, name: entry.name, avatar_url: entry.avatar_url, from_slot: null };
+                return (
+                  <li
+                    key={entry.user_id}
+                    draggable={canDrag}
+                    onDragStart={canDrag ? (event) => writeDragPlayer(event, player) : undefined}
+                    title={canDrag ? "Drag onto a nation, a taken Major (co-op) or Filler" : undefined}
+                    className={`gm-cut py-1.5 pl-1 pr-1.5 [--cut:7px] ${self ? "bg-[oklch(21%_0.03_146)]" : "bg-ink-900"} ${
+                      canDrag ? "cursor-grab hover:bg-ink-800 active:cursor-grabbing" : ""
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      {canDrag ? <GripVertical aria-hidden className="h-3 w-3 shrink-0 text-ink-600" /> : <span className="w-1" />}
+                      {entry.avatar_url ? (
+                        // Discord CDN avatar (plain <img>, like the roster).
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={entry.avatar_url} alt="" draggable={false} className="h-[26px] w-[26px] shrink-0 rounded-full" />
+                      ) : (
+                        <span className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-ink-800 text-[11px] font-bold text-ink-100">
+                          {entry.name.charAt(0).toUpperCase()}
+                        </span>
+                      )}
+                      <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-ink-100">
+                        {entry.name}
+                        {self && <span className="ml-1 text-[11px] font-medium text-brand-400">(you)</span>}
+                      </span>
+                      <PreferenceBadge preference={entry.preference} size="xs" />
+                      {canPlace && (
+                        <button
+                          type="button"
+                          onClick={() => onPlace(entry)}
+                          disabled={request.busy}
+                          className="gm-btn gm-btn-primary h-7 px-2.5 text-xs [--cut:6px]"
+                          title={
+                            myTurn
+                              ? canManage
+                                ? "Pick for your team, or place them anywhere as the host"
+                                : "Pick for your team"
+                              : "Place them yourself (doesn't use a captain's turn)"
+                          }
+                        >
+                          {myTurn ? "Pick" : "Place"}
+                        </button>
+                      )}
+                      {canManage && (
+                        <button
+                          type="button"
+                          onClick={() => onRemove(entry)}
+                          disabled={request.busy}
+                          className="gm-btn gm-btn-quiet h-6 w-6 p-0 text-ink-500 [--cut:5px] hover:text-rose-300"
+                          aria-label={`Remove ${entry.name} from the pool`}
+                          title="Remove from the pool"
+                        >
+                          <X aria-hidden className="!h-3.5 !w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                    {note && <p className="mt-0.5 pl-[42px] text-[11.5px] italic leading-snug text-ink-400">“{note}”</p>}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          {canDrag && draft.pool.length > 0 && (
+            <div
+              onDragOver={(event) => {
+                if (!isPlayerDrag(event)) return;
+                event.preventDefault();
+                event.dataTransfer.dropEffect = "move";
+                setFillerOver(true);
+              }}
+              onDragLeave={() => setFillerOver(false)}
+              onDrop={(event) => {
+                setFillerOver(false);
+                const player = readDragPlayer(event);
+                if (!player) return;
+                event.preventDefault();
+                onDropFiller(player);
+              }}
+              className={`gm-cut gm-hatch-faint mt-1.5 flex h-10 items-center justify-center gap-2 text-xs font-semibold transition-colors [--cut:8px] ${
+                fillerOver ? "bg-sky-950 text-sky-200" : "bg-ink-900 text-ink-300"
+              }`}
+            >
+              <Puzzle aria-hidden className="h-[15px] w-[15px] text-sky-300" />
+              Drop a player here to make them a filler
+            </div>
+          )}
+        </div>
+      )}
     </section>
   );
 }

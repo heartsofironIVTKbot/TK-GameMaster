@@ -51,7 +51,7 @@ export default function HelpButton() {
     <div
       ref={rootRef}
       data-tour="help.button"
-      className={`fixed z-[5900] transition-[left] ${top ? "top-[106px] sm:top-[70px]" : "bottom-4"} ${right ? "right-4" : "left-4"} ${besidePanel ? "sm:left-[354px]" : ""} ${activeTourId ? "pointer-events-none" : ""}`}
+      className={`fixed z-[1200] transition-[left] ${top ? "top-[106px] sm:top-[70px]" : "bottom-4"} ${right ? "right-4" : "left-4"} ${besidePanel ? "sm:left-[354px]" : ""} ${activeTourId ? "pointer-events-none" : ""}`}
       // In development, Next.js puts its own badge in the bottom-right corner.
       style={right && process.env.NODE_ENV === "development" ? { right: 68 } : undefined}
     >

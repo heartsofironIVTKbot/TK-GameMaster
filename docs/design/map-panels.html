@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GameMaster Map Panels Mock-up</title>
+<!-- Design mock-up of the map's Draft section, Host Tool panel and their
+     pop-up windows in the cut-plate style (docs/branding.md). Not part of
+     the app. Drawn at 1440x900 (desktop) or 390x844 (phone). -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Big+Shoulders+Stencil+Display:wght@800&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+<style>
+  :root {
+    --ink-950: oklch(11.8% 0.009 152);
+    --ink-900: oklch(19.2% 0.011 152);
+    --ink-850: oklch(22.8% 0.012 152);
+    --ink-800: oklch(26.6% 0.012 152);
+    --ink-700: oklch(36.2% 0.013 152);
+    --ink-600: oklch(44.4% 0.014 152);
+    --ink-500: oklch(55.4% 0.015 152);
+    --ink-400: oklch(70.4% 0.015 152);
+    --ink-300: oklch(86.4% 0.012 152);
+    --ink-100: oklch(96.6% 0.006 152);
+    --brand-300: oklch(83.2% 0.158 146);
+    --brand-400: oklch(76.4% 0.186 146);
+    --brand-950: oklch(19.4% 0.046 146);
+    --good: oklch(79.4% 0.118 174);
+    --good-bg: oklch(23.4% 0.038 174);
+    --pending: oklch(86% 0.15 95);
+    --pending-bg: oklch(25% 0.045 95);
+    --live: oklch(74% 0.13 240);
+    --live-bg: oklch(24% 0.045 240);
+    --danger: oklch(71% 0.17 18);
+    --danger-bg: oklch(24% 0.06 18);
+    --sky: oklch(78% 0.11 230);
+    --sky-bg: oklch(22% 0.035 230);
+    --display: "Big Shoulders Display", "Arial Narrow", sans-serif;
+    --stencil: "Big Shoulders Stencil Display", var(--display);
+    --body: "Public Sans", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: oklch(8% 0.006 152); color: var(--ink-300); font: 400 14px/1.45 var(--body); font-variant-numeric: tabular-nums; display: flex; flex-direction: column; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
+  svg.lucide { width: 16px; height: 16px; stroke-width: 1.75; flex: none; }
+
+  /* ---------- design switches (not part of the design) ---------- */
+  .switches { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; padding: 10px 16px; border-bottom: 1px solid var(--ink-800); background: var(--ink-950); }
+  .switches h1 { margin: 0 6px 0 0; font: 800 22px/1 var(--display); text-transform: uppercase; color: var(--ink-100); }
+  .seg { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-500); }
+  .seg div { display: flex; border: 1px solid var(--ink-700); border-radius: 4px; overflow: hidden; }
+  .seg button { padding: 5px 10px; font-size: 12px; font-weight: 600; color: var(--ink-400); }
+  .seg button + button { border-left: 1px solid var(--ink-700); }
+  .seg button[aria-pressed="true"] { background: var(--ink-800); color: var(--ink-100); }
+  .viewport { flex: 1; min-height: 0; display: grid; place-items: center; padding: 16px; overflow: hidden; }
+  .frame { position: relative; overflow: hidden; outline: 1px solid var(--ink-800); }
+  .stage { position: absolute; left: 0; top: 0; transform-origin: 0 0; overflow: hidden; background: #0f1d21; }
+  .stage.desk { width: 1440px; height: 900px; }
+  .stage.phone { width: 390px; height: 844px; }
+  [hidden] { display: none !important; }
+
+  /* ---------- cut-plate pieces (same as web/src/app/globals.css) ---------- */
+  .cut, .btn, .plate, .field { clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut)); }
+  .cut, .btn, .field { --cut: 8px; }
+  .plate { --cut: 12px; --line: var(--ink-800); background-color: var(--ink-950); }
+  .plate, .field, .btn-secondary, .btn-danger {
+    border: 1px solid var(--line);
+    background-image: linear-gradient(135deg, var(--line) calc(var(--cut) * .7071 + 1px), transparent 0), linear-gradient(315deg, var(--line) calc(var(--cut) * .7071 + 1px), transparent 0);
+    background-origin: border-box;
+  }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; height: 36px; padding: 0 14px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+  .btn-primary { background-color: var(--brand-400); color: var(--brand-950); }
+  .btn-secondary { --line: var(--ink-700); color: var(--ink-100); background-color: var(--ink-950); }
+  .btn-quiet { color: var(--ink-300); }
+  .btn-danger { --line: oklch(71% 0.17 18 / .45); color: oklch(80% 0.12 18); background-color: var(--ink-950); }
+  .btn-icon { width: 34px; padding: 0; }
+  .btn-sm { height: 28px; padding: 0 10px; font-size: 12px; --cut: 6px; }
+  .field { --line: var(--ink-700); display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 10px; background-color: var(--ink-950); color: var(--ink-500); font-size: 13.5px; }
+  .field b { flex: 1; font-weight: 400; color: var(--ink-100); }
+  .tag { display: inline-flex; align-items: center; gap: 6px; height: 21px; padding: 0 11px; font-size: 11.5px; font-weight: 600; white-space: nowrap;
+    clip-path: polygon(7px 0, calc(100% - 7px) 0, 100% 50%, calc(100% - 7px) 100%, 7px 100%, 0 50%); }
+  .tag svg { width: 12px; height: 12px; }
+  .dot::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .t-ink { color: var(--ink-300); background: var(--ink-850); }
+  .t-open { color: var(--good); background: var(--good-bg); }
+  .t-live { color: var(--live); background: var(--live-bg); }
+  .t-ended { color: var(--ink-400); background: var(--ink-850); }
+  .t-you { color: var(--brand-400); background: var(--brand-950); }
+  .t-bad { color: var(--danger); background: var(--danger-bg); }
+  .title { font-family: var(--display); font-weight: 800; text-transform: uppercase; line-height: .95; color: var(--ink-100); }
+  .mark { width: 30px; height: 30px; --cut: 7px; display: grid; place-items: center; background: var(--brand-400); color: var(--brand-950); font: 800 17px/1 var(--stencil); }
+  .avatar { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; flex: none; background: var(--ink-800); color: var(--ink-100); font-size: 11px; font-weight: 700; }
+  .flag { width: 24px; height: 16px; object-fit: cover; outline: 1px solid oklch(100% 0 0 / .12); flex: none; }
+  .switch { width: 38px; height: 22px; --cut: 5px; background: var(--ink-700); position: relative; flex: none; }
+  .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; background: var(--ink-300); clip-path: polygon(4px 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%, 0 4px); }
+  .switch.on { background: var(--brand-400); }
+  .switch.on::after { left: 19px; background: var(--brand-950); }
+  .small { font-size: 12px; color: var(--ink-400); }
+  .label { margin: 0 0 6px; font-size: 12px; font-weight: 600; color: var(--ink-500); }
+
+  /* ---------- map, top bar, reservations (as built) ---------- */
+  .map { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .top { position: absolute; left: 0; right: 0; top: 0; height: 56px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 0 12px; background: var(--ink-950); border-bottom: 1px solid var(--ink-800); z-index: 3; }
+  .top-l, .top-r { display: flex; align-items: center; gap: 6px; }
+  .top-r { justify-self: end; }
+  .sep { width: 1px; height: 24px; background: var(--ink-800); margin: 0 6px; }
+  .game { text-align: center; }
+  .game .title { font-size: 22px; }
+  .game-sub { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 3px; font-size: 12px; color: var(--ink-400); }
+  .roster { position: absolute; left: 0; top: 56px; bottom: 0; width: 340px; display: flex; flex-direction: column; background: var(--ink-950); border-right: 1px solid var(--ink-800); z-index: 2; }
+  .r-head { padding: 14px; border-bottom: 1px solid var(--ink-800); }
+  .r-head-row { display: flex; align-items: center; justify-content: space-between; }
+  .r-head .title { font-size: 26px; }
+  .counts { display: grid; grid-template-columns: 1.25fr 1fr 1fr 1fr 1fr; margin-top: 12px; --cut: 10px; }
+  .counts div { padding: 7px 4px 6px; text-align: center; }
+  .counts div + div { border-left: 1px solid var(--ink-800); }
+  .counts strong { display: block; font: 800 20px/1 var(--display); color: var(--ink-100); }
+  .counts strong small { font-size: 14px; color: var(--ink-500); }
+  .counts span { display: block; margin-top: 3px; font-size: 11px; color: var(--ink-400); }
+  .counts .taken strong { color: var(--brand-400); }
+  .r-scroll { flex: 1; overflow: hidden; padding: 10px 10px 12px; }
+  .rtabs { display: flex; border-bottom: 1px solid var(--ink-800); }
+  .rtabs button { flex: 1; height: 40px; display: flex; align-items: center; justify-content: center; gap: 7px; font-size: 13px; font-weight: 600; color: var(--ink-400); box-shadow: inset 0 -2px 0 transparent; }
+  .rtabs button[aria-current] { color: var(--ink-100); box-shadow: inset 0 -2px 0 var(--brand-400); }
+  .rtabs button[aria-current] svg { color: var(--brand-400); }
+  .rtabs small { color: var(--ink-500); font-weight: 500; }
+  .nations h3 { margin: 12px 6px 4px; font-size: 12px; font-weight: 600; color: var(--ink-500); }
+  .nrow { display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 6px; }
+  .nrow .n { flex: 1; font-size: 13.5px; font-weight: 500; color: var(--ink-100); }
+  .help { position: absolute; top: 70px; left: 354px; z-index: 2; height: 32px; }
+
+  /* ---------- the Draft section ---------- */
+  .draft { padding: 12px; }
+  .draft-top { display: flex; align-items: center; gap: 8px; }
+  .draft-top .title { font-size: 20px; display: flex; align-items: center; gap: 7px; }
+  .draft-top .title svg { width: 17px; height: 17px; color: var(--brand-400); }
+  .draft-top .small { margin-left: auto; }
+  .teams { display: grid; grid-template-columns: 1fr auto 1fr; align-items: stretch; gap: 6px; margin-top: 10px; }
+  .vs { align-self: center; font: 800 14px/1 var(--display); color: var(--ink-500); text-transform: uppercase; }
+  .team { position: relative; padding: 8px 10px 9px; --cut: 9px; background-color: var(--ink-900); }
+  .team.clock { box-shadow: inset 0 2px 0 var(--brand-400); background-color: oklch(21% 0.03 146); }
+  .team strong { display: flex; align-items: center; gap: 6px; font-size: 13.5px; color: var(--ink-100); }
+  .team strong svg { width: 13px; height: 13px; color: var(--ink-400); }
+  .team p { margin: 2px 0 0; font-size: 11.5px; color: var(--ink-400); display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+  .team .tag { height: 18px; padding: 0 8px; font-size: 10.5px; }
+  .turn { display: flex; align-items: center; gap: 8px; margin-top: 8px; padding: 8px 10px; --cut: 8px; font-size: 12.5px; font-weight: 600; background: var(--ink-900); color: var(--ink-200, var(--ink-300)); }
+  .turn.mine { background: var(--brand-400); color: var(--brand-950); }
+  .turn svg { width: 15px; height: 15px; }
+  .draft .note { margin: 8px 0 0; font-size: 12px; color: var(--ink-400); display: flex; gap: 6px; align-items: center; }
+  .draft .note svg { width: 13px; height: 13px; }
+  .join { width: 100%; height: 42px; margin-top: 10px; font: 800 18px/1 var(--display); text-transform: uppercase; letter-spacing: .02em; --cut: 9px; }
+  .host-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
+  .host-row .btn { height: 32px; font-size: 12.5px; }
+  .pool-head { display: flex; align-items: baseline; justify-content: space-between; margin: 14px 2px 6px; }
+  .pool-head b { font-size: 12px; font-weight: 600; color: var(--ink-500); }
+  .pool-head span { font-size: 11px; color: var(--ink-500); }
+  .pool { display: grid; gap: 4px; }
+  .prow { display: grid; grid-template-columns: 10px 26px minmax(0, 1fr) auto auto; align-items: center; gap: 8px; padding: 6px 6px 6px 4px; --cut: 7px; background: var(--ink-900); }
+  .prow.self { background: oklch(21% 0.03 146); }
+  .prow .grip { color: var(--ink-600); width: 12px; height: 12px; }
+  .prow .nm { min-width: 0; font-size: 13px; font-weight: 600; color: var(--ink-100); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .prow .nm small { font-weight: 500; color: var(--brand-400); }
+  .prow .why { grid-column: 3 / -1; margin-top: -2px; font-size: 11.5px; font-style: italic; color: var(--ink-400); }
+  .pref { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; font-size: 11px; font-weight: 600; color: var(--ink-300); background: var(--ink-800);
+    clip-path: polygon(6px 0, calc(100% - 6px) 0, 100% 50%, calc(100% - 6px) 100%, 6px 100%, 0 50%); }
+  .pref svg { width: 12px; height: 12px; }
+  .prow .x { width: 22px; height: 22px; display: grid; place-items: center; color: var(--ink-500); }
+  .prow .x svg { width: 13px; height: 13px; }
+  .dropzone { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 6px; height: 40px; --cut: 8px; font-size: 12px; font-weight: 600; color: var(--ink-300);
+    background: repeating-linear-gradient(135deg, transparent 0 6px, oklch(100% 0 0 / .035) 6px 12px), var(--ink-900); }
+  .dropzone svg { width: 15px; height: 15px; color: var(--sky); }
+  .draft-msg { margin-top: 8px; padding: 8px 10px; --cut: 8px; font-size: 12px; background: var(--good-bg); color: var(--good); }
+
+  /* ---------- the Host Tool panel ---------- */
+  .hosttool { position: absolute; left: 354px; top: 112px; width: 340px; z-index: 4; display: flex; flex-direction: column; --cut: 14px; }
+  .ht-head { display: flex; align-items: center; gap: 10px; padding: 10px 8px 10px 12px; border-bottom: 1px solid var(--ink-800); cursor: move; }
+  .ht-head .grip { color: var(--ink-600); }
+  .ht-head .title { font-size: 20px; }
+  .ht-head small { display: block; font-size: 11.5px; color: var(--ink-400); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ht-head .tools { margin-left: auto; display: flex; }
+  .ht-head .tools .btn { height: 30px; width: 30px; }
+  .ht-body { padding: 12px; display: grid; gap: 12px; }
+  .held { display: flex; align-items: center; gap: 9px; padding: 8px 8px 8px 10px; --cut: 8px; font-size: 12.5px; color: var(--ink-100); background: var(--pending-bg); box-shadow: inset 3px 0 0 var(--pending); }
+  .held svg { color: var(--pending); }
+  .held span { flex: 1; }
+  .held .btn { height: 26px; padding: 0 9px; font-size: 11.5px; --cut: 5px; }
+  .results { display: grid; gap: 4px; }
+  .mrow { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; align-items: center; gap: 9px; padding: 6px 8px; --cut: 7px; background: var(--ink-900); cursor: grab; }
+  .mrow.held-row { background: var(--pending-bg); box-shadow: inset 2px 0 0 var(--pending); }
+  .mrow b { display: flex; align-items: center; gap: 5px; font-size: 13px; color: var(--ink-100); font-weight: 600; }
+  .mrow b svg { width: 12px; height: 12px; color: var(--pending); fill: var(--pending); }
+  .mrow small { display: block; font-size: 11.5px; color: var(--ink-500); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mrow small em { font-style: normal; color: var(--sky); }
+  .mrow .tag { height: 19px; padding: 0 9px; font-size: 10.5px; }
+  .zones { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .zone { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; height: 64px; --cut: 10px; font-size: 12px; font-weight: 600;
+    background: repeating-linear-gradient(135deg, transparent 0 6px, oklch(100% 0 0 / .035) 6px 12px), var(--ink-900); }
+  .zone svg { width: 18px; height: 18px; }
+  .zone.fill { color: var(--sky); }
+  .zone.remove { color: oklch(80% 0.12 18); }
+  .notify { display: flex; align-items: center; gap: 10px; padding: 10px; --cut: 10px; background: var(--ink-900); }
+  .notify svg { color: var(--ink-300); }
+  .notify strong { display: block; font-size: 13px; color: var(--ink-100); }
+  .notify span { display: block; font-size: 11.5px; color: var(--ink-400); }
+  .notify .switch { margin-left: auto; }
+  .act { display: grid; gap: 4px; }
+  .arow { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; gap: 8px; padding: 8px 8px 8px 10px; --cut: 8px; background: var(--ink-900); font-size: 12px; color: var(--ink-300); }
+  .arow strong { display: block; font-size: 12.5px; color: var(--ink-100); font-weight: 600; }
+  .arow ul { margin: 4px 0 0; padding-left: 16px; color: var(--ink-300); }
+  .arow .acts { grid-column: 2 / -1; display: flex; gap: 6px; margin-top: 6px; }
+  .arow.ok svg.st { color: var(--good); }
+  .arow.warn { background: var(--pending-bg); box-shadow: inset 3px 0 0 var(--pending); }
+  .arow.warn svg.st { color: var(--pending); }
+  .arow.err svg.st { color: var(--danger); }
+  .arow.busy svg.st { color: var(--ink-400); }
+  .arow .x { color: var(--ink-500); }
+
+  /* ---------- pop-up windows ---------- */
+  .scrim { position: absolute; inset: 0; background: oklch(8% 0.006 152 / .72); z-index: 6; }
+  .win { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 540px; z-index: 7; --cut: 16px; }
+  .win-head { padding: 18px 20px 14px; border-bottom: 1px solid var(--ink-800); position: relative; }
+  .win-head .title { font-size: 30px; }
+  .win-head .x { position: absolute; right: 12px; top: 12px; }
+  .win-head .vsline { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; font-size: 12.5px; }
+  .win-head .vsline .tag { height: 24px; }
+  .win-body { padding: 16px 20px; display: grid; gap: 14px; }
+  .choices { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .choice { display: grid; grid-template-columns: 34px 1fr; gap: 10px; align-items: center; padding: 12px; --cut: 11px; --line: var(--ink-800); background-color: var(--ink-900); }
+  .choice .ico { width: 34px; height: 34px; --cut: 7px; display: grid; place-items: center; background: var(--ink-800); color: var(--ink-100); }
+  .choice .ico svg { width: 18px; height: 18px; }
+  .choice strong { display: block; font-size: 14px; color: var(--ink-100); }
+  .choice span { display: block; font-size: 12px; color: var(--ink-400); line-height: 1.3; }
+  .choice.on { --line: var(--brand-400); background-color: oklch(20% 0.035 146); }
+  .choice.on .ico { background: var(--brand-400); color: var(--brand-950); }
+  .textarea { --line: var(--ink-700); height: 72px; padding: 9px 10px; --cut: 8px; background-color: var(--ink-950); font-size: 13px; color: var(--ink-500); }
+  .win-foot { display: flex; align-items: center; gap: 10px; padding: 14px 20px; border-top: 1px solid var(--ink-800); }
+  .win-foot .grow { flex: 1; }
+  .win-foot .go { height: 42px; padding: 0 22px; font: 800 18px/1 var(--display); text-transform: uppercase; letter-spacing: .02em; --cut: 9px; }
+  .groups { display: grid; gap: 12px; max-height: 360px; overflow: hidden; }
+  .slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .slot { display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 10px; --cut: 7px; background: var(--ink-900); font-size: 13px; color: var(--ink-100); }
+  .slot.on { background: oklch(20% 0.035 146); box-shadow: inset 0 0 0 1px var(--brand-400); }
+  .slot svg { width: 14px; height: 14px; color: var(--ink-400); }
+  .menu { position: absolute; z-index: 7; width: 290px; --cut: 12px; padding: 6px; }
+  .menu p { margin: 4px 8px 8px; font-size: 12.5px; color: var(--ink-400); }
+  .menu p b { color: var(--ink-100); font-weight: 600; }
+  .mopt { display: flex; align-items: center; gap: 10px; width: 100%; height: 38px; padding: 0 10px; --cut: 7px; font-size: 13px; font-weight: 600; color: var(--ink-100); text-align: left; }
+  .mopt:hover, .mopt.hover { background: var(--ink-900); }
+  .mopt svg { color: var(--ink-400); }
+  .mopt small { margin-left: auto; font-size: 11px; font-weight: 500; color: var(--ink-500); }
+  .menu .dm { display: flex; align-items: center; gap: 7px; margin: 6px 8px 4px; font-size: 11.5px; color: var(--ink-500); }
+  .menu .dm svg { width: 13px; height: 13px; }
+  .menu .cancel { width: 100%; height: 32px; margin-top: 4px; font-size: 12.5px; color: var(--ink-400); border-top: 1px solid var(--ink-800); }
+  .cursor { position: absolute; z-index: 8; width: 18px; height: 18px; color: var(--ink-100); filter: drop-shadow(0 1px 2px #000); }
+
+  /* ---------- phone ---------- */
+  .phone .top { height: 52px; grid-template-columns: auto 1fr auto; gap: 8px; padding: 0 8px; }
+  .p-game { position: absolute; top: 52px; left: 0; right: 0; height: 40px; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 12px; background: var(--ink-950); border-bottom: 1px solid var(--ink-800); z-index: 3; }
+  .p-game .title { font-size: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .p-game span { font-size: 11.5px; color: var(--ink-400); white-space: nowrap; }
+  .p-sheet { position: absolute; left: 0; right: 0; top: 140px; bottom: 0; display: flex; flex-direction: column; background: var(--ink-950); border-top: 1px solid var(--ink-800); z-index: 3; }
+  .p-sheet .grip-bar { width: 40px; height: 4px; border-radius: 2px; background: var(--ink-700); margin: 8px auto 4px; }
+  .p-sheet .r-head { padding: 6px 14px 12px; }
+  .phone .win { width: calc(100% - 24px); top: auto; bottom: 12px; transform: translateX(-50%); }
+  .phone .win-head .title { font-size: 26px; }
+  .phone .choices { grid-template-columns: 1fr; }
+  .phone .choice { padding: 9px 10px; }
+</style>
+</head>
+<body>
+
+<div class="switches">
+  <h1>Map panels mock-up</h1>
+  <div class="seg">Draft <div data-k="phase"><button data-v="signups">Sign-ups open</button><button data-v="drafting">Drafting, your turn</button><button data-v="complete">Complete</button></div></div>
+  <div class="seg">Draft in the list <div data-k="place"><button data-v="top">On top (now)</button><button data-v="tab">Own tab</button></div></div>
+  <div class="seg">Host Tool <div data-k="tool"><button data-v="off">Off</button><button data-v="search">Searching</button><button data-v="held">Placing a player</button><button data-v="confirm">Needs your OK</button></div></div>
+  <div class="seg">Window <div data-k="win"><button data-v="none">None</button><button data-v="join">Join the draft</button><button data-v="pick">Pick a nation</button><button data-v="drop">Drop menu</button></div></div>
+  <div class="seg">Size <div data-k="size"><button data-v="desk">Desktop</button><button data-v="phone">Phone</button></div></div>
+</div>
+
+<div class="viewport"><div class="frame" id="frame">
+
+  <!-- ===================== DESKTOP ===================== -->
+  <div class="stage desk" id="desk">
+    <img class="map" src="assets/map-teal.jpg" alt="">
+    <header class="top">
+      <div class="top-l">
+        <span class="mark cut">GM</span>
+        <button class="btn btn-quiet"><i data-lucide="menu"></i>Menu</button>
+        <span class="sep"></span>
+        <button class="btn btn-secondary"><i data-lucide="scroll-text"></i>Rules</button>
+        <button class="btn btn-secondary"><i data-lucide="puzzle"></i>Mods</button>
+        <button class="btn" data-toolbtn><i data-lucide="wrench"></i>Host tool</button>
+      </div>
+      <div class="game">
+        <div class="title">Historical Draft Game</div>
+        <div class="game-sub"><span class="tag t-ink">Vanilla</span>Starts Tuesday 17:59 UTC</div>
+      </div>
+      <div class="top-r"><span class="avatar">D</span></div>
+    </header>
+
+    <aside class="roster">
+      <div class="r-head">
+        <div class="r-head-row">
+          <span class="title">Reservations</span>
+          <button class="btn btn-quiet btn-icon" aria-label="Fold the list"><i data-lucide="panel-left-close"></i></button>
+        </div>
+        <div class="counts plate" data-counts></div>
+      </div>
+      <nav class="rtabs" data-rtabs></nav>
+      <div class="r-scroll" data-roster></div>
+    </aside>
+
+    <button class="btn btn-primary help"><i data-lucide="circle-help"></i>Help</button>
+    <section class="hosttool plate" data-hosttool></section>
+    <div data-overlay></div>
+  </div>
+
+  <!-- ===================== PHONE ===================== -->
+  <div class="stage phone" id="phone" hidden>
+    <img class="map" src="assets/map-teal.jpg" alt="" style="object-position:49% 30%">
+    <header class="top">
+      <span class="mark cut">GM</span>
+      <span></span>
+      <div class="top-r"><button class="btn btn-quiet btn-icon"><i data-lucide="menu"></i></button></div>
+    </header>
+    <div class="p-game"><span class="title">Historical Draft Game</span><span>Tue 17:59 UTC</span></div>
+    <aside class="p-sheet">
+      <div class="grip-bar"></div>
+      <div class="r-head">
+        <div class="r-head-row"><span class="title" style="font-size:22px">Reservations</span><button class="btn btn-quiet btn-icon"><i data-lucide="chevron-down"></i></button></div>
+      </div>
+      <nav class="rtabs" data-rtabs></nav>
+      <div class="r-scroll" data-roster style="padding-top:8px"></div>
+    </aside>
+    <div data-overlay></div>
+  </div>
+
+</div></div>
+
+<script>
+  const state = { phase: "signups", place: "top", tool: "search", win: "none", size: "desk" };
+  const PREF = { major: ["crown", "Major"], minor: ["flag", "Minor"], coop: ["handshake", "Major Co-op"], filler: ["puzzle", "Filler"] };
+  const POOL = [
+    ["D", "Demo Host", "major", "Allies please, the UK or France.", true],
+    ["E", "Erwin", "major", null],
+    ["W", "Wilhelm", "coop", "Happy to co-op Germany."],
+    ["P", "Pieter", "minor", null],
+    ["S", "Sakura", "minor", "Manchukuo if it's free."],
+    ["J", "Jan", "filler", null],
+  ];
+  const pref = (k) => `<span class="pref"><i data-lucide="${PREF[k][0]}"></i>${PREF[k][1]}</span>`;
+
+  function draftSection(phone) {
+    const p = state.phase;
+    const phaseTag = p === "signups" ? '<span class="tag dot t-open">Sign-ups open</span>' : p === "drafting" ? '<span class="tag dot t-live">Drafting</span>' : '<span class="tag dot t-ended">Complete</span>';
+    const clock = p === "drafting";
+    const teams = `<div class="teams">
+      <div class="team cut ${clock ? "clock" : ""}"><strong><i data-lucide="flag"></i>Allies</strong><p>Demo Host <span class="tag t-you">You</span></p><p>${p === "complete" ? "12" : p === "drafting" ? "3" : "0"} placed</p></div>
+      <span class="vs">vs</span>
+      <div class="team cut"><strong><i data-lucide="flag"></i>Axis</strong><p>Erwin, captain</p><p>${p === "complete" ? "11" : p === "drafting" ? "2" : "0"} placed</p></div>
+    </div>`;
+    const turn = p === "drafting" ? `<div class="turn mine cut"><i data-lucide="hand"></i>Your turn: pick 2 players from the pool</div>` : "";
+    const note = p === "signups" ? `<p class="note"><i data-lucide="info"></i>The captains start picking once the host starts the draft.</p>`
+      : p === "drafting" ? `<p class="note"><i data-lucide="coins"></i>Allies won the coin toss.</p>`
+      : `<div class="draft-msg cut">Everyone is placed. See the nations below.</div>`;
+    const join = p === "signups" ? `<button class="btn btn-primary join">Join the draft</button>` : "";
+    const host = p !== "complete" ? `<div class="host-row">${p === "signups" ? '<button class="btn btn-secondary"><i data-lucide="play"></i>Start draft</button>' : ""}<button class="btn btn-danger" ${p === "drafting" ? 'style="grid-column:1/-1"' : ""}><i data-lucide="flag-triangle-right"></i>Finish draft</button></div>` : "";
+    const pool = p === "complete" ? "" : `
+      <div class="pool-head"><b>Pool (${POOL.length})</b><span>Notes: hosts and captains only</span></div>
+      <div class="pool">${POOL.map(([a, name, k, why, self]) => `
+        <div class="prow cut ${self ? "self" : ""}"><i data-lucide="grip-vertical" class="grip"></i><span class="avatar">${a}</span>
+          <span class="nm">${name}${self ? " <small>(you)</small>" : ""}</span>${pref(k)}
+          ${p === "drafting" ? '<button class="btn btn-primary btn-sm">Pick</button>' : '<button class="x" aria-label="Remove"><i data-lucide="x"></i></button>'}
+          ${why ? `<span class="why">“${why}”</span>` : ""}</div>`).join("")}</div>
+      ${p === "drafting" ? '<div class="dropzone cut"><i data-lucide="puzzle"></i>Drop a player here to make them a filler</div>' : ""}`;
+    return `<section class="draft plate" style="--cut:12px">
+      <div class="draft-top"><span class="title"><i data-lucide="swords"></i>Draft</span>${phaseTag}<span class="small">${POOL.length}/43 in pool</span></div>
+      ${teams}${turn}${note}${join}${host}${pool}</section>`;
+  }
+  function nations() {
+    const rows = [["GER", "Germany", "Wilhelm"], ["ENG", "United Kingdom", null], ["SOV", "Soviet Union", null], ["USA", "United States", "Erwin"], ["ITA", "Italy", null], ["JAP", "Japan", null], ["FRA", "France", null]];
+    return `<div class="nations"><h3>Majors</h3>${rows.map(([t, n, who]) => `<div class="nrow"><img class="flag" src="../../web/public/assets_rt56/flags/${t}.png" alt=""><span class="n">${n}</span>${who ? `<span class="tag" style="color:var(--danger);background:var(--danger-bg)">${who}</span>` : '<span class="tag dot t-open">Open</span>'}</div>`).join("")}</div>`;
+  }
+  function rosterHtml(phone) {
+    if (state.place === "tab") return state.phase === "complete" ? nations() : draftSection(phone);
+    return draftSection(phone) + nations();
+  }
+  function hostTool() {
+    const t = state.tool;
+    if (t === "off") return "";
+    const held = t === "held" ? `<div class="held cut"><i data-lucide="hand"></i><span>Placing <b>Erwin</b>: click a nation on the map or in the list.</span><button class="btn btn-secondary">Esc</button></div>` : "";
+    const results = t !== "confirm" ? `<div class="results">
+      ${[["E", "Erwin", "@rommel77", "on United States", true, false, t === "held"], ["W", "Wilhelm", "@kaiser_bill", "on Germany", true, true], ["P", "Pieter", "@dutch_trader", null, false]]
+        .map(([a, n, u, on, auth, vip, isHeld]) => `<div class="mrow cut ${isHeld ? "held-row" : ""}"><span class="avatar">${a}</span><span style="min-width:0"><b>${n}${vip ? '<i data-lucide="star"></i>' : ""}</b><small>${u}${on ? ` <em>· ${on}</em>` : ""}</small></span>${auth ? '<span class="tag dot t-open">Authenticated</span>' : '<span class="tag dot t-bad">Not authenticated</span>'}</div>`).join("")}</div>` : "";
+    const activity = t === "confirm" ? `<div><p class="label">Activity</p><div class="act">
+        <div class="arow warn cut"><i data-lucide="triangle-alert" class="st"></i><div><strong>Erwin → Germany</strong>Germany is a Major and Erwin played a Major last game.<ul><li>Major cooldown: 1 game left</li></ul></div><span></span>
+          <div class="acts"><button class="btn btn-primary btn-sm">Add anyway</button><button class="btn btn-quiet btn-sm">Cancel</button></div></div>
+        <div class="arow ok cut"><i data-lucide="check" class="st"></i><div><strong>Pieter → Hungary</strong>Added. Pieter got a DM.</div><button class="x" aria-label="Dismiss"><i data-lucide="x"></i></button></div>
+        <div class="arow busy cut"><i data-lucide="loader" class="st"></i><div><strong>Jan → Filler</strong>The bot is adding him…</div><span></span></div>
+      </div></div>` : "";
+    return `<header class="ht-head"><i data-lucide="grip-vertical" class="grip"></i><i data-lucide="wrench" style="color:var(--brand-400)"></i>
+        <div style="min-width:0"><div class="title">Host Tool</div><small>Historical Draft Game</small></div>
+        <div class="tools"><button class="btn btn-quiet btn-icon" aria-label="Collapse"><i data-lucide="chevron-up"></i></button><button class="btn btn-quiet btn-icon" aria-label="Turn off"><i data-lucide="x"></i></button></div></header>
+      <div class="ht-body">
+        <label class="field"><i data-lucide="gamepad-2"></i><b>Historical Draft Game</b><i data-lucide="chevron-down"></i></label>
+        ${held}
+        <div><label class="field"><i data-lucide="search"></i><b>${t === "confirm" ? '<span style="color:var(--ink-500)">Find a player</span>' : "er"}</b></label>
+          <p class="small" style="margin:5px 2px 0">Drag a player onto a nation, or click them and then the nation.</p></div>
+        ${results}
+        <div class="zones"><div class="zone fill cut"><i data-lucide="puzzle"></i>Add as filler</div><div class="zone remove cut"><i data-lucide="user-minus"></i>Remove from game</div></div>
+        <div class="notify cut"><i data-lucide="bell"></i><div><strong>Notify players</strong><span>Players get a DM when you add, move, swap or remove them.</span></div><span class="switch cut on"></span></div>
+        ${activity}
+      </div>`;
+  }
+  function overlay(phone) {
+    const w = state.win;
+    if (w === "join") return `<div class="scrim"></div><div class="win plate">
+      <div class="win-head"><div class="small">Historical Draft Game</div><div class="title">Join the draft</div>
+        <button class="btn btn-quiet btn-icon x" aria-label="Close"><i data-lucide="x"></i></button>
+        <div class="vsline"><span class="tag t-ink"><i data-lucide="flag"></i>Allies: Demo Host</span><span class="small">vs</span><span class="tag t-ink"><i data-lucide="flag"></i>Axis: Erwin</span></div></div>
+      <div class="win-body">
+        <p style="margin:0;font-size:13.5px;color:var(--ink-300)">Pick what you'd like to play. Everyone who joins goes into one pool, and the two captains take turns placing players on their team's nations.</p>
+        <div class="choices">
+          ${[["crown", "Major", "Lead one of the big powers.", true], ["flag", "Minor", "Play a smaller nation."], ["handshake", "Major Co-op", "Share a Major with its main player."], ["puzzle", "Filler", "Fill in wherever you're needed. You still play."]]
+            .map(([i, t, d, on]) => `<button class="choice plate ${on ? "on" : ""}"><span class="ico cut"><i data-lucide="${i}"></i></span><span><strong>${t}</strong><span>${d}</span></span></button>`).join("")}
+        </div>
+        <div><p class="label">Note for the host and captains (optional)</p><div class="textarea field">I'd like to be on the Allies, a Major: maybe France or the UK.</div></div>
+      </div>
+      <div class="win-foot"><span class="small grow">You can change or leave until the draft starts.</span><button class="btn btn-quiet">Cancel</button><button class="btn btn-primary go">Join</button></div></div>`;
+    if (w === "pick") {
+      const group = (title, list, on) => `<div><p class="label">${title}</p><div class="slots" ${phone ? 'style="grid-template-columns:1fr 1fr"' : ""}>${list.map(([t, n]) => `<div class="slot cut ${n === on ? "on" : ""}">${t ? `<img class="flag" src="../../web/public/assets_rt56/flags/${t}.png" alt="">` : '<i data-lucide="puzzle"></i>'}${n}</div>`).join("")}</div></div>`;
+      return `<div class="scrim"></div><div class="win plate">
+        <div class="win-head"><div class="small">Allies: your pick 1 of 2</div><div class="title">Pick a nation for Pieter</div>
+          <button class="btn btn-quiet btn-icon x" aria-label="Close"><i data-lucide="x"></i></button>
+          <div class="vsline">${pref("minor")}<span class="small">“Happy anywhere in Europe.”</span></div></div>
+        <div class="win-body groups">
+          ${group("Majors", [["ENG", "United Kingdom"], ["FRA", "France"], ["SOV", "Soviet Union"]])}
+          ${group("Co-ops", [["USA", "United States Co-op"]])}
+          ${group("Minors", [["POL", "Poland"], ["CHI", "China"], ["ROM", "Romania"], ["MAN", "Manchukuo"], ["HUN", "Hungary"]], "Poland")}
+          ${group("Filler", [[null, "Filler"]])}
+        </div>
+        <div class="win-foot"><span class="grow"></span><button class="btn btn-quiet">Cancel</button><button class="btn btn-primary go">Pick Poland</button></div></div>`;
+    }
+    if (w === "drop") {
+      const left = phone ? 40 : 760, top = phone ? 300 : 300;
+      return `<svg class="cursor" style="left:${left - 14}px;top:${top - 18}px" viewBox="0 0 24 24" fill="currentColor"><path d="M4 2l16 9-7 2-3 7z"/></svg>
+        <div class="menu plate" style="left:${left}px;top:${top}px">
+          <p><b>Germany</b> is held by <b>Wilhelm</b>.</p>
+          <button class="mopt cut hover"><i data-lucide="arrow-left-right"></i>Swap<small>Wilhelm gets United States</small></button>
+          <button class="mopt cut"><i data-lucide="rotate-ccw"></i>Replace<small>Wilhelm leaves the game</small></button>
+          <button class="mopt cut"><i data-lucide="handshake"></i>Add Erwin as co-op</button>
+          <div class="dm"><i data-lucide="bell"></i>Both players get a DM.</div>
+          <button class="cancel">Cancel</button>
+        </div>`;
+    }
+    return "";
+  }
+
+  function render() {
+    document.querySelectorAll(".seg > div").forEach((seg) =>
+      seg.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(state[seg.dataset.k] === b.dataset.v))));
+    const counts = state.phase === "complete" ? [23, 7, 16, 0, 0] : state.phase === "drafting" ? [5, 3, 2, 0, 0] : [0, 0, 0, 0, 0];
+    document.querySelector("[data-counts]").innerHTML = `<div class="taken"><strong>${counts[0]}<small>/96</small></strong><span>Taken</span></div><div><strong>${counts[1]}<small>/7</small></strong><span>Majors</span></div><div><strong>${counts[2]}<small>/89</small></strong><span>Minors</span></div><div><strong>${counts[3]}</strong><span>Co-op</span></div><div><strong>${counts[4]}</strong><span>Filler</span></div>`;
+    document.querySelectorAll("[data-rtabs]").forEach((el) => {
+      el.hidden = state.place !== "tab";
+      const draftOn = state.phase !== "complete";
+      el.innerHTML = `<button ${draftOn ? "aria-current" : ""}><i data-lucide="swords"></i>Draft <small>${POOL.length}</small></button><button ${draftOn ? "" : "aria-current"}><i data-lucide="flag"></i>Nations <small>96</small></button>`;
+    });
+    document.querySelectorAll("[data-roster]").forEach((el, i) => (el.innerHTML = rosterHtml(i === 1)));
+    const tool = document.querySelector("[data-hosttool]");
+    tool.innerHTML = hostTool();
+    tool.hidden = state.tool === "off";
+    const btn = document.querySelector("[data-toolbtn]");
+    btn.className = `btn ${state.tool === "off" ? "btn-quiet" : "btn-primary"}`;
+    document.querySelectorAll("[data-overlay]").forEach((el, i) => (el.innerHTML = overlay(i === 1)));
+    document.getElementById("desk").hidden = state.size !== "desk";
+    document.getElementById("phone").hidden = state.size !== "phone";
+    lucide.createIcons();
+    fit();
+  }
+  function fit() {
+    const stage = document.getElementById(state.size);
+    const w = state.size === "desk" ? 1440 : 390, h = state.size === "desk" ? 900 : 844;
+    const vp = document.querySelector(".viewport");
+    const s = Math.min((vp.clientWidth - 32) / w, (vp.clientHeight - 32) / h, state.size === "desk" ? 1 : 1.2);
+    stage.style.transform = `scale(${s})`;
+    const frame = document.getElementById("frame");
+    frame.style.width = `${w * s}px`; frame.style.height = `${h * s}px`;
+  }
+  document.querySelectorAll(".seg > div").forEach((seg) =>
+    seg.addEventListener("click", (e) => { const v = e.target.closest("button")?.dataset.v; if (v) { state[seg.dataset.k] = v; render(); } }));
+  addEventListener("resize", fit);
+  render();
+</script>
+</body>
+</html>

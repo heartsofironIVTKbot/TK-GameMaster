@@ -421,7 +421,7 @@ export default function TutorialOverlay({
         </div>
         <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/5" aria-hidden>
           <div
-            className="h-full rounded-full bg-gradient-to-r from-brand-300 to-orange-500 transition-[width] duration-300"
+            className="h-full rounded-full bg-brand-400 transition-[width] duration-300"
             style={{ width: `${(number / Math.max(1, total)) * 100}%` }}
           />
         </div>

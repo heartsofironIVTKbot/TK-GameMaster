@@ -47,6 +47,15 @@ breathing out in turn (`gm-reserve` in `globals.css`; it keeps running with
 reduced motion on). Nation panel number boxes use muted game tints (brown
 civilian, green military / army, blue naval, red air).
 
+**Map panels** (`docs/design/map-panels.html`): the Draft section sits on top
+of the reservations list; its phase uses the status colours (sign-ups green,
+drafting blue, complete grey). Draft choices are line icons (`DRAFT_ICONS` in
+`PreferenceBadge.tsx`: crown, flag, handshake, puzzle). The Host Tool is a
+solid plate; drop zones are hatched plates (blue filler, red remove); a
+player being placed or a warning to accept is yellow. Steam status says
+Authenticated / Not authenticated (IronLegion's word). Help sits on layer
+1200: above the map panels, under every window.
+
 **The calendars** (`docs/design/calendar.html`): a game's colour is its
 status and nothing else: yellow scheduled, green announced, blue on-going,
 grey ended, red cancelled (`GameState` in `web/src/lib/scheduleOptions.ts`,

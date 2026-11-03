@@ -1,21 +1,25 @@
-import { DRAFT_CHOICES, draftChoiceOf } from "@/lib/draft";
+import { Crown, Flag, Handshake, Puzzle, type LucideIcon } from "lucide-react";
+import { DRAFT_CHOICES, draftChoiceOf, type DraftChoice } from "@/lib/draft";
 
-const TONES = {
-  major: "bg-violet-500/20 text-violet-100",
-  minor: "bg-ink-600/40 text-ink-200",
-  coop: "bg-sky-500/20 text-sky-100",
-  filler: "bg-emerald-500/15 text-emerald-100",
-} as const;
+/** Each draft choice's line icon (the website's; DRAFT_CHOICES keeps the bot's emoji). */
+export const DRAFT_ICONS: Record<DraftChoice, LucideIcon> = {
+  major: Crown,
+  minor: Flag,
+  coop: Handshake,
+  filler: Puzzle,
+};
 
-/** What a pool player signed up as: 👑 Major, 🏳️ Minor, 🤝 Major Co-op or 🧩 Filler. */
+/** What a pool player signed up as: Major, Minor, Major Co-op or Filler. */
 export default function PreferenceBadge({ preference, size = "sm" }: { preference: string; size?: "xs" | "sm" }) {
   const choice = draftChoiceOf(preference);
   const meta = DRAFT_CHOICES.find((entry) => entry.value === choice);
+  const Icon = DRAFT_ICONS[choice];
   return (
     <span
-      className={`shrink-0 whitespace-nowrap rounded-md px-1.5 py-0.5 font-bold ${size === "xs" ? "text-[10px]" : "text-[11px]"} ${TONES[choice]}`}
+      className={`gm-tag shrink-0 gap-1 bg-ink-800 text-ink-300 ${size === "xs" ? "h-5 px-2 text-[11px]" : "h-[22px] px-2.5 text-xs"}`}
     >
-      {meta?.icon} {meta?.title ?? preference}
+      <Icon aria-hidden className="h-3 w-3" strokeWidth={2} />
+      {meta?.title ?? preference}
     </span>
   );
 }

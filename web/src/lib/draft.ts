@@ -15,7 +15,7 @@ export const DRAFT_CHOICES: readonly { value: DraftChoice; icon: string; title: 
   { value: "major", icon: "👑", title: "Major", text: "Lead one of the big powers." },
   { value: "minor", icon: "🏳️", title: "Minor", text: "Play a smaller nation." },
   { value: "coop", icon: "🤝", title: "Major Co-op", text: "Share a Major with its main player." },
-  { value: "filler", icon: "🧩", title: "Filler", text: "Fill in wherever you're needed — you still play." },
+  { value: "filler", icon: "🧩", title: "Filler", text: "Fill in wherever you're needed. You still play." },
 ];
 export const DRAFT_CHOICE_VALUES: readonly DraftChoice[] = DRAFT_CHOICES.map((choice) => choice.value);
 
