@@ -1,11 +1,12 @@
 "use client";
 
+import { CalendarPlus, Check, CircleAlert, ClipboardList } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { SectionCard } from "@/components/schedule/ui";
-import type { ModeDefaults } from "@/lib/presetTypes";
+import { playableNations, type ModeDefaults } from "@/lib/presetTypes";
 import { lockLevelLabel, modeOption } from "@/lib/scheduleOptions";
 import { formatDurationMinutes } from "@/lib/timeEngine";
+import { Section } from "./parts";
 import type { MakerState, MakerTab } from "./model";
 
 export interface MakerIssue {
@@ -21,6 +22,7 @@ export default function SaveTab({
   issues,
   savedId,
   dirty,
+  savesCopy,
   onGoTo,
 }: {
   state: MakerState;
@@ -29,6 +31,8 @@ export default function SaveTab({
   issues: MakerIssue[];
   savedId: string | null;
   dirty: boolean;
+  /** Saving makes a copy (GameMaster's preset, another server's or another host's). */
+  savesCopy: boolean;
   onGoTo: (tab: MakerTab) => void;
 }) {
   const locks = state.locks.filter((group) => group.nations.length > 0);
@@ -38,53 +42,58 @@ export default function SaveTab({
     <button
       type="button"
       onClick={() => onGoTo(tab)}
-      className="flex w-full items-start gap-3 rounded-lg px-2 py-1.5 text-left hover:bg-white/5"
+      className="gm-cut flex w-full items-start gap-3 px-2 py-1.5 text-left [--cut:6px] hover:bg-ink-800"
     >
-      <span className="w-24 shrink-0 text-[11px] font-semibold text-ink-500">{label}</span>
-      <span className="min-w-0 flex-1 text-xs text-ink-200">{value}</span>
+      <span className="w-24 shrink-0 text-xs font-semibold text-ink-500">{label}</span>
+      <span className="min-w-0 flex-1 text-[13px] text-ink-200">{value}</span>
     </button>
   );
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {issues.length > 0 ? (
-        <SectionCard icon="⚠️" title="Fix before saving">
-          <ul className="space-y-1.5">
+        <Section icon={CircleAlert} title="Fix these first">
+          <ul className="space-y-1">
             {issues.map((issue) => (
               <li key={`${issue.tab}|${issue.message}`}>
                 <button
                   type="button"
                   onClick={() => onGoTo(issue.tab)}
-                  className="w-full rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-left text-xs text-rose-100 hover:border-rose-300/60"
+                  className="gm-cut w-full bg-rose-950/70 px-3 py-2 text-left text-[13px] text-rose-100 [--cut:7px] hover:bg-rose-950"
                 >
                   {issue.message}
                 </button>
               </li>
             ))}
           </ul>
-        </SectionCard>
+        </Section>
       ) : (
-        <p className="rounded-2xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-sm font-semibold text-emerald-100">
-          {savedId && !dirty ? "✓ Saved — every host of the server can use it now." : "✓ Ready to save."}
+        <p className="gm-cut flex items-center gap-2 bg-emerald-950/70 px-3.5 py-2.5 text-[13px] font-semibold text-emerald-200 [--cut:8px]">
+          <Check aria-hidden className="h-4 w-4 shrink-0" strokeWidth={2} />
+          {savedId && !dirty && !savesCopy
+            ? "Saved. Every host of the server can use it now."
+            : savesCopy
+              ? "Ready. Saving makes your own copy; the original stays the same."
+              : "Ready to save."}
         </p>
       )}
 
-      <SectionCard icon="✅" title={state.name.trim() || "Unnamed preset"} subtitle={modeOption(state.mode)?.label ?? state.mode}>
+      <Section icon={ClipboardList} title={state.name.trim() || "Unnamed preset"} subtitle={modeOption(state.mode)?.label ?? state.mode}>
         <div className="-mx-2 space-y-0.5">
-          {row("basics", "Sharing", state.shared ? "🌐 In the public library" : "🔒 This server only")}
+          {row("basics", "Sharing", state.shared ? "In the public library" : "This server only")}
           {row(
             "groups",
-            "Nation groups",
+            "Nations",
             state.layout
-              ? `${state.layout.filter((group) => group.enabled).map((group) => group.name).join(", ") || "none on"}${
+              ? `${playableNations(state.layout).length} playable in ${state.layout.filter((group) => group.enabled).map((group) => group.name).join(", ") || "no group"}${
                   state.layout.some((group) => !group.enabled)
-                    ? ` · off: ${state.layout.filter((group) => !group.enabled).map((group) => group.name).join(", ")}`
+                    ? `; off: ${state.layout.filter((group) => !group.enabled).map((group) => group.name).join(", ")}`
                     : ""
                 }`
-              : "The mode's standard groups",
+              : "The whole map",
           )}
           {state.layout && row("groups", "Not playable", hiddenCount === 0 ? "None" : `${hiddenCount} nation${hiddenCount === 1 ? "" : "s"}`)}
-          {row("locks", "Who can reserve", `Majors: ${lockLevelLabel(state.majorLevel)} · Minors: ${lockLevelLabel(state.minorLevel)}`)}
+          {row("locks", "Who can reserve", `Majors ${lockLevelLabel(state.majorLevel)}, Minors ${lockLevelLabel(state.minorLevel)}`)}
           {row(
             "locks",
             "Nation locks",
@@ -93,30 +102,27 @@ export default function SaveTab({
               : locks
                   .map(
                     (group) =>
-                      `${group.label || "Locked nations"} (${group.nations.length}${
-                        group.releaseEnabled ? `, opens ${formatDurationMinutes(group.releaseHoursBefore * 60)} before` : ", all game"
+                      `${group.label || "Locked nations"} (${group.nations.length}, ${
+                        group.releaseEnabled ? `opens ${formatDurationMinutes(group.releaseHoursBefore * 60)} before` : "all game"
                       })`,
                   )
-                  .join(" · "),
+                  .join("; "),
           )}
-          {row("resources", "Rules", `${state.rules ? "Custom" : "Standard"}: ${rules.map((entry) => entry.name).join(", ") || "none"}`)}
-          {row("resources", "Mods", `${state.mods ? "Custom" : "Standard"}: ${mods.map((entry) => entry.name).join(", ") || "none"}`)}
+          {row("resources", "Rules", `${state.rules ? "Our own" : "Standard"}: ${rules.map((entry) => entry.name).join(", ") || "none"}`)}
+          {row("resources", "Mods", `${state.mods ? "Our own" : "Standard"}: ${mods.map((entry) => entry.name).join(", ") || "none"}`)}
         </div>
-      </SectionCard>
+      </Section>
 
-      {savedId && (
-        <SectionCard icon="🗓️" title="Use it" subtitle="Load it on the calendar when you set up a game.">
-          <Link
-            href={`/schedule/new?preset=${savedId}`}
-            className="block rounded-xl bg-sky-500/20 px-4 py-2.5 text-center text-sm font-bold text-sky-100 hover:bg-sky-500/30"
-          >
-            Schedule a game with this preset →
+      {savedId && !savesCopy && (
+        <Section icon={CalendarPlus} title="Use it" subtitle="Load it on the calendar when you set up a game.">
+          <Link href={`/schedule/new?preset=${savedId}`} className="gm-btn gm-btn-secondary w-full">
+            <CalendarPlus aria-hidden strokeWidth={1.75} /> Schedule a game with it
           </Link>
           <p className="mt-2 text-[11px] text-ink-500">
-            Games copy the preset when they&apos;re scheduled — changing the preset later doesn&apos;t change games already on the
+            A game copies the preset when it&apos;s scheduled: changing the preset later doesn&apos;t change games already on the
             calendar.
           </p>
-        </SectionCard>
+        </Section>
       )}
     </div>
   );

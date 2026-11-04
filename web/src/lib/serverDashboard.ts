@@ -269,7 +269,7 @@ function demoDashboard(guildId: string, status: ServerLiveStatus): ServerDashboa
     recent: [
       game("r1", "Roleplay", "Roleplay #86 — Road to 56", now - 2 * DAY, "Demo Host", 34),
       game("r2", "Historical (Vanilla)", "Vanilla 1936", now - 3 * DAY, "Senior Host", 18),
-      game("r3", "Kaiserreich (FFA)", "Kaiserreich FFA", now - 5 * DAY, "md_enjoyer", 26),
+      game("r3", "Kaiserreich (FFA)", "Kaiserreich", now - 5 * DAY, "md_enjoyer", 26),
     ],
     staff: {
       top_hosts: [

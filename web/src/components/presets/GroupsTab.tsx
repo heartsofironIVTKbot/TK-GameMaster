@@ -1,25 +1,19 @@
 "use client";
 
+import { ArrowDown, ArrowUp, Ban, ChevronDown, Layers, Map as MapIcon, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { PRESET_LIMITS, notPlayableNations, type ModeDefaults, type PresetGroup } from "@/lib/presetTypes";
-import { SectionCard, Segmented, Toggle } from "@/components/schedule/ui";
+import { Segmented, Toggle } from "@/components/schedule/ui";
 import NationPicker from "./NationPicker";
-import {
-  GROUP_COLORS,
-  customLayout,
-  nationOwners,
-  newGroup,
-  placeNations,
-  removeNations,
-  type MakerState,
-} from "./model";
+import { Count, GroupMark, NationChip, Section } from "./parts";
+import { customLayout, nationOwners, newGroup, placeNations, removeNations, type MakerState } from "./model";
 
 /**
- * Nation groups of a preset: keep the mode's standard groups (Europe,
- * Asia… or the factions), or make custom ones — rename, reorder, turn off,
- * add new groups with sub-headings, and move nations between them (here or
- * by clicking the map). Nations outside every turned-on group aren't
- * playable: hidden from the reservation list and the map, and locked.
+ * Nation groups of a preset: the whole map (every nation playable, grouped
+ * the mode's standard way: regions or factions), or your own groups: rename,
+ * reorder, turn off, add groups with sub-headings, and move nations between
+ * them (here or by clicking the map). Nations outside every turned-on group
+ * aren't playable: hidden from the reservation list and the map, and locked.
  */
 export default function GroupsTab({
   state,
@@ -27,6 +21,7 @@ export default function GroupsTab({
   defaults,
   allNations,
   majors,
+  flagOf,
   disabled,
 }: {
   state: MakerState;
@@ -34,6 +29,8 @@ export default function GroupsTab({
   defaults: ModeDefaults | undefined;
   allNations: string[];
   majors: Set<string>;
+  /** A nation's flag image, when the map draws it. */
+  flagOf: (nation: string) => string | null;
   disabled: boolean;
 }) {
   const [showHidden, setShowHidden] = useState(false);
@@ -45,45 +42,46 @@ export default function GroupsTab({
   const setLayout = (next: PresetGroup[], patch: Partial<MakerState> = {}) => update({ layout: next, ...patch });
   const patchGroup = (id: string, patch: Partial<PresetGroup>) =>
     layout && setLayout(layout.map((group) => (group.id === id ? { ...group, ...patch } : group)));
+  const startCustom = () => {
+    const next = customLayout(defaults);
+    update({ layout: next, activeGroupId: next[0]?.id ?? null, activeTier: 0 });
+  };
+  const source = (
+    <Segmented
+      ariaLabel="Nation groups"
+      size="sm"
+      value={layout ? "custom" : "standard"}
+      onChange={(value) => {
+        if (value === "custom" && !layout) startCustom();
+        if (value === "standard" && layout) update({ layout: null, activeGroupId: null, activeTier: 0 });
+      }}
+      options={[
+        { value: "standard", label: "Whole map", disabled },
+        { value: "custom", label: "Our own groups", disabled },
+      ]}
+    />
+  );
 
   if (!layout) {
     return (
-      <div className="space-y-4">
-        <SectionCard
-          icon="🧩"
-          title="Nation groups"
-          subtitle="How nations are grouped on the reservation list and the map."
-        >
-          <Segmented
-            ariaLabel="Nation groups"
-            size="sm"
-            value="standard"
-            onChange={(value) => {
-              if (value !== "custom") return;
-              const next = customLayout(defaults);
-              update({ layout: next, activeGroupId: next[0]?.id ?? null, activeTier: 0 });
-            }}
-            options={[
-              { value: "standard", label: "Mode's standard groups", disabled },
-              { value: "custom", label: "Custom groups", disabled },
-            ]}
-          />
+      <div className="space-y-3">
+        <Section icon={Layers} title="Nation groups" subtitle="Which nations are playable, and how the reservation list groups them.">
+          {source}
           <p className="mt-3 text-xs text-ink-400">
-            Games with this preset use the mode&apos;s usual groups. Pick <b className="text-ink-200">Custom groups</b> to
-            rename, reorder or turn groups off (their nations stop being playable), or to build your own factions.
+            Every nation on the map is playable, grouped the mode&apos;s usual way. Pick{" "}
+            <b className="font-semibold text-ink-200">Our own groups</b> to rename, reorder or turn groups off (their nations
+            stop being playable), or to build your own factions.
           </p>
-          <ul className="mt-3 space-y-1.5">
+          <ul className="mt-3 space-y-1">
             {(defaults?.groups ?? []).map((group, index) => (
-              <li key={group.name} className="flex items-center gap-2.5 rounded-lg border border-white/5 bg-white/[0.02] px-3 py-2">
-                <span className="h-2.5 w-2.5 rounded-full" style={{ background: GROUP_COLORS[index % GROUP_COLORS.length] }} />
-                <span className="flex-1 text-sm font-semibold text-ink-200">{group.name}</span>
-                <span className="text-[11px] text-ink-500">
-                  {group.tiers.reduce((sum, tier) => sum + tier.nations.length, 0)} nations
-                </span>
+              <li key={group.name} className="gm-cut flex items-center gap-2.5 bg-ink-950 px-2.5 py-1.5 [--cut:7px]">
+                <GroupMark name={group.name} index={index} size={22} />
+                <span className="flex-1 truncate text-[13px] font-semibold text-ink-200">{group.name}</span>
+                <span className="text-[11px] text-ink-500">{group.tiers.reduce((sum, tier) => sum + tier.nations.length, 0)} nations</span>
               </li>
             ))}
           </ul>
-        </SectionCard>
+        </Section>
       </div>
     );
   }
@@ -109,36 +107,24 @@ export default function GroupsTab({
     if (!active) return;
     setLayout(placeNations(layout, nations, active.id, state.activeTier));
   };
-
-  const groupColor = (id: string) => GROUP_COLORS[Math.max(0, layout.findIndex((group) => group.id === id)) % GROUP_COLORS.length];
   const nameClash =
     active && layout.some((group) => group.id !== active.id && group.name.trim().toLowerCase() === active.name.trim().toLowerCase());
+  const iconButton = "grid h-7 w-7 place-items-center text-ink-500 hover:text-ink-100 disabled:opacity-25";
 
   return (
-    <div className="space-y-4">
-      <SectionCard
-        icon="🧩"
+    <div className="space-y-3">
+      <Section
+        icon={Layers}
         title="Nation groups"
-        subtitle="Click a group to edit it — map clicks put nations into it."
+        subtitle="Click a group to edit it. Clicking the map puts nations into it."
         right={
-          <span className="rounded-full bg-white/5 px-2.5 py-1 text-[11px] font-bold text-ink-300">
+          <Count>
             {layout.length}/{PRESET_LIMITS.groups}
-          </span>
+          </Count>
         }
       >
-        <Segmented
-          ariaLabel="Nation groups"
-          size="sm"
-          value="custom"
-          onChange={(value) => {
-            if (value === "standard") update({ layout: null, activeGroupId: null, activeTier: 0 });
-          }}
-          options={[
-            { value: "standard", label: "Mode's standard groups", disabled },
-            { value: "custom", label: "Custom groups", disabled },
-          ]}
-        />
-        <ul className="mt-3 space-y-1.5">
+        {source}
+        <ul className="mt-3 space-y-1">
           {layout.map((group, index) => {
             const isActive = group.id === active?.id;
             const count = group.tiers.reduce((sum, tier) => sum + tier.nations.length, 0);
@@ -151,69 +137,66 @@ export default function GroupsTab({
                 onKeyDown={(event) => {
                   if (event.key === "Enter") update({ activeGroupId: group.id, activeTier: 0 });
                 }}
-                className={`flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 transition ${
-                  isActive ? "border-rose-400/60 bg-rose-500/10" : "border-white/10 bg-white/[0.03] hover:border-white/25"
-                } ${group.enabled ? "" : "opacity-60"}`}
+                className={`gm-cut flex cursor-pointer items-center gap-2.5 py-1.5 pl-2 pr-1 [--cut:7px] ${
+                  isActive ? "bg-ink-800 shadow-[inset_3px_0_0_var(--color-brand-400)]" : "bg-ink-950 hover:bg-ink-800/60"
+                } ${group.enabled ? "" : "opacity-55"}`}
               >
-                <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: groupColor(group.id) }} />
+                <GroupMark name={group.name} index={index} />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-semibold text-ink-100">{group.name || "Unnamed group"}</span>
-                  <span className="block text-[11px] text-ink-400">
+                  <span className="block truncate text-[13px] font-semibold text-ink-100">{group.name || "Unnamed group"}</span>
+                  <span className="block truncate text-[11px] text-ink-400">
                     {count} nation{count === 1 ? "" : "s"}
-                    {group.tiers.length > 1 ? ` · ${group.tiers.length} sub-groups` : ""}
-                    {group.enabled ? "" : " · off — not playable"}
-                    {group.builtin ? " · standard" : ""}
+                    {group.tiers.length > 1 ? `, ${group.tiers.length} sub-groups` : ""}
+                    {group.enabled ? "" : ", off: not playable"}
                   </span>
                 </span>
-                {isActive && <span className="text-[10px] font-bold uppercase tracking-wider text-rose-300">Editing</span>}
-                <button type="button" disabled={disabled || index === 0}
-                  onClick={(event) => { event.stopPropagation(); moveGroup(index, -1); }}
-                  className="rounded-md px-1 text-ink-500 hover:text-white disabled:opacity-25" aria-label={`Move ${group.name} up`}>↑</button>
-                <button type="button" disabled={disabled || index === layout.length - 1}
-                  onClick={(event) => { event.stopPropagation(); moveGroup(index, 1); }}
-                  className="rounded-md px-1 text-ink-500 hover:text-white disabled:opacity-25" aria-label={`Move ${group.name} down`}>↓</button>
-                <button type="button" disabled={disabled}
-                  onClick={(event) => { event.stopPropagation(); deleteGroup(group.id); }}
-                  className="rounded-md px-1 text-ink-500 hover:text-rose-300 disabled:opacity-25" title="Delete group (its nations stop being playable)"
-                  aria-label={`Delete ${group.name}`}>✕</button>
+                {isActive && <span className="text-[11px] font-semibold text-brand-400">Editing</span>}
+                <button type="button" disabled={disabled || index === 0} className={iconButton} aria-label={`Move ${group.name} up`}
+                  onClick={(event) => { event.stopPropagation(); moveGroup(index, -1); }}>
+                  <ArrowUp aria-hidden className="h-3.5 w-3.5" strokeWidth={2} />
+                </button>
+                <button type="button" disabled={disabled || index === layout.length - 1} className={iconButton} aria-label={`Move ${group.name} down`}
+                  onClick={(event) => { event.stopPropagation(); moveGroup(index, 1); }}>
+                  <ArrowDown aria-hidden className="h-3.5 w-3.5" strokeWidth={2} />
+                </button>
+                <button type="button" disabled={disabled} className={`${iconButton} hover:text-rose-300`} aria-label={`Delete ${group.name}`}
+                  title="Delete the group (its nations stop being playable)"
+                  onClick={(event) => { event.stopPropagation(); deleteGroup(group.id); }}>
+                  <Trash2 aria-hidden className="h-3.5 w-3.5" strokeWidth={1.75} />
+                </button>
               </li>
             );
           })}
         </ul>
-        <div className="mt-2 flex gap-2">
+        <div className="mt-2 flex gap-1.5">
           <button
             type="button"
             onClick={addGroup}
             disabled={disabled || layout.length >= PRESET_LIMITS.groups}
-            className="flex-1 rounded-xl border border-dashed border-white/15 py-2 text-xs font-semibold text-ink-400 transition hover:border-brand-300/40 hover:text-brand-200 disabled:opacity-40"
+            className="gm-btn gm-btn-secondary h-8 flex-1 px-3 text-[13px]"
           >
-            ＋ New group (e.g. &quot;Axis&quot;, &quot;Pacific&quot;)
+            <Plus aria-hidden strokeWidth={2} /> Add a group
           </button>
           <button
             type="button"
             disabled={disabled}
-            onClick={() => {
-              const next = customLayout(defaults);
-              update({ layout: next, activeGroupId: next[0]?.id ?? null, activeTier: 0 });
-            }}
-            className="rounded-xl border border-white/10 px-3 py-2 text-xs font-semibold text-ink-400 hover:border-white/25 hover:text-white disabled:opacity-40"
-            title="Start again from the mode's standard groups"
+            onClick={startCustom}
+            className="gm-btn gm-btn-quiet h-8 px-3 text-[13px]"
+            title="Start again from the whole map's groups"
           >
-            ↺ Reset
+            <RotateCcw aria-hidden strokeWidth={1.75} /> Start over
           </button>
         </div>
-      </SectionCard>
+      </Section>
 
       {active && (
-        <SectionCard icon="✏️" title={`Editing: ${active.name || "Unnamed group"}`} subtitle="Name, on / off, sub-groups and nations">
+        <Section icon={Pencil} title={`Editing ${active.name || "Unnamed group"}`} subtitle="Its name, whether it's playable, sub-groups and nations.">
           <input
             value={active.name}
             maxLength={PRESET_LIMITS.groupName}
             disabled={disabled}
             onChange={(event) => patchGroup(active.id, { name: event.target.value })}
-            className={`w-full rounded-lg border bg-ink-950/70 px-3 py-2 text-sm font-semibold text-ink-100 focus:outline-none ${
-              nameClash || !active.name.trim() ? "border-rose-400/60" : "border-white/10 focus:border-brand-300/50"
-            }`}
+            className={`gm-input w-full font-semibold ${nameClash || !active.name.trim() ? "shadow-[inset_0_0_0_1px_var(--color-rose-400)]" : ""}`}
             aria-label="Group name"
           />
           {nameClash && <p className="mt-1 text-[11px] text-rose-300">Another group already has this name.</p>}
@@ -231,15 +214,15 @@ export default function GroupsTab({
             />
           </div>
 
-          <div className="mt-4 space-y-3">
+          <div className="mt-3 space-y-2">
             {active.tiers.map((tier, tierIndex) => {
               const targeted = tierIndex === Math.min(state.activeTier, active.tiers.length - 1);
               return (
                 <div
                   key={tierIndex}
-                  className={`rounded-xl border p-2.5 ${targeted ? "border-brand-300/40 bg-brand-400/[0.04]" : "border-white/10 bg-white/[0.02]"}`}
+                  className={`gm-cut p-2.5 [--cut:8px] ${targeted ? "bg-ink-950 shadow-[inset_0_0_0_1px_var(--color-brand-400)]" : "bg-ink-950"}`}
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     <input
                       value={tier.label ?? ""}
                       maxLength={PRESET_LIMITS.groupName}
@@ -251,18 +234,16 @@ export default function GroupsTab({
                           ),
                         })
                       }
-                      placeholder={active.tiers.length > 1 ? "Sub-heading (e.g. Majors)" : "Optional sub-heading"}
-                      className="min-w-0 flex-1 rounded-lg border border-white/10 bg-ink-950/70 px-2.5 py-1.5 text-xs font-semibold text-ink-100 placeholder:text-ink-600 focus:border-brand-300/50 focus:outline-none"
+                      placeholder={active.tiers.length > 1 ? "Sub-heading (e.g. Majors)" : "Sub-heading (optional)"}
+                      className="gm-input min-h-8 min-w-0 flex-1 py-1 text-[13px] [--cut:6px]"
                       aria-label={`Sub-group ${tierIndex + 1} heading`}
                     />
                     <button
                       type="button"
                       disabled={disabled}
                       onClick={() => update({ activeTier: tierIndex })}
-                      className={`rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-wide ${
-                        targeted ? "bg-brand-400 text-ink-950" : "bg-white/5 text-ink-400 hover:text-white"
-                      }`}
-                      title="New nations go here"
+                      className={`gm-btn h-8 px-2.5 text-xs [--cut:6px] ${targeted ? "gm-btn-primary" : "gm-btn-secondary"}`}
+                      title="Map clicks and searches put nations here"
                     >
                       {targeted ? "Adding here" : "Add here"}
                     </button>
@@ -277,35 +258,30 @@ export default function GroupsTab({
                           patchGroup(active.id, { tiers: rest });
                           update({ activeTier: 0 });
                         }}
-                        className="rounded-md px-1 text-ink-500 hover:text-rose-300"
-                        aria-label="Remove sub-group"
-                        title="Remove sub-group (its nations move to the first one)"
+                        className={`${iconButton} hover:text-rose-300`}
+                        aria-label="Remove the sub-group"
+                        title="Remove the sub-group (its nations move to the first one)"
                       >
-                        ✕
+                        <Trash2 aria-hidden className="h-3.5 w-3.5" strokeWidth={1.75} />
                       </button>
                     )}
                   </div>
                   {tier.nations.length === 0 ? (
-                    <p className="mt-2 text-[11px] text-ink-500">No nations yet — click them on the map or search below.</p>
+                    <p className="mt-2 flex items-center gap-1.5 text-[11px] text-ink-500">
+                      <MapIcon aria-hidden className="h-3.5 w-3.5" strokeWidth={1.75} /> No nations yet. Click them on the map or search below.
+                    </p>
                   ) : (
-                    <div className="mt-2 flex flex-wrap gap-1.5">
+                    <div className="mt-2 flex flex-wrap gap-1">
                       {tier.nations.map((nation) => (
-                        <span
+                        <NationChip
                           key={nation}
-                          className="inline-flex items-center gap-1 rounded-lg border border-white/15 bg-white/[0.06] py-0.5 pl-2 pr-1 text-xs font-semibold text-ink-100"
-                        >
-                          {majors.has(nation) && <span title="Major nation">👑</span>}
-                          <span className="max-w-[150px] truncate">{nation}</span>
-                          <button
-                            type="button"
-                            disabled={disabled}
-                            onClick={() => setLayout(removeNations(layout, [nation]))}
-                            className="rounded px-1 text-ink-400 hover:bg-rose-500/30 hover:text-white"
-                            aria-label={`Take ${nation} out of the group`}
-                          >
-                            ×
-                          </button>
-                        </span>
+                          name={nation}
+                          flag={flagOf(nation)}
+                          major={majors.has(nation)}
+                          disabled={disabled}
+                          onRemove={() => setLayout(removeNations(layout, [nation]))}
+                          removeLabel={`Take ${nation} out of the group`}
+                        />
                       ))}
                     </div>
                   )}
@@ -320,18 +296,19 @@ export default function GroupsTab({
                   patchGroup(active.id, { tiers: [...active.tiers, { label: null, nations: [] }] });
                   update({ activeTier: active.tiers.length });
                 }}
-                className="w-full rounded-xl border border-dashed border-white/15 py-1.5 text-[11px] font-semibold text-ink-400 hover:border-brand-300/40 hover:text-brand-200"
+                className="gm-btn gm-btn-quiet h-8 w-full text-[12.5px]"
               >
-                ＋ Sub-group (e.g. &quot;Majors&quot; / &quot;Minors&quot;)
+                <Plus aria-hidden strokeWidth={2} /> Add a sub-group (e.g. Majors, Minors)
               </button>
             )}
           </div>
 
-          <div className="mt-4">
-            <p className="mb-1.5 text-[11px] font-semibold text-ink-400">Add nations to {active.name || "this group"}</p>
+          <div className="mt-3">
+            <p className="mb-1.5 text-xs font-semibold text-ink-400">Add nations to {active.name || "this group"}</p>
             <NationPicker
               nations={allNations}
               majors={majors}
+              flagOf={flagOf}
               disabled={disabled}
               status={(nation) => {
                 const owner = owners.get(nation);
@@ -345,18 +322,14 @@ export default function GroupsTab({
               onPick={(nation) => addTo([nation])}
             />
           </div>
-        </SectionCard>
+        </Section>
       )}
 
-      <SectionCard
-        icon="🚫"
+      <Section
+        icon={Ban}
         title="Not playable"
-        subtitle="Nations outside every turned-on group — hidden from the list and the map, and locked."
-        right={
-          <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${hidden.length ? "bg-rose-500/15 text-rose-200" : "bg-emerald-500/15 text-emerald-200"}`}>
-            {hidden.length}
-          </span>
-        }
+        subtitle="Nations outside every turned-on group: hidden from the list and the map, and locked."
+        right={<Count tone={hidden.length ? "rose" : "mint"}>{hidden.length}</Count>}
       >
         {hidden.length === 0 ? (
           <p className="text-xs text-ink-400">Every nation of the mode is playable.</p>
@@ -366,24 +339,26 @@ export default function GroupsTab({
               <button
                 type="button"
                 onClick={() => setShowHidden((value) => !value)}
-                className="text-xs font-semibold text-ink-300 hover:text-white"
+                className="flex items-center gap-1 text-xs font-semibold text-ink-300 hover:text-ink-100"
+                aria-expanded={showHidden}
               >
-                {showHidden ? "Hide the list ▴" : `Show the ${hidden.length} nations ▾`}
+                {showHidden ? "Hide the list" : `Show the ${hidden.length} nations`}
+                <ChevronDown aria-hidden className={`h-3.5 w-3.5 transition-transform ${showHidden ? "rotate-180" : ""}`} strokeWidth={2} />
               </button>
               {active && (
                 <button
                   type="button"
                   disabled={disabled}
                   onClick={() => addTo(hidden.filter((nation) => !owners.has(nation)))}
-                  className="ml-auto rounded-md bg-white/5 px-2 py-1 text-[11px] font-bold text-ink-300 hover:bg-brand-400/20 hover:text-brand-100 disabled:opacity-40"
+                  className="gm-btn gm-btn-secondary ml-auto h-7 px-2.5 text-[11.5px] [--cut:6px]"
                   title="Nations in turned-off groups stay where they are"
                 >
-                  Add every ungrouped one to {active.name || "this group"}
+                  Add the ungrouped ones to {active.name || "this group"}
                 </button>
               )}
             </div>
             {showHidden && (
-              <div className="mt-2 flex flex-wrap gap-1.5">
+              <div className="mt-2 flex flex-wrap gap-1">
                 {hidden.map((nation) => {
                   const owner = owners.get(nation);
                   return (
@@ -392,12 +367,10 @@ export default function GroupsTab({
                       type="button"
                       disabled={disabled || !active}
                       onClick={() => addTo([nation])}
-                      className="rounded-lg border border-rose-400/30 bg-rose-500/10 px-2 py-0.5 text-xs font-semibold text-rose-100 hover:border-brand-300/50"
-                      title={owner ? `In ${owner.group.name} (turned off) — click to move to ${active?.name}` : `Click to add to ${active?.name}`}
+                      title={owner ? `In ${owner.group.name} (turned off). Click to move it to ${active?.name}` : `Click to add it to ${active?.name}`}
+                      className="hover:opacity-80 disabled:opacity-60"
                     >
-                      {majors.has(nation) ? "👑 " : ""}
-                      {nation}
-                      {owner && <span className="ml-1 text-[10px] text-rose-300/70">· {owner.group.name}</span>}
+                      <NationChip name={owner ? `${nation} (${owner.group.name})` : nation} flag={flagOf(nation)} major={majors.has(nation)} tone="rose" />
                     </button>
                   );
                 })}
@@ -405,7 +378,7 @@ export default function GroupsTab({
             )}
           </>
         )}
-      </SectionCard>
+      </Section>
     </div>
   );
 }

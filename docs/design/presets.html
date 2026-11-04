@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GameMaster Presets Mock-up</title>
+<!-- Design mock-up of the Presets page, the update check and the preset
+     editor in the cut-plate style (docs/branding.md). Not part of the app.
+     Drawn at 1440x900 (desktop) or 390x844 (phone). -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Big+Shoulders+Stencil+Display:wght@800&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+<style>
+  :root {
+    --ink-950: oklch(11.8% 0.009 152); --ink-900: oklch(19.2% 0.011 152); --ink-850: oklch(22.8% 0.012 152); --ink-800: oklch(26.6% 0.012 152);
+    --ink-700: oklch(36.2% 0.013 152); --ink-600: oklch(44.4% 0.014 152); --ink-500: oklch(55.4% 0.015 152); --ink-400: oklch(70.4% 0.015 152);
+    --ink-300: oklch(86.4% 0.012 152); --ink-100: oklch(96.6% 0.006 152);
+    --brand-400: oklch(76.4% 0.186 146); --brand-950: oklch(19.4% 0.046 146);
+    --mint: oklch(79.4% 0.118 174); --yellow: oklch(86% 0.15 95); --red: oklch(70% 0.17 22); --sky: oklch(76% 0.11 235); --violet: oklch(72% 0.13 300);
+    --display: "Big Shoulders Display", "Arial Narrow", sans-serif; --stencil: "Big Shoulders Stencil Display", var(--display); --body: "Public Sans", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: oklch(8% 0.006 152); color: var(--ink-300); font: 400 14px/1.45 var(--body); font-variant-numeric: tabular-nums; display: flex; flex-direction: column; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
+  svg.lucide { width: 16px; height: 16px; stroke-width: 1.75; flex: none; }
+  .switches { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; padding: 10px 16px; border-bottom: 1px solid var(--ink-800); background: var(--ink-950); }
+  .switches h1 { margin: 0 6px 0 0; font: 800 22px/1 var(--display); text-transform: uppercase; color: var(--ink-100); }
+  .seg { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-500); }
+  .seg div { display: flex; border: 1px solid var(--ink-700); border-radius: 4px; overflow: hidden; }
+  .seg button { padding: 5px 10px; font-size: 12px; font-weight: 600; color: var(--ink-400); }
+  .seg button + button { border-left: 1px solid var(--ink-700); }
+  .seg button[aria-pressed="true"] { background: var(--ink-800); color: var(--ink-100); }
+  .seg.off { opacity: .35; pointer-events: none; }
+  .viewport { flex: 1; min-height: 0; display: grid; place-items: center; padding: 16px; overflow: hidden; }
+  .frame { position: relative; overflow: hidden; outline: 1px solid var(--ink-800); }
+  .stage { position: absolute; left: 0; top: 0; transform-origin: 0 0; overflow: hidden; background: var(--ink-950); }
+  .stage.desk { width: 1440px; height: 900px; } .stage.phone { width: 390px; height: 844px; }
+  [hidden] { display: none !important; }
+  .cut, .btn, .plate, .field { clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut)); }
+  .cut, .btn, .field { --cut: 8px; }
+  .plate { --cut: 14px; --line: var(--ink-800); background-color: var(--ink-900); }
+  .plate, .field, .btn-secondary, .btn-danger { border: 1px solid var(--line);
+    background-image: linear-gradient(135deg, var(--line) calc(var(--cut) * .7071 + 1px), transparent 0), linear-gradient(315deg, var(--line) calc(var(--cut) * .7071 + 1px), transparent 0); background-origin: border-box; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; height: 34px; padding: 0 13px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+  .btn-primary { background-color: var(--brand-400); color: var(--brand-950); }
+  .btn-secondary { --line: var(--ink-700); color: var(--ink-100); background-color: var(--ink-950); }
+  .btn-quiet { color: var(--ink-300); } .btn-icon { width: 32px; padding: 0; }
+  .btn-danger { --line: oklch(71% 0.17 18 / .45); color: oklch(80% 0.12 18); background-color: var(--ink-950); }
+  .btn-sm { height: 30px; padding: 0 11px; font-size: 12.5px; --cut: 7px; }
+  .field { --line: var(--ink-700); display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 10px; background-color: var(--ink-950); color: var(--ink-500); font-size: 13px; }
+  .field b { flex: 1; font-weight: 400; color: var(--ink-100); }
+  .tag { display: inline-flex; align-items: center; gap: 6px; height: 21px; padding: 0 11px; font-size: 11.5px; font-weight: 600; white-space: nowrap; clip-path: polygon(7px 0, calc(100% - 7px) 0, 100% 50%, calc(100% - 7px) 100%, 7px 100%, 0 50%); }
+  .tag svg { width: 12px; height: 12px; }
+  .dot::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .t { color: var(--c); background: color-mix(in oklab, var(--c) 16%, var(--ink-950)); }
+  .t-ink { color: var(--ink-300); background: var(--ink-800); }
+  .title { font-family: var(--display); font-weight: 800; text-transform: uppercase; line-height: .95; color: var(--ink-100); }
+  .mark { width: 30px; height: 30px; --cut: 7px; display: grid; place-items: center; background: var(--brand-400); color: var(--brand-950); font: 800 17px/1 var(--stencil); }
+  .avatar { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; flex: none; background: var(--ink-800); color: var(--ink-100); font-size: 12px; font-weight: 700; }
+  .small { font-size: 12px; color: var(--ink-400); }
+  .label { margin: 0 0 6px; font-size: 12px; font-weight: 600; color: var(--ink-500); }
+  .h { display: flex; align-items: center; gap: 9px; margin: 0 0 4px; } .h .title { font-size: 22px; } .h > svg { color: var(--brand-400); width: 18px; height: 18px; } .h .right { margin-left: auto; }
+
+  .top { height: 56px; display: flex; align-items: center; gap: 12px; padding: 0 20px; border-bottom: 1px solid var(--ink-800); background: var(--ink-950); }
+  .top .title { font-size: 26px; } .top small { display: block; font-size: 12px; color: var(--ink-400); }
+  .top-end { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  .wrap { padding: 18px 24px; }
+  .bar { display: flex; align-items: center; gap: 10px; }
+  .tabs { display: flex; border-bottom: 1px solid var(--ink-800); }
+  .tabs button { display: flex; align-items: center; gap: 7px; height: 40px; padding: 0 14px; font-size: 13.5px; font-weight: 600; color: var(--ink-400); box-shadow: inset 0 -2px 0 transparent; white-space: nowrap; }
+  .tabs button[aria-current] { color: var(--ink-100); box-shadow: inset 0 -2px 0 var(--brand-400); } .tabs button[aria-current] svg { color: var(--brand-400); }
+  .tabs small { color: var(--ink-500); font-weight: 500; }
+  .modes { display: flex; flex-wrap: wrap; gap: 5px; margin: 14px 0 6px; }
+  .chip { flex: none; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px; --cut: 6px; background: var(--ink-950); box-shadow: inset 0 0 0 1px var(--ink-800); font-size: 12.5px; font-weight: 600; color: var(--ink-300); }
+  .chip svg { width: 14px; height: 14px; } .chip.on { background: var(--brand-400); box-shadow: none; color: var(--brand-950); }
+  .note { margin: 4px 0 14px; font-size: 13px; color: var(--ink-400); }
+  /* cards */
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .card { padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+  .card.upd { box-shadow: inset 3px 0 0 var(--yellow); }
+  .chead { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 11px; align-items: start; }
+  .mico { width: 40px; height: 40px; --cut: 8px; display: grid; place-items: center; background: var(--ink-800); color: var(--ink-100); } .mico svg { width: 20px; height: 20px; }
+  .chead .title { font-size: 22px; } .chead .tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
+  .card p { margin: 0; font-size: 13px; color: var(--ink-400); }
+  .facts { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12.5px; color: var(--ink-300); }
+  .facts span { display: inline-flex; align-items: center; gap: 5px; } .facts svg { width: 13px; height: 13px; color: var(--ink-500); }
+  .by { font-size: 12px; color: var(--ink-500); }
+  .acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; padding-top: 6px; border-top: 1px solid var(--ink-800); }
+  .acts .more { margin-left: auto; }
+  .updbar { display: flex; align-items: center; gap: 8px; padding: 7px 9px; --cut: 8px; background: color-mix(in oklab, var(--yellow) 12%, var(--ink-950)); font-size: 12.5px; color: var(--ink-100); }
+  .updbar svg { color: var(--yellow); } .updbar .btn { margin-left: auto; }
+  /* rows */
+  .rows { display: grid; gap: 5px; }
+  .row { display: grid; grid-template-columns: 36px minmax(0, 1.5fr) minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 9px 12px; --cut: 9px; background: var(--ink-900); }
+  .row.upd { box-shadow: inset 3px 0 0 var(--yellow); }
+  .row .mico { width: 36px; height: 36px; } .row strong { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--ink-100); } .row strong .tag { height: 19px; padding: 0 9px; font-size: 10.5px; }
+  .row small { display: block; font-size: 12px; color: var(--ink-400); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row .ra { display: flex; gap: 6px; }
+  /* dialog */
+  .scrim { position: absolute; inset: 0; background: oklch(8% 0.006 152 / .74); z-index: 6; }
+  .win { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 600px; z-index: 7; --cut: 16px; background-color: var(--ink-950); }
+  .win-head { padding: 18px 20px 14px; border-bottom: 1px solid var(--ink-800); position: relative; } .win-head .title { font-size: 30px; } .win-head .x { position: absolute; right: 12px; top: 12px; }
+  .win-body { padding: 14px 20px; display: grid; gap: 12px; }
+  .diff { display: grid; gap: 4px; }
+  .drow { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 10px; align-items: start; padding: 9px 11px; --cut: 9px; background: var(--ink-900); font-size: 13px; color: var(--ink-300); }
+  .drow .ico { width: 26px; height: 26px; --cut: 5px; display: grid; place-items: center; } .drow .ico svg { width: 14px; height: 14px; }
+  .drow b { color: var(--ink-100); font-weight: 600; } .drow em { font-style: normal; color: var(--ink-500); }
+  .chg { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .old { color: var(--ink-500); text-decoration: line-through; } .new { color: var(--ink-100); }
+  .warnline { display: flex; gap: 8px; padding: 9px 11px; --cut: 8px; background: var(--ink-900); font-size: 12.5px; color: var(--ink-400); } .warnline svg { color: var(--yellow); margin-top: 1px; }
+  .win-foot { display: flex; align-items: center; gap: 8px; padding: 14px 20px; border-top: 1px solid var(--ink-800); }
+  .win-foot .grow { flex: 1; }
+  .win-foot .go { height: 42px; padding: 0 20px; font: 800 18px/1 var(--display); text-transform: uppercase; letter-spacing: .02em; --cut: 9px; }
+  /* editor */
+  .map { position: absolute; inset: 56px 0 0 0; width: 100%; height: calc(100% - 56px); object-fit: cover; }
+  .ed-top { position: absolute; inset: 0 0 auto 0; height: 56px; display: flex; align-items: center; gap: 12px; padding: 0 16px; background: var(--ink-950); border-bottom: 1px solid var(--ink-800); z-index: 3; }
+  .ed-top .title { font-size: 22px; }
+  .ed-panel { position: absolute; left: 0; top: 56px; bottom: 0; width: 420px; background: var(--ink-950); border-right: 1px solid var(--ink-800); display: flex; flex-direction: column; z-index: 2; }
+  .steps { display: flex; padding: 0 8px; border-bottom: 1px solid var(--ink-800); }
+  .steps button { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; height: 54px; justify-content: center; font-size: 12px; font-weight: 600; color: var(--ink-400); box-shadow: inset 0 -2px 0 transparent; }
+  .steps button svg { width: 17px; height: 17px; } .steps button[aria-current] { color: var(--ink-100); box-shadow: inset 0 -2px 0 var(--brand-400); } .steps button[aria-current] svg { color: var(--brand-400); }
+  .steps button.done svg { color: var(--mint); }
+  .ed-body { flex: 1; overflow: hidden; padding: 14px; display: grid; gap: 10px; align-content: start; }
+  .grp { padding: 10px 12px; --cut: 10px; background: var(--ink-900); }
+  .grp-h { display: flex; align-items: center; gap: 9px; }
+  .fmark { width: 26px; height: 26px; --cut: 6px; display: grid; place-items: center; color: #fff; font: 800 12px/1 var(--display); flex: none; }
+  .fmark svg { width: 14px; height: 14px; }
+  .grp-h strong { font-size: 14px; color: var(--ink-100); } .grp-h small { margin-left: auto; font-size: 12px; color: var(--ink-500); }
+  .tier { margin-top: 8px; } .tier p { margin: 0 0 5px; font-size: 11.5px; font-weight: 600; color: var(--ink-500); display: flex; align-items: center; gap: 5px; } .tier p svg { width: 12px; height: 12px; }
+  .nations { display: flex; flex-wrap: wrap; gap: 4px; }
+  .nat { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 8px 0 5px; --cut: 5px; background: var(--ink-950); font-size: 12px; color: var(--ink-100); }
+  .nat img { width: 18px; height: 12px; object-fit: cover; outline: 1px solid oklch(100% 0 0 / .12); } .nat i { width: 18px; height: 12px; background: var(--ink-700); }
+  .ed-foot { display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-top: 1px solid var(--ink-800); }
+  .ed-foot .grow { flex: 1; font-size: 12px; color: var(--ink-500); }
+  .legend { position: absolute; right: 16px; bottom: 16px; padding: 10px 12px; --cut: 10px; z-index: 2; display: grid; gap: 5px; font-size: 12px; color: var(--ink-300); }
+  .legend span { display: flex; align-items: center; gap: 8px; } .legend i { width: 12px; height: 12px; --cut: 3px; }
+  .copynote { display: flex; gap: 9px; padding: 10px 12px; --cut: 10px; background: color-mix(in oklab, var(--sky) 10%, var(--ink-900)); box-shadow: inset 3px 0 0 var(--sky); font-size: 12.5px; color: var(--ink-300); } .copynote svg { color: var(--sky); margin-top: 1px; } .copynote b { color: var(--ink-100); }
+  /* phone */
+  .phone .top { padding: 0 10px; gap: 10px; } .phone .top .title { font-size: 21px; }
+  .phone .wrap { padding: 10px; } .phone .cards { grid-template-columns: 1fr; } .phone .tabs button { padding: 0 9px; font-size: 12.5px; }
+  .phone .modes { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-inline: -10px; padding-inline: 10px; } .phone .win { width: calc(100% - 20px); top: auto; bottom: 10px; transform: translateX(-50%); } .phone .win-head .title { font-size: 24px; }
+  .phone .row { grid-template-columns: 34px minmax(0, 1fr) auto; } .phone .row .mid { display: none; }
+</style>
+</head>
+<body>
+<div class="switches">
+  <h1>Presets mock-up</h1>
+  <div class="seg">Show <div data-k="view"><button data-v="list">Presets page</button><button data-v="update">Update check</button><button data-v="editor">Editor</button></div></div>
+  <div class="seg" data-only="list">Tab <div data-k="tab"><button data-v="ours">Our presets</button><button data-v="library">Public library</button></div></div>
+  <div class="seg" data-only="list">List <div data-k="layout"><button data-v="cards">Cards (now)</button><button data-v="rows">Compact rows</button></div></div>
+  <div class="seg" data-only="editor">Editing <div data-k="whose"><button data-v="own">Our own preset</button><button data-v="official">A GameMaster preset</button></div></div>
+  <div class="seg">Size <div data-k="size"><button data-v="desk">Desktop</button><button data-v="phone">Phone</button></div></div>
+</div>
+<div class="viewport"><div class="frame" id="frame">
+  <div class="stage desk" id="desk"><div data-screen></div></div>
+  <div class="stage phone" id="phone" hidden><div data-screen-phone></div></div>
+</div></div>
+<script>
+  const TANK = '<svg class="lucide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="14" width="20" height="6" rx="3"/><path d="M5 14v-2h14v2"/><path d="M8 12V9.5A1.5 1.5 0 0 1 9.5 8h4A1.5 1.5 0 0 1 15 9.5V12"/><path d="M15 10h7"/></svg>';
+  const icon = (k) => k === "hist" ? TANK : '<i data-lucide="drama"></i>';
+  const state = { view: "list", tab: "ours", layout: "cards", whose: "official", size: "desk" };
+  const MODES = [["All modes", null], ["Roleplay", "rp"], ["Millennium Dawn", "rp"], ["Novum Vexillum", "rp"], ["Kaiserreich", "rp"], ["The Fire Rises", "rp"], ["Vanilla", "hist"], ["Their Finest Bruh", "hist"], ["Hearts of Oak", "hist"], ["Horstorical", "hist"], ["BFFU 2", "hist"]];
+  // [mode, kind, name, description, tags, facts, by, used, flags]
+  const OURS = [
+    ["Roleplay", "rp", "Road to 56", "Our Roleplay board: 7 Majors and the 50 Minors we play. The other nations stay off the list.", ["default", "private"], ["7 groups, 57 nations", "Standard rules", "3 mods"], "GameMaster, for TommyKay", 48],
+    ["Kaiserreich", "rp", "FFA", "Free-for-all in four factions: Entente, Third International, Reichspakt and Moscow Accord.", ["default", "private"], ["4 factions, 43 nations", "TommyKay KR rules", "2 mods"], "GameMaster, for TommyKay", 17],
+    ["Their Finest Bruh", "hist", "Main factions", "Copied from GameMaster: Allies, Comintern, Axis and GEACPS.", ["copy", "update"], ["4 factions, 25 nations", "Standard rules", "2 mods"], "Demo Host, copied Oct 30", 9],
+    ["Roleplay", "rp", "Europe only", "Majors and Europe; every other region is turned off.", [], ["2 groups, 28 nations", "2 locked nations", "3 mods"], "Demo Host", 11],
+  ];
+  const LIB = [
+    ["Their Finest Bruh", "hist", "Main factions", "Allies, Comintern, Axis and GEACPS with the nations most games use.", ["official"], ["4 factions, 25 nations", "2 mods"], "GameMaster", 213],
+    ["Vanilla", "hist", "Main factions", "Allies, Comintern, Axis and GEACPS: the usual Vanilla multiplayer line-up.", ["official"], ["4 factions, 21 nations", "1 mod"], "GameMaster", 160],
+    ["Hearts of Oak", "hist", "Allies vs Axis", "Two sides with three Majors each.", ["official"], ["2 factions, 22 nations", "1 mod"], "GameMaster", 74],
+    ["Millennium Dawn", "rp", "Main nations", "7 Majors and the regional Minors most games play.", ["official"], ["7 groups, 69 nations", "1 mod"], "GameMaster", 41],
+    ["The Fire Rises", "rp", "Five factions", "NATO, CSTO, EADI, PDTO and the four sides of the USA.", ["official"], ["5 factions, 22 nations", "2 mods"], "GameMaster", 22],
+    ["Kaiserreich", "rp", "Syndicalist Revolution", "Third International and Entente only; the Reichspakt sits this one out.", ["shared"], ["2 factions", "2 mods"], "Kaiserreich Central", 9],
+  ];
+  const TAG = {
+    default: '<span class="tag t" style="--c:var(--brand-400)"><i data-lucide="star"></i>Default</span>',
+    private: '<span class="tag t-ink"><i data-lucide="lock"></i>Only our server</span>',
+    copy: '<span class="tag t-ink"><i data-lucide="copy"></i>Copy</span>',
+    update: '<span class="tag dot t" style="--c:var(--yellow)">Update available</span>',
+    official: '<span class="tag t" style="--c:var(--brand-400)"><i data-lucide="badge-check"></i>GameMaster</span>',
+    shared: '<span class="tag t-ink"><i data-lucide="globe"></i>Shared</span>',
+  };
+  const FACT_ICON = ["layers", "scroll-text", "puzzle"];
+  const topBar = (title) => `<header class="top"><span class="mark cut">GM</span><div><div class="title">${title}</div>${state.size === "desk" ? "<small>TommyKay HOI4</small>" : ""}</div>
+    ${state.size === "desk" ? '<span class="tag" style="color:oklch(80% 0.12 330);background:oklch(24% 0.06 330)">Preview: sample data</span>' : ""}<div class="top-end">${state.size === "desk" ? '<span class="avatar">D</span><button class="btn btn-quiet"><i data-lucide="menu"></i>Menu</button>' : '<button class="btn btn-quiet btn-icon"><i data-lucide="menu"></i></button>'}</div></header>`;
+
+  function card(p, lib) {
+    const [mode, k, name, desc, tags, facts, by, used] = p;
+    const upd = tags.includes("update");
+    const actions = lib
+      ? `<button class="btn btn-primary btn-sm"><i data-lucide="copy-plus"></i>Copy to our server</button><button class="btn btn-secondary btn-sm"><i data-lucide="eye"></i>View</button>`
+      : `<button class="btn btn-primary btn-sm"><i data-lucide="calendar-plus"></i>Use in a game</button><button class="btn btn-secondary btn-sm"><i data-lucide="pencil"></i>Edit</button><button class="btn btn-quiet btn-icon btn-sm more" aria-label="More"><i data-lucide="ellipsis"></i></button>`;
+    return `<div class="card plate ${upd ? "upd" : ""}"><div class="chead"><span class="mico cut">${icon(k)}</span><div style="min-width:0"><span class="small">${mode}</span><div class="title">${name}</div>
+        <div class="tags">${tags.filter((t) => t !== "update").map((t) => TAG[t]).join("")}</div></div></div>
+      <p>${desc}</p><div class="facts">${facts.map((f, i) => `<span><i data-lucide="${FACT_ICON[i] ?? "dot"}"></i>${f}</span>`).join("")}</div>
+      ${upd ? `<div class="updbar cut"><i data-lucide="sparkles"></i>GameMaster updated the original<button class="btn btn-secondary btn-sm">See changes</button></div>` : ""}
+      <div class="by">by ${by}, used ${used}×</div><div class="acts">${actions}</div></div>`;
+  }
+  function row(p, lib) {
+    const [mode, k, name, desc, tags, facts, by, used] = p;
+    const upd = tags.includes("update");
+    return `<div class="row cut ${upd ? "upd" : ""}"><span class="mico cut">${icon(k)}</span><div style="min-width:0"><strong>${name}${tags.map((t) => TAG[t]).join("")}</strong><small>${mode}: ${desc}</small></div>
+      <div class="mid small">${facts.join(", ")}<br><span style="color:var(--ink-500)">used ${used}×</span></div>
+      <div class="ra">${upd ? '<button class="btn btn-secondary btn-sm">See changes</button>' : ""}${lib ? '<button class="btn btn-primary btn-sm">Copy</button>' : '<button class="btn btn-primary btn-sm">Use</button><button class="btn btn-secondary btn-sm btn-icon" aria-label="Edit"><i data-lucide="pencil"></i></button>'}</div></div>`;
+  }
+  function listScreen() {
+    const lib = state.tab === "library";
+    const items = lib ? LIB : OURS;
+    const phone = state.size === "phone";
+    return topBar("Presets") + `<div class="wrap">
+      <div class="bar"><nav class="tabs" style="flex:1"><button ${!lib ? "aria-current" : ""}><i data-lucide="folder"></i>Our presets <small>${OURS.length}</small></button><button ${lib ? "aria-current" : ""}><i data-lucide="globe"></i>Public library</button></nav>
+        ${phone ? "" : '<label class="field" style="width:240px"><i data-lucide="search"></i><span>Search presets</span></label>'}<button class="btn btn-primary"><i data-lucide="plus"></i>${phone ? "New" : "New preset"}</button></div>
+      <div class="modes">${MODES.map(([m, k], i) => `<button class="chip cut ${i === 0 ? "on" : ""}">${k ? icon(k) : ""}${m}</button>`).join("")}</div>
+      <p class="note">${lib ? "Presets other servers share, and GameMaster's own. Copy one to use it; your copy is yours to change." : "Every host here can use these when setting up a game. A star marks the one the calendar picks first for that mode."}</p>
+      ${state.layout === "rows" ? `<div class="rows">${items.map((p) => row(p, lib)).join("")}</div>` : `<div class="cards">${items.slice(0, phone ? 3 : 6).map((p) => card(p, lib)).join("")}</div>`}</div>`;
+  }
+  function updateScreen() {
+    const base = listScreen();
+    return base + `<div class="scrim"></div><div class="win plate">
+      <div class="win-head"><div class="small">Their Finest Bruh</div><div class="title">Update Main factions?</div><button class="btn btn-quiet btn-icon x" aria-label="Close"><i data-lucide="x"></i></button>
+        <p class="small" style="margin:8px 0 0">GameMaster changed the original on Nov 2. This is what updating changes in your copy:</p></div>
+      <div class="win-body"><div class="diff">
+        <div class="drow cut"><span class="ico cut" style="background:color-mix(in oklab,var(--mint) 15%,var(--ink-950));color:var(--mint)"><i data-lucide="plus"></i></span><span><b>Added to Axis:</b> Croatia</span></div>
+        <div class="drow cut"><span class="ico cut" style="background:color-mix(in oklab,var(--red) 15%,var(--ink-950));color:var(--red)"><i data-lucide="minus"></i></span><span><b>Removed from Allies:</b> New Zealand</span></div>
+        <div class="drow cut"><span class="ico cut" style="background:var(--ink-800);color:var(--ink-300)"><i data-lucide="arrow-right-left"></i></span><span class="chg"><b>Who can reserve Majors:</b><span class="old">Trusted+</span><i data-lucide="arrow-right" style="width:13px;height:13px"></i><span class="new">Verified+</span></span></div>
+        <div class="drow cut"><span class="ico cut" style="background:color-mix(in oklab,var(--mint) 15%,var(--ink-950));color:var(--mint)"><i data-lucide="plus"></i></span><span><b>Mods:</b> Their Finest Cope Submod</span></div>
+      </div>
+      <div class="warnline cut"><i data-lucide="triangle-alert"></i><span>You changed your copy too (2 locked nations). Updating replaces those changes with the original's.</span></div></div>
+      <div class="win-foot"><button class="btn btn-quiet">Keep mine</button><span class="grow"></span><button class="btn btn-secondary">Update as a new preset</button><button class="btn btn-primary go">Update</button></div></div>`;
+  }
+  function editorScreen() {
+    const official = state.whose === "official";
+    const phone = state.size === "phone";
+    const F = [
+      ["Entente", "oklch(55% 0.13 250)", "shield", [["Majors", [["USA", "United States Federal Government"], ["", "Dominion of Canada"]]], ["Minors", [["AST", "Australasia"], ["BRA", "Brazil"], ["NFA", "French Republic"], ["MEX", "Mexico"], ["PHI", "Philippines"], ["WIF", "West Indies Federation"], ["ARG", "Argentina"], ["RAJ", "Dominion of India"]]]]],
+      ["Third International", "oklch(55% 0.18 25)", "star", [["Majors", [["FRA", "Commune of France"], ["ENG", "Union of Britain"], ["", "Combined Syndicates of America"]]], ["Minors", [["ITA", "Socialist Republic of Italy"], ["", "Kingdom of Spain"], ["NOR", "Norway"], ["IRE", "Ireland"], ["SAF", "Union of South Africa"], ["", "Bharatiya Commune"]]]]],
+      ["Reichspakt", "oklch(42% 0.02 150)", "crown", [["Majors", [["GER", "German Empire"], ["AUS", "Austrian Empire"], ["TUR", "Ottoman Empire"], ["", "American Union State"]]], ["Minors", [["", "German East Asia"], ["", "Mittelafrika"], ["", "Netherlands"]]]]],
+      ["Moscow Accord", "oklch(58% 0.12 80)", "snowflake", [["Majors", [["RUS", "Russian Republic"], ["FNG", "Fengtian Government"], ["JAP", "Empire of Japan"], ["", "Pacific States of America"]]], ["Minors", [["", "Kingdom of Finland"], ["", "Mongolia"], ["", "Siam"]]]]],
+    ];
+    const nat = ([t, n]) => `<span class="nat cut">${t ? `<img src="../../web/public/assets_kr/flags/${t}.png" alt="">` : "<i></i>"}${n}</span>`;
+    const groups = F.slice(0, phone ? 2 : 4).map(([n, c, ic, tiers]) => `<div class="grp cut"><div class="grp-h"><span class="fmark cut" style="background:${c}"><i data-lucide="${ic}"></i></span><strong>${n}</strong><small>${tiers.reduce((s, t) => s + t[1].length, 0)} nations</small><button class="btn btn-quiet btn-icon" style="height:26px;width:26px" aria-label="Group options"><i data-lucide="ellipsis"></i></button></div>
+      ${tiers.map(([label, list]) => `<div class="tier"><p><i data-lucide="${label === "Majors" ? "crown" : "flag"}"></i>${label}</p><div class="nations">${list.map(nat).join("")}</div></div>`).join("")}</div>`).join("");
+    return `<img class="map" src="assets/map-teal.jpg" alt="">
+      <div class="ed-top"><button class="btn btn-quiet btn-icon"><i data-lucide="chevron-left"></i></button><span class="mark cut">GM</span><div><div class="small">Kaiserreich preset</div><div class="title">FFA</div></div>
+        ${official ? '<span class="tag t" style="--c:var(--brand-400)"><i data-lucide="badge-check"></i>GameMaster</span>' : ""}<div class="top-end"><button class="btn btn-quiet"><i data-lucide="circle-help"></i>${phone ? "" : "Help"}</button></div></div>
+      <aside class="ed-panel" style="${phone ? "width:100%" : ""}">
+        <nav class="steps">${[["file-text", "Basics", 1], ["layers", "Groups", 0], ["lock", "Locks", 0], ["scroll-text", "Rules and mods", 0], ["check", "Save", 0]].map(([i, t, d], j) => `<button class="${d ? "done" : ""}" ${j === 1 ? "aria-current" : ""}><i data-lucide="${i}"></i>${t}</button>`).join("")}</nav>
+        <div class="ed-body">
+          ${official ? '<div class="copynote cut"><i data-lucide="info"></i><span>This is <b>GameMaster\'s preset</b>. Change anything you like: saving makes <b>your own copy</b>, and the original stays the same.</span></div>' : ""}
+          <p class="small" style="margin:0">Click a nation on the map to move it, or drag it between groups. Nations in no group aren't playable.</p>
+          ${groups}
+          <button class="btn btn-secondary" style="justify-self:start"><i data-lucide="plus"></i>Add a group</button>
+        </div>
+        <div class="ed-foot"><span class="grow">Step 2 of 5</span><button class="btn btn-secondary">Back</button><button class="btn btn-primary">Next: Locks</button></div>
+      </aside>
+      ${phone ? "" : `<div class="legend plate"><span><i class="cut" style="background:oklch(55% 0.13 250)"></i>Entente</span><span><i class="cut" style="background:oklch(55% 0.18 25)"></i>Third International</span><span><i class="cut" style="background:oklch(42% 0.02 150)"></i>Reichspakt</span><span><i class="cut" style="background:oklch(58% 0.12 80)"></i>Moscow Accord</span><span><i class="cut" style="background:var(--ink-700)"></i>Not playable</span></div>`}`;
+  }
+
+  function render() {
+    document.querySelectorAll(".seg > div").forEach((seg) => seg.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(state[seg.dataset.k] === b.dataset.v))));
+    document.querySelectorAll('[data-only="list"]').forEach((el) => el.classList.toggle("off", state.view === "editor"));
+    document.querySelector('[data-only="editor"]').classList.toggle("off", state.view !== "editor");
+    const html = state.view === "list" ? listScreen() : state.view === "update" ? updateScreen() : editorScreen();
+    document.querySelector(state.size === "desk" ? "[data-screen]" : "[data-screen-phone]").innerHTML = html;
+    document.getElementById("desk").hidden = state.size !== "desk";
+    document.getElementById("phone").hidden = state.size !== "phone";
+    lucide.createIcons();
+    fit();
+  }
+  function fit() {
+    const stage = document.getElementById(state.size);
+    const w = state.size === "desk" ? 1440 : 390, h = state.size === "desk" ? 900 : 844;
+    const vp = document.querySelector(".viewport");
+    const s = Math.min((vp.clientWidth - 32) / w, (vp.clientHeight - 32) / h, state.size === "desk" ? 1 : 1.2);
+    stage.style.transform = `scale(${s})`;
+    const frame = document.getElementById("frame"); frame.style.width = `${w * s}px`; frame.style.height = `${h * s}px`;
+  }
+  document.querySelectorAll(".seg > div").forEach((seg) => seg.addEventListener("click", (e) => { const v = e.target.closest("button")?.dataset.v; if (v) { state[seg.dataset.k] = v; render(); } }));
+  addEventListener("resize", fit);
+  render();
+</script>
+</body>
+</html>

@@ -22,7 +22,7 @@ export const SCHEDULE_MODES: ScheduleModeOption[] = [
   { value: "Roleplay", label: "Roleplay", category: "Roleplay", scenarioId: "road_to_56" },
   { value: "Roleplay (Millennium Dawn)", label: "Millennium Dawn", category: "Roleplay", scenarioId: "modern_md" },
   { value: "Roleplay (Novum Vexillum)", label: "Novum Vexillum", category: "Roleplay", scenarioId: "modern_nv" },
-  { value: "Kaiserreich (FFA)", label: "Kaiserreich FFA", category: "Roleplay", scenarioId: "kaiserreich" },
+  { value: "Kaiserreich (FFA)", label: "Kaiserreich", category: "Roleplay", scenarioId: "kaiserreich" },
   { value: "TFR", label: "The Fire Rises", category: "Roleplay", scenarioId: "modern_tfr" },
   { value: "Historical (Vanilla)", label: "Vanilla", category: "Historical", scenarioId: "vanilla_1936" },
   { value: "Historical (TFB)", label: "Their Finest Bruh", category: "Historical", scenarioId: "tfb" },

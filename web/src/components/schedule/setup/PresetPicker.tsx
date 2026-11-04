@@ -1,5 +1,6 @@
 "use client";
 
+import { BadgeCheck, Star } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { presetSummary, type GamePreset } from "@/lib/presetTypes";
@@ -70,7 +71,7 @@ export default function PresetPicker({
             type="button"
             onClick={onClear}
             className="rounded-md px-2 py-0.5 text-[11px] font-bold text-ink-300 hover:bg-white/10 hover:text-white"
-            title="Use the mode's standard groups, rules and mods again (locks and access stay as they are)"
+            title="Go back to the whole map and the usual rules and mods (locks and access stay as they are)"
           >
             Remove
           </button>
@@ -84,9 +85,9 @@ export default function PresetPicker({
         <p className="text-xs text-rose-300">{current.error}</p>
       ) : presets.length === 0 ? (
         <p className="text-xs text-ink-400">
-          No presets for this mode yet —{" "}
+          No presets for this mode yet, so the game lists the whole map.{" "}
           <Link href="/presets?view=library" className="font-semibold text-sky-300 hover:underline">
-            browse the public library
+            Browse the public library
           </Link>{" "}
           or make one.
         </p>
@@ -97,9 +98,20 @@ export default function PresetPicker({
             return (
               <li key={preset.preset_id} className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-semibold text-ink-100">{preset.name}</span>
+                  <span className="flex items-center gap-1.5 truncate text-sm font-semibold text-ink-100">
+                    {preset.name}
+                    {preset.is_default && (
+                      <Star aria-label="Loads first for this mode" className="h-3.5 w-3.5 shrink-0 fill-current text-brand-400" strokeWidth={1.75} />
+                    )}
+                    {preset.official && (
+                      <BadgeCheck aria-label="GameMaster's preset" className="h-3.5 w-3.5 shrink-0 text-brand-400" strokeWidth={1.75} />
+                    )}
+                  </span>
                   <span className="block truncate text-[11px] text-ink-400">
-                    {presetSummary(preset.data).join(" · ")} · by {preset.created_by_name ?? "a host"}
+                    {presetSummary(preset.data)
+                      .map((fact) => fact.text)
+                      .join(", ")}
+                    , by {preset.official ? "GameMaster" : (preset.created_by_name ?? "a host")}
                   </span>
                 </span>
                 <button

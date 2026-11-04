@@ -1,8 +1,11 @@
 "use client";
 
-import { SectionCard, Toggle } from "@/components/schedule/ui";
+import { FileText, Gamepad2, Globe } from "lucide-react";
+import ModeIcon from "@/components/schedule/ModeIcon";
+import { Toggle } from "@/components/schedule/ui";
 import { PRESET_LIMITS } from "@/lib/presetTypes";
-import { CATEGORY_META, SCHEDULE_MODES } from "@/lib/scheduleOptions";
+import { SCHEDULE_MODES } from "@/lib/scheduleOptions";
+import { Section } from "./parts";
 import type { MakerState } from "./model";
 
 /** Mode, name, description and sharing of a preset. */
@@ -23,45 +26,42 @@ export default function BasicsTab({
   disabled: boolean;
 }) {
   return (
-    <div className="space-y-4">
-      <SectionCard
-        icon="🎮"
+    <div className="space-y-3">
+      <Section
+        icon={Gamepad2}
         title="Game mode"
-        subtitle={modeLocked ? "A saved preset keeps its mode — duplicate it for another mode." : "Presets belong to one mode."}
+        subtitle={modeLocked ? "A saved preset keeps its mode. Duplicate it for another mode." : "A preset belongs to one mode."}
       >
-        <div className="grid grid-cols-2 gap-1.5">
+        <div className="grid grid-cols-2 gap-1">
           {SCHEDULE_MODES.map((mode) => {
             const active = mode.value === state.mode;
-            const meta = CATEGORY_META[mode.category];
             return (
               <button
                 key={mode.value}
                 type="button"
                 disabled={disabled || (modeLocked && !active)}
                 onClick={() => onModeChange(mode.value)}
-                className={`rounded-xl border px-3 py-2 text-left text-xs font-bold transition ${
-                  active
-                    ? "border-brand-300/70 bg-brand-400/15 text-brand-100"
-                    : "border-white/10 bg-white/[0.03] text-ink-300 hover:border-white/25 disabled:opacity-35 disabled:hover:border-white/10"
+                aria-pressed={active}
+                className={`gm-cut flex h-9 items-center gap-2 px-2.5 text-left text-[13px] font-semibold [--cut:7px] disabled:cursor-not-allowed disabled:opacity-30 ${
+                  active ? "bg-brand-400 text-brand-950" : "bg-ink-950 text-ink-300 hover:text-ink-100"
                 }`}
               >
-                <span className={meta.text}>{meta.emoji}</span> {mode.label}
+                <ModeIcon mode={mode.value} className="h-4 w-4 shrink-0" strokeWidth={1.75} />
+                <span className="truncate">{mode.label}</span>
               </button>
             );
           })}
         </div>
-      </SectionCard>
+      </Section>
 
-      <SectionCard icon="📝" title="Name & description">
+      <Section icon={FileText} title="Name and description">
         <input
           value={state.name}
           maxLength={PRESET_LIMITS.name}
           disabled={disabled}
           onChange={(event) => update({ name: event.target.value })}
           placeholder="e.g. Europe only, Axis vs Allies, Tournament rules"
-          className={`w-full rounded-lg border bg-ink-950/70 px-3 py-2 text-sm font-semibold text-ink-100 placeholder:text-ink-600 focus:outline-none ${
-            state.name.trim() ? "border-white/10 focus:border-brand-300/50" : "border-rose-400/50"
-          }`}
+          className={`gm-input w-full font-semibold ${state.name.trim() ? "" : "shadow-[inset_0_0_0_1px_var(--color-rose-400)]"}`}
           aria-label="Preset name"
         />
         <textarea
@@ -70,16 +70,16 @@ export default function BasicsTab({
           disabled={disabled}
           onChange={(event) => update({ description: event.target.value })}
           rows={3}
-          placeholder="What's special about it? (shown on the preset card and in the library)"
-          className="mt-2 w-full resize-none rounded-lg border border-white/10 bg-ink-950/70 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-600 focus:border-brand-300/50 focus:outline-none"
+          placeholder="What's special about it? Shown on the preset's card and in the library."
+          className="gm-input mt-2 w-full resize-none"
           aria-label="Description"
         />
-        <p className="mt-1 text-right text-[10px] text-ink-500">
+        <p className="mt-1 text-right text-[11px] text-ink-500">
           {state.description.length}/{PRESET_LIMITS.description}
         </p>
-      </SectionCard>
+      </Section>
 
-      <SectionCard icon="🌐" title="Sharing">
+      <Section icon={Globe} title="Sharing">
         <Toggle
           checked={state.shared}
           disabled={disabled}
@@ -87,15 +87,15 @@ export default function BasicsTab({
           label="Share in the public library"
           description={
             state.shared
-              ? "Other servers can see this preset and copy it into their own list. Their copies are theirs — your preset stays yours."
+              ? "Other servers can see it and copy it. Their copies are theirs; yours stays yours."
               : `Only ${serverName ?? "this server"} can see and use it.`
           }
         />
-        <p className="mt-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-[11px] text-ink-400">
-          Every host of {serverName ?? "this server"} can use this preset when scheduling a game. Only you (and staff) can
-          change or delete it.
+        <p className="mt-3 text-xs text-ink-400">
+          Every host of {serverName ?? "this server"} can use it when setting up a game. Only you and staff can change or
+          delete it.
         </p>
-      </SectionCard>
+      </Section>
     </div>
   );
 }

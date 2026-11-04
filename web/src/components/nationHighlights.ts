@@ -17,6 +17,10 @@ import { lighten } from "./nationGeometry";
  *  - coop     electric-blue beaded border (reserved major power inspected)
  *  - others   dashed yellow border, softly breathing (other players on the
  *             same game's map have this nation selected — live)
+ *  - editing  purple neon border (preset editor: the group being edited)
+ *  - group    blue neon border (preset editor: the other groups)
+ *  - excluded red neon border (preset editor: not-playable nations, when
+ *             the host turns that on; players see them greyed out)
  *
  * Why overlays instead of CSS classes on the base paths:
  *  - Each pane owns its own <svg>, so an animation only repaints its own few
@@ -36,7 +40,17 @@ import { lighten } from "./nationGeometry";
  * a string join, instead of a second pass over ~470k vertices on every zoom.
  */
 
-export type HighlightKind = "hover" | "taken" | "locked" | "self" | "coop" | "others" | "pending";
+export type HighlightKind =
+  | "hover"
+  | "excluded"
+  | "taken"
+  | "group"
+  | "editing"
+  | "locked"
+  | "self"
+  | "coop"
+  | "others"
+  | "pending";
 
 /** The seven major powers: a reserved one opens the Co-Op flow when clicked. */
 export const MAJOR_TAGS: ReadonlySet<string> = new Set([
@@ -73,12 +87,21 @@ export interface HighlightState {
   lockedTags: readonly string[];
   /** Nations other players on the same game's map have selected (live). */
   othersTags?: readonly string[];
+  /** Preset editor: the group (or lock group) being edited, purple. */
+  editingTags?: readonly string[];
+  /** Preset editor: the other groups, thin blue. */
+  groupTags?: readonly string[];
+  /** Preset editor: not-playable nations shown in red. */
+  excludedTags?: readonly string[];
 }
 
 /** Pane z-order: hover sits under the reservation borders so they stay crisp. */
 const PANE_Z: Record<HighlightKind, number> = {
   hover: 405,
-  taken: 408,
+  excluded: 406,
+  taken: 407,
+  group: 408,
+  editing: 409,
   locked: 410,
   self: 420,
   coop: 430,
@@ -98,6 +121,9 @@ function paneName(kind: HighlightKind): string {
  */
 const PALETTE = {
   taken: { wash: "#232a35", edge: "#9aa4b2" },
+  editing: { core: "#e2b8ff", glow: "#b45cff" },
+  group: { core: "#7fd0ff", glow: "#1f6bff" },
+  excluded: { core: "#ff5266", glow: "#ff2442" },
   locked: { core: "#ff5266", glow: "#ff2442", dim: "#240208" },
   self: { core: "#62ffa8", glow: "#19f57a", tint: "#8affc0" },
   coop: { core: "#3cc4ff", glow: "#1f6bff", tint: "#7fd0ff", accent: "#f2fbff" },
@@ -276,6 +302,25 @@ const LOCKED_RECIPE: readonly LayerSpec[] = [
   { stroke: PALETTE.locked.core, strokeOpacity: 1, width: 1.9 },
 ];
 
+// The preset editor's three: neon borders only, like the reservation map's
+// states. No fill, so nations keep their own colours, and no wide halo or
+// dash: they can cover two hundred nations, and big painted areas are what
+// make a zoomed-in map blink out while it's dragged.
+const EDITING_RECIPE: readonly LayerSpec[] = [
+  { stroke: PALETTE.editing.glow, strokeOpacity: 0.4, width: 5 },
+  { stroke: PALETTE.editing.core, strokeOpacity: 1, width: 1.8 },
+];
+
+const GROUP_RECIPE: readonly LayerSpec[] = [
+  { stroke: PALETTE.group.glow, strokeOpacity: 0.3, width: 4 },
+  { stroke: PALETTE.group.core, strokeOpacity: 0.95, width: 1.3 },
+];
+
+const EXCLUDED_RECIPE: readonly LayerSpec[] = [
+  { stroke: PALETTE.excluded.glow, strokeOpacity: 0.4, width: 4 },
+  { stroke: PALETTE.excluded.core, strokeOpacity: 1, width: 1.4 },
+];
+
 const SELF_RECIPE: readonly LayerSpec[] = [
   {
     fill: PALETTE.self.tint,
@@ -436,7 +481,10 @@ export class NationHighlightController {
       const overlay = new MirrorOverlay(group);
       this.overlays.set(kind, overlay);
     }
+    this.overlays.get("excluded")?.setRecipe(EXCLUDED_RECIPE);
     this.overlays.get("taken")?.setRecipe(TAKEN_RECIPE);
+    this.overlays.get("group")?.setRecipe(GROUP_RECIPE);
+    this.overlays.get("editing")?.setRecipe(EDITING_RECIPE);
     this.overlays.get("locked")?.setRecipe(LOCKED_RECIPE);
     this.overlays.get("self")?.setRecipe(SELF_RECIPE);
     this.overlays.get("coop")?.setRecipe(COOP_RECIPE);
@@ -452,7 +500,10 @@ export class NationHighlightController {
   /** Reconcile the overlays with the latest nation states. */
   apply(state: HighlightState): void {
     if (this.destroyed) return;
+    this.syncTags("excluded", state.excludedTags ?? []);
     this.syncTags("taken", state.takenTags ?? []);
+    this.syncTags("group", state.groupTags ?? []);
+    this.syncTags("editing", state.editingTags ?? []);
     this.syncTags("locked", state.lockedTags);
     this.syncTags("self", state.selfTags);
     this.syncTags(

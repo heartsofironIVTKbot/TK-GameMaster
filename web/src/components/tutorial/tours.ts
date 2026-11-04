@@ -659,7 +659,7 @@ const GAMES: Tour = {
 
 const PRESETS: Tour = {
   id: "presets",
-  version: 1,
+  version: 2,
   title: "Presets",
   summary: "Saved game setups you load when scheduling.",
   paths: ["/presets"],
@@ -669,16 +669,18 @@ const PRESETS: Tour = {
     {
       title: "What a preset is",
       body:
-        "A saved setup for one game mode: nation groups, nation locks, who can reserve, and the rules and mods lists. " +
-        "Load it on the calendar's **Game** tab and the whole form fills in.",
+        "A saved setup for one game mode: which nations are playable and how they're grouped, nation locks, who can " +
+        "reserve, and the rules and mods. Load it on the calendar and the whole form fills in.\n\n" +
+        "Without a preset, a game lists every nation on the map.",
     },
     {
       target: "presets.view",
       placement: "bottom",
-      title: "Yours, or the public library",
+      title: "Ours, or the public library",
       body:
-        "**Our presets**: every host on this server can load them. Only the person who made one (or staff) can change it.\n" +
-        "**Public library**: presets other servers shared. **Copy to our server** gives you your own version.",
+        "**Our presets**: every host here can use them.\n" +
+        "**Public library**: presets other servers share, and GameMaster's own. **Copy to our server** gives you a " +
+        "version to use and change.",
     },
     {
       target: "presets.filters",
@@ -691,18 +693,72 @@ const PRESETS: Tour = {
       placement: "top",
       title: "The presets",
       body:
-        "Each card shows what's in the preset.\n" +
-        "**🗓️ Use in a game** opens a new game with it loaded.\n" +
-        "**✏️ Edit** changes it (**👁️ View** if it isn't yours).\n" +
-        "**⧉ Duplicate** makes a copy to change.",
+        "**Use in a game** opens a new game with it loaded. **Edit** changes it.\n\n" +
+        "Editing a GameMaster preset, or one someone else made, saves **your own copy**: nobody can change anyone " +
+        "else's preset.",
+    },
+    {
+      target: "presets.list",
+      placement: "top",
+      title: "Default and updates",
+      body:
+        "The **star** (staff) picks the preset the calendar loads first for its mode.\n\n" +
+        "When the original of a copy changes, the copy shows **See changes**: you see what's different, then keep " +
+        "yours, update it, or save the new version as another preset.",
     },
     {
       target: "presets.new",
       placement: "bottom",
       title: "Make one",
       body:
-        "**＋ New preset** walks you through it: basics, nation groups, locks, then rules and mods. " +
-        "You can share it with the public library when you save.",
+        "**New preset** walks you through it: basics, nation groups, locks, then rules and mods. " +
+        "You can share it in the public library when you save.",
+    },
+  ],
+};
+
+const PRESET_EDITOR: Tour = {
+  id: "preset-editor",
+  version: 1,
+  title: "Preset editor",
+  summary: "Groups, locks, rules and mods of a preset.",
+  paths: ["/presets/new", "/presets/edit"],
+  auto: "visit",
+  anchor: "presetEditor.steps",
+  steps: [
+    {
+      target: "presetEditor.steps",
+      placement: "bottom",
+      title: "Five steps",
+      body:
+        "**Basics**: mode, name and sharing.\n" +
+        "**Groups**: which nations are playable, and how the list groups them.\n" +
+        "**Locks**: who can reserve, and nations that start locked.\n" +
+        "**Rules and mods**, then **Save**: everything at a glance.\n\n" +
+        "A red dot on a step means something there needs fixing.",
+    },
+    {
+      target: "presetEditor.map",
+      placement: "left",
+      title: "The map",
+      body:
+        "On **Groups**, clicking a nation puts it in the group you're editing, or takes it out. On **Locks**, it locks " +
+        "or unlocks it.\n\nThe strip along the top says what each colour means: purple is what you're editing, blue " +
+        "the rest. **Show not playable in red** marks the nations nobody can play; players see them greyed out.",
+    },
+    {
+      target: "presetEditor.copy",
+      placement: "bottom",
+      title: "Saving makes a copy",
+      body:
+        "This preset isn't yours to change. Edit anything: saving makes your own copy, and the original stays the " +
+        "same. Your copy tells you when the original changes.",
+    },
+    {
+      target: "presetEditor.save",
+      placement: "top",
+      title: "Save",
+      body: "Save from any step. Games scheduled with a preset keep the settings they were scheduled with.",
     },
   ],
 };
@@ -1066,6 +1122,7 @@ export const TOURS: Tour[] = [
   GAME_SETUP,
   GAMES,
   PRESETS,
+  PRESET_EDITOR,
   ATTENDANCE,
   DATABASE,
   SERVERS_LIST,

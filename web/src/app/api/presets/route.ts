@@ -12,6 +12,9 @@ import { SCHEDULE_MODE_VALUES } from "@/lib/scheduleOptions";
  * GET  /api/presets[?mode=<mode>]  — this server's game mode presets (hosts).
  * POST /api/presets                — save a new one ({mode, name, description,
  *                                    shared, data}); any host may create.
+ *                                    `copied_from` = the preset it was made from
+ *                                    (an edited GameMaster or other server's
+ *                                    preset is saved as a copy of it).
  */
 export async function GET(request: Request) {
   const status = await getHostStatus();
@@ -38,7 +41,9 @@ export async function POST(request: Request) {
     const mode = typeof (body as { mode?: unknown })?.mode === "string" ? (body as { mode: string }).mode : "";
     const validation = validatePresetInput(body, await modeNationNames(mode, status.host.guild_id));
     if (!validation.ok) return Response.json({ error: validation.error }, { status: 400 });
-    const preset = await createPreset(status.host, validation.value);
+    const copiedFrom = (body as { copied_from?: unknown })?.copied_from;
+    const source = typeof copiedFrom === "string" && /^[0-9a-f]{32}$/.test(copiedFrom) ? copiedFrom : null;
+    const preset = await createPreset(status.host, validation.value, source);
     return Response.json({ preset }, { status: 201 });
   } catch (error) {
     return presetErrorResponse(error, "create");

@@ -29,38 +29,81 @@
         "Cuba",
         "Czechoslovakia",
         "Denmark",
+        "Dominican Republic",
         "Dutch East Indies",
         "Egypt",
         "Estonia",
+        "Ethiopian Empire",
         "Finland",
+        "Free City of Danzig",
         "French Indochina",
+        "Grand Duchy of Luxembourg",
         "Greece",
+        "Guangxi Clique",
+        "Hebei-Chahar Political Council",
+        "Hexi Ma Clique",
         "Honduras",
         "Hungary",
         "Iran",
         "Iraq",
         "Ireland",
+        "Khotan Ma Clique",
+        "Kingdom of Albania",
+        "Kingdom of Bhutan",
+        "Kingdom of Iceland",
+        "Kingdom of Nepal",
         "Latvia",
         "Lithuania",
         "Manchuria",
         "Mexico",
+        "Mongolian People's Republic",
+        "Mutawakkilite Kingdom of Yemen",
         "Netherlands",
+        "Ningxia Ma Clique",
+        "Northwest Bandit Suppression Headquarters",
         "Norway",
+        "Oriental Republic of Uruguay",
         "Palestine",
         "Peru",
         "Philippines",
         "Poland",
         "Portugal",
+        "Principality of Andorra",
+        "Principality of Monaco",
+        "Qinghai Ma Clique",
+        "Republic of Bolivia",
+        "Republic of Costa Rica",
+        "Republic of Ecuador",
+        "Republic of El Salvador",
+        "Republic of Guatemala",
+        "Republic of Haiti",
+        "Republic of Liberia",
+        "Republic of Liechtenstein",
+        "Republic of New Zealand",
+        "Republic of Nicaragua",
+        "Republic of Panama",
+        "Republic of Paraguay",
+        "Republic of San Marino",
         "Romania",
         "Saudi Arabia",
+        "Shandong Clique",
+        "Shanxi Clique",
         "Siam",
+        "Sichuan Clique",
         "South Africa",
         "Spain",
+        "State of Inner Mongolia",
+        "Sultanate of Aussa",
+        "Sultanate of Muscat and Oman",
         "Sweden",
         "Switzerland",
+        "Tibet",
         "Turkey",
+        "Tuvan People's Republic",
         "Venezuela",
-        "Yugoslavia"
+        "Xinjiang Clique",
+        "Yugoslavia",
+        "Yunnan Clique"
       ]
     },
     "Roleplay (Millennium Dawn)": {
@@ -75,67 +118,230 @@
       ],
       "minors": [
         "Abkhazia",
+        "Aceh",
         "Afghanistan",
+        "Al-Itihaad",
+        "Albania",
+        "Algeria",
+        "Allied Somali Forces",
+        "Andorra",
+        "Angola",
+        "Antigua and Barbuda",
+        "Argentina",
+        "Armed Forces Revolutionary Council",
         "Armenia",
         "Artsakh",
+        "Australia",
+        "Austria",
         "Azerbaijan",
+        "Bahamas",
         "Bahrain",
+        "Bangladesh",
+        "Barbados",
         "Belarus",
+        "Belgium",
+        "Belize",
+        "Benin",
+        "Bhutan",
+        "Bolivia",
         "Bosnia",
         "Botswana",
         "Brazil",
+        "Brunei",
         "Bulgaria",
+        "Burkina Faso",
+        "Burundi",
+        "Cabo Verde",
+        "Cambodia",
+        "Cameroon",
         "Canada",
+        "Central African Republic",
+        "Chad",
+        "Chechnya",
+        "Chile",
+        "Colombia",
         "Comoros",
+        "Congo",
+        "Congo DR",
+        "Costa Rica",
+        "Croatia",
         "Cuba",
+        "Cyprus",
         "Czechia",
+        "Côte d'Ivoire",
         "Denmark",
+        "Djibouti",
+        "Dominica",
+        "Dominican Republic",
+        "Ecuador",
         "Egypt",
+        "El Salvador",
+        "Equatorial Guinea",
+        "Eritrea",
         "Estonia",
         "Ethiopia",
+        "Faroe Islands",
         "Fiji",
         "Finland",
+        "Gabon",
+        "Gambia",
+        "Gaza Strip",
         "Georgia",
+        "Ghana",
         "Greece",
+        "Greenland",
+        "Grenada",
+        "Guatemala",
+        "Guinea",
+        "Guinea-Bissau",
+        "Guyana",
+        "Haiti",
         "Hezbollah",
+        "Honduras",
+        "Hong Kong S.A.R.",
+        "Hungary",
+        "Iceland",
         "India",
         "Indonesia",
         "Iran",
         "Iraq",
+        "Ireland",
+        "Islamic Emirate of Afghanistan",
+        "Islamic Emirate of Kurdistan",
         "Israel",
         "Italy",
+        "Jamaica",
+        "Jordan",
+        "Kachin State",
+        "Karen State",
         "Kazakhstan",
+        "Kenya",
+        "Kiribati",
+        "Kosovo",
+        "Kurdistan Democratic Party",
         "Kuwait",
         "Kyrgyzstan",
+        "Laos",
+        "Latvia",
+        "Lebanon",
+        "Lesotho",
+        "Liberia",
+        "Liberians United for Reconciliation and Democracy",
         "Libya",
         "Liechtenstein",
+        "Lithuania",
+        "Luxembourg",
+        "Macau S.A.R.",
+        "Macedonia",
+        "Madagascar",
+        "Malawi",
+        "Malaysia",
+        "Maldives",
+        "Mali",
+        "Malta",
+        "Maoist Nepal",
+        "Marshall Islands",
+        "Mauritania",
+        "Mauritius",
+        "Mexico",
+        "Micronesia",
+        "Moldova",
+        "Monaco",
+        "Mongolia",
+        "Montenegro",
+        "Morocco",
+        "Movement for the Liberation of Congo",
+        "Mozambique",
         "Myanmar",
+        "Namibia",
+        "Nauru",
+        "Nepal",
         "Netherlands",
+        "New Zealand",
+        "Nicaragua",
+        "Niger",
         "Nigeria",
         "North Korea",
+        "Northern Cyprus",
         "Norway",
         "Oman",
+        "Pakistan",
+        "Palau",
+        "Palestine",
+        "Panama",
+        "Papua New Guinea",
+        "Paraguay",
+        "Patriotic Union of Kurdistan",
+        "Peru",
+        "Philippines",
         "Poland",
+        "Portugal",
+        "Puntland",
         "Qatar",
+        "Rally for Congolese Democracy",
+        "Republic of China",
         "Romania",
+        "Rwanda",
+        "Sahrawi",
+        "Saint Kitts and Nevis",
+        "Saint Lucia",
+        "Saint Vincent and the Grenadines",
+        "Samoa",
         "San Marino",
         "Saudi Arabia",
+        "Senegal",
         "Serbia",
+        "Seychelles",
+        "Sierra Leone",
         "Singapore",
+        "Slovakia",
+        "Slovenia",
+        "Solomon Islands",
+        "Somali National Alliance",
+        "Somalia",
+        "Somaliland",
+        "South Africa",
         "South Korea",
         "South Ossetia",
+        "South Shan State",
+        "Southwestern State of Somalia",
         "Spain",
+        "Sri Lanka",
+        "Sudan",
+        "Sudan People's Liberation Army",
+        "Suriname",
+        "Swaziland",
         "Sweden",
         "Switzerland",
         "Syria",
+        "São Tomé and Príncipe",
         "Tajikistan",
+        "Tamil Eelam",
+        "Tanzania",
+        "Thailand",
+        "Togo",
+        "Tonga",
         "Transnistria",
+        "Trinidad and Tobago",
+        "Tunisia",
         "Turkey",
+        "Turkmenistan",
+        "Tuvalu",
+        "UNITA",
+        "Uganda",
         "Ukraine",
         "United Arab Emirates",
+        "Uruguay",
         "Uzbekistan",
+        "Vanuatu",
+        "Vatican City",
         "Venezuela",
-        "Yugoslavia"
+        "Vietnam",
+        "Wa State",
+        "Yemen",
+        "Yugoslavia",
+        "Zambia",
+        "Zimbabwe"
       ]
     },
     "Roleplay (Novum Vexillum)": {
@@ -150,67 +356,230 @@
       ],
       "minors": [
         "Abkhazia",
+        "Aceh",
         "Afghanistan",
+        "Al-Itihaad",
+        "Albania",
+        "Algeria",
+        "Allied Somali Forces",
+        "Andorra",
+        "Angola",
+        "Antigua and Barbuda",
+        "Argentina",
+        "Armed Forces Revolutionary Council",
         "Armenia",
         "Artsakh",
+        "Australia",
+        "Austria",
         "Azerbaijan",
+        "Bahamas",
         "Bahrain",
+        "Bangladesh",
+        "Barbados",
         "Belarus",
+        "Belgium",
+        "Belize",
+        "Benin",
+        "Bhutan",
+        "Bolivia",
         "Bosnia",
         "Botswana",
         "Brazil",
+        "Brunei",
         "Bulgaria",
+        "Burkina Faso",
+        "Burundi",
+        "Cabo Verde",
+        "Cambodia",
+        "Cameroon",
         "Canada",
+        "Central African Republic",
+        "Chad",
+        "Chechnya",
+        "Chile",
+        "Colombia",
         "Comoros",
+        "Congo",
+        "Congo DR",
+        "Costa Rica",
+        "Croatia",
         "Cuba",
+        "Cyprus",
         "Czechia",
+        "Côte d'Ivoire",
         "Denmark",
+        "Djibouti",
+        "Dominica",
+        "Dominican Republic",
+        "Ecuador",
         "Egypt",
+        "El Salvador",
+        "Equatorial Guinea",
+        "Eritrea",
         "Estonia",
         "Ethiopia",
+        "Faroe Islands",
         "Fiji",
         "Finland",
+        "Gabon",
+        "Gambia",
+        "Gaza Strip",
         "Georgia",
+        "Ghana",
         "Greece",
+        "Greenland",
+        "Grenada",
+        "Guatemala",
+        "Guinea",
+        "Guinea-Bissau",
+        "Guyana",
+        "Haiti",
         "Hezbollah",
+        "Honduras",
+        "Hong Kong S.A.R.",
+        "Hungary",
+        "Iceland",
         "India",
         "Indonesia",
         "Iran",
         "Iraq",
+        "Ireland",
+        "Islamic Emirate of Afghanistan",
+        "Islamic Emirate of Kurdistan",
         "Israel",
         "Italy",
+        "Jamaica",
+        "Jordan",
+        "Kachin State",
+        "Karen State",
         "Kazakhstan",
+        "Kenya",
+        "Kiribati",
+        "Kosovo",
+        "Kurdistan Democratic Party",
         "Kuwait",
         "Kyrgyzstan",
+        "Laos",
+        "Latvia",
+        "Lebanon",
+        "Lesotho",
+        "Liberia",
+        "Liberians United for Reconciliation and Democracy",
         "Libya",
         "Liechtenstein",
+        "Lithuania",
+        "Luxembourg",
+        "Macau S.A.R.",
+        "Macedonia",
+        "Madagascar",
+        "Malawi",
+        "Malaysia",
+        "Maldives",
+        "Mali",
+        "Malta",
+        "Maoist Nepal",
+        "Marshall Islands",
+        "Mauritania",
+        "Mauritius",
+        "Mexico",
+        "Micronesia",
+        "Moldova",
+        "Monaco",
+        "Mongolia",
+        "Montenegro",
+        "Morocco",
+        "Movement for the Liberation of Congo",
+        "Mozambique",
         "Myanmar",
+        "Namibia",
+        "Nauru",
+        "Nepal",
         "Netherlands",
+        "New Zealand",
+        "Nicaragua",
+        "Niger",
         "Nigeria",
         "North Korea",
+        "Northern Cyprus",
         "Norway",
         "Oman",
+        "Pakistan",
+        "Palau",
+        "Palestine",
+        "Panama",
+        "Papua New Guinea",
+        "Paraguay",
+        "Patriotic Union of Kurdistan",
+        "Peru",
+        "Philippines",
         "Poland",
+        "Portugal",
+        "Puntland",
         "Qatar",
+        "Rally for Congolese Democracy",
+        "Republic of China",
         "Romania",
+        "Rwanda",
+        "Sahrawi",
+        "Saint Kitts and Nevis",
+        "Saint Lucia",
+        "Saint Vincent and the Grenadines",
+        "Samoa",
         "San Marino",
         "Saudi Arabia",
+        "Senegal",
         "Serbia",
+        "Seychelles",
+        "Sierra Leone",
         "Singapore",
+        "Slovakia",
+        "Slovenia",
+        "Solomon Islands",
+        "Somali National Alliance",
+        "Somalia",
+        "Somaliland",
+        "South Africa",
         "South Korea",
         "South Ossetia",
+        "South Shan State",
+        "Southwestern State of Somalia",
         "Spain",
+        "Sri Lanka",
+        "Sudan",
+        "Sudan People's Liberation Army",
+        "Suriname",
+        "Swaziland",
         "Sweden",
         "Switzerland",
         "Syria",
+        "São Tomé and Príncipe",
         "Tajikistan",
+        "Tamil Eelam",
+        "Tanzania",
+        "Thailand",
+        "Togo",
+        "Tonga",
         "Transnistria",
+        "Trinidad and Tobago",
+        "Tunisia",
         "Turkey",
+        "Turkmenistan",
+        "Tuvalu",
+        "UNITA",
+        "Uganda",
         "Ukraine",
         "United Arab Emirates",
+        "Uruguay",
         "Uzbekistan",
+        "Vanuatu",
+        "Vatican City",
         "Venezuela",
-        "Yugoslavia"
+        "Vietnam",
+        "Wa State",
+        "Yemen",
+        "Yugoslavia",
+        "Zambia",
+        "Zimbabwe"
       ]
     },
     "Kaiserreich (FFA)": {
@@ -230,64 +599,348 @@
         "United States Federal Government"
       ],
       "minors": [
+        "Albania",
         "Argentina",
         "Australasia",
+        "Austrian Italy",
+        "Azerbaijan Democratic Republic",
         "Bharatiya Commune",
+        "Bharatiya People's Republic",
+        "Bhutan",
+        "Bohemia",
+        "Bolivia",
         "Brazil",
         "Bulgaria",
+        "Chile",
+        "Colombia",
+        "Costa Rica",
+        "Cuba",
+        "Cyrenaican North Africa",
+        "Denmark",
+        "Dominican Republic",
         "Dominion of India",
         "Dutch East Indies",
+        "Ecuador",
+        "El Salvador",
+        "Emirate of Bukhara",
+        "Ethiopia",
         "Flanders-Wallonia",
         "French Republic",
+        "Galicia and Lodomeria",
         "German East Asia",
+        "Greece",
+        "Guatemala",
+        "Haiti",
+        "Honduras",
+        "Hunan Clique",
+        "Iceland",
+        "Illyria",
         "Ireland",
+        "Jabal Shammar",
+        "Kingdom of Afghanistan",
+        "Kingdom of Egypt",
         "Kingdom of Finland",
+        "Kingdom of Hungary",
         "Kingdom of Spain",
+        "Kumul Khanate",
+        "League of Eight Provinces",
+        "Legation Cities",
+        "Liangguang",
+        "Liberia",
         "Lithuania",
+        "Ma Clique",
         "Mexico",
+        "MinGan Insurgency",
         "Mittelafrika",
         "Mongolia",
+        "Muscat and Oman",
+        "Mutasarrifate of Jerusalem",
+        "Najd and Hasa",
+        "Nepal",
         "Netherlands",
+        "New Khivan Khanate",
+        "Nicaragua",
         "Norway",
+        "Panama",
+        "Papal States",
+        "Paraguay",
+        "Patagonian Workers' Front",
+        "Persia",
+        "Peru",
         "Philippines",
         "Poland",
+        "Portugal",
         "Princely Federation",
+        "Qing Government",
+        "Republic of Burma",
+        "Republic of Georgia",
+        "Romania",
+        "Sardinia",
+        "Serbia",
+        "Shandong Clique",
+        "Shanxi Clique",
         "Siam",
+        "Sichuan",
         "Socialist Republic of Italy",
+        "Somalia",
+        "Sultanate of Morocco",
         "Sweden",
+        "Switzerland",
+        "Tibet",
+        "Turkestan Republic",
+        "Two Sicilies",
         "Ukrainian State",
         "Union of South Africa",
         "United Baltic Duchy",
+        "United States of America",
+        "Uruguay",
+        "Venezuela",
         "West Indies Federation",
-        "White Ruthenia"
+        "White Ruthenia",
+        "Xinjiang Clique",
+        "Yemen",
+        "Yunnan"
       ]
     },
     "TFR": {
       "majors": [
-        "Germany",
+        "Australia",
         "France",
-        "Italy",
-        "United Kingdom",
-        "Russia",
-        "People's Republic of China",
-        "Japan",
+        "Germany",
         "India",
-        "Australia"
+        "Italy",
+        "Japan",
+        "People's Republic of China",
+        "Russia",
+        "United Kingdom"
       ],
       "minors": [
+        "Abkhazia",
+        "Aceh",
+        "Afghanistan",
+        "Al-Itihaad",
+        "Albania",
+        "Algeria",
+        "Allied Somali Forces",
+        "Andorra",
+        "Angola",
+        "Antigua and Barbuda",
+        "Argentina",
+        "Armed Forces Revolutionary Council",
+        "Armenia",
+        "Artsakh",
         "Atomwaffen",
+        "Austria",
+        "Azerbaijan",
+        "Bahamas",
+        "Bahrain",
+        "Bangladesh",
+        "Barbados",
+        "Belarus",
+        "Belgium",
+        "Belize",
+        "Benin",
+        "Bhutan",
         "Biden or Trump",
+        "Bolivia",
+        "Bosnia",
+        "Botswana",
+        "Brazil",
+        "Brunei",
+        "Bulgaria",
+        "Burkina Faso",
+        "Burundi",
+        "Cabo Verde",
+        "Cambodia",
+        "Cameroon",
+        "Canada",
+        "Central African Republic",
+        "Chad",
+        "Chechnya",
+        "Chile",
+        "Colombia",
         "Commie USA",
+        "Comoros",
+        "Congo",
+        "Congo DR",
+        "Costa Rica",
+        "Croatia",
+        "Cuba",
+        "Cyprus",
+        "Czech Republic",
+        "Côte d'Ivoire",
+        "Denmark",
+        "Djibouti",
+        "Dominica",
+        "Dominican Republic",
+        "Ecuador",
+        "Egypt",
+        "El Salvador",
+        "Equatorial Guinea",
+        "Eritrea",
+        "Estonia",
+        "Ethiopia",
+        "Faroe Islands",
+        "Fiji",
+        "Finland",
+        "Gabon",
+        "Gambia",
+        "Gaza Strip",
+        "Georgia",
+        "Ghana",
+        "Greece",
+        "Greenland",
+        "Grenada",
+        "Guatemala",
+        "Guinea",
+        "Guinea-Bissau",
+        "Guyana",
+        "Haiti",
+        "Hezbollah",
+        "Honduras",
+        "Hong Kong S.A.R.",
+        "Hungary",
+        "Iceland",
+        "Indonesia",
         "Iran",
+        "Iraq",
+        "Ireland",
+        "Islamic Emirate of Afghanistan",
+        "Islamic Emirate of Kurdistan",
+        "Israel",
+        "Jamaica",
+        "Jordan",
+        "Kachin State",
+        "Karen State",
+        "Kazakhstan",
+        "Kenya",
+        "Kiribati",
+        "Kosovo",
+        "Kurdistan Democratic Party",
+        "Kuwait",
+        "Kyrgyzstan",
+        "Laos",
+        "Latvia",
+        "Lebanon",
+        "Lesotho",
+        "Liberia",
+        "Liberians United for Reconciliation and Democracy",
+        "Libya",
+        "Liechtenstein",
+        "Lithuania",
+        "Luxembourg",
+        "Macau S.A.R.",
+        "Macedonia",
+        "Madagascar",
+        "Malawi",
+        "Malaysia",
+        "Maldives",
+        "Mali",
+        "Malta",
+        "Maoist Nepal",
+        "Marshall Islands",
+        "Mauritania",
+        "Mauritius",
+        "Mexico",
+        "Micronesia",
+        "Moldova",
+        "Monaco",
+        "Mongolia",
+        "Montenegro",
+        "Morocco",
+        "Movement for the Liberation of Congo",
+        "Mozambique",
+        "Myanmar",
+        "Namibia",
+        "Nauru",
+        "Nepal",
+        "Netherlands",
+        "New Zealand",
+        "Nicaragua",
+        "Niger",
+        "Nigeria",
         "North Korea",
+        "Northern Cyprus",
+        "Norway",
+        "Oman",
         "Pakistan",
+        "Palau",
+        "Palestine",
+        "Panama",
+        "Papua New Guinea",
+        "Paraguay",
         "Patriot Front",
+        "Patriotic Union of Kurdistan",
+        "Peru",
+        "Philippines",
         "Poland",
+        "Portugal",
+        "Puntland",
+        "Qatar",
+        "Rally for Congolese Democracy",
         "Republic of China",
+        "Romania",
+        "Rwanda",
+        "Sahrawi",
+        "Saint Kitts and Nevis",
+        "Saint Lucia",
+        "Saint Vincent and the Grenadines",
+        "Samoa",
+        "San Marino",
+        "Saudi Arabia",
+        "Senegal",
         "Serbia",
+        "Seychelles",
+        "Sierra Leone",
+        "Singapore",
+        "Slovakia",
+        "Slovenia",
+        "Solomon Islands",
+        "Somali National Alliance",
+        "Somalia",
+        "Somaliland",
+        "South Africa",
         "South Korea",
+        "South Ossetia",
+        "South Shan State",
+        "Southwestern State of Somalia",
+        "Spain",
+        "Sri Lanka",
+        "Sudan",
+        "Sudan People's Liberation Army",
+        "Suriname",
+        "Swaziland",
+        "Sweden",
+        "Switzerland",
+        "Syria",
+        "São Tomé and Príncipe",
+        "Tajikistan",
+        "Tamil Eelam",
+        "Tanzania",
+        "Thailand",
+        "Togo",
+        "Tonga",
+        "Transnistria",
+        "Trinidad and Tobago",
+        "Tunisia",
+        "Turkey",
+        "Turkmenistan",
+        "Tuvalu",
+        "UNITA",
+        "Uganda",
         "Ukraine",
-        "Vietnam"
+        "United Arab Emirates",
+        "United States",
+        "Uruguay",
+        "Uzbekistan",
+        "Vanuatu",
+        "Vatican City",
+        "Venezuela",
+        "Vietnam",
+        "Wa State",
+        "Yemen",
+        "Zambia",
+        "Zimbabwe"
       ]
     },
     "Historical (Vanilla)": {
@@ -300,21 +953,96 @@
         "United Kingdom"
       ],
       "minors": [
+        "Albanian Kingdom",
+        "Argentina",
         "Australia",
+        "Austria",
+        "Belgium",
+        "Bhutan",
+        "Bolivia",
         "Brazil",
+        "British Burma",
+        "British Malaya",
         "British Raj",
         "Bulgaria",
         "Canada",
+        "Chile",
+        "China",
+        "Chinese Soviet Republic",
+        "Colombia",
+        "Commonwealth of the Philippines",
+        "Costa Rica",
+        "Cuba",
+        "Czechoslovak Republic",
+        "Denmark",
+        "Dominican Republic",
+        "Dutch East Indies",
+        "Ecuador",
+        "El Salvador",
+        "Estonia",
+        "Ethiopia",
         "Finland",
         "France",
+        "Free Mandate of Palestine",
+        "Gansu Ma",
+        "Guangdong Clique",
+        "Guangxi Clique",
+        "Guatemala",
+        "Haiti",
+        "Hebei-Chahar",
+        "Honduras",
         "Hungary",
+        "Iceland",
+        "Iran",
+        "Ireland",
+        "Khotan Ma",
+        "Kingdom of Afghanistan",
+        "Kingdom of Greece",
+        "Kingdom of Iraq",
+        "Kingdom of Jordan",
+        "Kingdom of Kuwait",
+        "Latvia",
+        "Liberia",
+        "Lithuania",
+        "Luxembourg",
         "Manchukuo",
+        "Mengjiang",
         "Mexico",
+        "Mongolian People's Republic",
+        "Nepal",
         "Netherlands",
+        "New Zealand",
+        "Nicaragua",
+        "Ningxia Ma",
+        "Northeastern Army",
+        "Norway",
+        "Oriental Republic of Uruguay",
+        "Panama",
+        "Peru",
+        "Poland",
+        "Portugal",
+        "Qinghai Ma",
+        "Republic of Paraguay",
         "Romania",
+        "Saudi Arabia",
+        "Shandong Clique",
+        "Shanxi",
         "Siam",
+        "Sichuan Clique",
+        "Sinkiang",
         "South Africa",
-        "Spain"
+        "Spain",
+        "Sultanate of Aussa",
+        "Sultanate of Muscat and Oman",
+        "Sweden",
+        "Switzerland",
+        "Tannu Tuva",
+        "Tibet",
+        "Turkey",
+        "Venezuela",
+        "Yemen",
+        "Yugoslavia",
+        "Yunnan"
       ]
     },
     "Historical (TFB)": {
@@ -327,23 +1055,50 @@
         "United Kingdom"
       ],
       "minors": [
+        "Albanian Kingdom",
         "Australia",
+        "Austria",
+        "Belgian Congo",
+        "Belgium",
         "Brazil",
+        "British Ireland",
+        "British Malaya",
         "British Raj",
         "Bulgaria",
         "Canada",
+        "Commonwealth of the Philippines",
+        "Czechoslovak Republic",
+        "Denmark",
+        "Dutch East Indies",
+        "Estonia",
+        "Ethiopia",
         "Finland",
         "France",
         "Hungary",
+        "Iceland",
+        "Iran",
+        "Kingdom of Greece",
+        "Kingdom of Iraq",
+        "Latvia",
+        "Lithuania",
+        "Luxembourg",
         "Manchukuo",
         "Mexico",
         "Mongolia",
         "Netherlands",
         "New Zealand",
+        "Norway",
+        "Poland",
+        "Portugal",
+        "Republic of China",
         "Romania",
         "Siam",
         "South Africa",
         "Spain",
+        "Sweden",
+        "Switzerland",
+        "Turkey",
+        "Venezuela",
         "Vichy France",
         "Yugoslavia"
       ]
@@ -358,22 +1113,52 @@
         "United Kingdom"
       ],
       "minors": [
+        "Albania",
         "Australia",
+        "Austria",
+        "Baltic States",
+        "Belgium",
+        "Brazil",
         "British Raj",
         "Bulgaria",
         "Canada",
         "China",
+        "Communist China",
+        "Denmark",
+        "Dutch East Indies",
+        "Ethiopia",
+        "Finland",
         "France",
+        "Free City of Danzig",
+        "Greece",
         "Hungary",
+        "Indochina",
+        "Iran",
+        "Iraq",
+        "Irish Free State",
+        "Luxembourg",
         "Manchuria",
+        "Mexico",
+        "Mongolia",
+        "Netherlands",
         "New Zealand",
+        "Norway",
+        "Paraguay",
         "Poland",
+        "Portugal",
         "Rep Spain",
         "Romania",
+        "Siam",
         "Slovakia",
         "South Africa",
         "Spain",
-        "Vichy France"
+        "Sweden",
+        "Switzerland",
+        "Tannu Tuva",
+        "Turkey",
+        "Venezuela",
+        "Vichy France",
+        "Yugoslavia"
       ]
     },
     "Historical (Horst)": {
@@ -388,24 +1173,30 @@
       ],
       "minors": [
         "Australia",
+        "Belgium",
         "Brazil",
         "British Raj",
         "Bulgaria",
         "Canada",
         "Croatia",
+        "Czechoslovak Republic",
+        "Denmark",
         "Finland",
         "France",
         "Hungary",
+        "Iran",
         "Manchukuo",
         "Mongolia",
         "Netherlands",
         "Norway",
         "Poland",
+        "Republican Spain",
         "Romania",
         "Slovakia",
         "South Africa",
         "Spain",
-        "Vichy France"
+        "Vichy France",
+        "Yugoslavia"
       ]
     },
     "Historical (BFFU)": {
@@ -418,23 +1209,43 @@
         "United Kingdom"
       ],
       "minors": [
+        "Albanian Kingdom",
         "Australia",
+        "Austria",
+        "Baltic States",
+        "Belgium",
         "Brazil",
+        "British Ireland",
+        "British Malaya",
         "British Raj",
         "Bulgaria",
         "Canada",
+        "Czechoslovakia",
+        "Denmark",
+        "Dutch East Indies",
+        "Ethiopia",
         "Finland",
         "France",
         "Hungary",
+        "Iran",
+        "Kingdom of Greece",
         "Manchukuo",
         "Mexico",
         "Mongolia",
         "Netherlands",
         "New Zealand",
+        "Norway",
+        "Poland",
+        "Portugal",
+        "Republic of China",
         "Romania",
         "Siam",
         "South Africa",
         "Spain",
+        "Sweden",
+        "Switzerland",
+        "Turkey",
+        "Venezuela",
         "Vichy France",
         "Yugoslavia"
       ]
@@ -448,13 +1259,13 @@
           {
             "label": null,
             "nations": [
-              "U.S.A",
-              "Soviet Union",
-              "Germany",
-              "United Kingdom",
               "France",
+              "Germany",
               "Italy",
-              "Japan"
+              "Japan",
+              "Soviet Union",
+              "U.S.A",
+              "United Kingdom"
             ]
           }
         ]
@@ -472,15 +1283,23 @@
               "Denmark",
               "Estonia",
               "Finland",
+              "Free City of Danzig",
+              "Grand Duchy of Luxembourg",
               "Greece",
               "Hungary",
               "Ireland",
+              "Kingdom of Albania",
+              "Kingdom of Iceland",
               "Latvia",
               "Lithuania",
               "Netherlands",
               "Norway",
               "Poland",
               "Portugal",
+              "Principality of Andorra",
+              "Principality of Monaco",
+              "Republic of Liechtenstein",
+              "Republic of San Marino",
               "Romania",
               "Spain",
               "Sweden",
@@ -501,13 +1320,33 @@
               "China",
               "Chinese Soviet Republic",
               "French Indochina",
+              "Guangxi Clique",
+              "Hebei-Chahar Political Council",
+              "Hexi Ma Clique",
               "Iran",
               "Iraq",
+              "Khotan Ma Clique",
+              "Kingdom of Bhutan",
+              "Kingdom of Nepal",
               "Manchuria",
+              "Mongolian People's Republic",
+              "Mutawakkilite Kingdom of Yemen",
+              "Ningxia Ma Clique",
+              "Northwest Bandit Suppression Headquarters",
               "Palestine",
+              "Qinghai Ma Clique",
               "Saudi Arabia",
+              "Shandong Clique",
+              "Shanxi Clique",
               "Siam",
-              "Turkey"
+              "Sichuan Clique",
+              "State of Inner Mongolia",
+              "Sultanate of Muscat and Oman",
+              "Tibet",
+              "Turkey",
+              "Tuvan People's Republic",
+              "Xinjiang Clique",
+              "Yunnan Clique"
             ]
           }
         ]
@@ -521,7 +1360,8 @@
               "Australia",
               "British Malaya",
               "Dutch East Indies",
-              "Philippines"
+              "Philippines",
+              "Republic of New Zealand"
             ]
           }
         ]
@@ -534,8 +1374,15 @@
             "nations": [
               "Canada",
               "Cuba",
+              "Dominican Republic",
               "Honduras",
-              "Mexico"
+              "Mexico",
+              "Republic of Costa Rica",
+              "Republic of El Salvador",
+              "Republic of Guatemala",
+              "Republic of Haiti",
+              "Republic of Nicaragua",
+              "Republic of Panama"
             ]
           }
         ]
@@ -550,7 +1397,11 @@
               "Brazil",
               "Chile",
               "Colombia",
+              "Oriental Republic of Uruguay",
               "Peru",
+              "Republic of Bolivia",
+              "Republic of Ecuador",
+              "Republic of Paraguay",
               "Venezuela"
             ]
           }
@@ -564,7 +1415,10 @@
             "nations": [
               "Belgian Congo",
               "Egypt",
-              "South Africa"
+              "Ethiopian Empire",
+              "Republic of Liberia",
+              "South Africa",
+              "Sultanate of Aussa"
             ]
           }
         ]
@@ -577,9 +1431,9 @@
           {
             "label": null,
             "nations": [
-              "China",
               "France",
               "Germany",
+              "Italy",
               "Japan",
               "Russia",
               "United Kingdom",
@@ -594,65 +1448,53 @@
           {
             "label": null,
             "nations": [
+              "Abkhazia",
+              "Albania",
+              "Andorra",
+              "Artsakh",
+              "Austria",
               "Belarus",
+              "Belgium",
               "Bosnia",
               "Bulgaria",
+              "Chechnya",
+              "Croatia",
               "Czechia",
               "Denmark",
               "Estonia",
+              "Faroe Islands",
               "Finland",
+              "Georgia",
               "Greece",
-              "Italy",
+              "Hungary",
+              "Iceland",
+              "Ireland",
+              "Kosovo",
+              "Latvia",
+              "Liechtenstein",
+              "Lithuania",
+              "Luxembourg",
+              "Macedonia",
+              "Malta",
+              "Moldova",
+              "Monaco",
+              "Montenegro",
               "Netherlands",
               "Norway",
-              "Liechtenstein",
               "Poland",
+              "Portugal",
               "Romania",
-              "Serbia",
+              "San Marino",
+              "Slovakia",
+              "Slovenia",
+              "South Ossetia",
               "Spain",
               "Sweden",
               "Switzerland",
-              "San Marino",
+              "Transnistria",
               "Ukraine",
+              "Vatican City",
               "Yugoslavia"
-            ]
-          }
-        ]
-      },
-      {
-        "name": "Caucasia",
-        "tiers": [
-          {
-            "label": null,
-            "nations": [
-              "Abkhazia",
-              "Armenia",
-              "Artsakh",
-              "Azerbaijan",
-              "Georgia",
-              "South Ossetia",
-              "Transnistria"
-            ]
-          }
-        ]
-      },
-      {
-        "name": "Asia",
-        "tiers": [
-          {
-            "label": null,
-            "nations": [
-              "Afghanistan",
-              "India",
-              "Indonesia",
-              "Kazakhstan",
-              "Kyrgyzstan",
-              "Myanmar",
-              "North Korea",
-              "Singapore",
-              "South Korea",
-              "Tajikistan",
-              "Uzbekistan"
             ]
           }
         ]
@@ -663,18 +1505,159 @@
           {
             "label": null,
             "nations": [
+              "Afghanistan",
+              "Armenia",
+              "Azerbaijan",
               "Bahrain",
+              "Cyprus",
+              "Egypt",
+              "Gaza Strip",
               "Hezbollah",
               "Iran",
               "Iraq",
+              "Islamic Emirate of Afghanistan",
+              "Islamic Emirate of Kurdistan",
               "Israel",
+              "Jordan",
+              "Kurdistan Democratic Party",
               "Kuwait",
+              "Lebanon",
+              "Northern Cyprus",
               "Oman",
+              "Palestine",
+              "Patriotic Union of Kurdistan",
               "Qatar",
               "Saudi Arabia",
               "Syria",
               "Turkey",
-              "United Arab Emirates"
+              "United Arab Emirates",
+              "Yemen"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Asia",
+        "tiers": [
+          {
+            "label": null,
+            "nations": [
+              "Bangladesh",
+              "Bhutan",
+              "Cambodia",
+              "China",
+              "Hong Kong S.A.R.",
+              "India",
+              "Kachin State",
+              "Karen State",
+              "Kazakhstan",
+              "Kyrgyzstan",
+              "Laos",
+              "Macau S.A.R.",
+              "Maldives",
+              "Maoist Nepal",
+              "Mongolia",
+              "Myanmar",
+              "Nepal",
+              "North Korea",
+              "Pakistan",
+              "Republic of China",
+              "South Korea",
+              "South Shan State",
+              "Sri Lanka",
+              "Tajikistan",
+              "Tamil Eelam",
+              "Thailand",
+              "Turkmenistan",
+              "Uzbekistan",
+              "Vietnam",
+              "Wa State"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Oceania",
+        "tiers": [
+          {
+            "label": null,
+            "nations": [
+              "Aceh",
+              "Australia",
+              "Brunei",
+              "Fiji",
+              "Indonesia",
+              "Kiribati",
+              "Malaysia",
+              "Mali",
+              "Marshall Islands",
+              "Micronesia",
+              "Nauru",
+              "New Zealand",
+              "Palau",
+              "Papua New Guinea",
+              "Philippines",
+              "Samoa",
+              "Singapore",
+              "Solomon Islands",
+              "Tonga",
+              "Tuvalu",
+              "Vanuatu"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "North America",
+        "tiers": [
+          {
+            "label": null,
+            "nations": [
+              "Antigua and Barbuda",
+              "Bahamas",
+              "Barbados",
+              "Belize",
+              "Canada",
+              "Costa Rica",
+              "Cuba",
+              "Dominica",
+              "Dominican Republic",
+              "El Salvador",
+              "Greenland",
+              "Grenada",
+              "Guatemala",
+              "Haiti",
+              "Honduras",
+              "Jamaica",
+              "Mexico",
+              "Nicaragua",
+              "Panama",
+              "Saint Kitts and Nevis",
+              "Saint Lucia",
+              "Saint Vincent and the Grenadines",
+              "Trinidad and Tobago"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "South America",
+        "tiers": [
+          {
+            "label": null,
+            "nations": [
+              "Argentina",
+              "Bolivia",
+              "Brazil",
+              "Chile",
+              "Colombia",
+              "Ecuador",
+              "Guyana",
+              "Paraguay",
+              "Peru",
+              "Suriname",
+              "Uruguay",
+              "Venezuela"
             ]
           }
         ]
@@ -685,27 +1668,70 @@
           {
             "label": null,
             "nations": [
+              "Al-Itihaad",
+              "Algeria",
+              "Allied Somali Forces",
+              "Angola",
+              "Armed Forces Revolutionary Council",
+              "Benin",
               "Botswana",
+              "Burkina Faso",
+              "Burundi",
+              "Cabo Verde",
+              "Cameroon",
+              "Central African Republic",
+              "Chad",
               "Comoros",
-              "Egypt",
+              "Congo",
+              "Congo DR",
+              "Côte d'Ivoire",
+              "Djibouti",
+              "Equatorial Guinea",
+              "Eritrea",
               "Ethiopia",
+              "Gabon",
+              "Gambia",
+              "Ghana",
+              "Guinea",
+              "Guinea-Bissau",
+              "Kenya",
+              "Lesotho",
+              "Liberia",
+              "Liberians United for Reconciliation and Democracy",
               "Libya",
-              "Nigeria"
-            ]
-          }
-        ]
-      },
-      {
-        "name": "Americas",
-        "tiers": [
-          {
-            "label": null,
-            "nations": [
-              "Brazil",
-              "Canada",
-              "Cuba",
-              "Fiji",
-              "Venezuela"
+              "Madagascar",
+              "Malawi",
+              "Mauritania",
+              "Mauritius",
+              "Morocco",
+              "Movement for the Liberation of Congo",
+              "Mozambique",
+              "Namibia",
+              "Niger",
+              "Nigeria",
+              "Puntland",
+              "Rally for Congolese Democracy",
+              "Rwanda",
+              "Sahrawi",
+              "Senegal",
+              "Seychelles",
+              "Sierra Leone",
+              "Somali National Alliance",
+              "Somalia",
+              "Somaliland",
+              "South Africa",
+              "Southwestern State of Somalia",
+              "Sudan",
+              "Sudan People's Liberation Army",
+              "Swaziland",
+              "São Tomé and Príncipe",
+              "Tanzania",
+              "Togo",
+              "Tunisia",
+              "UNITA",
+              "Uganda",
+              "Zambia",
+              "Zimbabwe"
             ]
           }
         ]
@@ -718,9 +1744,9 @@
           {
             "label": null,
             "nations": [
-              "China",
               "France",
               "Germany",
+              "Italy",
               "Japan",
               "Russia",
               "United Kingdom",
@@ -735,65 +1761,53 @@
           {
             "label": null,
             "nations": [
+              "Abkhazia",
+              "Albania",
+              "Andorra",
+              "Artsakh",
+              "Austria",
               "Belarus",
+              "Belgium",
               "Bosnia",
               "Bulgaria",
+              "Chechnya",
+              "Croatia",
               "Czechia",
               "Denmark",
               "Estonia",
+              "Faroe Islands",
               "Finland",
+              "Georgia",
               "Greece",
-              "Italy",
+              "Hungary",
+              "Iceland",
+              "Ireland",
+              "Kosovo",
+              "Latvia",
+              "Liechtenstein",
+              "Lithuania",
+              "Luxembourg",
+              "Macedonia",
+              "Malta",
+              "Moldova",
+              "Monaco",
+              "Montenegro",
               "Netherlands",
               "Norway",
-              "Liechtenstein",
               "Poland",
+              "Portugal",
               "Romania",
-              "Serbia",
+              "San Marino",
+              "Slovakia",
+              "Slovenia",
+              "South Ossetia",
               "Spain",
               "Sweden",
               "Switzerland",
-              "San Marino",
+              "Transnistria",
               "Ukraine",
+              "Vatican City",
               "Yugoslavia"
-            ]
-          }
-        ]
-      },
-      {
-        "name": "Caucasia",
-        "tiers": [
-          {
-            "label": null,
-            "nations": [
-              "Abkhazia",
-              "Armenia",
-              "Artsakh",
-              "Azerbaijan",
-              "Georgia",
-              "South Ossetia",
-              "Transnistria"
-            ]
-          }
-        ]
-      },
-      {
-        "name": "Asia",
-        "tiers": [
-          {
-            "label": null,
-            "nations": [
-              "Afghanistan",
-              "India",
-              "Indonesia",
-              "Kazakhstan",
-              "Kyrgyzstan",
-              "Myanmar",
-              "North Korea",
-              "Singapore",
-              "South Korea",
-              "Tajikistan",
-              "Uzbekistan"
             ]
           }
         ]
@@ -804,18 +1818,159 @@
           {
             "label": null,
             "nations": [
+              "Afghanistan",
+              "Armenia",
+              "Azerbaijan",
               "Bahrain",
+              "Cyprus",
+              "Egypt",
+              "Gaza Strip",
               "Hezbollah",
               "Iran",
               "Iraq",
+              "Islamic Emirate of Afghanistan",
+              "Islamic Emirate of Kurdistan",
               "Israel",
+              "Jordan",
+              "Kurdistan Democratic Party",
               "Kuwait",
+              "Lebanon",
+              "Northern Cyprus",
               "Oman",
+              "Palestine",
+              "Patriotic Union of Kurdistan",
               "Qatar",
               "Saudi Arabia",
               "Syria",
               "Turkey",
-              "United Arab Emirates"
+              "United Arab Emirates",
+              "Yemen"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Asia",
+        "tiers": [
+          {
+            "label": null,
+            "nations": [
+              "Bangladesh",
+              "Bhutan",
+              "Cambodia",
+              "China",
+              "Hong Kong S.A.R.",
+              "India",
+              "Kachin State",
+              "Karen State",
+              "Kazakhstan",
+              "Kyrgyzstan",
+              "Laos",
+              "Macau S.A.R.",
+              "Maldives",
+              "Maoist Nepal",
+              "Mongolia",
+              "Myanmar",
+              "Nepal",
+              "North Korea",
+              "Pakistan",
+              "Republic of China",
+              "South Korea",
+              "South Shan State",
+              "Sri Lanka",
+              "Tajikistan",
+              "Tamil Eelam",
+              "Thailand",
+              "Turkmenistan",
+              "Uzbekistan",
+              "Vietnam",
+              "Wa State"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Oceania",
+        "tiers": [
+          {
+            "label": null,
+            "nations": [
+              "Aceh",
+              "Australia",
+              "Brunei",
+              "Fiji",
+              "Indonesia",
+              "Kiribati",
+              "Malaysia",
+              "Mali",
+              "Marshall Islands",
+              "Micronesia",
+              "Nauru",
+              "New Zealand",
+              "Palau",
+              "Papua New Guinea",
+              "Philippines",
+              "Samoa",
+              "Singapore",
+              "Solomon Islands",
+              "Tonga",
+              "Tuvalu",
+              "Vanuatu"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "North America",
+        "tiers": [
+          {
+            "label": null,
+            "nations": [
+              "Antigua and Barbuda",
+              "Bahamas",
+              "Barbados",
+              "Belize",
+              "Canada",
+              "Costa Rica",
+              "Cuba",
+              "Dominica",
+              "Dominican Republic",
+              "El Salvador",
+              "Greenland",
+              "Grenada",
+              "Guatemala",
+              "Haiti",
+              "Honduras",
+              "Jamaica",
+              "Mexico",
+              "Nicaragua",
+              "Panama",
+              "Saint Kitts and Nevis",
+              "Saint Lucia",
+              "Saint Vincent and the Grenadines",
+              "Trinidad and Tobago"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "South America",
+        "tiers": [
+          {
+            "label": null,
+            "nations": [
+              "Argentina",
+              "Bolivia",
+              "Brazil",
+              "Chile",
+              "Colombia",
+              "Ecuador",
+              "Guyana",
+              "Paraguay",
+              "Peru",
+              "Suriname",
+              "Uruguay",
+              "Venezuela"
             ]
           }
         ]
@@ -826,27 +1981,70 @@
           {
             "label": null,
             "nations": [
+              "Al-Itihaad",
+              "Algeria",
+              "Allied Somali Forces",
+              "Angola",
+              "Armed Forces Revolutionary Council",
+              "Benin",
               "Botswana",
+              "Burkina Faso",
+              "Burundi",
+              "Cabo Verde",
+              "Cameroon",
+              "Central African Republic",
+              "Chad",
               "Comoros",
-              "Egypt",
+              "Congo",
+              "Congo DR",
+              "Côte d'Ivoire",
+              "Djibouti",
+              "Equatorial Guinea",
+              "Eritrea",
               "Ethiopia",
+              "Gabon",
+              "Gambia",
+              "Ghana",
+              "Guinea",
+              "Guinea-Bissau",
+              "Kenya",
+              "Lesotho",
+              "Liberia",
+              "Liberians United for Reconciliation and Democracy",
               "Libya",
-              "Nigeria"
-            ]
-          }
-        ]
-      },
-      {
-        "name": "Americas",
-        "tiers": [
-          {
-            "label": null,
-            "nations": [
-              "Brazil",
-              "Canada",
-              "Cuba",
-              "Fiji",
-              "Venezuela"
+              "Madagascar",
+              "Malawi",
+              "Mauritania",
+              "Mauritius",
+              "Morocco",
+              "Movement for the Liberation of Congo",
+              "Mozambique",
+              "Namibia",
+              "Niger",
+              "Nigeria",
+              "Puntland",
+              "Rally for Congolese Democracy",
+              "Rwanda",
+              "Sahrawi",
+              "Senegal",
+              "Seychelles",
+              "Sierra Leone",
+              "Somali National Alliance",
+              "Somalia",
+              "Somaliland",
+              "South Africa",
+              "Southwestern State of Somalia",
+              "Sudan",
+              "Sudan People's Liberation Army",
+              "Swaziland",
+              "São Tomé and Príncipe",
+              "Tanzania",
+              "Togo",
+              "Tunisia",
+              "UNITA",
+              "Uganda",
+              "Zambia",
+              "Zimbabwe"
             ]
           }
         ]
@@ -854,104 +2052,180 @@
     ],
     "Kaiserreich (FFA)": [
       {
-        "name": "Entente",
+        "name": "Majors",
         "tiers": [
           {
-            "label": "Majors",
+            "label": null,
             "nations": [
-              "United States Federal Government",
-              "Dominion of Canada"
+              "Austrian Empire",
+              "Commune of France",
+              "Empire of Japan",
+              "German Empire",
+              "Ottoman Empire",
+              "Russian Republic",
+              "Union of Britain",
+              "United States of America"
             ]
-          },
+          }
+        ]
+      },
+      {
+        "name": "Europe",
+        "tiers": [
           {
-            "label": "Minors",
+            "label": null,
+            "nations": [
+              "Albania",
+              "Austrian Italy",
+              "Bohemia",
+              "Bulgaria",
+              "Denmark",
+              "Flanders-Wallonia",
+              "Galicia and Lodomeria",
+              "Greece",
+              "Iceland",
+              "Illyria",
+              "Ireland",
+              "Kingdom of Finland",
+              "Kingdom of Hungary",
+              "Kingdom of Spain",
+              "Lithuania",
+              "Netherlands",
+              "Norway",
+              "Papal States",
+              "Poland",
+              "Portugal",
+              "Romania",
+              "Sardinia",
+              "Serbia",
+              "Socialist Republic of Italy",
+              "Sweden",
+              "Switzerland",
+              "Ukrainian State",
+              "United Baltic Duchy",
+              "White Ruthenia"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Asia",
+        "tiers": [
+          {
+            "label": null,
+            "nations": [
+              "Azerbaijan Democratic Republic",
+              "Bharatiya People's Republic",
+              "Bhutan",
+              "Dominion of India",
+              "Emirate of Bukhara",
+              "Fengtian Government",
+              "German East Asia",
+              "Hunan Clique",
+              "Jabal Shammar",
+              "Kingdom of Afghanistan",
+              "Kumul Khanate",
+              "League of Eight Provinces",
+              "Legation Cities",
+              "Liangguang",
+              "Ma Clique",
+              "MinGan Insurgency",
+              "Mongolia",
+              "Muscat and Oman",
+              "Mutasarrifate of Jerusalem",
+              "Najd and Hasa",
+              "Nepal",
+              "New Khivan Khanate",
+              "Persia",
+              "Princely Federation",
+              "Qing Government",
+              "Republic of Burma",
+              "Republic of Georgia",
+              "Shandong Clique",
+              "Shanxi Clique",
+              "Siam",
+              "Sichuan",
+              "Tibet",
+              "Turkestan Republic",
+              "Two Sicilies",
+              "Xinjiang Clique",
+              "Yemen",
+              "Yunnan"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Oceania",
+        "tiers": [
+          {
+            "label": null,
             "nations": [
               "Australasia",
-              "Brazil",
-              "French Republic",
-              "Mexico",
-              "Philippines",
-              "West Indies Federation",
-              "Argentina",
-              "Dominion of India"
-            ]
-          }
-        ]
-      },
-      {
-        "name": "Third International",
-        "tiers": [
-          {
-            "label": "Majors",
-            "nations": [
-              "Commune of France",
-              "Union of Britain",
-              "Combined Syndicates of America"
-            ]
-          },
-          {
-            "label": "Minors",
-            "nations": [
-              "Socialist Republic of Italy",
-              "Kingdom of Spain",
-              "Norway",
-              "Ireland",
-              "Union of South Africa",
-              "Bharatiya Commune"
-            ]
-          }
-        ]
-      },
-      {
-        "name": "Reichspakt",
-        "tiers": [
-          {
-            "label": "Majors",
-            "nations": [
-              "German Empire",
-              "Austrian Empire",
-              "Ottoman Empire",
-              "American Union State"
-            ]
-          },
-          {
-            "label": "Minors",
-            "nations": [
-              "German East Asia",
-              "Mittelafrika",
-              "Netherlands",
               "Dutch East Indies",
-              "Flanders-Wallonia",
-              "Bulgaria",
-              "Sweden",
-              "Poland",
-              "Lithuania",
-              "White Ruthenia",
-              "United Baltic Duchy",
-              "Ukrainian State",
-              "Princely Federation"
+              "Philippines"
             ]
           }
         ]
       },
       {
-        "name": "Moscow Accord",
+        "name": "North America",
         "tiers": [
           {
-            "label": "Majors",
+            "label": null,
             "nations": [
-              "Russian Republic",
-              "Fengtian Government",
-              "Empire of Japan",
-              "Pacific States of America"
+              "Costa Rica",
+              "Cuba",
+              "Dominican Republic",
+              "Dominion of Canada",
+              "El Salvador",
+              "Guatemala",
+              "Haiti",
+              "Honduras",
+              "Mexico",
+              "Nicaragua",
+              "Panama",
+              "West Indies Federation"
             ]
-          },
+          }
+        ]
+      },
+      {
+        "name": "South America",
+        "tiers": [
           {
-            "label": "Minors",
+            "label": null,
             "nations": [
-              "Kingdom of Finland",
-              "Mongolia",
-              "Siam"
+              "Argentina",
+              "Bolivia",
+              "Brazil",
+              "Chile",
+              "Colombia",
+              "Ecuador",
+              "Paraguay",
+              "Patagonian Workers' Front",
+              "Peru",
+              "Uruguay",
+              "Venezuela"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Africa",
+        "tiers": [
+          {
+            "label": null,
+            "nations": [
+              "Cyrenaican North Africa",
+              "Ethiopia",
+              "French Republic",
+              "Kingdom of Egypt",
+              "Liberia",
+              "Mittelafrika",
+              "Somalia",
+              "Sultanate of Morocco",
+              "Union of South Africa"
             ]
           }
         ]
@@ -959,97 +2233,312 @@
     ],
     "TFR": [
       {
-        "name": "NATO",
+        "name": "Majors",
         "tiers": [
           {
-            "label": "Majors",
+            "label": null,
             "nations": [
-              "Germany",
               "France",
+              "Germany",
               "Italy",
-              "United Kingdom"
-            ]
-          },
-          {
-            "label": "Minors",
-            "nations": [
-              "Poland",
-              "Ukraine"
-            ]
-          }
-        ]
-      },
-      {
-        "name": "CSTO",
-        "tiers": [
-          {
-            "label": "Majors",
-            "nations": [
-              "Russia"
-            ]
-          },
-          {
-            "label": "Minors",
-            "nations": [
-              "Serbia",
-              "Iran"
-            ]
-          }
-        ]
-      },
-      {
-        "name": "EADI",
-        "tiers": [
-          {
-            "label": "Majors",
-            "nations": [
-              "People's Republic of China"
-            ]
-          },
-          {
-            "label": "Minors",
-            "nations": [
-              "North Korea",
-              "Pakistan"
-            ]
-          }
-        ]
-      },
-      {
-        "name": "PDTO",
-        "tiers": [
-          {
-            "label": "Majors",
-            "nations": [
               "Japan",
-              "India",
-              "Australia"
+              "Russia",
+              "United Kingdom",
+              "United States"
             ]
-          },
+          }
+        ]
+      },
+      {
+        "name": "Europe",
+        "tiers": [
           {
-            "label": "Minors",
+            "label": null,
             "nations": [
+              "Abkhazia",
+              "Albania",
+              "Andorra",
+              "Artsakh",
+              "Austria",
+              "Belarus",
+              "Belgium",
+              "Bosnia",
+              "Bulgaria",
+              "Chechnya",
+              "Croatia",
+              "Czech Republic",
+              "Denmark",
+              "Estonia",
+              "Faroe Islands",
+              "Finland",
+              "Georgia",
+              "Greece",
+              "Hungary",
+              "Iceland",
+              "Ireland",
+              "Kosovo",
+              "Latvia",
+              "Liechtenstein",
+              "Lithuania",
+              "Luxembourg",
+              "Macedonia",
+              "Malta",
+              "Moldova",
+              "Monaco",
+              "Montenegro",
+              "Netherlands",
+              "Norway",
+              "Poland",
+              "Portugal",
+              "Romania",
+              "San Marino",
+              "Serbia",
+              "Slovakia",
+              "Slovenia",
+              "South Ossetia",
+              "Spain",
+              "Sweden",
+              "Switzerland",
+              "Transnistria",
+              "Ukraine",
+              "Vatican City"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Middle East",
+        "tiers": [
+          {
+            "label": null,
+            "nations": [
+              "Afghanistan",
+              "Armenia",
+              "Azerbaijan",
+              "Bahrain",
+              "Cyprus",
+              "Egypt",
+              "Gaza Strip",
+              "Hezbollah",
+              "Iran",
+              "Iraq",
+              "Islamic Emirate of Afghanistan",
+              "Islamic Emirate of Kurdistan",
+              "Israel",
+              "Jordan",
+              "Kurdistan Democratic Party",
+              "Kuwait",
+              "Lebanon",
+              "Northern Cyprus",
+              "Oman",
+              "Palestine",
+              "Patriotic Union of Kurdistan",
+              "Qatar",
+              "Saudi Arabia",
+              "Syria",
+              "Turkey",
+              "United Arab Emirates",
+              "Yemen"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Asia",
+        "tiers": [
+          {
+            "label": null,
+            "nations": [
+              "Bangladesh",
+              "Bhutan",
+              "Cambodia",
+              "Hong Kong S.A.R.",
+              "India",
+              "Kachin State",
+              "Karen State",
+              "Kazakhstan",
+              "Kyrgyzstan",
+              "Laos",
+              "Macau S.A.R.",
+              "Maldives",
+              "Maoist Nepal",
+              "Mongolia",
+              "Myanmar",
+              "Nepal",
+              "North Korea",
+              "Pakistan",
+              "People's Republic of China",
               "Republic of China",
               "South Korea",
-              "Vietnam"
+              "South Shan State",
+              "Sri Lanka",
+              "Tajikistan",
+              "Tamil Eelam",
+              "Thailand",
+              "Turkmenistan",
+              "Uzbekistan",
+              "Vietnam",
+              "Wa State"
             ]
           }
         ]
       },
       {
-        "name": "USA",
+        "name": "Oceania",
         "tiers": [
           {
-            "label": "Majors",
-            "nations": []
-          },
-          {
-            "label": "Minors",
+            "label": null,
             "nations": [
-              "Biden or Trump",
-              "Patriot Front",
-              "Commie USA",
-              "Atomwaffen"
+              "Aceh",
+              "Australia",
+              "Brunei",
+              "Fiji",
+              "Indonesia",
+              "Kiribati",
+              "Malaysia",
+              "Mali",
+              "Marshall Islands",
+              "Micronesia",
+              "Nauru",
+              "New Zealand",
+              "Palau",
+              "Papua New Guinea",
+              "Philippines",
+              "Samoa",
+              "Singapore",
+              "Solomon Islands",
+              "Tonga",
+              "Tuvalu",
+              "Vanuatu"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "North America",
+        "tiers": [
+          {
+            "label": null,
+            "nations": [
+              "Antigua and Barbuda",
+              "Bahamas",
+              "Barbados",
+              "Belize",
+              "Canada",
+              "Costa Rica",
+              "Cuba",
+              "Dominica",
+              "Dominican Republic",
+              "El Salvador",
+              "Greenland",
+              "Grenada",
+              "Guatemala",
+              "Haiti",
+              "Honduras",
+              "Jamaica",
+              "Mexico",
+              "Nicaragua",
+              "Panama",
+              "Saint Kitts and Nevis",
+              "Saint Lucia",
+              "Saint Vincent and the Grenadines",
+              "Trinidad and Tobago"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "South America",
+        "tiers": [
+          {
+            "label": null,
+            "nations": [
+              "Argentina",
+              "Bolivia",
+              "Brazil",
+              "Chile",
+              "Colombia",
+              "Ecuador",
+              "Guyana",
+              "Paraguay",
+              "Peru",
+              "Suriname",
+              "Uruguay",
+              "Venezuela"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Africa",
+        "tiers": [
+          {
+            "label": null,
+            "nations": [
+              "Al-Itihaad",
+              "Algeria",
+              "Allied Somali Forces",
+              "Angola",
+              "Armed Forces Revolutionary Council",
+              "Benin",
+              "Botswana",
+              "Burkina Faso",
+              "Burundi",
+              "Cabo Verde",
+              "Cameroon",
+              "Central African Republic",
+              "Chad",
+              "Comoros",
+              "Congo",
+              "Congo DR",
+              "Côte d'Ivoire",
+              "Djibouti",
+              "Equatorial Guinea",
+              "Eritrea",
+              "Ethiopia",
+              "Gabon",
+              "Gambia",
+              "Ghana",
+              "Guinea",
+              "Guinea-Bissau",
+              "Kenya",
+              "Lesotho",
+              "Liberia",
+              "Liberians United for Reconciliation and Democracy",
+              "Libya",
+              "Madagascar",
+              "Malawi",
+              "Mauritania",
+              "Mauritius",
+              "Morocco",
+              "Movement for the Liberation of Congo",
+              "Mozambique",
+              "Namibia",
+              "Niger",
+              "Nigeria",
+              "Puntland",
+              "Rally for Congolese Democracy",
+              "Rwanda",
+              "Sahrawi",
+              "Senegal",
+              "Seychelles",
+              "Sierra Leone",
+              "Somali National Alliance",
+              "Somalia",
+              "Somaliland",
+              "South Africa",
+              "Southwestern State of Somalia",
+              "Sudan",
+              "Sudan People's Liberation Army",
+              "Swaziland",
+              "São Tomé and Príncipe",
+              "Tanzania",
+              "Togo",
+              "Tunisia",
+              "UNITA",
+              "Uganda",
+              "Zambia",
+              "Zimbabwe"
             ]
           }
         ]
@@ -1057,46 +2546,173 @@
     ],
     "Historical (Vanilla)": [
       {
-        "name": "Allies",
+        "name": "Majors",
         "tiers": [
           {
-            "label": "Majors",
-            "nations": [
-              "United Kingdom",
-              "USA"
-            ]
-          },
-          {
-            "label": "Important Minors",
+            "label": null,
             "nations": [
               "France",
-              "British Raj"
-            ]
-          },
-          {
-            "label": "Minors",
-            "nations": [
-              "Canada",
-              "South Africa",
-              "Australia",
-              "Brazil",
-              "Mexico",
-              "Netherlands"
+              "Germany",
+              "Italy",
+              "Japan",
+              "Soviet Union",
+              "USA",
+              "United Kingdom"
             ]
           }
         ]
       },
       {
-        "name": "Comintern",
+        "name": "Europe",
         "tiers": [
           {
-            "label": "Majors",
+            "label": null,
             "nations": [
-              "Soviet Union"
+              "Albanian Kingdom",
+              "Austria",
+              "Belgium",
+              "Bulgaria",
+              "Czechoslovak Republic",
+              "Denmark",
+              "Estonia",
+              "Finland",
+              "Hungary",
+              "Iceland",
+              "Ireland",
+              "Kingdom of Greece",
+              "Latvia",
+              "Lithuania",
+              "Luxembourg",
+              "Netherlands",
+              "Norway",
+              "Poland",
+              "Portugal",
+              "Romania",
+              "Spain",
+              "Sweden",
+              "Switzerland",
+              "Yugoslavia"
             ]
           }
         ]
       },
+      {
+        "name": "Asia",
+        "tiers": [
+          {
+            "label": null,
+            "nations": [
+              "Bhutan",
+              "British Burma",
+              "British Raj",
+              "China",
+              "Chinese Soviet Republic",
+              "Free Mandate of Palestine",
+              "Gansu Ma",
+              "Guangdong Clique",
+              "Guangxi Clique",
+              "Hebei-Chahar",
+              "Iran",
+              "Khotan Ma",
+              "Kingdom of Afghanistan",
+              "Kingdom of Iraq",
+              "Kingdom of Jordan",
+              "Kingdom of Kuwait",
+              "Manchukuo",
+              "Mengjiang",
+              "Mongolian People's Republic",
+              "Nepal",
+              "Ningxia Ma",
+              "Northeastern Army",
+              "Qinghai Ma",
+              "Saudi Arabia",
+              "Shandong Clique",
+              "Shanxi",
+              "Siam",
+              "Sichuan Clique",
+              "Sinkiang",
+              "Sultanate of Muscat and Oman",
+              "Tannu Tuva",
+              "Tibet",
+              "Turkey",
+              "Yemen",
+              "Yunnan"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Oceania",
+        "tiers": [
+          {
+            "label": null,
+            "nations": [
+              "Australia",
+              "British Malaya",
+              "Commonwealth of the Philippines",
+              "Dutch East Indies",
+              "New Zealand"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "North America",
+        "tiers": [
+          {
+            "label": null,
+            "nations": [
+              "Canada",
+              "Costa Rica",
+              "Cuba",
+              "Dominican Republic",
+              "El Salvador",
+              "Guatemala",
+              "Haiti",
+              "Honduras",
+              "Mexico",
+              "Nicaragua",
+              "Panama"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "South America",
+        "tiers": [
+          {
+            "label": null,
+            "nations": [
+              "Argentina",
+              "Bolivia",
+              "Brazil",
+              "Chile",
+              "Colombia",
+              "Ecuador",
+              "Oriental Republic of Uruguay",
+              "Peru",
+              "Republic of Paraguay",
+              "Venezuela"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Africa",
+        "tiers": [
+          {
+            "label": null,
+            "nations": [
+              "Ethiopia",
+              "Liberia",
+              "South Africa",
+              "Sultanate of Aussa"
+            ]
+          }
+        ]
+      }
+    ],
+    "Historical (TFB)": [
       {
         "name": "Axis",
         "tiers": [
@@ -1119,36 +2735,12 @@
             "nations": [
               "Romania",
               "Finland",
-              "Hungary"
+              "Hungary",
+              "Yugoslavia"
             ]
           }
         ]
       },
-      {
-        "name": "GEACPS",
-        "tiers": [
-          {
-            "label": "Majors",
-            "nations": [
-              "Japan"
-            ]
-          },
-          {
-            "label": "Important Minors",
-            "nations": [
-              "Manchukuo"
-            ]
-          },
-          {
-            "label": "Minors",
-            "nations": [
-              "Siam"
-            ]
-          }
-        ]
-      }
-    ],
-    "Historical (TFB)": [
       {
         "name": "Allies",
         "tiers": [
@@ -1190,42 +2782,9 @@
             ]
           },
           {
-            "label": "Important Minors",
-            "nations": []
-          },
-          {
             "label": "Minors",
             "nations": [
               "Mongolia"
-            ]
-          }
-        ]
-      },
-      {
-        "name": "Axis",
-        "tiers": [
-          {
-            "label": "Majors",
-            "nations": [
-              "Germany",
-              "Italy"
-            ]
-          },
-          {
-            "label": "Important Minors",
-            "nations": [
-              "Bulgaria",
-              "Spain"
-            ]
-          },
-          {
-            "label": "Minors",
-            "nations": [
-              "Romania",
-              "Finland",
-              "Hungary",
-              "Vichy France",
-              "Yugoslavia"
             ]
           }
         ]
@@ -1252,9 +2811,75 @@
             ]
           }
         ]
+      },
+      {
+        "name": "Unaligned",
+        "tiers": [
+          {
+            "label": null,
+            "nations": [
+              "Albanian Kingdom",
+              "Austria",
+              "Belgian Congo",
+              "Belgium",
+              "British Ireland",
+              "British Malaya",
+              "Commonwealth of the Philippines",
+              "Czechoslovak Republic",
+              "Denmark",
+              "Dutch East Indies",
+              "Estonia",
+              "Ethiopia",
+              "Iceland",
+              "Iran",
+              "Kingdom of Greece",
+              "Kingdom of Iraq",
+              "Latvia",
+              "Lithuania",
+              "Luxembourg",
+              "Norway",
+              "Poland",
+              "Portugal",
+              "Republic of China",
+              "Sweden",
+              "Switzerland",
+              "Turkey",
+              "Venezuela"
+            ]
+          }
+        ]
       }
     ],
     "Historical (Oak)": [
+      {
+        "name": "Axis",
+        "tiers": [
+          {
+            "label": "Majors",
+            "nations": [
+              "Germany",
+              "Italy",
+              "Japan"
+            ]
+          },
+          {
+            "label": "Important Minors",
+            "nations": [
+              "Spain",
+              "Romania",
+              "Manchuria"
+            ]
+          },
+          {
+            "label": "Minors",
+            "nations": [
+              "Hungary",
+              "Bulgaria",
+              "Slovakia"
+            ]
+          }
+        ]
+      },
       {
         "name": "Allies",
         "tiers": [
@@ -1288,37 +2913,75 @@
         ]
       },
       {
-        "name": "Axis",
+        "name": "Unaligned",
         "tiers": [
           {
-            "label": "Majors",
+            "label": null,
             "nations": [
-              "Germany",
-              "Italy",
-              "Japan"
-            ]
-          },
-          {
-            "label": "Important Minors",
-            "nations": [
-              "Spain",
-              "Romania",
-              "Manchuria"
-            ]
-          },
-          {
-            "label": "Minors",
-            "nations": [
-              "Hungary",
-              "Bulgaria",
-              "Vichy France",
-              "Slovakia"
+              "Albania",
+              "Austria",
+              "Baltic States",
+              "Belgium",
+              "Brazil",
+              "Communist China",
+              "Denmark",
+              "Dutch East Indies",
+              "Ethiopia",
+              "Finland",
+              "Free City of Danzig",
+              "Greece",
+              "Indochina",
+              "Iran",
+              "Iraq",
+              "Irish Free State",
+              "Luxembourg",
+              "Mexico",
+              "Mongolia",
+              "Netherlands",
+              "Norway",
+              "Paraguay",
+              "Portugal",
+              "Siam",
+              "Sweden",
+              "Switzerland",
+              "Tannu Tuva",
+              "Turkey",
+              "Venezuela",
+              "Yugoslavia"
             ]
           }
         ]
       }
     ],
     "Historical (Horst)": [
+      {
+        "name": "Axis",
+        "tiers": [
+          {
+            "label": "Majors",
+            "nations": [
+              "Germany",
+              "Italy"
+            ]
+          },
+          {
+            "label": "Important Minors",
+            "nations": [
+              "Hungary",
+              "Romania",
+              "Bulgaria",
+              "Spain"
+            ]
+          },
+          {
+            "label": "Minors",
+            "nations": [
+              "Finland",
+              "Vichy France"
+            ]
+          }
+        ]
+      },
       {
         "name": "Allies",
         "tiers": [
@@ -1360,43 +3023,9 @@
             ]
           },
           {
-            "label": "Important Minors",
-            "nations": []
-          },
-          {
             "label": "Minors",
             "nations": [
               "Mongolia"
-            ]
-          }
-        ]
-      },
-      {
-        "name": "Axis",
-        "tiers": [
-          {
-            "label": "Majors",
-            "nations": [
-              "Germany",
-              "Italy"
-            ]
-          },
-          {
-            "label": "Important Minors",
-            "nations": [
-              "Croatia",
-              "Hungary",
-              "Romania",
-              "Bulgaria",
-              "Spain"
-            ]
-          },
-          {
-            "label": "Minors",
-            "nations": [
-              "Finland",
-              "Slovakia",
-              "Vichy France"
             ]
           }
         ]
@@ -1415,10 +3044,6 @@
             "nations": [
               "Manchukuo"
             ]
-          },
-          {
-            "label": "Minors",
-            "nations": []
           }
         ]
       },
@@ -1430,19 +3055,56 @@
             "nations": [
               "China"
             ]
-          },
+          }
+        ]
+      },
+      {
+        "name": "Unaligned",
+        "tiers": [
           {
-            "label": "Important Minors",
-            "nations": []
-          },
-          {
-            "label": "Minors",
-            "nations": []
+            "label": null,
+            "nations": [
+              "Belgium",
+              "Czechoslovak Republic",
+              "Denmark",
+              "Iran",
+              "Republican Spain",
+              "Yugoslavia"
+            ]
           }
         ]
       }
     ],
     "Historical (BFFU)": [
+      {
+        "name": "Axis",
+        "tiers": [
+          {
+            "label": "Majors",
+            "nations": [
+              "Germany",
+              "Italy"
+            ]
+          },
+          {
+            "label": "Important Minors",
+            "nations": [
+              "Bulgaria",
+              "Spain"
+            ]
+          },
+          {
+            "label": "Minors",
+            "nations": [
+              "Romania",
+              "Finland",
+              "Hungary",
+              "Vichy France",
+              "Yugoslavia"
+            ]
+          }
+        ]
+      },
       {
         "name": "Allies",
         "tiers": [
@@ -1484,42 +3146,9 @@
             ]
           },
           {
-            "label": "Important Minors",
-            "nations": []
-          },
-          {
             "label": "Minors",
             "nations": [
               "Mongolia"
-            ]
-          }
-        ]
-      },
-      {
-        "name": "Axis",
-        "tiers": [
-          {
-            "label": "Majors",
-            "nations": [
-              "Germany",
-              "Italy"
-            ]
-          },
-          {
-            "label": "Important Minors",
-            "nations": [
-              "Bulgaria",
-              "Spain"
-            ]
-          },
-          {
-            "label": "Minors",
-            "nations": [
-              "Romania",
-              "Finland",
-              "Hungary",
-              "Vichy France",
-              "Yugoslavia"
             ]
           }
         ]
@@ -1543,6 +3172,36 @@
             "label": "Minors",
             "nations": [
               "Siam"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Unaligned",
+        "tiers": [
+          {
+            "label": null,
+            "nations": [
+              "Albanian Kingdom",
+              "Austria",
+              "Baltic States",
+              "Belgium",
+              "British Ireland",
+              "British Malaya",
+              "Czechoslovakia",
+              "Denmark",
+              "Dutch East Indies",
+              "Ethiopia",
+              "Iran",
+              "Kingdom of Greece",
+              "Norway",
+              "Poland",
+              "Portugal",
+              "Republic of China",
+              "Sweden",
+              "Switzerland",
+              "Turkey",
+              "Venezuela"
             ]
           }
         ]

@@ -236,7 +236,7 @@ export default function ReservationDrawer({
   };
 
   // --- Sections -------------------------------------------------------------
-  const { sections, lockedRows } = useMemo(() => {
+  const { sections, lockedRows, notPlayableTags } = useMemo(() => {
     const factionGroups = FACTION_CATEGORIES[scenarioId];
     const lockedRows: RosterRow[] = [];
 
@@ -257,22 +257,41 @@ export default function ReservationDrawer({
     if (layout && layout.length > 0) {
       const keysOf = (nation: RosterNation) =>
         nationMatchKeys(nation.tag, nation.slot_key ?? "", nation.name);
+      // Which map nation each listed name is: the same name first (Taiwan is
+      // "Republic of China" on both), then the looser matching ("Republic of
+      // China" and "China" are both "china" to it).
       const claimed = new Set<string>();
+      const listed = layout.flatMap((group) => group.tiers.flatMap((tier) => tier.nations));
+      const nationOf = new Map<string, RosterNation>();
+      for (const botName of listed) {
+        const nation = nations.find(
+          (candidate) => !claimed.has(candidate.tag) && (candidate.slot_key === botName || candidate.name === botName),
+        );
+        if (!nation) continue;
+        claimed.add(nation.tag);
+        nationOf.set(botName, nation);
+      }
+      for (const botName of listed) {
+        if (nationOf.has(botName)) continue;
+        const key = canonicalName(botName);
+        const nation = nations.find((candidate) => !claimed.has(candidate.tag) && keysOf(candidate).has(key));
+        if (!nation) continue;
+        claimed.add(nation.tag);
+        nationOf.set(botName, nation);
+      }
       const ordered: RosterSection[] = [];
       for (const group of layout) {
         const rows: RosterRow[] = [];
         for (const botName of group.tiers.flatMap((tier) => tier.nations)) {
-          const key = canonicalName(botName);
-          const nation = nations.find(
-            (candidate) => !claimed.has(candidate.tag) && keysOf(candidate).has(key),
-          );
+          const nation = nationOf.get(botName);
           if (!nation) continue;
-          claimed.add(nation.tag);
           if (!pushLocked(nation, group.name)) rows.push(rowFor(nation));
         }
         if (rows.length > 0) ordered.push({ title: group.name, rows });
       }
-      return { sections: ordered, lockedRows };
+      // The rest of the map isn't playable: greyed out like a locked nation.
+      const notPlayableTags = nations.filter((nation) => !claimed.has(nation.tag)).map((nation) => nation.tag);
+      return { sections: ordered, lockedRows, notPlayableTags };
     }
 
     if (factionGroups) {
@@ -334,7 +353,7 @@ export default function ReservationDrawer({
       if (leftovers.length > 0) {
         ordered.push({ title: "Unaligned", rows: leftovers });
       }
-      return { sections: ordered, lockedRows };
+      return { sections: ordered, lockedRows, notPlayableTags: [] as string[] };
     }
 
     // Geographic mode: Majors first, then regions, then Other.
@@ -362,12 +381,13 @@ export default function ReservationDrawer({
         ordered.push({ title: region, rows });
       }
     }
-    return { sections: ordered, lockedRows };
+    return { sections: ordered, lockedRows, notPlayableTags: [] as string[] };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nations, reservationsOf, selected, authUser, selectedThread, gameLock, scenarioId]);
 
-  // Tell the map which nations the host locked (same list as "Locked Nations").
-  const lockedTagKey = lockedRows.map((row) => row.nation.tag).join(",");
+  // Tell the map which nations to grey out: the host's locks (same list as
+  // "Locked Nations") and a preset's not-playable nations.
+  const lockedTagKey = [...lockedRows.map((row) => row.nation.tag), ...notPlayableTags].join(",");
   useEffect(() => {
     onHostLockedChange?.(lockedTagKey ? lockedTagKey.split(",") : []);
   }, [lockedTagKey, onHostLockedChange]);

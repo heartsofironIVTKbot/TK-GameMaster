@@ -76,6 +76,18 @@ no Gamer Pass, red offline / absent, blue excused, grey not in the server
 (`components/attendance/labels.ts`). Per-sample marks stay round dots; on
 phones the roster is player cards instead of the wide table.
 
+**Presets** (`docs/design/presets.html`): presets are cards (mode icon,
+name, tags, facts with line icons). Tags: Default is green with a star,
+GameMaster is grey with a green check, the rest grey. A copy whose original
+changed gets a yellow edge and a yellow "See changes" strip; the change list
+uses mint for added, red for removed, grey for changed. Mode chips scroll
+sideways on phones instead of squeezing. The editor's panel sits on the left
+with five line-icon steps; nations show their own mod's flags, and
+Kaiserreich's factions have marks (Entente blue shield, Third International
+red star, Reichspakt grey crown, Moscow Accord gold snowflake; `GroupMark` in
+`components/presets/parts.tsx`). Saving a preset you can't change says "Save
+as our copy" under a blue note.
+
 **The calendars** (`docs/design/calendar.html`): a game's colour is its
 status and nothing else: yellow scheduled, green announced, blue on-going,
 grey ended, red cancelled (`GameState` in `web/src/lib/scheduleOptions.ts`,

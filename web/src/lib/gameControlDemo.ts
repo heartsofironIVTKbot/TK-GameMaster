@@ -8,6 +8,7 @@ import {
   demoAttendanceStart,
 } from "@/lib/attendanceDemo";
 import { demoModerationOptions } from "@/lib/databaseDemo";
+import officialPresets from "@/data/officialPresets.json";
 import { chatLogSignature, demoChatLogFiles } from "@/lib/chatLogs";
 import { buildLobbyDraft, draftSlots, type DraftPhase, type LobbyDraft } from "@/lib/draft";
 import { ACCESS_LEVELS, type LifecycleAction } from "@/lib/gameControlTypes";
@@ -72,11 +73,16 @@ function build(): RawAttendanceGame[] {
   ];
 }
 
+/** GameMaster's preset groups of a mode (the bot's curated factions). */
+function officialLayout(mode: string): { name: string; tiers: { label: string | null; nations: string[] }[] }[] {
+  return officialPresets.presets.find((preset) => preset.mode === mode)?.data.layout ?? [];
+}
+
 /** A draft in sign-ups: Allies (captain: you) vs Axis, eight players in the pool. */
 function demoDraftState(id: (index: number) => string, now: number): Record<string, unknown> {
   const mode = "Historical (Vanilla)";
   const options = demoModerationOptions();
-  const layout = options.mode_layouts?.[mode] ?? [];
+  const layout = officialLayout(mode);
   const majors = new Set(options.mode_nations?.[mode]?.majors ?? []);
   const team = (key: string, name: string, captainId: string, groups: string[]) => {
     const nations = layout.filter((group) => groups.includes(group.name)).flatMap((group) => group.tiers.flatMap((tier) => tier.nations));

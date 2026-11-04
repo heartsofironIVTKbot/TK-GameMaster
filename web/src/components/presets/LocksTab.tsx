@@ -1,13 +1,15 @@
 "use client";
 
+import { Crown, Flag as FlagIcon, Lock, Pencil, Plus, ShieldCheck, Trash2 } from "lucide-react";
 import IronLegionChoice from "@/components/IronLegionChoice";
 import { useMemo } from "react";
 import { newLockGroup, type LockGroupForm } from "@/components/schedule/setup/model";
-import { SectionCard, Segmented, Slider, Toggle } from "@/components/schedule/ui";
+import { Segmented, Slider, Toggle } from "@/components/schedule/ui";
 import { PRESET_LIMITS } from "@/lib/presetTypes";
 import { HOURS_BEFORE_PRESETS, LOCK_LEVELS, type LockLevel } from "@/lib/scheduleOptions";
 import { formatDurationMinutes } from "@/lib/timeEngine";
 import NationPicker from "./NationPicker";
+import { Count, NationChip, Section } from "./parts";
 import type { MakerState } from "./model";
 
 /**
@@ -22,6 +24,7 @@ export default function LocksTab({
   allNations,
   majors,
   hidden,
+  flagOf,
   disabled,
 }: {
   state: MakerState;
@@ -30,6 +33,7 @@ export default function LocksTab({
   majors: Set<string>;
   /** Not-playable nations (locked for good, so not offered here). */
   hidden: Set<string>;
+  flagOf: (nation: string) => string | null;
   disabled: boolean;
 }) {
   const active = state.locks.find((group) => group.id === state.activeLockId) ?? state.locks[0];
@@ -57,9 +61,11 @@ export default function LocksTab({
   const levelOptions = LOCK_LEVELS.map((level) => ({ value: level.value, label: level.label, title: level.hint, disabled }));
 
   return (
-    <div className="space-y-4">
-      <SectionCard icon="🔐" title="Who can reserve" subtitle="The game starts with these access levels (hosts can change them on the Games page).">
-        <p className="mb-1.5 text-[11px] font-semibold text-ink-400">👑 Major nations</p>
+    <div className="space-y-3">
+      <Section icon={ShieldCheck} title="Who can reserve" subtitle="Games start with these. Hosts can change them on the Games page.">
+        <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-ink-400">
+          <Crown aria-hidden className="h-3.5 w-3.5" strokeWidth={1.75} /> Major nations
+        </p>
         <Segmented<LockLevel>
           ariaLabel="Who can reserve major nations"
           size="sm"
@@ -67,7 +73,9 @@ export default function LocksTab({
           onChange={(majorLevel) => update({ majorLevel })}
           options={levelOptions}
         />
-        <p className="mb-1.5 mt-3 text-[11px] font-semibold text-ink-400">🏳️ Minor nations</p>
+        <p className="mb-1.5 mt-3 flex items-center gap-1.5 text-xs font-semibold text-ink-400">
+          <FlagIcon aria-hidden className="h-3.5 w-3.5" strokeWidth={1.75} /> Minor nations
+        </p>
         <Segmented<LockLevel>
           ariaLabel="Who can reserve minor nations"
           size="sm"
@@ -78,19 +86,15 @@ export default function LocksTab({
         <div className="mt-4">
           <IronLegionChoice value={state.ironlegion} onChange={(ironlegion) => update({ ironlegion })} disabled={disabled} />
         </div>
-      </SectionCard>
+      </Section>
 
-      <SectionCard
-        icon="🗺️"
+      <Section
+        icon={Lock}
         title="Nation locks"
-        subtitle="Nations nobody can reserve — click them on the map, or search below."
-        right={
-          <span className="rounded-full bg-rose-500/15 px-2.5 py-1 text-[11px] font-bold text-rose-200">
-            {ownerOf.size} locked
-          </span>
-        }
+        subtitle="Nations nobody can reserve. Click them on the map, or search below."
+        right={<Count tone={ownerOf.size ? "rose" : "ink"}>{ownerOf.size} locked</Count>}
       >
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           {state.locks.map((group) => {
             const isActive = group.id === active.id;
             return (
@@ -102,19 +106,19 @@ export default function LocksTab({
                 onKeyDown={(event) => {
                   if (event.key === "Enter") update({ activeLockId: group.id });
                 }}
-                className={`flex cursor-pointer items-center gap-2.5 rounded-xl border px-3 py-2 transition ${
-                  isActive ? "border-rose-400/60 bg-rose-500/10" : "border-white/10 bg-white/[0.03] hover:border-white/25"
+                className={`gm-cut flex cursor-pointer items-center gap-2.5 py-1.5 pl-2.5 pr-1 [--cut:7px] ${
+                  isActive ? "bg-ink-800 shadow-[inset_3px_0_0_var(--color-brand-400)]" : "bg-ink-950 hover:bg-ink-800/60"
                 }`}
               >
-                <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: isActive ? "#ff5266" : "#3cc4ff" }} />
+                <Lock aria-hidden className={`h-4 w-4 shrink-0 ${isActive ? "text-rose-300" : "text-sky-300"}`} strokeWidth={1.75} />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-semibold text-ink-100">{group.label || "Locked nations"}</span>
-                  <span className="block text-[11px] text-ink-400">
-                    {group.nations.length} nation{group.nations.length === 1 ? "" : "s"} ·{" "}
+                  <span className="block truncate text-[13px] font-semibold text-ink-100">{group.label || "Locked nations"}</span>
+                  <span className="block truncate text-[11px] text-ink-400">
+                    {group.nations.length} nation{group.nations.length === 1 ? "" : "s"},{" "}
                     {group.releaseEnabled ? `unlocks ${formatDurationMinutes(group.releaseHoursBefore * 60)} before` : "locked all game"}
                   </span>
                 </span>
-                {isActive && <span className="text-[10px] font-bold uppercase tracking-wider text-rose-300">Editing</span>}
+                {isActive && <span className="text-[11px] font-semibold text-brand-400">Editing</span>}
                 <button
                   type="button"
                   disabled={disabled}
@@ -124,10 +128,10 @@ export default function LocksTab({
                     const next = rest.length > 0 ? rest : [newLockGroup(0)];
                     update({ locks: next, activeLockId: state.activeLockId === group.id ? next[0].id : state.activeLockId });
                   }}
-                  className="rounded-md px-1.5 text-ink-500 hover:text-rose-300 disabled:opacity-30"
+                  className="grid h-7 w-7 place-items-center text-ink-500 hover:text-rose-300 disabled:opacity-30"
                   aria-label={`Delete ${group.label}`}
                 >
-                  ✕
+                  <Trash2 aria-hidden className="h-3.5 w-3.5" strokeWidth={1.75} />
                 </button>
               </div>
             );
@@ -140,19 +144,19 @@ export default function LocksTab({
             const group = newLockGroup(state.locks.length);
             update({ locks: [...state.locks, group], activeLockId: group.id });
           }}
-          className="mt-2 w-full rounded-xl border border-dashed border-white/15 py-2 text-xs font-semibold text-ink-400 transition hover:border-brand-300/40 hover:text-brand-200 disabled:opacity-40"
+          className="gm-btn gm-btn-secondary mt-2 h-8 w-full text-[13px]"
         >
-          ＋ New lock group (e.g. &quot;Axis majors until 12h before&quot;)
+          <Plus aria-hidden strokeWidth={2} /> Add a lock group (e.g. Axis Majors until 12h before)
         </button>
-      </SectionCard>
+      </Section>
 
-      <SectionCard icon="✏️" title={`Editing: ${active.label || "Locked nations"}`} subtitle="Name, unlock time and nations of this lock group">
+      <Section icon={Pencil} title={`Editing ${active.label || "Locked nations"}`} subtitle="Its name, when it unlocks and its nations.">
         <input
           value={active.label}
           maxLength={40}
           disabled={disabled}
           onChange={(event) => patchLock(active.id, { label: event.target.value })}
-          className="w-full rounded-lg border border-white/10 bg-ink-950/70 px-3 py-2 text-sm font-semibold text-ink-100 focus:border-brand-300/50 focus:outline-none"
+          className="gm-input w-full font-semibold"
           aria-label="Lock group name"
         />
         <div className="mt-3">
@@ -160,14 +164,14 @@ export default function LocksTab({
             checked={active.releaseEnabled}
             disabled={disabled}
             onChange={(releaseEnabled) => patchLock(active.id, { releaseEnabled })}
-            label="Unlock automatically before the game"
+            label="Unlock by itself before the game"
             description={active.releaseEnabled ? undefined : "Off: these nations stay locked until a host unlocks them on the Games page."}
           />
           {active.releaseEnabled && (
-            <div className="gm-fade-up mt-3 rounded-xl border border-white/10 bg-ink-950/50 p-3">
+            <div className="gm-cut gm-fade-up mt-3 bg-ink-950 p-3 [--cut:8px]">
               <div className="flex items-baseline justify-between">
-                <span className="text-[11px] font-semibold text-ink-400">Before the game</span>
-                <span className="text-sm font-black text-brand-200">{formatDurationMinutes(active.releaseHoursBefore * 60)}</span>
+                <span className="text-xs font-semibold text-ink-400">Before the game</span>
+                <span className="text-sm font-semibold text-brand-300">{formatDurationMinutes(active.releaseHoursBefore * 60)}</span>
               </div>
               <Slider
                 min={1}
@@ -182,10 +186,11 @@ export default function LocksTab({
           )}
         </div>
 
-        <div className="mt-4">
+        <div className="mt-3">
           <NationPicker
             nations={lockable}
             majors={majors}
+            flagOf={flagOf}
             disabled={disabled}
             status={(nation) => {
               const owner = ownerOf.get(nation);
@@ -204,36 +209,28 @@ export default function LocksTab({
           )}
         </div>
 
-        <div className="mt-4">
-          <p className="mb-1.5 text-[11px] font-semibold text-ink-400">In this group ({active.nations.length})</p>
+        <div className="mt-3">
+          <p className="mb-1.5 text-xs font-semibold text-ink-400">In this group ({active.nations.length})</p>
           {active.nations.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-white/10 px-3 py-4 text-center text-xs text-ink-500">
-              Click a nation on the map to lock it.
-            </p>
+            <p className="gm-cut bg-ink-950 px-3 py-4 text-center text-xs text-ink-500 [--cut:8px]">Click a nation on the map to lock it.</p>
           ) : (
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-1">
               {active.nations.map((nation) => (
-                <span
+                <NationChip
                   key={nation}
-                  className="inline-flex items-center gap-1 rounded-lg border border-rose-400/40 bg-rose-500/15 py-0.5 pl-2 pr-1 text-xs font-semibold text-rose-100"
-                >
-                  {majors.has(nation) && <span>👑</span>}
-                  <span className="max-w-[150px] truncate">{nation}</span>
-                  <button
-                    type="button"
-                    disabled={disabled}
-                    onClick={() => toggle(nation)}
-                    className="rounded px-1 text-rose-200/70 hover:bg-rose-500/30 hover:text-white"
-                    aria-label={`Unlock ${nation}`}
-                  >
-                    ×
-                  </button>
-                </span>
+                  name={nation}
+                  flag={flagOf(nation)}
+                  major={majors.has(nation)}
+                  tone="rose"
+                  disabled={disabled}
+                  onRemove={() => toggle(nation)}
+                  removeLabel={`Unlock ${nation}`}
+                />
               ))}
             </div>
           )}
         </div>
-      </SectionCard>
+      </Section>
     </div>
   );
 }

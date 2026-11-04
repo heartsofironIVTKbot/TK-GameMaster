@@ -132,6 +132,31 @@ export default function GameSetupApp({
     };
   }, [initialPresetId, editSlotId, loadPreset]);
 
+  // A new game starts from its mode's default preset (the star on the Presets
+  // page), looked up once per mode; without one it lists the whole map.
+  const [defaultCheckedFor, setDefaultCheckedFor] = useState<string | null>(null);
+  useEffect(() => {
+    if (editSlotId || initialPresetId || defaultCheckedFor === form.mode) return undefined;
+    let cancelled = false;
+    const mode = form.mode;
+    fetch(`/api/presets?mode=${encodeURIComponent(mode)}`, { cache: "no-store" })
+      .then(async (response) => {
+        const body = (await response.json().catch(() => null)) as { presets?: GamePreset[] } | null;
+        if (cancelled) return;
+        setDefaultCheckedFor(mode);
+        const preset = body?.presets?.find((entry) => entry.is_default);
+        if (!preset) return;
+        setForm((current) => (current.mode === mode && !current.presetName ? applyPreset(current, preset) : current));
+        setToast(`Started from “${preset.name}”, this mode's default preset.`);
+      })
+      .catch(() => {
+        if (!cancelled) setDefaultCheckedFor(mode);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [form.mode, defaultCheckedFor, editSlotId, initialPresetId]);
+
   // Editing: load the game's stored settings + the hosts it can go to.
   useEffect(() => {
     if (!editSlotId) return undefined;

@@ -45,7 +45,7 @@ export function validateResourceList(raw: unknown, limit: number, noun: "mods" |
 }
 
 /**
- * Custom nation groups; null = the mode's standard groups. `nations` = the
+ * Custom nation groups; null = the whole map. `nations` = the
  * mode's nation names when known (names must match the bot's exactly).
  */
 export function validateLayout(raw: unknown, nations: Set<string> | null): Result<PresetGroup[] | null> {

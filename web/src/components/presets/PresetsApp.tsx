@@ -3,27 +3,67 @@
 import SiteHeader from "@/components/site/SiteHeader";
 import Link from "next/link";
 import ServerSwitcher from "@/components/ServerSwitcher";
-import { useCallback, useEffect, useState } from "react";
-import { useNow } from "@/components/attendance/labels";
-import { GLASS, Segmented, Spinner } from "@/components/schedule/ui";
-import { presetSummary, type GamePreset } from "@/lib/presetTypes";
-import { CATEGORY_META, SCHEDULE_MODES, lockLevelLabel, modeOption } from "@/lib/scheduleOptions";
+import {
+  ArrowRight,
+  ArrowRightLeft,
+  BadgeCheck,
+  CalendarPlus,
+  Copy,
+  CopyPlus,
+  Eye,
+  Folder,
+  Globe,
+  Layers,
+  Lock,
+  Minus,
+  Pencil,
+  Plus,
+  Puzzle,
+  ScrollText,
+  Search,
+  Shapes,
+  Sparkles,
+  Star,
+  Trash2,
+  TriangleAlert,
+  X,
+  type LucideIcon,
+} from "lucide-react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import ModeIcon from "@/components/schedule/ModeIcon";
+import { Spinner } from "@/components/schedule/ui";
+import { presetSummary, type GamePreset, type PresetChange, type PresetFact, type PresetUpdateCheck } from "@/lib/presetTypes";
+import { SCHEDULE_MODES, modeOption } from "@/lib/scheduleOptions";
 import type { HostProfile } from "@/lib/scheduleTypes";
-import { formatRelative } from "@/lib/timeEngine";
 
 /**
  * /presets — this server's game mode presets and the public library.
  *
- * Our presets: any host can use them on the calendar; the creator (or
- * staff) can edit or delete. Public library: presets every server chose to
- * share — copy one to get your own editable version.
+ * Our presets: any host can use them on the calendar. Editing one you can't
+ * change (GameMaster's, another host's) saves your own copy. A star marks
+ * each mode's default, the one the calendar loads first (staff pick it).
+ * A copy whose original changed says so and shows what updating changes.
+ * Public library: presets other servers shared, GameMaster's first; copy
+ * one to use it.
  */
 
 type View = "ours" | "library";
 
-
 function readView(): View {
   return new URLSearchParams(window.location.search).get("view") === "library" ? "library" : "ours";
+}
+
+const FACT_ICON: Record<PresetFact["kind"], LucideIcon> = { groups: Layers, locks: Lock, rules: ScrollText, mods: Puzzle };
+
+async function send<T>(url: string, init?: RequestInit): Promise<{ ok: true; body: T } | { ok: false; error: string }> {
+  try {
+    const response = await fetch(url, init);
+    const body = (await response.json().catch(() => null)) as (T & { error?: string }) | null;
+    if (!response.ok || !body) return { ok: false, error: body?.error ?? `Something went wrong (HTTP ${response.status}).` };
+    return { ok: true, body };
+  } catch {
+    return { ok: false, error: "Network error. Try again." };
+  }
 }
 
 export default function PresetsApp({ host }: { host: HostProfile }) {
@@ -36,25 +76,20 @@ export default function PresetsApp({ host }: { host: HostProfile }) {
   const [library, setLibrary] = useState<{ key: string; presets: GamePreset[] | null; error: string | null } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
-  const now = useNow(60_000);
+  const [updating, setUpdating] = useState<GamePreset | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/presets", { cache: "no-store" })
-      .then(async (response) => {
-        const body = (await response.json().catch(() => null)) as { presets?: GamePreset[]; error?: string } | null;
-        if (cancelled) return;
-        setOurs({ nonce, presets: body?.presets ?? null, error: response.ok ? null : (body?.error ?? "Couldn't load the presets.") });
-      })
-      .catch(() => {
-        if (!cancelled) setOurs({ nonce, presets: null, error: "Network error — reload to try again." });
-      });
+    void send<{ presets: GamePreset[] }>("/api/presets", { cache: "no-store" }).then((result) => {
+      if (cancelled) return;
+      setOurs(result.ok ? { nonce, presets: result.body.presets, error: null } : { nonce, presets: null, error: result.error });
+    });
     return () => {
       cancelled = true;
     };
   }, [nonce]);
 
-  // Library search waits for a pause in typing.
+  // Search waits for a pause in typing.
   useEffect(() => {
     const timer = window.setTimeout(() => setQuery(search.trim()), 300);
     return () => window.clearTimeout(timer);
@@ -67,19 +102,16 @@ export default function PresetsApp({ host }: { host: HostProfile }) {
     const params = new URLSearchParams();
     if (modeFilter) params.set("mode", modeFilter);
     if (query) params.set("q", query);
-    fetch(`/api/presets/library?${params.toString()}`, { cache: "no-store" })
-      .then(async (response) => {
-        const body = (await response.json().catch(() => null)) as { presets?: GamePreset[]; error?: string } | null;
-        if (cancelled) return;
-        setLibrary({ key: libraryKey, presets: body?.presets ?? null, error: response.ok ? null : (body?.error ?? "Couldn't load the library.") });
-      })
-      .catch(() => {
-        if (!cancelled) setLibrary({ key: libraryKey, presets: null, error: "Network error — try again." });
-      });
+    void send<{ presets: GamePreset[] }>(`/api/presets/library?${params.toString()}`, { cache: "no-store" }).then((result) => {
+      if (cancelled) return;
+      setLibrary(
+        result.ok ? { key: libraryKey, presets: result.body.presets, error: null } : { key: libraryKey, presets: null, error: result.error },
+      );
+    });
     return () => {
       cancelled = true;
     };
-  }, [view, modeFilter, query, nonce, libraryKey]);
+  }, [view, modeFilter, query, libraryKey]);
 
   useEffect(() => {
     if (!toast) return undefined;
@@ -92,153 +124,169 @@ export default function PresetsApp({ host }: { host: HostProfile }) {
     window.history.replaceState(null, "", next === "library" ? "/presets?view=library" : "/presets");
   }, []);
 
+  const act = async (preset: GamePreset, url: string, init: RequestInit, done: (result: GamePreset) => string) => {
+    setBusy(preset.preset_id);
+    const result = await send<{ preset: GamePreset }>(url, init);
+    setBusy(null);
+    if (!result.ok) {
+      setToast(result.error);
+      return null;
+    }
+    setToast(done(result.body.preset));
+    setNonce((value) => value + 1);
+    return result.body.preset;
+  };
+
   const copy = async (preset: GamePreset) => {
-    setBusy(preset.preset_id);
-    try {
-      const response = await fetch(`/api/presets/${preset.preset_id}/copy`, { method: "POST" });
-      const body = (await response.json().catch(() => null)) as { preset?: GamePreset; error?: string } | null;
-      if (!response.ok || !body?.preset) {
-        setToast(body?.error ?? "Couldn't copy the preset.");
-        return;
-      }
-      setToast(`Copied “${body.preset.name}” — it's in Our presets now.`);
-      setNonce((value) => value + 1);
-      if (view === "library") switchView("ours");
-    } catch {
-      setToast("Network error — try again.");
-    } finally {
-      setBusy(null);
-    }
+    const made = await act(preset, `/api/presets/${preset.preset_id}/copy`, { method: "POST" }, (result) =>
+      `Copied “${result.name}”. It's in Our presets now.`,
+    );
+    if (made && view === "library") switchView("ours");
   };
+  const remove = (preset: GamePreset) =>
+    act(preset, `/api/presets/${preset.preset_id}`, { method: "DELETE" }, () => `Deleted “${preset.name}”.`);
+  const star = (preset: GamePreset) =>
+    act(
+      preset,
+      `/api/presets/${preset.preset_id}/default`,
+      { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ on: !preset.is_default }) },
+      () =>
+        preset.is_default
+          ? `${modeOption(preset.mode)?.label ?? preset.mode} games start from the whole map now.`
+          : `“${preset.name}” loads first for ${modeOption(preset.mode)?.label ?? preset.mode} games now.`,
+    );
 
-  const remove = async (preset: GamePreset) => {
-    setBusy(preset.preset_id);
-    try {
-      const response = await fetch(`/api/presets/${preset.preset_id}`, { method: "DELETE" });
-      const body = (await response.json().catch(() => null)) as { error?: string } | null;
-      if (!response.ok) {
-        setToast(body?.error ?? "Couldn't delete the preset.");
-        return;
-      }
-      setToast(`Deleted “${preset.name}”.`);
-      setNonce((value) => value + 1);
-    } catch {
-      setToast("Network error — try again.");
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const ourList = (ours?.presets ?? []).filter((preset) => !modeFilter || preset.mode === modeFilter);
+  const needle = search.trim().toLowerCase();
+  const ourList = (ours?.presets ?? [])
+    .filter((preset) => !modeFilter || preset.mode === modeFilter)
+    .filter((preset) => !needle || `${preset.name} ${preset.description ?? ""}`.toLowerCase().includes(needle));
   const libraryList = library?.presets ?? [];
   const shown = view === "ours" ? ourList : libraryList;
   const loading = view === "ours" ? !ours : !library || library.key !== libraryKey;
   const error = view === "ours" ? ours?.error : library?.error;
+  const serverName = host.servers.find((server) => server.id === host.guild_id)?.name;
+  const modeName = modeFilter ? (modeOption(modeFilter)?.label ?? modeFilter) : null;
 
   return (
-    <div className="gm-backdrop min-h-screen w-full text-ink-100">
-      <SiteHeader page="presets" title="Presets" subtitle="GameMaster · Game mode presets">
-          {host.demo && (
-            <span className="rounded-full border border-fuchsia-400/40 bg-fuchsia-500/15 px-3 py-1 text-[11px] font-bold text-fuchsia-200">
-              PREVIEW MODE · sample data
-            </span>
-          )}
-          <ServerSwitcher host={host} />
+    <div className="min-h-screen w-full bg-ink-950 text-ink-100">
+      <SiteHeader page="presets" title="Presets" subtitle={serverName}>
+        {host.demo && <span className="gm-tag bg-fuchsia-500/15 text-fuchsia-200">Preview: sample data</span>}
+        <ServerSwitcher host={host} />
       </SiteHeader>
 
-      <main className="mx-auto max-w-[1500px] px-4 py-5 sm:px-6">
-        <section className={`rounded-3xl p-4 sm:p-5 ${GLASS}`}>
-          <div className="flex flex-wrap items-center gap-3">
-            <div data-tour="presets.view" className="w-full sm:w-[380px]">
-              <Segmented<View>
-                ariaLabel="Which presets"
-                value={view}
-                onChange={switchView}
-                options={[
-                  { value: "ours", label: `📁 Our presets${ours?.presets ? ` (${ours.presets.length})` : ""}` },
-                  { value: "library", label: "🌐 Public library" },
-                ]}
-              />
-            </div>
-            {view === "library" && (
-              <input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="🔎 Search by name, description or server…"
-                className="min-w-[220px] flex-1 rounded-xl border border-white/10 bg-ink-950/70 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:border-brand-300/50 focus:outline-none"
-              />
-            )}
-            <Link
-              href={`/presets/new${modeFilter ? `?mode=${encodeURIComponent(modeFilter)}` : ""}`}
-              data-tour="presets.new"
-              className="ml-auto rounded-xl bg-brand-400 px-4 py-2.5 text-sm font-black text-ink-950 shadow-lg shadow-brand-500/20 hover:bg-brand-300"
-            >
-              ＋ New preset
-            </Link>
-          </div>
-          <div data-tour="presets.filters" className="mt-3 flex flex-wrap gap-1.5">
-            <FilterChip active={!modeFilter} onClick={() => setModeFilter("")} label="All modes" />
-            {SCHEDULE_MODES.map((mode) => (
-              <FilterChip
-                key={mode.value}
-                active={modeFilter === mode.value}
-                onClick={() => setModeFilter(mode.value)}
-                label={`${CATEGORY_META[mode.category].emoji} ${mode.label}`}
-              />
-            ))}
-          </div>
-          <p className="mt-3 text-xs text-ink-400">
-            {view === "ours"
-              ? "Every host of this server can load these when scheduling a game. Only a preset's creator (or staff) can change or delete it."
-              : "Presets every server chose to share. Copy one to get your own version — changing it never touches the original."}
-          </p>
-        </section>
+      <main className="mx-auto max-w-[1500px] px-3 py-4 sm:px-6 sm:py-5">
+        <div className="flex flex-wrap items-end gap-x-3 gap-y-2">
+          <nav data-tour="presets.view" className="flex w-full min-w-0 border-b border-ink-800 sm:w-auto sm:flex-1" aria-label="Which presets">
+            <TabButton on={view === "ours"} onClick={() => switchView("ours")} icon={Folder}>
+              Our presets {ours?.presets && <span className="font-medium text-ink-500">{ours.presets.length}</span>}
+            </TabButton>
+            <TabButton on={view === "library"} onClick={() => switchView("library")} icon={Globe}>
+              Public library
+            </TabButton>
+          </nav>
+          <label className="gm-field min-w-0 flex-1 sm:w-[240px] sm:flex-none">
+            <Search aria-hidden className="h-4 w-4 shrink-0" strokeWidth={1.75} />
+            <input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder={view === "library" ? "Search presets or servers" : "Search presets"}
+              aria-label="Search presets"
+            />
+          </label>
+          <Link
+            href={`/presets/new${modeFilter ? `?mode=${encodeURIComponent(modeFilter)}` : ""}`}
+            data-tour="presets.new"
+            className="gm-btn gm-btn-primary"
+          >
+            <Plus aria-hidden strokeWidth={2} />
+            <span className="sm:hidden">New</span>
+            <span className="hidden sm:inline">New preset</span>
+          </Link>
+        </div>
 
-        {error && (
-          <p className="mt-4 rounded-2xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">{error}</p>
-        )}
+        {/* Mode chips: one row that scrolls sideways on phones */}
+        <div
+          data-tour="presets.filters"
+          className="-mx-3 mt-3.5 flex gap-1.5 overflow-x-auto px-3 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 [&::-webkit-scrollbar]:hidden"
+        >
+          <ModeChip on={!modeFilter} onClick={() => setModeFilter("")} label="All modes" />
+          {SCHEDULE_MODES.map((mode) => (
+            <ModeChip key={mode.value} on={modeFilter === mode.value} onClick={() => setModeFilter(mode.value)} label={mode.label} mode={mode.value} />
+          ))}
+        </div>
+        <p className="mb-3.5 mt-1.5 text-[13px] text-ink-400">
+          {view === "ours"
+            ? "Every host here can use these when setting up a game. A star marks the one the calendar loads first for its mode; without one, a game lists the whole map."
+            : "Presets other servers share, and GameMaster's own. Copy one to use it: your copy is yours to change."}
+        </p>
+
+        {error && <p className="gm-cut bg-rose-950/60 px-4 py-3 text-sm text-rose-200">{error}</p>}
         {loading && !error && (
-          <p className="mt-6 flex items-center gap-2 px-2 text-sm text-ink-400">
-            <Spinner className="h-4 w-4 text-brand-300" /> Loading…
+          <p className="flex items-center gap-2 px-1 py-4 text-sm text-ink-400">
+            <Spinner className="h-4 w-4 text-brand-400" /> Loading…
           </p>
         )}
         {!loading && !error && shown.length === 0 && (
-          <div className={`mt-4 rounded-3xl p-10 text-center ${GLASS}`}>
-            <p className="text-4xl">{view === "ours" ? "🧩" : "🌐"}</p>
-            <p className="mt-3 text-sm font-semibold text-ink-300">
+          <div className="gm-plate flex flex-col items-center px-6 py-10 text-center">
+            <Shapes aria-hidden className="h-8 w-8 text-ink-500" strokeWidth={1.5} />
+            <p className="mt-3 text-sm font-semibold text-ink-200">
               {view === "ours"
-                ? modeFilter
-                  ? `No presets for ${modeOption(modeFilter)?.label ?? modeFilter} yet.`
-                  : "No presets yet."
+                ? needle
+                  ? `No preset here matches “${search.trim()}”.`
+                  : modeName
+                    ? `No presets for ${modeName} yet. ${modeName} games list the whole map.`
+                    : "No presets yet."
                 : query
                   ? `Nothing in the library matches “${query}”.`
                   : "Nobody has shared a preset for this mode yet."}
             </p>
             {view === "ours" && (
-              <p className="mt-1 text-xs text-ink-500">
-                Make one with <b>＋ New preset</b>, or copy one from the public library.
-              </p>
+              <div className="mt-4 flex flex-wrap justify-center gap-2">
+                <Link href={`/presets/new${modeFilter ? `?mode=${encodeURIComponent(modeFilter)}` : ""}`} className="gm-btn gm-btn-primary h-8 px-3 text-[13px]">
+                  <Plus aria-hidden strokeWidth={2} /> New preset
+                </Link>
+                <button type="button" onClick={() => switchView("library")} className="gm-btn gm-btn-secondary h-8 px-3 text-[13px]">
+                  <Globe aria-hidden strokeWidth={1.75} /> Browse the library
+                </button>
+              </div>
             )}
           </div>
         )}
 
-        <div data-tour="presets.list" className="mt-4 grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+        <div data-tour="presets.list" className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {shown.map((preset) => (
             <PresetCard
               key={`${view}-${preset.preset_id}`}
               preset={preset}
               view={view}
-              now={now}
+              isStaff={host.is_staff}
               busy={busy === preset.preset_id}
               onCopy={() => void copy(preset)}
               onDelete={() => void remove(preset)}
+              onStar={() => void star(preset)}
+              onUpdate={() => setUpdating(preset)}
             />
           ))}
         </div>
       </main>
 
+      {updating && (
+        <UpdateDialog
+          preset={updating}
+          onClose={() => setUpdating(null)}
+          onDone={(message) => {
+            setUpdating(null);
+            setToast(message);
+            setNonce((value) => value + 1);
+          }}
+        />
+      )}
+
       {toast && (
-        <div className="gm-fade-up fixed bottom-6 left-1/2 z-[1500] -translate-x-1/2 rounded-full border border-white/15 bg-ink-900/90 px-4 py-2 text-xs font-semibold text-ink-100 shadow-xl backdrop-blur-md">
+        <div
+          role="status"
+          className="gm-cut gm-fade-up fixed bottom-6 left-1/2 z-[1500] max-w-[calc(100vw-32px)] -translate-x-1/2 bg-ink-800 px-4 py-2.5 text-[13px] font-semibold text-ink-100"
+        >
           {toast}
         </div>
       )}
@@ -246,196 +294,376 @@ export default function PresetsApp({ host }: { host: HostProfile }) {
   );
 }
 
-function FilterChip({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {
+function TabButton({ on, onClick, icon: Icon, children }: { on: boolean; onClick: () => void; icon: LucideIcon; children: ReactNode }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-lg border px-2.5 py-1 text-xs font-semibold transition ${
-        active ? "border-brand-300/70 bg-brand-400/15 text-brand-100" : "border-white/10 bg-white/[0.03] text-ink-300 hover:border-white/25"
+      aria-current={on ? "page" : undefined}
+      className={`flex h-10 shrink-0 items-center gap-2 whitespace-nowrap px-3 text-[13.5px] font-semibold transition-colors sm:px-3.5 ${
+        on ? "text-ink-100 shadow-[inset_0_-2px_0_var(--color-brand-400)]" : "text-ink-400 hover:text-ink-100"
       }`}
     >
+      <Icon aria-hidden className={`h-4 w-4 ${on ? "text-brand-400" : ""}`} strokeWidth={1.75} />
+      {children}
+    </button>
+  );
+}
+
+function ModeChip({ on, onClick, label, mode }: { on: boolean; onClick: () => void; label: string; mode?: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={on}
+      className={`gm-cut flex h-7 flex-none items-center gap-1.5 whitespace-nowrap px-3 text-[12.5px] font-semibold transition-colors [--cut:6px] ${
+        on ? "bg-brand-400 text-brand-950" : "bg-ink-900 text-ink-300 shadow-[inset_0_0_0_1px_var(--color-ink-800)] hover:text-ink-100"
+      }`}
+    >
+      {mode && <ModeIcon mode={mode} className="h-3.5 w-3.5" strokeWidth={1.75} />}
       {label}
     </button>
+  );
+}
+
+function Tag({
+  icon: Icon,
+  tone = "ink",
+  children,
+}: {
+  icon?: LucideIcon;
+  /** brand: green tag; mark: grey tag with a green icon. */
+  tone?: "ink" | "brand" | "mark";
+  children: ReactNode;
+}) {
+  const color = tone === "brand" ? "bg-brand-400/15 text-brand-400" : tone === "mark" ? "bg-ink-800 text-ink-100" : "bg-ink-800 text-ink-300";
+  return (
+    <span className={`gm-tag h-[21px] px-[11px] text-[11.5px] ${color}`}>
+      {Icon && <Icon aria-hidden className={`h-3 w-3 ${tone === "mark" ? "text-brand-400" : ""}`} strokeWidth={2} />}
+      {children}
+    </span>
   );
 }
 
 function PresetCard({
   preset,
   view,
-  now,
+  isStaff,
   busy,
   onCopy,
   onDelete,
+  onStar,
+  onUpdate,
 }: {
   preset: GamePreset;
   view: View;
-  now: number;
+  isStaff: boolean;
   busy: boolean;
   onCopy: () => void;
   onDelete: () => void;
+  onStar: () => void;
+  onUpdate: () => void;
 }) {
-  const [open, setOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const mode = modeOption(preset.mode);
-  const meta = mode ? CATEGORY_META[mode.category] : null;
-  const data = preset.data;
-  const locks = data.nation_locks;
-  const button =
-    "rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-ink-200 transition hover:border-white/25 disabled:opacity-50";
+  const library = view === "library";
+  const who = preset.official
+    ? "GameMaster"
+    : `${preset.created_by_name ?? "a host"}${library && !preset.own_server && preset.server_name ? `, ${preset.server_name}` : ""}`;
+  const original = preset.update_available ? "The original changed" : null;
 
   return (
-    <article className={`flex flex-col rounded-3xl p-4 ${GLASS}`}>
-      <div className="flex flex-wrap items-center gap-1.5">
-        <span className={`rounded-full border px-2 py-0.5 text-[11px] font-bold ${meta?.chip ?? "border-white/10 text-ink-300"}`}>
-          {meta?.emoji} {mode?.label ?? preset.mode}
+    <article
+      className={`gm-plate flex flex-col gap-2 px-4 py-3.5 ${preset.update_available ? "shadow-[inset_3px_0_0_var(--color-yellow-300)]" : ""}`}
+    >
+      <div className="grid grid-cols-[40px_minmax(0,1fr)] items-start gap-[11px]">
+        <span className="gm-cut grid h-10 w-10 place-items-center bg-ink-800 text-ink-100">
+          <ModeIcon mode={preset.mode} className="h-5 w-5" strokeWidth={1.75} />
         </span>
-        {preset.shared && preset.own_server && (
-          <span className="rounded-full border border-sky-400/40 bg-sky-500/15 px-2 py-0.5 text-[11px] font-bold text-sky-100">🌐 Shared</span>
-        )}
-        {!preset.own_server && (
-          <span className="rounded-full border border-teal-400/40 bg-teal-500/15 px-2 py-0.5 text-[11px] font-bold text-teal-100">
-            🏰 {preset.server_name ?? "Another server"}
-          </span>
-        )}
-        {view === "library" && preset.own_server && (
-          <span className="rounded-full bg-brand-400/20 px-2 py-0.5 text-[11px] font-bold text-brand-100">Ours</span>
-        )}
-        {preset.uses > 0 && (
-          <span className="ml-auto text-[11px] font-semibold text-ink-400" title="Games scheduled with it">
-            🗓️ used {preset.uses}×
-          </span>
-        )}
+        <div className="min-w-0">
+          <span className="block text-xs text-ink-400">{mode?.label ?? preset.mode}</span>
+          <h2 className="gm-title truncate text-[22px]">{preset.name}</h2>
+          <div className="mt-[5px] flex flex-wrap gap-[5px]">
+            {preset.is_default && (
+              <Tag icon={Star} tone="brand">
+                Default
+              </Tag>
+            )}
+            {preset.official && (
+              <Tag icon={BadgeCheck} tone="mark">
+                GameMaster
+              </Tag>
+            )}
+            {!library && !preset.shared && <Tag icon={Lock}>Only our server</Tag>}
+            {!library && preset.shared && <Tag icon={Globe}>Shared</Tag>}
+            {preset.copied_from && !library && <Tag icon={Copy}>Copy</Tag>}
+            {library && preset.own_server && <Tag>Ours</Tag>}
+          </div>
+        </div>
       </div>
-      <h2 className="mt-2 text-lg font-black leading-tight text-white">{preset.name}</h2>
-      {preset.description && <p className="mt-1 line-clamp-3 text-sm text-ink-300">{preset.description}</p>}
-      <div className="mt-3 flex flex-wrap gap-1.5">
-        {presetSummary(data).map((part) => (
-          <span key={part} className="rounded-md bg-white/5 px-2 py-0.5 text-[11px] font-semibold text-ink-300">
-            {part}
-          </span>
-        ))}
-      </div>
-      <p className="mt-3 text-[11px] text-ink-500">
-        by {preset.created_by_name ?? "a host"} · updated {formatRelative(preset.updated_at * 1000, now)}
-        {preset.copied_from ? " · copied from the library" : ""}
-      </p>
 
-      <button
-        type="button"
-        onClick={() => setOpen((value) => !value)}
-        className="mt-2 self-start text-xs font-semibold text-ink-400 hover:text-white"
-      >
-        {open ? "Hide details ▴" : "Details ▾"}
-      </button>
-      {open && (
-        <dl className="gm-fade-up mt-2 space-y-2 rounded-2xl border border-white/10 bg-ink-950/40 p-3 text-xs">
-          <div>
-            <dt className="font-semibold text-ink-500">Nation groups</dt>
-            <dd className="mt-1 flex flex-wrap gap-1">
-              {data.layout ? (
-                data.layout.map((group) => (
-                  <span
-                    key={group.id}
-                    className={`rounded-md px-1.5 py-0.5 ${group.enabled ? "bg-white/5 text-ink-200" : "bg-rose-500/10 text-rose-200 line-through"}`}
-                    title={group.tiers.flatMap((tier) => tier.nations).join(", ")}
-                  >
-                    {group.name} ({group.tiers.reduce((sum, tier) => sum + tier.nations.length, 0)})
-                  </span>
-                ))
-              ) : (
-                <span className="text-ink-300">The mode&apos;s standard groups</span>
-              )}
-            </dd>
-          </div>
-          <div>
-            <dt className="font-semibold text-ink-500">Who can reserve</dt>
-            <dd className="mt-0.5 text-ink-200">
-              Majors {lockLevelLabel(data.major_lock_level)} · Minors {lockLevelLabel(data.minor_lock_level)}
-            </dd>
-          </div>
-          <div>
-            <dt className="font-semibold text-ink-500">Nation locks</dt>
-            <dd className="mt-0.5 text-ink-200">
-              {locks.length === 0
-                ? "None"
-                : locks.map((group) => (
-                    <span key={group.label} className="block">
-                      {group.label}: {group.nations.join(", ")}
-                      <span className="text-ink-500">
-                        {group.release_hours_before ? ` — opens ${group.release_hours_before}h before` : " — all game"}
-                      </span>
-                    </span>
-                  ))}
-            </dd>
-          </div>
-          <div>
-            <dt className="font-semibold text-ink-500">Rules</dt>
-            <dd className="mt-0.5 text-ink-200">
-              {data.rules ? (data.rules.length ? data.rules.map((entry) => entry.name).join(", ") : "None") : "Standard"}
-            </dd>
-          </div>
-          <div>
-            <dt className="font-semibold text-ink-500">Mods</dt>
-            <dd className="mt-0.5 text-ink-200">
-              {data.mods ? (data.mods.length ? data.mods.map((entry) => entry.name).join(", ") : "None") : "Standard"}
-            </dd>
-          </div>
-        </dl>
+      {preset.description && <p className="line-clamp-3 text-[13px] text-ink-400">{preset.description}</p>}
+      <div className="flex flex-wrap gap-x-3 gap-y-1 text-[12.5px] text-ink-300">
+        {presetSummary(preset.data).map((fact) => {
+          const Icon = FACT_ICON[fact.kind];
+          return (
+            <span key={fact.kind} className="inline-flex items-center gap-[5px]">
+              <Icon aria-hidden className="h-[13px] w-[13px] text-ink-500" strokeWidth={1.75} />
+              {fact.text}
+            </span>
+          );
+        })}
+      </div>
+
+      {original && (
+        <div className="gm-cut flex items-center gap-2 bg-yellow-300/10 py-[7px] pl-[9px] pr-[7px] text-[12.5px] text-ink-100">
+          <Sparkles aria-hidden className="h-4 w-4 shrink-0 text-yellow-300" strokeWidth={1.75} />
+          {original}
+          <button type="button" onClick={onUpdate} className="gm-btn gm-btn-secondary ml-auto h-[30px] px-[11px] text-[12.5px] [--cut:7px]">
+            See changes
+          </button>
+        </div>
       )}
 
-      <div className="mt-auto flex flex-wrap items-center gap-2 pt-4">
-        {preset.own_server ? (
+      <p className="text-xs text-ink-500">
+        by {who}
+        {preset.uses > 0 ? `, used ${preset.uses}×` : ""}
+      </p>
+
+      <div className="mt-auto flex flex-wrap items-center gap-1.5 border-t border-ink-800 pt-2.5">
+        {library ? (
           <>
-            <Link
-              href={`/schedule/new?preset=${preset.preset_id}`}
-              className="rounded-lg bg-sky-500/25 px-3 py-1.5 text-xs font-black text-sky-100 hover:bg-sky-500/35"
-            >
-              🗓️ Use in a game
-            </Link>
-            <Link href={`/presets/edit?id=${preset.preset_id}`} className={button}>
-              {preset.can_edit ? "✏️ Edit" : "👁️ View"}
-            </Link>
-            <button type="button" onClick={onCopy} disabled={busy} className={button}>
-              ⧉ Duplicate
+            <button type="button" onClick={onCopy} disabled={busy} className="gm-btn gm-btn-primary h-[30px] px-[11px] text-[12.5px] [--cut:7px]">
+              {busy ? <Spinner className="h-3.5 w-3.5" /> : <CopyPlus aria-hidden strokeWidth={1.75} />}
+              Copy to our server
             </button>
-            {preset.can_edit &&
-              (confirmDelete ? (
-                <button
-                  type="button"
-                  onClick={onDelete}
-                  disabled={busy}
-                  onBlur={() => setConfirmDelete(false)}
-                  className="ml-auto rounded-lg bg-rose-500 px-3 py-1.5 text-xs font-black text-white hover:bg-rose-400"
-                >
-                  {busy ? "Deleting…" : "Click again to delete"}
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setConfirmDelete(true)}
-                  className="ml-auto rounded-lg px-2 py-1.5 text-xs font-bold text-ink-500 hover:text-rose-300"
-                >
-                  🗑️ Delete
-                </button>
-              ))}
+            <Link href={`/presets/edit?id=${preset.preset_id}`} className="gm-btn gm-btn-secondary h-[30px] px-[11px] text-[12.5px] [--cut:7px]">
+              <Eye aria-hidden strokeWidth={1.75} /> View
+            </Link>
           </>
         ) : (
           <>
-            <button
-              type="button"
-              onClick={onCopy}
-              disabled={busy}
-              className="flex items-center gap-1.5 rounded-lg bg-brand-400 px-3 py-1.5 text-xs font-black text-ink-950 hover:bg-brand-300 disabled:opacity-60"
+            <Link
+              href={`/schedule/new?preset=${preset.preset_id}`}
+              className="gm-btn gm-btn-primary h-[30px] px-[11px] text-[12.5px] [--cut:7px]"
             >
-              {busy && <Spinner className="h-3 w-3" />}⧉ Copy to our server
-            </button>
-            <Link href={`/presets/edit?id=${preset.preset_id}`} className={button}>
-              🗺️ Preview
+              <CalendarPlus aria-hidden strokeWidth={1.75} /> Use in a game
             </Link>
+            <Link href={`/presets/edit?id=${preset.preset_id}`} className="gm-btn gm-btn-secondary h-[30px] px-[11px] text-[12.5px] [--cut:7px]">
+              <Pencil aria-hidden strokeWidth={1.75} /> Edit
+            </Link>
+            <span className="ml-auto flex items-center gap-0.5">
+              {isStaff && (
+                <IconButton
+                  label={preset.is_default ? "Stop loading it first" : "Load it first for this mode"}
+                  onClick={onStar}
+                  disabled={busy}
+                  on={preset.is_default}
+                  icon={Star}
+                />
+              )}
+              <IconButton label="Duplicate" onClick={onCopy} disabled={busy} icon={CopyPlus} />
+              {preset.can_edit &&
+                (confirmDelete ? (
+                  <button
+                    type="button"
+                    onClick={onDelete}
+                    disabled={busy}
+                    onBlur={() => setConfirmDelete(false)}
+                    className="gm-btn gm-btn-danger h-[30px] px-[11px] text-[12.5px] [--cut:7px]"
+                  >
+                    {busy ? "Deleting…" : "Delete?"}
+                  </button>
+                ) : (
+                  <IconButton label="Delete" onClick={() => setConfirmDelete(true)} icon={Trash2} />
+                ))}
+            </span>
           </>
         )}
       </div>
     </article>
+  );
+}
+
+function IconButton({
+  label,
+  onClick,
+  icon: Icon,
+  disabled = false,
+  on = false,
+}: {
+  label: string;
+  onClick: () => void;
+  icon: LucideIcon;
+  disabled?: boolean;
+  on?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={label}
+      aria-label={label}
+      aria-pressed={on || undefined}
+      className={`gm-btn gm-btn-quiet h-[30px] w-[30px] p-0 [--cut:7px] ${on ? "text-brand-400" : ""}`}
+    >
+      <Icon aria-hidden strokeWidth={1.75} className={on ? "fill-current" : ""} />
+    </button>
+  );
+}
+
+const CHANGE_STYLE: Record<PresetChange["kind"], { icon: LucideIcon; tone: string }> = {
+  add: { icon: Plus, tone: "bg-emerald-950 text-emerald-300" },
+  remove: { icon: Minus, tone: "bg-rose-950 text-rose-300" },
+  change: { icon: ArrowRightLeft, tone: "bg-ink-800 text-ink-300" },
+};
+
+/** "See changes": what updating a copy from its original changes, and the three answers. */
+function UpdateDialog({ preset, onClose, onDone }: { preset: GamePreset; onClose: () => void; onDone: (message: string) => void }) {
+  const [check, setCheck] = useState<PresetUpdateCheck | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState<"update" | "new" | "keep" | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void send<PresetUpdateCheck>(`/api/presets/${preset.preset_id}/update`, { cache: "no-store" }).then((result) => {
+      if (cancelled) return;
+      if (result.ok) setCheck(result.body);
+      else setError(result.error);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [preset.preset_id]);
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  const answer = async (action: "update" | "new" | "keep") => {
+    setBusy(action);
+    const result = await send<{ preset: GamePreset }>(`/api/presets/${preset.preset_id}/update`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action }),
+    });
+    setBusy(null);
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+    onDone(
+      action === "update"
+        ? `Updated “${preset.name}”.`
+        : action === "new"
+          ? `Saved the new version as “${result.body.preset.name}”.`
+          : `Kept your “${preset.name}”.`,
+    );
+  };
+
+  const source = check?.source;
+  const changed = useMemo(
+    () => (source ? new Date(source.updated_at * 1000).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : null),
+    [source],
+  );
+
+  return (
+    <div className="fixed inset-0 z-[1300] flex items-end justify-center bg-ink-950/75 p-2.5 sm:items-center sm:p-4" onClick={onClose}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="preset-update-title"
+        onClick={(event) => event.stopPropagation()}
+        className="gm-plate gm-fade-up flex max-h-[calc(100vh-20px)] w-full max-w-[600px] flex-col bg-ink-950 [--cut:16px]"
+      >
+        <div className="relative border-b border-ink-800 px-5 pb-3.5 pt-[18px]">
+          <p className="text-xs text-ink-400">{modeOption(preset.mode)?.label ?? preset.mode}</p>
+          <h2 id="preset-update-title" className="gm-title pr-10 text-[26px] sm:text-[30px]">
+            Update {preset.name}?
+          </h2>
+          <button type="button" onClick={onClose} className="gm-btn gm-btn-quiet absolute right-3 top-3 h-8 w-8 p-0" aria-label="Close">
+            <X aria-hidden strokeWidth={1.75} />
+          </button>
+          {source && (
+            <p className="mt-2 text-xs text-ink-400">
+              {source.official ? "GameMaster" : (source.server_name ?? "Its server")} changed the original on {changed}. This is what
+              updating changes in your copy:
+            </p>
+          )}
+        </div>
+
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-5 py-3.5">
+          {error && <p className="gm-cut bg-rose-950/60 px-3 py-2 text-[13px] text-rose-200">{error}</p>}
+          {!check && !error && (
+            <p className="flex items-center gap-2 text-[13px] text-ink-400">
+              <Spinner className="h-4 w-4 text-brand-400" /> Comparing…
+            </p>
+          )}
+          {check && check.changes.length === 0 && (
+            <p className="text-[13px] text-ink-300">Your copy already matches the original. Nothing would change.</p>
+          )}
+          {check && check.changes.length > 0 && (
+            <ul className="grid gap-1">
+              {check.changes.map((change, index) => {
+                const style = CHANGE_STYLE[change.kind];
+                const Icon = style.icon;
+                return (
+                  <li key={index} className="gm-cut grid grid-cols-[26px_minmax(0,1fr)] items-start gap-2.5 bg-ink-900 px-[11px] py-[9px] text-[13px] text-ink-300 [--cut:9px]">
+                    <span className={`gm-cut grid h-[26px] w-[26px] place-items-center [--cut:5px] ${style.tone}`}>
+                      <Icon aria-hidden className="h-3.5 w-3.5" strokeWidth={2} />
+                    </span>
+                    {change.kind === "change" ? (
+                      <span className="flex flex-wrap items-center gap-1.5 pt-[3px]">
+                        <b className="font-semibold text-ink-100">{change.label}:</b>
+                        <span className="text-ink-500 line-through">{change.from}</span>
+                        <ArrowRight aria-hidden className="h-[13px] w-[13px] text-ink-500" strokeWidth={1.75} />
+                        <span className="text-ink-100">{change.to}</span>
+                      </span>
+                    ) : (
+                      <span className="pt-[3px]">
+                        <b className="font-semibold text-ink-100">{change.label}:</b> {change.detail}
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          {check?.own_edits && check.changes.length > 0 && (
+            <p className="gm-cut flex gap-2 bg-ink-900 px-[11px] py-[9px] text-[12.5px] text-ink-400">
+              <TriangleAlert aria-hidden className="mt-px h-4 w-4 shrink-0 text-yellow-300" strokeWidth={1.75} />
+              You changed your copy too. Updating replaces those changes with the original&apos;s.
+            </p>
+          )}
+        </div>
+
+        <div className="flex flex-col-reverse gap-2 border-t border-ink-800 px-5 py-3.5 sm:flex-row sm:items-center">
+          <button type="button" onClick={() => void answer("keep")} disabled={busy !== null || !check} className="gm-btn gm-btn-quiet">
+            {busy === "keep" && <Spinner className="h-3.5 w-3.5" />}Keep mine
+          </button>
+          <span className="hidden flex-1 sm:block" />
+          {check && check.changes.length > 0 && (
+            <>
+              <button type="button" onClick={() => void answer("new")} disabled={busy !== null} className="gm-btn gm-btn-secondary">
+                {busy === "new" && <Spinner className="h-3.5 w-3.5" />}Update as a new preset
+              </button>
+              <button
+                type="button"
+                onClick={() => void answer("update")}
+                disabled={busy !== null}
+                className="gm-btn gm-btn-primary h-[42px] px-5 font-display text-lg font-extrabold uppercase tracking-[0.02em] [--cut:9px]"
+              >
+                {busy === "update" && <Spinner className="h-4 w-4" />}Update
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

@@ -251,6 +251,12 @@ const NAME_ALIASES: Record<string, string> = {
   spanishstate: "spain",
   republicofchina: "china",
   nationalistchina: "china",
+  // The modern map's names for the bot's Czechia, the two Koreas and TFR's China, and KR's Australasia.
+  czechrepublic: "czechia",
+  peoplesrepublicofchina: "china",
+  korea: "southkorea",
+  koreadpr: "northkorea",
+  commonwealthofaustralasia: "australasia",
 };
 
 /** All canonical keys a map nation answers to: its tag's bot slot name, its

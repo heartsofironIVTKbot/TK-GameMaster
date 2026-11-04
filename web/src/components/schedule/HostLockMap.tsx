@@ -8,6 +8,7 @@ import {
   FocusController,
   HighlightsBridge,
   MAX_ZOOM,
+  INERTIA_MAX_SPEED,
   MapSetup,
   OCEAN,
   buildRosterNations,
@@ -36,6 +37,9 @@ import type {
  *
  *   red neon   nations in the lock group being edited
  *   blue       nations in the host's other lock groups
+ *
+ * The preset editor passes its own, lighter sets instead (purple: being
+ * edited, thin blue: the other groups, red or grey: not playable).
  */
 
 const DEFAULT_FILL = "#374151";
@@ -45,9 +49,17 @@ const HOVER_DEBOUNCE_MS = 80;
 interface HostLockMapProps {
   scenarioId: ScenarioId;
   /** Tags of the lock group being edited (red). */
-  activeTags: readonly string[];
+  activeTags?: readonly string[];
   /** Tags of the other lock groups (blue). */
-  otherTags: readonly string[];
+  otherTags?: readonly string[];
+  /** Preset editor: the group being edited (purple). */
+  editingTags?: readonly string[];
+  /** Preset editor: the other groups (thin blue). */
+  groupTags?: readonly string[];
+  /** Preset editor: not-playable nations in red… */
+  excludedTags?: readonly string[];
+  /** …or greyed out, the way players see them. */
+  greyTags?: readonly string[];
   onNationClick: (nation: NationFeatureProps) => void;
   /** One entry per nation once the map has loaded. */
   onNationsChange: (nations: RosterNation[]) => void;
@@ -55,10 +67,16 @@ interface HostLockMapProps {
   focusRequest?: { tag: string; nonce: number } | null;
 }
 
+const NONE: readonly string[] = [];
+
 export default function HostLockMap({
   scenarioId,
-  activeTags,
-  otherTags,
+  activeTags = NONE,
+  otherTags = NONE,
+  editingTags = NONE,
+  groupTags = NONE,
+  excludedTags = NONE,
+  greyTags = NONE,
   onNationClick,
   onNationsChange,
   onHoverChange,
@@ -188,8 +206,12 @@ export default function HostLockMap({
       coopTags: otherTags,
       selfTags: [],
       lockedTags: activeTags,
+      editingTags,
+      groupTags,
+      excludedTags,
+      takenTags: greyTags,
     }),
-    [hover, activeTags, otherTags],
+    [hover, activeTags, otherTags, editingTags, groupTags, excludedTags, greyTags],
   );
 
   if (error) {
@@ -224,6 +246,10 @@ export default function HostLockMap({
       maxZoom={MAX_ZOOM}
       maxBoundsViscosity={1.0}
       worldCopyJump
+      // A flick glides at most a few hundred px (Leaflet's default has no
+      // cap): further than the drawn area around the view and, zoomed in,
+      // half the map blinks out until it's redrawn.
+      inertiaMaxSpeed={INERTIA_MAX_SPEED}
       zoomSnap={0.01}
       zoomDelta={0.1}
       wheelPxPerZoomLevel={150}

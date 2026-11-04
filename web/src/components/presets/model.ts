@@ -1,3 +1,4 @@
+import { Check, FileText, Layers, Lock, ScrollText, type LucideIcon } from "lucide-react";
 import { newLockGroup, type LockGroupForm } from "@/components/schedule/setup/model";
 import {
   layoutFromDefaults,
@@ -13,12 +14,12 @@ import type { LockLevel } from "@/lib/scheduleOptions";
 
 export type MakerTab = "basics" | "groups" | "locks" | "resources" | "save";
 
-export const MAKER_TABS: { id: MakerTab; label: string; icon: string }[] = [
-  { id: "basics", label: "Basics", icon: "📝" },
-  { id: "groups", label: "Groups", icon: "🧩" },
-  { id: "locks", label: "Locks", icon: "🔐" },
-  { id: "resources", label: "Rules & mods", icon: "📖" },
-  { id: "save", label: "Save", icon: "✅" },
+export const MAKER_TABS: { id: MakerTab; label: string; icon: LucideIcon }[] = [
+  { id: "basics", label: "Basics", icon: FileText },
+  { id: "groups", label: "Groups", icon: Layers },
+  { id: "locks", label: "Locks", icon: Lock },
+  { id: "resources", label: "Rules and mods", icon: ScrollText },
+  { id: "save", label: "Save", icon: Check },
 ];
 
 export interface MakerState {
@@ -26,7 +27,7 @@ export interface MakerState {
   name: string;
   description: string;
   shared: boolean;
-  /** null = the mode's standard groups. */
+  /** null = the whole map. */
   layout: PresetGroup[] | null;
   /** The group map clicks and "add" buttons put nations into. */
   activeGroupId: string | null;
@@ -150,14 +151,8 @@ export function newGroup(index: number): PresetGroup {
   return { id: newGroupId(), name: `New group ${index + 1}`, enabled: true, builtin: false, tiers: [{ label: null, nations: [] }] };
 }
 
-/** Start customizing from the mode's standard groups. */
+/** Start customizing from the whole map, grouped the mode's standard way. */
 export function customLayout(defaults: ModeDefaults | undefined): PresetGroup[] {
   const layout = layoutFromDefaults(defaults);
   return layout.length > 0 ? layout : [newGroup(0)];
 }
-
-/** Group colours on the list (the map shows the edited group red, the rest blue). */
-export const GROUP_COLORS = [
-  "#f59e0b", "#38bdf8", "#a78bfa", "#34d399", "#fb7185", "#f472b6", "#facc15", "#60a5fa",
-  "#4ade80", "#c084fc", "#fb923c", "#2dd4bf",
-];

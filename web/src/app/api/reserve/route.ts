@@ -4,7 +4,7 @@ import type { PoolConnection } from "mysql2/promise";
 import { HOME_GUILD_ID, playerRecords } from "@/lib/currentGuild";
 import { getPool, DatabaseConfigError } from "@/lib/db";
 import { getSession } from "@/lib/session";
-import { canonicalName } from "@/data/nationCategories";
+import { canonicalName, nationMatchKeys } from "@/data/nationCategories";
 import { demoLobbyState } from "@/lib/liveDemo";
 import { liveHub } from "@/lib/live/hub";
 import { recordAudit } from "@/lib/auditLog";
@@ -24,7 +24,9 @@ const tagToSlot = tagToSlotJson as Record<string, string>;
  * /api/reserve
  *
  * GET  ?thread_id=<id>  — reservations + lobby metadata for one game thread.
- * POST {thread_id, slot_key} — atomically record a reservation.
+ * POST {thread_id, slot_key, tag?} — atomically record a reservation. `tag`
+ *      = the map nation's tag, so a lock on the bot's name for it ("Australia")
+ *      also covers the map's ("Commonwealth of Australia").
  *
  * ``slot_key`` must be a playable country slot name in the bot's convention
  * (e.g. "Germany", "Soviet Union", "British RAJ"), NOT a map state name or
@@ -211,6 +213,7 @@ export async function POST(request: NextRequest) {
   const payload = (body ?? {}) as Record<string, unknown>;
   const threadId = payload.thread_id;
   const slotKey = payload.slot_key;
+  const mapTag = typeof payload.tag === "string" && /^[A-Z0-9]{2,4}$/.test(payload.tag) ? payload.tag : null;
 
   if (typeof threadId !== "string" || !THREAD_ID_RE.test(threadId)) {
     return jsonError("thread_id must be a valid Discord thread id", 400);
@@ -279,7 +282,8 @@ export async function POST(request: NextRequest) {
         ].map((name) => canonicalName(String(name))),
       );
       const mainNation = isCoopSlot(resolvedSlotKey) ? resolvedSlotKey.split("_coop", 1)[0] : resolvedSlotKey;
-      if (lockedKeys.has(canonicalName(mainNation))) {
+      const nationKeys = mapTag ? nationMatchKeys(mapTag, mainNation, mainNation) : new Set([canonicalName(mainNation)]);
+      if ([...nationKeys].some((key) => lockedKeys.has(key))) {
         await connection.rollback();
         return jsonError(`${mainNation} is locked in this game`, 409);
       }

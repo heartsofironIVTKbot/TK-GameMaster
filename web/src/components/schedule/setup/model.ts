@@ -90,7 +90,7 @@ export interface SetupForm {
   presetName: string | null;
   /** Require IronLegion for this game; null = the server's setting. */
   ironlegion: boolean | null;
-  /** A preset's own nation groups; null = the mode's standard groups. */
+  /** A preset's own nation groups; null = the whole map. */
   layout: PresetGroup[] | null;
   /** Rules / mods to post; null = the mode's standard list. */
   rules: ResourceEntry[] | null;

@@ -11,8 +11,9 @@ import { useTutorialActions, useTutorialState } from "./TutorialProvider";
  * tours on or off, or reset them all. It sits bottom right, where page
  * content scrolls away from under it. Pages can move it with facts:
  * `helpLeft` (left side), `helpTop` (just under the map's 56px top bar; the
- * menu opens downwards) and `helpBesideLeftPanel` (right of the map's 340px
- * reservations list).
+ * menu opens downwards), `helpBesideLeftPanel` (right of the map's 340px
+ * reservations list) and `helpInBar` (inside a 56px top bar, left of its
+ * menu button: the preset editor, whose panel fills phones).
  * The map uses the top: its bottom edge is for reserving.
  */
 export default function HelpButton() {
@@ -45,15 +46,18 @@ export default function HelpButton() {
   const pageTours = state.pageTours.filter((tour) => shownIds.includes(tour.id));
   const besidePanel = Boolean(facts.helpBesideLeftPanel);
   const right = !besidePanel && !facts.helpLeft;
-  const top = Boolean(facts.helpTop);
+  const inBar = Boolean(facts.helpInBar);
+  const top = Boolean(facts.helpTop) || inBar;
 
   return (
     <div
       ref={rootRef}
       data-tour="help.button"
-      className={`fixed z-[1200] transition-[left] ${top ? "top-[106px] sm:top-[70px]" : "bottom-4"} ${right ? "right-4" : "left-4"} ${besidePanel ? "sm:left-[354px]" : ""} ${activeTourId ? "pointer-events-none" : ""}`}
+      className={`fixed z-[1200] transition-[left] ${
+        inBar ? "right-[56px] top-[10px] sm:right-[106px]" : `${top ? "top-[106px] sm:top-[70px]" : "bottom-4"} ${right ? "right-4" : "left-4"}`
+      } ${besidePanel ? "sm:left-[354px]" : ""} ${activeTourId ? "pointer-events-none" : ""}`}
       // In development, Next.js puts its own badge in the bottom-right corner.
-      style={right && process.env.NODE_ENV === "development" ? { right: 68 } : undefined}
+      style={right && !inBar && process.env.NODE_ENV === "development" ? { right: 68 } : undefined}
     >
       {open && (
         <div

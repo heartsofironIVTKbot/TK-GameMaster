@@ -38,7 +38,7 @@ export const MODE_CATALOG: readonly { key: string; label: string; branch: Branch
   { key: "Roleplay", label: "Roleplay (Road to 56)", branch: "RP", mod: "Road to 56" },
   { key: "Roleplay (Millennium Dawn)", label: "Millennium Dawn", branch: "RP", mod: "Millennium Dawn" },
   { key: "Roleplay (Novum Vexillum)", label: "Novum Vexillum", branch: "RP", mod: "Novum Vexillum" },
-  { key: "Kaiserreich (FFA)", label: "Kaiserreich FFA", branch: "RP", mod: "Kaiserreich" },
+  { key: "Kaiserreich (FFA)", label: "Kaiserreich", branch: "RP", mod: "Kaiserreich" },
   { key: "TFR", label: "The Fire Rises", branch: "RP", mod: "The Fire Rises" },
   { key: "Historical (Vanilla)", label: "Historical — Vanilla", branch: "HIST", mod: "Vanilla" },
   { key: "Historical (TFB)", label: "Historical — Their Finest Bruh", branch: "HIST", mod: "Their Finest Bruh" },

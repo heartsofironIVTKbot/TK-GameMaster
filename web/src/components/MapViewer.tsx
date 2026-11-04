@@ -125,6 +125,11 @@ const DEFAULT_STROKE = "#101827";
 // clipping breakage. MapSetup raises it dynamically when a tall viewport
 // needs a higher fill zoom, so the world always touches the viewport edges.
 export const MAX_ZOOM = 2;
+// Fastest a flick may glide (px/s). Leaflet's default is no limit, so a quick
+// flick when zoomed in could throw the view thousands of px — past the area
+// the SVG renderer has drawn around it — and the map blinked out until the
+// glide ended. ~1500 px/s glides about 330 px at the default deceleration.
+export const INERTIA_MAX_SPEED = 1500;
 // Authentic HOI4 tactical map ocean blue (also the map background).
 /** The sea behind the nations: teal-black. */
 export const OCEAN = "#0f1d21";
@@ -1099,6 +1104,7 @@ export default function MapViewer({
         body: JSON.stringify({
           thread_id: selectedThread,
           slot_key: slotKey,
+          tag: selected.tag,
         }),
       });
       const result = (await response.json().catch(() => null)) as {

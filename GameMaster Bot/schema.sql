@@ -279,6 +279,10 @@ CREATE TABLE IF NOT EXISTS attendance_events (
 -- preset in the public library other servers can copy from (a copy is a new
 -- row in the copying server, copied_from = the original). data = JSON
 -- {layout, nation_locks, major_lock_level, minor_lock_level, rules, mods}.
+-- official = 1: GameMaster's own presets (the bot's curated lists, written by
+-- the web, never edited). copied_version = the original's updated_at when the
+-- copy was made or last updated, copied_hash = the copy's settings then: a
+-- newer original means "Update available".
 CREATE TABLE IF NOT EXISTS game_presets (
     preset_id        VARCHAR(32)  NOT NULL,
     guild_id         VARCHAR(32)  NOT NULL,
@@ -294,9 +298,24 @@ CREATE TABLE IF NOT EXISTS game_presets (
     data             JSON         NOT NULL,
     created_at       BIGINT       NOT NULL,
     updated_at       BIGINT       NOT NULL,
+    official         TINYINT(1)   NOT NULL DEFAULT 0,
+    copied_version   BIGINT       NULL,
+    copied_hash      VARCHAR(16)  NULL,
     PRIMARY KEY (preset_id),
     KEY idx_game_presets_guild (guild_id, mode),
     KEY idx_game_presets_shared (shared, updated_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- game_preset_defaults: each server's default preset per mode (the calendar
+-- loads it first for a new game). preset_id '' = no default (the whole map).
+-- Written by the web, which creates the table. On the home server, a mode
+-- with no row defaults to GameMaster's preset for it.
+CREATE TABLE IF NOT EXISTS game_preset_defaults (
+    guild_id         VARCHAR(32)  NOT NULL,
+    mode             VARCHAR(64)  NOT NULL,
+    preset_id        VARCHAR(32)  NOT NULL,
+    updated_at       BIGINT       NOT NULL,
+    PRIMARY KEY (guild_id, mode)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- The server's roles for the web profile card (mirrored with the directory).

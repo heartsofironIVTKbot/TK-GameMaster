@@ -1,6 +1,8 @@
 "use client";
 
+import { Crown, Search } from "lucide-react";
 import { useMemo, useState } from "react";
+import { Flag } from "./parts";
 
 /**
  * Search the mode's nations (the bot's exact names) and pick one. `status`
@@ -13,14 +15,16 @@ export default function NationPicker({
   status,
   action,
   onPick,
+  flagOf,
   disabled = false,
-  placeholder = "🔎 Find a nation…",
+  placeholder = "Find a nation",
 }: {
   nations: string[];
   majors: Set<string>;
   status: (nation: string) => string | null;
   action: (nation: string) => string | null;
   onPick: (nation: string) => void;
+  flagOf?: (nation: string) => string | null;
   disabled?: boolean;
   placeholder?: string;
 }) {
@@ -33,31 +37,35 @@ export default function NationPicker({
 
   return (
     <div>
-      <input
-        value={query}
-        disabled={disabled}
-        onChange={(event) => setQuery(event.target.value)}
-        placeholder={placeholder}
-        className="w-full rounded-lg border border-white/10 bg-ink-950/70 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:border-brand-300/50 focus:outline-none"
-      />
+      <label className="gm-field">
+        <Search aria-hidden className="h-4 w-4 shrink-0" strokeWidth={1.75} />
+        <input
+          value={query}
+          disabled={disabled}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder={placeholder}
+          aria-label={placeholder}
+        />
+      </label>
       {results.length > 0 && (
-        <ul className="roster-scroll mt-2 max-h-56 space-y-1 overflow-y-auto">
+        <ul className="roster-scroll mt-1.5 max-h-56 space-y-0.5 overflow-y-auto">
           {results.map((nation) => {
             const label = action(nation);
             const where = status(nation);
             return (
-              <li key={nation} className="flex items-center gap-2 rounded-lg border border-white/5 bg-white/[0.03] px-2.5 py-1.5">
-                <span className="min-w-0 flex-1 truncate text-xs font-semibold text-ink-200">
-                  {majors.has(nation) && <span title="Major nation">👑 </span>}
-                  {nation}
+              <li key={nation} className="gm-cut flex items-center gap-2 bg-ink-950 py-1 pl-2 pr-1 [--cut:6px]">
+                {flagOf && <Flag src={flagOf(nation)} />}
+                <span className="flex min-w-0 flex-1 items-center gap-1.5 truncate text-[13px] text-ink-200">
+                  {majors.has(nation) && <Crown aria-label="Major" className="h-3 w-3 shrink-0 text-yellow-300" strokeWidth={2} />}
+                  <span className="truncate">{nation}</span>
                 </span>
-                {where && <span className="truncate text-[10px] text-sky-300">{where}</span>}
+                {where && <span className="truncate text-[11px] text-ink-500">{where}</span>}
                 {label && (
                   <button
                     type="button"
                     disabled={disabled}
                     onClick={() => onPick(nation)}
-                    className="shrink-0 rounded-md bg-white/5 px-2 py-0.5 text-[11px] font-bold text-ink-200 transition hover:bg-brand-400/25 hover:text-brand-100 disabled:opacity-40"
+                    className="gm-btn gm-btn-secondary h-7 shrink-0 px-2.5 text-[11.5px] [--cut:6px]"
                   >
                     {label}
                   </button>
@@ -67,9 +75,7 @@ export default function NationPicker({
           })}
         </ul>
       )}
-      {query.trim() && results.length === 0 && (
-        <p className="mt-2 text-xs text-ink-500">No nation matches “{query}”.</p>
-      )}
+      {query.trim() && results.length === 0 && <p className="mt-2 text-xs text-ink-500">No nation matches “{query}”.</p>}
     </div>
   );
 }
