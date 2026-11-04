@@ -93,7 +93,7 @@ function markedNames() {
         for (const match of source.matchAll(/data-tour=\{`([^`]+)`\}/g)) {
           for (const name of match[1].split(/\s+/)) {
             if (name === "setup.tab.${entry.id}") {
-              for (const tab of ["game", "announce", "access", "nations", "extras", "review"]) names.add(`setup.tab.${tab}`);
+              for (const tab of ["game", "announce", "players", "extras", "review"]) names.add(`setup.tab.${tab}`);
             } else names.add(name);
           }
         }

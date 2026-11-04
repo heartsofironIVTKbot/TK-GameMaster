@@ -88,6 +88,15 @@ red star, Reichspakt grey crown, Moscow Accord gold snowflake; `GroupMark` in
 `components/presets/parts.tsx`). Saving a preset you can't change says "Save
 as our copy" under a blue note.
 
+**Game setup** (`docs/design/setup.html`): the map with a 420px panel on
+the right, five line-icon steps (Game, Announce, Players, Extras, Review;
+Players holds who can reserve and the nation locks), sections in
+`SectionCard` (`components/schedule/ui.tsx`, a green line icon per section).
+A compact timeline strip above the footer shows when the game is announced
+and starts; Schedule is in the footer on every step. The map uses the preset
+editor's border glows: purple for the lock group being edited, blue for the
+others, red on not-playable nations when "Show not playable" is on.
+
 **The calendars** (`docs/design/calendar.html`): a game's colour is its
 status and nothing else: yellow scheduled, green announced, blue on-going,
 grey ended, red cancelled (`GameState` in `web/src/lib/scheduleOptions.ts`,

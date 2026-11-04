@@ -1,5 +1,6 @@
 "use client";
 
+import type { LucideIcon } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import type { HostProfile } from "@/lib/scheduleTypes";
 
@@ -162,35 +163,34 @@ export function CopyButton({ text, label = "Copy" }: { text: string; label?: str
           })
           .catch(() => {});
       }}
-      className="rounded-md border border-white/10 bg-white/5 px-2 py-1 text-[11px] font-semibold text-ink-300 transition hover:border-brand-300/50 hover:text-brand-200"
+      className="gm-btn gm-btn-secondary h-7 px-2.5 text-[11.5px] [--cut:6px]"
     >
-      {copied ? "Copied ✓" : label}
+      {copied ? "Copied" : label}
     </button>
   );
 }
 
+/** One block of the game setup panel: a green line icon, a title, an optional note and a corner slot. */
 export function SectionCard({
   title,
   subtitle,
-  icon,
+  icon: Icon,
   children,
   right,
 }: {
   title: ReactNode;
   subtitle?: ReactNode;
-  icon?: ReactNode;
+  icon?: LucideIcon;
   children: ReactNode;
   right?: ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-white/10 bg-ink-950/40 p-4">
-      <div className="mb-3 flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-start gap-2.5">
-          {icon && <span className="mt-0.5 text-lg leading-none">{icon}</span>}
-          <div className="min-w-0">
-            <h3 className="text-sm font-bold tracking-wide text-ink-100">{title}</h3>
-            {subtitle && <p className="mt-0.5 text-xs text-ink-400">{subtitle}</p>}
-          </div>
+    <section className="gm-cut bg-ink-900 p-3.5 [--cut:10px]">
+      <div className="mb-3 flex items-start gap-2.5">
+        {Icon && <Icon aria-hidden className="mt-0.5 h-[17px] w-[17px] shrink-0 text-brand-400" strokeWidth={1.75} />}
+        <div className="min-w-0 flex-1">
+          <h3 className="text-sm font-semibold text-ink-100">{title}</h3>
+          {subtitle && <p className="mt-0.5 text-xs text-ink-400">{subtitle}</p>}
         </div>
         {right}
       </div>

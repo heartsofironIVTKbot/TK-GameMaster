@@ -1,12 +1,14 @@
 "use client";
 
+import { Coins, Medal, Search, Swords } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { DirectoryMember } from "@/lib/scheduleTypes";
 import { SectionCard, Segmented, Spinner, Toggle } from "../ui";
 import { defaultDraftForm, type DraftForm, type DraftTeamForm } from "./model";
 
-const TEAM_TONES = ["border-sky-400/40 bg-sky-500/10", "border-rose-400/40 bg-rose-500/10"];
-const CHIP_TONES = ["border-sky-300/70 bg-sky-500/25 text-sky-50", "border-rose-300/70 bg-rose-500/25 text-rose-50"];
+/** Team 1 blue, team 2 red (the map's draft colours). */
+const TEAM_TONES = ["shadow-[inset_3px_0_0_var(--color-sky-300)]", "shadow-[inset_3px_0_0_var(--color-rose-300)]"];
+const CHIP_TONES = ["bg-sky-300 text-ink-950", "bg-rose-300 text-ink-950"];
 
 /**
  * Game setup → Draft game: players join a shared pool from the map as a Major
@@ -47,7 +49,7 @@ export default function DraftSection({
   const stale = draft ? draft.teams.flatMap((team) => team.groups).filter((group) => !groups.includes(group)) : [];
 
   return (
-    <SectionCard icon="🎯" title="Draft game" subtitle="Players sign up as a Major or a Minor; two captains draft them onto their team's nations.">
+    <SectionCard icon={Swords} title="Draft game" subtitle="Players sign up as a Major or a Minor; two captains draft them onto their team's nations.">
       <Toggle
         checked={draft !== null}
         disabled={Boolean(blocked) && draft === null}
@@ -58,31 +60,31 @@ export default function DraftSection({
             ? blocked
             : draft
               ? "The map link opens a sign-up pop-up; you start the draft from the Games page or the map."
-              : "Turn on to let captains draft players instead of first-come reservations."
+              : "Turn on to let captains draft players instead of first come, first served."
         }
       />
       {blocked && draft && <p className="mt-2 text-xs text-rose-300">{blocked}</p>}
 
       {draft && (
-        <div className="gm-fade-up mt-4 space-y-3">
+        <div className="gm-fade-up mt-3 space-y-2">
           {draft.teams.map((team, rawIndex) => {
             const index = rawIndex as 0 | 1;
             return (
-              <div key={index} className={`rounded-2xl border p-3 ${TEAM_TONES[index]}`}>
+              <div key={index} className={`gm-cut bg-ink-950 p-3 [--cut:8px] ${TEAM_TONES[index]}`}>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-black uppercase tracking-wider text-ink-300">Team {index + 1}</span>
+                  <span className="text-xs font-semibold text-ink-400">Team {index + 1}</span>
                   <input
                     value={team.name}
                     maxLength={30}
                     onChange={(event) => setTeam(index, { name: event.target.value })}
                     placeholder={index === 0 ? "e.g. Allies" : "e.g. Axis"}
-                    className={`min-w-0 flex-1 rounded-lg border bg-ink-950/70 px-2.5 py-1.5 text-sm font-bold text-ink-100 focus:outline-none ${
-                      team.name.trim() ? "border-white/10 focus:border-brand-300/50" : "border-rose-400/60"
+                    className={`gm-input min-h-8 min-w-0 flex-1 bg-ink-900 py-1 text-sm font-semibold [--cut:6px] ${
+                      team.name.trim() ? "" : "shadow-[inset_0_0_0_1px_var(--color-rose-400)]"
                     }`}
                     aria-label={`Team ${index + 1} name`}
                   />
                 </div>
-                <p className="mb-1 mt-3 text-[11px] font-semibold text-ink-400">Captain</p>
+                <p className="mb-1 mt-3 text-xs font-semibold text-ink-500">Captain</p>
                 <CaptainPicker
                   captainId={team.captainId}
                   captainName={team.captainName}
@@ -94,8 +96,8 @@ export default function DraftSection({
                     })
                   }
                 />
-                <p className="mb-1.5 mt-3 text-[11px] font-semibold text-ink-400">Nation groups — click to add / remove</p>
-                <div className="flex flex-wrap gap-1.5">
+                <p className="mb-1.5 mt-3 text-xs font-semibold text-ink-500">Nation groups (click to add or remove)</p>
+                <div className="flex flex-wrap gap-1">
                   {groups.map((group) => {
                     const mine = team.groups.includes(group);
                     const theirs = draft.teams[1 - index].groups.includes(group);
@@ -104,14 +106,14 @@ export default function DraftSection({
                         key={group}
                         type="button"
                         onClick={() => toggleGroup(index, group)}
-                        className={`rounded-lg border px-2.5 py-1 text-xs font-semibold transition ${
+                        className={`gm-cut h-[26px] px-2.5 text-xs font-semibold [--cut:6px] ${
                           mine
                             ? CHIP_TONES[index]
                             : theirs
-                              ? "border-white/5 bg-white/[0.02] text-ink-500 line-through hover:text-ink-300"
-                              : "border-white/10 bg-white/[0.04] text-ink-300 hover:border-white/30"
+                              ? "bg-ink-900 text-ink-500 line-through hover:text-ink-300"
+                              : "bg-ink-900 text-ink-300 hover:text-ink-100"
                         }`}
-                        title={theirs ? `In ${draft.teams[1 - index].name || "the other team"} — click to move here` : undefined}
+                        title={theirs ? `In ${draft.teams[1 - index].name || "the other team"}. Click to move it here` : undefined}
                       >
                         {group}
                       </button>
@@ -123,15 +125,15 @@ export default function DraftSection({
           })}
 
           {unassigned.length > 0 && (
-            <p className="text-[11px] text-ink-400">
-              In no team: <b className="text-ink-200">{unassigned.join(", ")}</b> — captains can&apos;t pick these nations, but you
-              can place players there yourself.
+            <p className="text-xs text-ink-400">
+              In no team: <b className="font-semibold text-ink-200">{unassigned.join(", ")}</b>. Captains can&apos;t pick these
+              nations, but you can place players there yourself.
             </p>
           )}
           {stale.length > 0 && (
-            <p className="text-[11px] text-rose-300">
-              {stale.join(", ")} {stale.length === 1 ? "isn't" : "aren't"} one of this game&apos;s nation groups any more —
-              click the team&apos;s groups again or{" "}
+            <p className="text-xs text-rose-300">
+              {stale.join(", ")} {stale.length === 1 ? "isn't" : "aren't"} one of this game&apos;s nation groups any more.
+              Click the team&apos;s groups again or{" "}
               <button type="button" className="font-bold underline" onClick={() => onChange(defaultDraftForm(groups))}>
                 reset the teams
               </button>
@@ -140,7 +142,7 @@ export default function DraftSection({
           )}
 
           <div>
-            <p className="mb-1.5 text-[11px] font-semibold text-ink-400">Pick order</p>
+            <p className="mb-1.5 text-xs font-semibold text-ink-500">Pick order</p>
             <Segmented<"coin" | "0" | "1">
               ariaLabel="Pick order"
               size="sm"
@@ -149,12 +151,12 @@ export default function DraftSection({
                 onChange(value === "coin" ? { ...draft, coinFlip: true } : { ...draft, coinFlip: false, firstPicker: value === "1" ? 1 : 0 })
               }
               options={[
-                { value: "coin", label: "🪙 Coin toss" },
+                { value: "coin", label: <span className="inline-flex items-center gap-1.5"><Coins aria-hidden className="h-3.5 w-3.5" />Coin toss</span> },
                 { value: "0", label: `${draft.teams[0].name || "Team 1"} first` },
                 { value: "1", label: `${draft.teams[1].name || "Team 2"} first` },
               ]}
             />
-            <p className="mt-1 text-[11px] text-ink-500">
+            <p className="mt-1 text-xs text-ink-500">
               {draft.coinFlip
                 ? "The winner of the coin toss opens with 3 picks, then the captains alternate one by one."
                 : "That team picks first, then the captains alternate one by one."}
@@ -203,9 +205,10 @@ export function CaptainPicker({
 
   if (captainId) {
     return (
-      <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-ink-950/50 px-2.5 py-1.5">
-        <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink-100">🎖️ {captainName ?? `#${captainId}`}</span>
-        <button type="button" onClick={() => onPick(null)} className="text-[11px] font-bold text-ink-400 hover:text-white">
+      <div className="gm-cut flex items-center gap-2 bg-ink-900 px-2.5 py-1.5 [--cut:6px]">
+        <Medal aria-hidden className="h-4 w-4 shrink-0 text-yellow-300" strokeWidth={1.75} />
+        <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink-100">{captainName ?? `#${captainId}`}</span>
+        <button type="button" onClick={() => onPick(null)} className="text-xs font-semibold text-ink-400 hover:text-ink-100">
           Change
         </button>
       </div>
@@ -215,13 +218,15 @@ export function CaptainPicker({
   const shown = results && results.query === needle ? results.players : null;
   return (
     <div>
-      <input
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
-        placeholder="🔎 Search a member (name, @handle or ID)…"
-        className="w-full rounded-lg border border-rose-400/40 bg-ink-950/70 px-2.5 py-1.5 text-sm text-ink-100 placeholder:text-ink-500 focus:border-brand-300/50 focus:outline-none"
-        aria-label="Captain"
-      />
+      <label className="gm-field h-8 bg-ink-900">
+        <Search aria-hidden className="h-4 w-4 shrink-0" strokeWidth={1.75} />
+        <input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Search a member (name, @handle or ID)"
+          aria-label="Captain"
+        />
+      </label>
       {needle.length >= 2 && !shown && (
         <p className="mt-1 flex items-center gap-1.5 text-[11px] text-ink-500">
           <Spinner className="h-3 w-3" /> Searching…
@@ -239,7 +244,7 @@ export function CaptainPicker({
                   onPick(member);
                   setQuery("");
                 }}
-                className="flex w-full items-center gap-2 rounded-lg border border-white/5 bg-white/[0.03] px-2.5 py-1 text-left text-xs hover:border-white/25 disabled:opacity-40"
+                className="gm-cut flex w-full items-center gap-2 bg-ink-900 px-2.5 py-1.5 text-left text-xs [--cut:6px] hover:bg-ink-800 disabled:opacity-40"
               >
                 <span className="min-w-0 flex-1 truncate font-semibold text-ink-100">{member.display_name || member.username}</span>
                 {member.username && <span className="truncate text-[10px] text-ink-500">@{member.username}</span>}

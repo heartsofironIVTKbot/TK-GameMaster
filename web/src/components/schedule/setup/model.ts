@@ -1,3 +1,4 @@
+import { Check, Gamepad2, Megaphone, Sparkles, Users, type LucideIcon } from "lucide-react";
 import {
   ADD_ON_VALUES,
   addOnOption,
@@ -33,16 +34,21 @@ import {
 
 /** Form state of the game setup page and how it becomes a bot payload. */
 
-export type TabId = IssueSection | "review";
+/** The form's steps. Players holds who can reserve (access) and the nation locks. */
+export type TabId = "game" | "announce" | "players" | "extras" | "review";
 
-export const TABS: { id: TabId; label: string; icon: string }[] = [
-  { id: "game", label: "Game", icon: "🎮" },
-  { id: "announce", label: "Announce", icon: "📣" },
-  { id: "access", label: "Access", icon: "🔐" },
-  { id: "nations", label: "Nations", icon: "🗺️" },
-  { id: "extras", label: "Extras", icon: "✨" },
-  { id: "review", label: "Review", icon: "✅" },
+export const TABS: { id: TabId; label: string; icon: LucideIcon }[] = [
+  { id: "game", label: "Game", icon: Gamepad2 },
+  { id: "announce", label: "Announce", icon: Megaphone },
+  { id: "players", label: "Players", icon: Users },
+  { id: "extras", label: "Extras", icon: Sparkles },
+  { id: "review", label: "Review", icon: Check },
 ];
+
+/** The step a problem is on (access and nation locks are both on Players). */
+export function tabOfSection(section: IssueSection): TabId {
+  return section === "access" || section === "nations" ? "players" : section;
+}
 
 /** Tabs available after the announcement (only day/time/host can change). */
 export const TIME_HOST_TABS: TabId[] = ["game", "review"];
@@ -359,7 +365,8 @@ export function deriveSetup(form: SetupForm, context: SetupContext): DerivedSetu
   let announceSec: number | null = null;
   if (!timeOnly) {
     if (form.announceMode === "now") announceSec = nowSec;
-    if (form.announceMode === "before") announceSec = gameSec - form.announceHoursBefore * 3600;
+    // A game sooner than the lead time is announced right away (not "in the past").
+    if (form.announceMode === "before") announceSec = Math.max(nowSec, gameSec - form.announceHoursBefore * 3600);
     if (form.announceMode === "custom") {
       announceSec = Math.floor(
         zonedToUnixMs(form.announceDate, form.announceTime, timeZone).unixMs / 1000,

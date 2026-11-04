@@ -1,5 +1,6 @@
 "use client";
 
+import { CalendarClock, Eye, Info, Megaphone, Timer, Zap, type LucideIcon } from "lucide-react";
 import { HOURS_BEFORE_PRESETS, addOnOption, modeOption } from "@/lib/scheduleOptions";
 import type { HostProfile } from "@/lib/scheduleTypes";
 import {
@@ -12,10 +13,10 @@ import {
 import { SectionCard, Slider } from "../ui";
 import type { AnnounceMode, DerivedSetup, SetupForm } from "./model";
 
-const MODES: { value: AnnounceMode; icon: string; title: string; text: string }[] = [
-  { value: "before", icon: "⏱️", title: "Before the game", text: "The bot posts it a set time before the start." },
-  { value: "custom", icon: "🗓️", title: "Exact time", text: "Pick the exact date and time to post it." },
-  { value: "now", icon: "⚡", title: "Right away", text: "Posted as soon as the bot saves the game." },
+const MODES: { value: AnnounceMode; icon: LucideIcon; title: string; text: string }[] = [
+  { value: "before", icon: Timer, title: "Before the game", text: "A set time before the start." },
+  { value: "custom", icon: CalendarClock, title: "At an exact time", text: "Pick the date and time." },
+  { value: "now", icon: Zap, title: "Right away", text: "As soon as the game is saved." },
 ];
 
 export default function AnnounceTab({
@@ -35,35 +36,39 @@ export default function AnnounceTab({
 }) {
   const maxHours = Math.max(1, Math.min(72, Math.floor((derived.gameSec - nowSec) / 3600)));
   return (
-    <div className="space-y-4">
-      <SectionCard icon="📣" title="Announcement" subtitle="When should the game be announced in Discord?">
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+    <div className="space-y-3">
+      <SectionCard icon={Megaphone} title="Announcement" subtitle="When the bot posts the game in Discord.">
+        <div className="grid gap-1">
           {MODES.map((mode) => {
             const active = form.announceMode === mode.value;
+            const Icon = mode.icon;
             return (
               <button
                 key={mode.value}
                 type="button"
                 onClick={() => update({ announceMode: mode.value })}
-                className={`rounded-xl border p-3 text-left transition ${
-                  active
-                    ? "border-brand-300/80 bg-brand-400/15"
-                    : "border-white/10 bg-white/[0.03] hover:border-white/25"
+                aria-pressed={active}
+                className={`gm-cut grid grid-cols-[30px_minmax(0,1fr)] items-center gap-2.5 bg-ink-950 px-2.5 py-2 text-left [--cut:8px] ${
+                  active ? "shadow-[inset_0_0_0_1px_var(--color-brand-400)]" : "hover:bg-ink-800/60"
                 }`}
               >
-                <span className="text-lg">{mode.icon}</span>
-                <span className={`mt-1 block text-sm font-bold ${active ? "text-brand-100" : "text-ink-100"}`}>{mode.title}</span>
-                <span className="mt-0.5 block text-[11px] leading-snug text-ink-400">{mode.text}</span>
+                <span className={`gm-cut grid h-[30px] w-[30px] place-items-center [--cut:6px] ${active ? "bg-brand-400 text-brand-950" : "bg-ink-800 text-ink-300"}`}>
+                  <Icon aria-hidden className="h-4 w-4" strokeWidth={1.75} />
+                </span>
+                <span>
+                  <span className="block text-[13px] font-semibold text-ink-100">{mode.title}</span>
+                  <span className="block text-xs text-ink-400">{mode.text}</span>
+                </span>
               </button>
             );
           })}
         </div>
 
         {form.announceMode === "before" && (
-          <div className="mt-4 rounded-xl border border-white/10 bg-ink-950/50 p-3">
+          <div className="gm-cut mt-3 bg-ink-950 p-3 [--cut:8px]">
             <div className="flex items-baseline justify-between">
-              <span className="text-xs font-semibold text-ink-400">Hours before the game</span>
-              <span className="text-lg font-black text-brand-200">
+              <span className="text-xs font-semibold text-ink-400">How long before the game</span>
+              <span className="text-sm font-semibold text-brand-300">
                 {formatDurationMinutes(form.announceHoursBefore * 60)}
               </span>
             </div>
@@ -82,14 +87,14 @@ export default function AnnounceTab({
         )}
 
         {form.announceMode === "custom" && (
-          <div className="mt-4 flex gap-2">
+          <div className="mt-3 flex gap-2">
             <input
               type="date"
               value={form.announceDate}
               onChange={(event) => {
                 if (isIsoDate(event.target.value)) update({ announceDate: event.target.value });
               }}
-              className="flex-1 rounded-lg border border-white/10 bg-ink-950/70 px-3 py-2 text-sm text-ink-100 [color-scheme:dark] focus:border-brand-300/50 focus:outline-none"
+              className="gm-input flex-1 text-sm"
               aria-label="Announcement date"
             />
             <input
@@ -98,23 +103,28 @@ export default function AnnounceTab({
               onChange={(event) => {
                 if (isHHMM(event.target.value)) update({ announceTime: event.target.value });
               }}
-              className="w-32 rounded-lg border border-white/10 bg-ink-950/70 px-3 py-2 text-sm text-ink-100 [color-scheme:dark] focus:border-brand-300/50 focus:outline-none"
+              className="gm-input w-32 text-sm"
               aria-label="Announcement time"
             />
           </div>
         )}
 
-        <p className="mt-3 text-xs text-ink-300">
+        <p className="mt-3 flex gap-2 text-xs text-ink-300">
+          <Info aria-hidden className="mt-px h-3.5 w-3.5 shrink-0 text-ink-500" strokeWidth={1.75} />
+          <span>
           {derived.announceSec === null ? (
             <>Pick when the bot should announce the game.</>
           ) : form.announceMode === "now" ? (
             <>Posts within a minute of the bot saving the game.</>
+          ) : form.announceMode === "before" && derived.announceSec <= nowSec ? (
+            <>The game starts sooner than that, so it&apos;s posted right away.</>
           ) : (
             <>
-              Posts <b className="text-white">{formatInZone(derived.announceSec * 1000, timeZone)}</b> ·{" "}
+              Posts <b className="font-semibold text-ink-100">{formatInZone(derived.announceSec * 1000, timeZone)}</b>,{" "}
               {formatRelative(derived.announceSec * 1000)}
             </>
           )}
+          </span>
         </p>
       </SectionCard>
 
@@ -152,10 +162,10 @@ function DiscordPreview({
   const addOn = addOnOption(form.addOn);
   const gameMs = derived.gameSec * 1000;
   return (
-    <SectionCard icon="👀" title="Preview" subtitle="Roughly what players will see in Discord">
-      <div className="rounded-xl bg-[#313338] p-3 font-sans text-[13px] leading-relaxed text-[#dbdee1]">
+    <SectionCard icon={Eye} title="Preview" subtitle="Roughly what players see in Discord">
+      <div className="gm-cut bg-[#313338] p-3 font-sans text-[13px] leading-relaxed text-[#dbdee1] [--cut:8px]">
         <div className="flex items-center gap-2">
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-brand-400 to-orange-600 text-sm">🤖</span>
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-400 font-stencil text-sm text-brand-950">GM</span>
           <span className="font-semibold text-white">GameMaster</span>
           <span className="rounded bg-[#5865F2] px-1 text-[10px] font-bold text-white">APP</span>
         </div>

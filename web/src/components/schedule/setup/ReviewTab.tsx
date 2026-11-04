@@ -1,10 +1,11 @@
 "use client";
 
+import { Check, CircleAlert, ClipboardList, Gamepad2, Send, TriangleAlert } from "lucide-react";
 import { addOnOption, lockLevelLabel, modeOption } from "@/lib/scheduleOptions";
 import type { HostOption } from "@/lib/scheduleTypes";
 import { formatInZone, formatRelative, zoneCity } from "@/lib/timeEngine";
 import { SectionCard } from "../ui";
-import { TABS, type DerivedSetup, type EditTarget, type SetupForm, type TabId } from "./model";
+import { TABS, tabOfSection, type DerivedSetup, type EditTarget, type SetupForm, type TabId } from "./model";
 import Timeline, { type TimelineMarker } from "./Timeline";
 
 export default function ReviewTab({
@@ -36,20 +37,23 @@ export default function ReviewTab({
   const gameMs = derived.gameSec * 1000;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {derived.issues.length > 0 ? (
-        <div className="rounded-2xl border border-rose-400/40 bg-rose-500/10 p-4">
-          <p className="text-sm font-bold text-rose-100">Fix {derived.issues.length === 1 ? "this" : "these"} first</p>
-          <ul className="mt-2 space-y-1.5">
+        <div className="gm-cut bg-rose-950/60 p-3 [--cut:9px]">
+          <p className="flex items-center gap-2 text-sm font-semibold text-rose-100">
+            <CircleAlert aria-hidden className="h-4 w-4 text-rose-300" strokeWidth={1.75} />
+            Fix {derived.issues.length === 1 ? "this" : "these"} first
+          </p>
+          <ul className="mt-2 space-y-1">
             {derived.issues.map((issue) => (
               <li key={`${issue.section}-${issue.message}`}>
                 <button
                   type="button"
-                  onClick={() => onGoTo(issue.section)}
+                  onClick={() => onGoTo(tabOfSection(issue.section))}
                   className="flex w-full items-start gap-2 text-left text-xs text-rose-100/90 hover:text-white"
                 >
-                  <span className="rounded bg-rose-500/30 px-1.5 py-px text-[10px] font-bold uppercase">
-                    {TABS.find((tab) => tab.id === issue.section)?.label}
+                  <span className="gm-tag h-[19px] shrink-0 bg-rose-900/60 px-2 text-[10.5px] text-rose-100">
+                    {TABS.find((tab) => tab.id === tabOfSection(issue.section))?.label}
                   </span>
                   {issue.message}
                 </button>
@@ -58,34 +62,38 @@ export default function ReviewTab({
           </ul>
         </div>
       ) : (
-        <div className="rounded-2xl border border-emerald-400/40 bg-emerald-500/10 p-4 text-sm font-semibold text-emerald-100">
-          ✓ Everything checks out — ready to send to the bot.
-        </div>
+        <p className="gm-cut flex items-center gap-2 bg-emerald-950/70 px-3.5 py-2.5 text-[13px] font-semibold text-emerald-200 [--cut:8px]">
+          <Check aria-hidden className="h-4 w-4 shrink-0" strokeWidth={2} />
+          Everything checks out: ready to send to the bot.
+        </p>
       )}
 
       {derived.conflicts.length > 0 && (
-        <div className="rounded-2xl border border-brand-300/40 bg-brand-400/10 p-4 text-xs text-brand-100">
-          ⚠️ Another host already has a {mode?.category} game that day (
-          {derived.conflicts.map((slot) => (slot.host_username ? `@${slot.host_username}` : "a host")).join(", ")}
-          ). Both games can run — you&apos;ll confirm when you schedule.
-        </div>
+        <p className="gm-cut flex gap-2 bg-yellow-950/50 px-3 py-2.5 text-xs text-yellow-100 [--cut:8px]">
+          <TriangleAlert aria-hidden className="mt-px h-4 w-4 shrink-0 text-yellow-300" strokeWidth={1.75} />
+          <span>
+            Another host already has a {mode?.category} game that day (
+            {derived.conflicts.map((slot) => (slot.host_username ? `@${slot.host_username}` : "a host")).join(", ")}). Both
+            games can run: you&apos;ll confirm when you schedule.
+          </span>
+        </p>
       )}
 
-      <SectionCard icon="🎮" title={mode ? mode.label : "No mode picked"} subtitle={mode?.category}>
-        <p className="text-2xl font-black text-white">{formatInZone(gameMs, timeZone)}</p>
-        <p className="text-xs text-ink-400">
-          {zoneCity(timeZone)} time · {formatRelative(gameMs)} · unix {derived.gameSec}
+      <SectionCard icon={Gamepad2} title={mode ? mode.label : "No mode picked"} subtitle={mode?.category}>
+        <p className="gm-title text-[30px]">{formatInZone(gameMs, timeZone)}</p>
+        <p className="mt-1 text-xs text-ink-400">
+          {zoneCity(timeZone)} time, {formatRelative(gameMs)}, unix {derived.gameSec}
         </p>
         {editing && (
-          <dl className="mt-3 grid grid-cols-[70px_1fr] gap-x-3 gap-y-1 border-t border-white/5 pt-3 text-xs">
+          <dl className="mt-3 grid grid-cols-[70px_1fr] gap-x-3 gap-y-1 border-t border-ink-800 pt-3 text-xs">
             <dt className="text-ink-500">Was</dt>
-            <dd className={editing.originalGameSec === derived.gameSec ? "text-ink-400" : "text-brand-200"}>
+            <dd className={editing.originalGameSec === derived.gameSec ? "text-ink-400" : "text-brand-300"}>
               {editing.originalGameSec === derived.gameSec
                 ? "Time unchanged"
                 : formatInZone(editing.originalGameSec * 1000, timeZone)}
             </dd>
             <dt className="text-ink-500">Host</dt>
-            <dd className={form.handoverTo ? "text-brand-200" : "text-ink-400"}>
+            <dd className={form.handoverTo ? "text-brand-300" : "text-ink-400"}>
               {form.handoverTo
                 ? `${hostName(editing.hostId)} → ${hostName(form.handoverTo)}`
                 : hostName(editing.hostId)}
@@ -93,9 +101,9 @@ export default function ReviewTab({
           </dl>
         )}
         {editing?.editable === "time_host" && (
-          <p className="mt-3 text-xs text-sky-200">
-            📨 Already announced: the announcement updates, and every reserved player
-            gets a DM about the change.
+          <p className="mt-3 flex gap-2 text-xs text-sky-200">
+            <Send aria-hidden className="mt-px h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
+            Already announced: the announcement updates, and every reserved player gets a DM about the change.
           </p>
         )}
       </SectionCard>
@@ -104,8 +112,8 @@ export default function ReviewTab({
         <Timeline nowSec={nowSec} gameSec={derived.gameSec} markers={markers} timeZone={timeZone} />
       )}
 
-      {editing?.editable !== "time_host" && <SectionCard icon="📋" title="Settings">
-        <dl className="grid grid-cols-[110px_1fr] gap-x-3 gap-y-1.5 text-xs">
+      {editing?.editable !== "time_host" && <SectionCard icon={ClipboardList} title="Settings" subtitle="Everything at a glance.">
+        <dl className="grid grid-cols-[110px_1fr] gap-x-3 gap-y-1.5 text-[13px] [&_dd]:text-ink-100 [&_dt]:text-xs [&_dt]:leading-5">
           <dt className="text-ink-500">Announcement</dt>
           <dd className="text-ink-200">
             {derived.announceSec === null
@@ -118,13 +126,13 @@ export default function ReviewTab({
           <dd className="text-ink-200">
             {lockLevelLabel(form.majorLevel)}
             {!derived.casino && form.unlocks.major.enabled && form.majorLevel !== "All Users" &&
-              ` → ${lockLevelLabel(form.unlocks.major.target)} at ${formatInZone(derived.unlockSec.major * 1000, timeZone)}`}
+              `, then ${lockLevelLabel(form.unlocks.major.target)} at ${formatInZone(derived.unlockSec.major * 1000, timeZone)}`}
           </dd>
           <dt className="text-ink-500">Minors</dt>
           <dd className="text-ink-200">
             {lockLevelLabel(form.minorLevel)}
             {!derived.casino && form.unlocks.minor.enabled && form.minorLevel !== "All Users" &&
-              ` → ${lockLevelLabel(form.unlocks.minor.target)} at ${formatInZone(derived.unlockSec.minor * 1000, timeZone)}`}
+              `, then ${lockLevelLabel(form.unlocks.minor.target)} at ${formatInZone(derived.unlockSec.minor * 1000, timeZone)}`}
           </dd>
           <dt className="text-ink-500">Nation locks</dt>
           <dd className="text-ink-200">
@@ -139,7 +147,7 @@ export default function ReviewTab({
                           : ", all game"
                       })`,
                   )
-                  .join(" · ")}
+                  .join("; ")}
           </dd>
           <dt className="text-ink-500">Preset</dt>
           <dd className="text-ink-200">{form.presetName ?? "None"}</dd>
@@ -148,10 +156,10 @@ export default function ReviewTab({
             {form.layout
               ? `${form.layout.filter((group) => group.enabled).map((group) => group.name).join(", ") || "none"}${
                   form.layout.some((group) => !group.enabled)
-                    ? ` · off: ${form.layout.filter((group) => !group.enabled).map((group) => group.name).join(", ")}`
+                    ? `; off: ${form.layout.filter((group) => !group.enabled).map((group) => group.name).join(", ")}`
                     : ""
                 }`
-              : "Standard"}
+              : "Whole map"}
           </dd>
           <dt className="text-ink-500">Rules</dt>
           <dd className="text-ink-200">
@@ -167,18 +175,18 @@ export default function ReviewTab({
             {form.draft
               ? `${form.draft.teams
                   .map((team) => `${team.name || "?"} (${team.captainName ?? "no captain"}: ${team.groups.join(", ") || "no groups"})`)
-                  .join(" vs ")} · ${form.draft.coinFlip ? "coin toss" : `${form.draft.teams[form.draft.firstPicker].name} first`}`
+                  .join(" vs ")}, ${form.draft.coinFlip ? "coin toss" : `${form.draft.teams[form.draft.firstPicker].name} first`}`
               : "No"}
           </dd>
           <dt className="text-ink-500">Add-on</dt>
           <dd className="text-ink-200">
-            {addOn.emoji} {addOn.label}
+            {addOn.label}
             {form.addOn === "fortunes" && ` (${form.fortunesMode})`}
           </dd>
-          <dt className="text-ink-500">Logging</dt>
+          <dt className="text-ink-500">Attendance</dt>
           <dd className="text-ink-200">{form.loggingMode}</dd>
           <dt className="text-ink-500">Reminder</dt>
-          <dd className="text-ink-200">{form.autoReminder ? `On · checksum ${form.checksum}` : "Off"}</dd>
+          <dd className="text-ink-200">{form.autoReminder ? `On, code ${form.checksum}` : "Off"}</dd>
         </dl>
       </SectionCard>}
     </div>

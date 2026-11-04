@@ -1,20 +1,22 @@
 "use client";
 
-import { useMemo } from "react";
+import { CalendarDays, ChevronDown, Clock, Gamepad2, Globe, Info, Lock, Mic, TriangleAlert, Users } from "lucide-react";
+import { useMemo, useState } from "react";
+import ModeIcon from "../ModeIcon";
 import {
-  CATEGORY_META,
   SCHEDULE_MODES,
   modeOption,
   type ScheduleCategory,
 } from "@/lib/scheduleOptions";
 import type { CalendarDayLock, HostOption } from "@/lib/scheduleTypes";
 import { branchOfMode, type HostBranch } from "@/lib/hostBranches";
-import { canBookDay, lastBookableDay, type BookingDays } from "@/lib/bookingWindow";
+import { bookingSummary, canBookDay, lastBookableDay, type BookingDays } from "@/lib/bookingWindow";
 import {
   DAY_NAMES,
   addDays,
   dateInZone,
   discordTag,
+  formatDateLong,
   formatInZone,
   formatOffset,
   formatRelative,
@@ -107,21 +109,21 @@ export default function GameTab({
   const minutes = hhmmToMinutes(form.time);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {editing && <HostCard form={form} update={update} editing={editing} hosts={hosts} />}
       {!timeOnly && form.mode && !branches.includes(branchOfMode(form.mode)) && (
-        <p className="rounded-xl border border-rose-400/40 bg-rose-500/10 px-3 py-2 text-xs text-rose-100">
-          {form.mode} is a {branchOfMode(form.mode) === "RP" ? "Roleplay" : "Historical"} game — you need an{" "}
+        <p className="gm-cut bg-rose-950/70 px-3 py-2 text-xs text-rose-100 [--cut:8px]">
+          {form.mode} is a {branchOfMode(form.mode) === "RP" ? "Roleplay" : "Historical"} game: you need an{" "}
           {branchOfMode(form.mode)} host rank to host it.
           {branches.length > 0 &&
             ` Pick a ${branches.map((branch) => (branch === "RP" ? "Roleplay" : "Historical")).join(" or ")} mode.`}
         </p>
       )}
       {timeOnly ? (
-        <SectionCard icon="🎮" title={modeOption(form.mode)?.label ?? form.mode} subtitle="Game mode">
+        <SectionCard icon={Gamepad2} title={modeOption(form.mode)?.label ?? form.mode} subtitle="Game mode">
           <p className="text-xs text-ink-400">
-            The mode, nation locks and other settings are fixed here once a game is announced — change
-            access, nation locks, rules and mods on the Games page.
+            Once a game is announced, its mode and settings are fixed here. Change access, nation locks, rules and
+            mods on the Games page.
           </p>
         </SectionCard>
       ) : (
@@ -137,8 +139,8 @@ export default function GameTab({
         </>
       )}
 
-      <SectionCard icon="📅" title="Day" subtitle="Bookable days — 🔒 days are locked by staff">
-        <div className="roster-scroll -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
+      <SectionCard icon={CalendarDays} title="Day" subtitle="Hatched days are locked by staff.">
+        <div className="roster-scroll -mx-1 flex gap-1 overflow-x-auto px-1 pb-1">
           {bookableDays.map((date) => {
             const active = date === form.date;
             // Staff locks never block the day an edited game is already on.
@@ -150,17 +152,23 @@ export default function GameTab({
                 disabled={locked}
                 onClick={() => update({ date })}
                 title={locked ? "Locked by staff" : undefined}
-                className={`flex w-12 shrink-0 flex-col items-center rounded-xl border py-1.5 transition ${
+                className={`gm-cut relative flex h-[54px] w-12 shrink-0 flex-col items-center justify-center [--cut:7px] ${
                   active
-                    ? "border-brand-300 bg-brand-400 text-ink-950"
+                    ? "bg-brand-400 text-brand-950"
                     : locked
-                      ? "gm-hatch cursor-not-allowed border-white/10 text-ink-500"
-                      : "border-white/10 bg-white/[0.03] text-ink-200 hover:border-white/30"
+                      ? "gm-hatch cursor-not-allowed text-ink-600"
+                      : "bg-ink-950 text-ink-400 hover:text-ink-100"
                 } ${weekdayIndex(date) === 0 && date !== today ? "ml-2" : ""}`}
               >
-                <span className="text-[10px] font-bold uppercase">{DAY_NAMES[weekdayIndex(date)].slice(0, 3)}</span>
-                <span className="text-base font-black leading-tight">{Number(date.slice(8))}</span>
-                <span className="text-[9px] font-semibold opacity-70">{locked ? "🔒" : date === today ? "today" : ""}</span>
+                <span className="text-[11px]">{DAY_NAMES[weekdayIndex(date)].slice(0, 3)}</span>
+                <span className={`font-display text-xl font-extrabold leading-none ${active ? "text-brand-950" : locked ? "text-ink-600" : "text-ink-100"}`}>
+                  {Number(date.slice(8))}
+                </span>
+                {locked ? (
+                  <Lock aria-label="Locked by staff" className="absolute right-1 top-1 h-[11px] w-[11px]" strokeWidth={2} />
+                ) : date === today ? (
+                  <span className={`text-[9.5px] ${active ? "text-brand-950" : "text-brand-400"}`}>today</span>
+                ) : null}
               </button>
             );
           })}
@@ -173,27 +181,33 @@ export default function GameTab({
               min={today}
               value={bookableDays.includes(form.date) ? "" : form.date}
               onChange={(event) => event.target.value && update({ date: event.target.value })}
-              className="rounded-lg border border-white/10 bg-ink-950/70 px-2 py-1 text-xs text-ink-100 [color-scheme:dark]"
+              className="gm-input min-h-8 py-1 text-xs [--cut:6px]"
             />
           </label>
         )}
         {!canBookDay(booking, form.date, today, nowMs, timeZone, form.mode || null) && form.date !== editing?.originalDate && (
           <p className="mt-2 text-xs text-rose-300">
-            {form.date} isn&apos;t bookable any more — pick one of the days above.
+            {form.date} can&apos;t be booked any more. Pick one of the days above.
           </p>
         )}
-        <p className="mt-2 text-[11px] text-ink-500">
-          Board week of {mondayOf(form.date)} · {DAY_NAMES[weekdayIndex(form.date)]}
+        <p className="mt-2 flex gap-2 text-xs text-ink-400">
+          <Info aria-hidden className="mt-px h-3.5 w-3.5 shrink-0 text-ink-500" strokeWidth={1.75} />
+          <span>
+            {bookingSummary(booking, today, formatDateLong)} Board week of {mondayOf(form.date)}.
+          </span>
         </p>
       </SectionCard>
 
       <SectionCard
-        icon="🕒"
+        icon={Clock}
         title="Start time"
-        subtitle={`Your local time · ${zoneCity(timeZone)} (${formatOffset(offsetMinutes(gameMs, timeZone))})`}
+        subtitle={`Your time, ${zoneCity(timeZone)} (${formatOffset(offsetMinutes(gameMs, timeZone))}). Everyone sees it in their own time.`}
       >
         <div className="flex items-end justify-between gap-3">
-          <p className="text-5xl font-black tabular-nums tracking-tight text-white">{form.time}</p>
+          <p className="leading-none">
+            <span className="gm-title text-[44px] tabular-nums">{form.time}</span>
+            <span className="ml-2.5 text-xs text-ink-400">{formatRelative(gameMs)}</span>
+          </p>
           <input
             type="time"
             value={form.time}
@@ -201,7 +215,7 @@ export default function GameTab({
             onChange={(event) => {
               if (isHHMM(event.target.value)) update({ time: event.target.value });
             }}
-            className="rounded-lg border border-white/10 bg-ink-950/70 px-3 py-2 text-sm font-semibold text-ink-100 [color-scheme:dark] focus:border-brand-300/50 focus:outline-none"
+            className="gm-input text-sm font-semibold"
             aria-label="Exact start time"
           />
         </div>
@@ -222,16 +236,14 @@ export default function GameTab({
             ]}
           />
         </div>
-        <div className="mt-3 flex flex-wrap gap-1.5">
+        <div className="mt-3 grid grid-cols-7 gap-1">
           {QUICK_TIMES.map((time) => (
             <button
               key={time}
               type="button"
               onClick={() => update({ time })}
-              className={`rounded-lg border px-2.5 py-1 text-xs font-bold tabular-nums transition ${
-                form.time === time
-                  ? "border-brand-300 bg-brand-400 text-ink-950"
-                  : "border-white/10 bg-white/[0.04] text-ink-300 hover:border-white/30"
+              className={`gm-cut h-[30px] text-xs font-semibold tabular-nums [--cut:6px] ${
+                form.time === time ? "bg-brand-400 text-brand-950" : "bg-ink-950 text-ink-300 hover:text-ink-100"
               }`}
             >
               {time}
@@ -239,14 +251,16 @@ export default function GameTab({
           ))}
         </div>
         {derived.conversion === "skipped" && (
-          <p className="mt-3 rounded-lg border border-brand-300/30 bg-brand-400/10 px-3 py-2 text-xs text-brand-100">
-            ⚠️ Clocks jump forward that night — {form.time} doesn&apos;t exist in {zoneCity(timeZone)}, so the game is
-            set to {timeInZone(gameMs, timeZone)}.
+          <p className="gm-cut mt-3 flex gap-2 bg-yellow-950/60 px-3 py-2 text-xs text-yellow-100 [--cut:7px]">
+            <TriangleAlert aria-hidden className="mt-px h-3.5 w-3.5 shrink-0 text-yellow-300" strokeWidth={1.75} />
+            Clocks jump forward that night: {form.time} doesn&apos;t exist in {zoneCity(timeZone)}, so the game is set to{" "}
+            {timeInZone(gameMs, timeZone)}.
           </p>
         )}
         {derived.conversion === "ambiguous" && (
-          <p className="mt-3 rounded-lg border border-brand-300/30 bg-brand-400/10 px-3 py-2 text-xs text-brand-100">
-            ⚠️ Clocks fall back that night, so {form.time} happens twice — the first one is used.
+          <p className="gm-cut mt-3 flex gap-2 bg-yellow-950/60 px-3 py-2 text-xs text-yellow-100 [--cut:7px]">
+            <TriangleAlert aria-hidden className="mt-px h-3.5 w-3.5 shrink-0 text-yellow-300" strokeWidth={1.75} />
+            Clocks fall back that night, so {form.time} happens twice. The first one is used.
           </p>
         )}
       </SectionCard>
@@ -254,21 +268,22 @@ export default function GameTab({
       <ConversionCard gameSec={derived.gameSec} timeZone={timeZone} />
 
       {(derived.sameDay.length > 0 || form.mode) && (
-        <SectionCard icon="👥" title="Same day" subtitle="Other games on the board that day">
+        <SectionCard icon={Users} title="Same day" subtitle="Other games on the board that day">
           {derived.sameDay.length === 0 ? (
-            <p className="text-xs text-ink-400">No other games yet — the day is yours.</p>
+            <p className="text-xs text-ink-400">No other games yet: the day is yours.</p>
           ) : (
-            <ul className="space-y-1.5">
+            <ul className="space-y-1">
               {derived.sameDay.map((slot) => {
                 const conflict = derived.conflicts.includes(slot);
                 return (
                   <li
                     key={slot.slot_id}
-                    className={`flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-xs ${
-                      conflict ? "border-brand-300/40 bg-brand-400/10 text-brand-100" : "border-white/10 text-ink-300"
+                    className={`gm-cut flex items-center gap-2.5 px-2.5 py-1.5 text-[13px] [--cut:7px] ${
+                      conflict ? "bg-yellow-950/50 text-ink-100" : "bg-ink-950 text-ink-300"
                     }`}
                   >
-                    <span className="tabular-nums font-bold">{timeInZone(slot.game_timestamp * 1000, timeZone)}</span>
+                    <ModeIcon mode={slot.mode} className="h-3.5 w-3.5 shrink-0 text-ink-400" strokeWidth={1.75} />
+                    <span className="font-semibold tabular-nums text-ink-100">{timeInZone(slot.game_timestamp * 1000, timeZone)}</span>
                     <span className="truncate">{modeOption(slot.mode)?.label ?? slot.mode}</span>
                     <span className="ml-auto truncate text-ink-400">
                       {slot.mine ? "you" : slot.host_username ? `@${slot.host_username}` : ""}
@@ -279,8 +294,8 @@ export default function GameTab({
             </ul>
           )}
           {derived.conflicts.length > 0 && (
-            <p className="mt-2 text-[11px] text-brand-200/80">
-              Another host already runs a {modeOption(form.mode)?.category ?? ""} game this day. That&apos;s allowed —
+            <p className="mt-2 text-[11px] text-yellow-200/90">
+              Another host already runs a {modeOption(form.mode)?.category ?? ""} game this day. That&apos;s allowed:
               you&apos;ll be asked to confirm.
             </p>
           )}
@@ -303,49 +318,41 @@ function ModePicker({
   hidden: readonly string[];
 }) {
   return (
-    <SectionCard icon="🎮" title="Game mode" subtitle="What are you hosting?">
+    <SectionCard icon={Gamepad2} title="Game mode" subtitle="What are you hosting?">
       <div className="space-y-3">
         {(["Roleplay", "Historical"] as ScheduleCategory[]).map((category) => {
           const branch: HostBranch = category === "Roleplay" ? "RP" : "HIST";
           const allowed = branches.includes(branch);
           if (!SCHEDULE_MODES.some((mode) => mode.category === category && !hidden.includes(mode.value))) return null;
           return (
-          <div key={category} className={allowed ? "" : "opacity-50"}>
-            <p className={`mb-1.5 text-[10px] font-bold uppercase tracking-[0.18em] ${CATEGORY_META[category].text}`}>
-              {CATEGORY_META[category].emoji} {category}
-              {!allowed && <span className="ml-1 normal-case tracking-normal text-ink-400">· needs an {branch} host rank</span>}
-            </p>
-            <div className="grid grid-cols-2 gap-1.5">
-              {SCHEDULE_MODES.filter((mode) => mode.category === category && !hidden.includes(mode.value)).map((mode) => {
-                const active = value === mode.value;
-                return (
-                  <button
-                    key={mode.value}
-                    type="button"
-                    disabled={!allowed}
-                    onClick={() => onChange(mode.value)}
-                    title={allowed ? undefined : `Only ${branch} hosts host ${category} games`}
-                    className={`group rounded-xl border px-3 py-2 text-left transition-all disabled:cursor-not-allowed ${
-                      active
-                        ? "border-brand-300/80 bg-brand-400/15 shadow-[0_0_18px_rgba(251,191,36,0.18)]"
-                        : "border-white/10 bg-white/[0.03] hover:border-white/25 hover:bg-white/[0.06]"
-                    }`}
-                  >
-                    <span className={`block truncate text-[13px] font-bold ${active ? "text-brand-100" : "text-ink-100"}`}>
-                      {mode.label}
-                    </span>
-                    <span className="mt-0.5 flex flex-wrap gap-1 text-[10px] font-semibold">
-                      {mode.scenarioId ? (
-                        <span className="text-emerald-300/80">🗺️ Map</span>
-                      ) : (
-                        <span className="text-ink-500">No map</span>
-                      )}
-                    </span>
-                  </button>
-                );
-              })}
+            <div key={category}>
+              <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-ink-500">
+                <ModeIcon mode={category} className="h-3.5 w-3.5" strokeWidth={1.75} />
+                {category}
+                {!allowed && <span className="font-normal text-ink-500">, needs a {branch} host rank</span>}
+              </p>
+              <div className="grid grid-cols-2 gap-1">
+                {SCHEDULE_MODES.filter((mode) => mode.category === category && !hidden.includes(mode.value)).map((mode) => {
+                  const active = value === mode.value;
+                  return (
+                    <button
+                      key={mode.value}
+                      type="button"
+                      disabled={!allowed}
+                      onClick={() => onChange(mode.value)}
+                      aria-pressed={active}
+                      title={allowed ? undefined : `Only ${branch} hosts host ${category} games`}
+                      className={`gm-cut flex h-9 items-center gap-2 px-2.5 text-left text-[13px] font-semibold [--cut:7px] disabled:cursor-not-allowed disabled:opacity-35 ${
+                        active ? "bg-brand-400 text-brand-950" : "bg-ink-950 text-ink-300 hover:text-ink-100"
+                      }`}
+                    >
+                      <ModeIcon mode={mode.value} className="h-4 w-4 shrink-0" strokeWidth={1.75} />
+                      <span className="truncate">{mode.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
           );
         })}
       </div>
@@ -375,25 +382,25 @@ function HostCard({
     ? eligible
     : [{ discord_id: editing.hostId, username: editing.hostName, display_name: null, branches: [] }, ...eligible];
   return (
-    <SectionCard icon="🎙️" title="Host" subtitle={`Hand the game over to another ${branch} host if needed`}>
+    <SectionCard icon={Mic} title="Host" subtitle={`Hand the game over to another ${branch} host if needed`}>
       <select
         value={current}
         onChange={(event) =>
           update({ handoverTo: event.target.value === editing.hostId ? null : event.target.value })
         }
-        className="w-full rounded-lg border border-white/10 bg-ink-950/70 px-3 py-2 text-sm font-semibold text-ink-100 [color-scheme:dark] focus:border-brand-300/50 focus:outline-none"
+        className="gm-input w-full text-sm font-semibold"
         aria-label="Host"
       >
         {options.map((host) => (
           <option key={host.discord_id} value={host.discord_id}>
             {host.display_name || host.username || host.discord_id}
             {host.username && host.display_name ? ` (@${host.username})` : ""}
-            {host.discord_id === editing.hostId ? " — current host" : ""}
+            {host.discord_id === editing.hostId ? " (current host)" : ""}
           </option>
         ))}
       </select>
       {form.handoverTo && (
-        <p className="mt-2 text-xs text-brand-200">
+        <p className="mt-2 text-xs text-ink-300">
           The game moves to the new host when you save
           {editing.editable === "time_host" ? "; the announcement and reserved players are updated too." : "."}
         </p>
@@ -402,35 +409,59 @@ function HostCard({
   );
 }
 
-/** The conversion engine, made visible: local → UTC → unix → every zone. */
+/** The conversion engine, made visible: local → UTC → unix → every zone. Folded until opened. */
 function ConversionCard({ gameSec, timeZone }: { gameSec: number; timeZone: string }) {
+  const [open, setOpen] = useState(false);
   const gameMs = gameSec * 1000;
   const hostDate = dateInZone(gameMs, timeZone);
   const zones = SAMPLE_ZONES.filter((zone) => zone !== timeZone).slice(0, 6);
+  const shiftOf = (zone: string) => {
+    const date = dateInZone(gameMs, zone);
+    return date === hostDate ? "" : date > hostDate ? "+1d" : "−1d";
+  };
   return (
-    <SectionCard icon="🌍" title="Time conversion" subtitle="Everyone sees the game in their own time zone">
-      <dl className="space-y-2 text-xs">
-        <Row label="Your time" value={`${formatInZone(gameMs, timeZone)} · ${formatRelative(gameMs)}`} strong />
-        <Row label="UTC" value={formatInZone(gameMs, "UTC")} />
-        <Row label="Unix timestamp" value={String(gameSec)} copy={String(gameSec)} mono />
-        <Row label="Discord tag" value={discordTag(gameSec)} copy={discordTag(gameSec)} mono />
-      </dl>
-      <div className="mt-3 grid grid-cols-2 gap-1.5">
-        {zones.map((zone) => {
-          const date = dateInZone(gameMs, zone);
-          const shift = date === hostDate ? "" : date > hostDate ? "+1d" : "−1d";
-          return (
-            <div key={zone} className="flex items-center justify-between rounded-lg border border-white/5 bg-white/[0.03] px-2.5 py-1.5">
-              <span className="truncate text-[11px] text-ink-400">{zoneCity(zone)}</span>
-              <span className="text-xs font-bold tabular-nums text-ink-100">
-                {timeInZone(gameMs, zone)}
-                {shift && <span className="ml-1 text-[10px] font-semibold text-brand-300">{shift}</span>}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-    </SectionCard>
+    <section className="gm-cut bg-ink-900 [--cut:10px]">
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        aria-expanded={open}
+        className="flex w-full items-center gap-2.5 p-3.5 text-left"
+      >
+        <Globe aria-hidden className="h-[17px] w-[17px] shrink-0 text-brand-400" strokeWidth={1.75} />
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-semibold text-ink-100">Other time zones</span>
+          <span className="block truncate text-xs text-ink-400">
+            {zones
+              .slice(0, 3)
+              .map((zone) => `${zoneCity(zone)} ${timeInZone(gameMs, zone)}${shiftOf(zone)}`)
+              .join(", ")}
+            , and the Discord tag
+          </span>
+        </span>
+        <ChevronDown aria-hidden className={`h-4 w-4 shrink-0 text-ink-400 transition-transform ${open ? "rotate-180" : ""}`} strokeWidth={1.75} />
+      </button>
+      {open && (
+        <div className="gm-fade-up px-3.5 pb-3.5">
+          <dl className="space-y-1.5 text-xs">
+            <Row label="Your time" value={`${formatInZone(gameMs, timeZone)}, ${formatRelative(gameMs)}`} strong />
+            <Row label="UTC" value={formatInZone(gameMs, "UTC")} />
+            <Row label="Unix timestamp" value={String(gameSec)} copy={String(gameSec)} mono />
+            <Row label="Discord tag" value={discordTag(gameSec)} copy={discordTag(gameSec)} mono />
+          </dl>
+          <div className="mt-3 grid grid-cols-2 gap-1">
+            {zones.map((zone) => (
+              <div key={zone} className="gm-cut flex items-center justify-between bg-ink-950 px-2.5 py-1.5 [--cut:6px]">
+                <span className="truncate text-[11.5px] text-ink-400">{zoneCity(zone)}</span>
+                <span className="text-xs font-semibold tabular-nums text-ink-100">
+                  {timeInZone(gameMs, zone)}
+                  {shiftOf(zone) && <span className="ml-1 text-[10px] text-brand-300">{shiftOf(zone)}</span>}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -450,7 +481,7 @@ function Row({
   return (
     <div className="flex items-center gap-2">
       <dt className="w-28 shrink-0 text-ink-500">{label}</dt>
-      <dd className={`min-w-0 flex-1 truncate ${mono ? "font-mono" : ""} ${strong ? "font-bold text-white" : "text-ink-200"}`}>
+      <dd className={`min-w-0 flex-1 truncate ${mono ? "font-mono" : ""} ${strong ? "font-semibold text-ink-100" : "text-ink-300"}`}>
         {value}
       </dd>
       {copy && <CopyButton text={copy} />}

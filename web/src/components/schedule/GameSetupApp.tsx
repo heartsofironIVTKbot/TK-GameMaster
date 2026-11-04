@@ -1,13 +1,15 @@
 "use client";
 
+import { ChevronLeft, ChevronRight, CircleAlert, Info, Lock, LockOpen, Map as MapIcon, Megaphone, PanelRightOpen, TriangleAlert } from "lucide-react";
 import { MenuButton } from "@/components/site/SiteMenu";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react";
+import { useTutorialFacts } from "@/components/tutorial/TutorialProvider";
 import { boardDisplayName, canonicalName, nationMatchKeys } from "@/data/nationCategories";
 import { usePresetDefaults } from "@/components/presets/usePresetDefaults";
 import { notPlayableNations, type GamePreset } from "@/lib/presetTypes";
-import { CATEGORY_META, lockLevelLabel, modeOption } from "@/lib/scheduleOptions";
+import { lockLevelLabel, modeOption } from "@/lib/scheduleOptions";
 import { lastBookableDay } from "@/lib/bookingWindow";
 import type {
   CalendarDayLock,
@@ -20,6 +22,7 @@ import type {
 import type { NationFeatureProps, RosterNation } from "@/lib/types";
 import { addDays, dateInZone, formatDateLong, isIsoDate, todayInZone } from "@/lib/timeEngine";
 import AccessTab from "./setup/AccessTab";
+import ModeIcon from "./ModeIcon";
 import AnnounceTab from "./setup/AnnounceTab";
 import ExtrasTab from "./setup/ExtrasTab";
 import GameTab from "./setup/GameTab";
@@ -36,12 +39,13 @@ import {
   deriveSetup,
   formFromSettings,
   initialForm,
+  tabOfSection,
   type EditTarget,
   type SetupForm,
   type TabId,
 } from "./setup/model";
 import TimeZonePicker, { useHostTimeZone } from "./TimeZonePicker";
-import { GLASS, HostAvatar, Spinner } from "./ui";
+import { HostAvatar, Spinner } from "./ui";
 import { submitScheduleRequest } from "./useRequestPoller";
 
 // Leaflet touches `window` on import — load the map in the browser only.
@@ -55,9 +59,10 @@ const HostLockMap = dynamic(() => import("./HostLockMap"), {
 });
 
 /**
- * Game setup: the scenario map fills the screen (click nations to lock
- * them) and a drawer on the right walks through the /schedule options —
- * game & time, announcement, access & unlocks, nation locks, extras, review.
+ * Game setup: the scenario map beside a panel on the right that walks
+ * through the /schedule options in five steps: game and time,
+ * announcement, players (who can reserve and nation locks: click nations on
+ * the map to lock them), extras, review.
  *
  * With `editSlotId` it edits an existing game instead: every setting before
  * the announcement, only the day/time/host after it.
@@ -84,7 +89,12 @@ export default function GameSetupApp({
   const [tab, setTab] = useState<TabId>("game");
   const [drawerOpen, setDrawerOpen] = useState(true);
   const [nations, setNations] = useState<RosterNation[]>([]);
-  const [hovered, setHovered] = useState<NationFeatureProps | null>(null);
+  // Hover goes straight to the name pill: re-rendering the whole panel on
+  // every mouse move made the map stutter.
+  const hoverListenerRef = useRef<((nation: NationFeatureProps | null) => void) | null>(null);
+  const handleHover = useCallback((nation: NationFeatureProps | null) => hoverListenerRef.current?.(nation), []);
+  /** Red borders on the preset's not-playable nations (players see them greyed out). */
+  const [showExcluded, setShowExcluded] = useState(false);
   const [focusRequest, setFocusRequest] = useState<{ tag: string; nonce: number } | null>(null);
   const [board, setBoard] = useState<{ slots: CalendarSlot[]; locks: CalendarDayLock[] }>({
     slots: [],
@@ -102,6 +112,8 @@ export default function GameSetupApp({
   const [hosts, setHosts] = useState<HostOption[]>([]);
   // Zone at load time: the edit form is prefilled once, not on zone changes.
   const loadZoneRef = useRef(timeZone);
+
+  useTutorialFacts({ isHost: true, isStaff: host.is_staff, helpInBar: true });
 
   const update = useCallback((patch: Partial<SetupForm>) => {
     setForm((current) => ({ ...current, ...patch }));
@@ -257,7 +269,7 @@ export default function GameSetupApp({
 
   const activeGroup =
     form.lockGroups.find((group) => group.id === form.activeGroupId) ?? form.lockGroups[0];
-  const { activeTags, otherTags } = useMemo(() => {
+  const { editingTags, groupTags } = useMemo(() => {
     // Locks hold the bot's nation names; the map sometimes names them differently.
     const activeKeys = new Set(activeGroup.nations.map(canonicalName));
     const otherKeys = new Set(
@@ -266,8 +278,8 @@ export default function GameSetupApp({
     const matches = (nation: RosterNation, keys: Set<string>) =>
       [...nationMatchKeys(nation.tag, nation.slot_key ?? "", nation.name)].some((key) => keys.has(key));
     return {
-      activeTags: nations.filter((nation) => matches(nation, activeKeys)).map((nation) => nation.tag),
-      otherTags: nations.filter((nation) => matches(nation, otherKeys)).map((nation) => nation.tag),
+      editingTags: nations.filter((nation) => matches(nation, activeKeys)).map((nation) => nation.tag),
+      groupTags: nations.filter((nation) => matches(nation, otherKeys)).map((nation) => nation.tag),
     };
   }, [nations, form.lockGroups, activeGroup]);
 
@@ -278,6 +290,16 @@ export default function GameSetupApp({
     [modeDefaults],
   );
   const notPlayable = useMemo(() => notPlayableNations(form.layout, botNations), [form.layout, botNations]);
+  // Map nations outside the preset's playable groups (players see them greyed out).
+  const excludedTags = useMemo(() => {
+    if (!form.layout) return [];
+    const playable = new Set(
+      form.layout.filter((group) => group.enabled).flatMap((group) => group.tiers.flatMap((tier) => tier.nations)).map(canonicalName),
+    );
+    return nations
+      .filter((nation) => ![...nationMatchKeys(nation.tag, nation.slot_key ?? "", nation.name)].some((key) => playable.has(key)))
+      .map((nation) => nation.tag);
+  }, [form.layout, nations]);
   const toBotName = useCallback(
     (slot: string) => {
       const nation = nations.find((entry) => entry.slot_key === slot);
@@ -322,7 +344,7 @@ export default function GameSetupApp({
         return;
       }
       toggleNations([nation.slot_key]);
-      setTab("nations");
+      setTab("players");
       setDrawerOpen(true);
     },
     [toggleNations, timeOnly],
@@ -348,7 +370,7 @@ export default function GameSetupApp({
     if (hadPreset) setToast("Preset removed — it was made for another mode.");
     if (changedMap) {
       setNations([]);
-      setHovered(null);
+      handleHover(null);
       if (hadLocks) setToast("Nation locks cleared — this mode uses a different map.");
     }
   };
@@ -356,7 +378,7 @@ export default function GameSetupApp({
   const markers = useMemo<TimelineMarker[]>(() => {
     const list: TimelineMarker[] = [];
     if (derived.announceSec !== null) {
-      list.push({ key: "announce", unixSec: derived.announceSec, icon: "📣", label: "Announcement", color: "#38bdf8" });
+      list.push({ key: "announce", unixSec: derived.announceSec, icon: Megaphone, label: "Announced", color: "oklch(86% 0.15 95)" });
     }
     if (!derived.casino) {
       for (const scope of ["major", "minor"] as const) {
@@ -366,9 +388,9 @@ export default function GameSetupApp({
           list.push({
             key: `unlock-${scope}`,
             unixSec: derived.unlockSec[scope],
-            icon: "🔓",
+            icon: LockOpen,
             label: `${scope === "major" ? "Majors" : "Minors"} open to ${lockLevelLabel(unlock.target)}`,
-            color: scope === "major" ? "#a78bfa" : "#34d399",
+            color: scope === "major" ? "oklch(72% 0.13 300)" : "oklch(79.4% 0.118 174)",
           });
         }
       }
@@ -378,16 +400,16 @@ export default function GameSetupApp({
         list.push({
           key: `release-${group.id}`,
           unixSec: derived.releaseSec[group.id],
-          icon: "🗺️",
+          icon: Lock,
           label: `${group.label} unlocks`,
-          color: "#fb7185",
+          color: "oklch(70% 0.17 22)",
         });
       }
     }
     return list;
   }, [derived, form]);
 
-  const issueSections = new Set(derived.issues.map((issue) => issue.section));
+  const issueSections = new Set(derived.issues.map((issue) => tabOfSection(issue.section)));
 
   const send = async () => {
     if (!derived.payload) return;
@@ -410,7 +432,7 @@ export default function GameSetupApp({
 
   const handleSchedule = () => {
     if (!derived.payload) {
-      setTab(derived.issues[0]?.section ?? "review");
+      setTab(derived.issues[0] ? tabOfSection(derived.issues[0].section) : "review");
       return;
     }
     if (derived.conflicts.length > 0) {
@@ -421,24 +443,21 @@ export default function GameSetupApp({
   };
 
   const tabIndex = tabs.findIndex((entry) => entry.id === tab);
-  const category = mode ? CATEGORY_META[mode.category] : null;
+  const nextTab = tabs[tabIndex + 1] ?? null;
 
   if (editLoad.state !== "ready") {
     return (
-      <main className="gm-backdrop flex min-h-screen w-full items-center justify-center p-4 text-ink-100">
+      <main className="flex min-h-screen w-full items-center justify-center bg-ink-950 p-4 text-ink-100">
         {editLoad.state === "loading" ? (
           <p className="flex items-center gap-3 text-sm font-semibold text-ink-300">
             <Spinner className="h-5 w-5 text-brand-400" /> Loading the game…
           </p>
         ) : (
-          <div className={`gm-fade-up w-full max-w-md rounded-3xl p-8 text-center ${GLASS}`}>
-            <div className="text-5xl">🔒</div>
-            <h1 className="mt-4 text-xl font-black text-white">Can&apos;t edit this game</h1>
+          <div className="gm-plate gm-fade-up flex w-full max-w-md flex-col items-center p-8 text-center">
+            <Lock aria-hidden className="h-9 w-9 text-ink-500" strokeWidth={1.5} />
+            <h1 className="gm-title mt-4 text-[28px]">Can&apos;t edit this game</h1>
             <p className="mt-2 text-sm text-ink-400">{editLoad.message}</p>
-            <Link
-              href="/schedule"
-              className="mt-6 inline-block rounded-xl bg-brand-400 px-5 py-2.5 text-sm font-black text-ink-950"
-            >
+            <Link href="/schedule" className="gm-btn gm-btn-primary mt-6">
               Back to the calendar
             </Link>
           </div>
@@ -447,31 +466,39 @@ export default function GameSetupApp({
     );
   }
 
+  const describeHover = (nation: NationFeatureProps) => ({
+    name: scenarioId ? boardDisplayName(scenarioId, nation.tag, nation.name) : nation.name,
+    status: activeGroup.nations.includes(nation.slot_key ?? "")
+      ? "click to unlock"
+      : form.lockGroups.some((group) => group.nations.includes(nation.slot_key ?? ""))
+        ? `click to move into ${activeGroup.label}`
+        : `click to lock in ${activeGroup.label}`,
+  });
+
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-ink-950 text-ink-100">
-      {/* Map (or a backdrop for modes without one) */}
-      <div className="absolute inset-0 z-0">
+      {/* Map (the WebGL switch rebuilds it; it keeps today's look until then) */}
+      <div data-tour="setup.map" className="absolute inset-x-0 bottom-0 top-14 z-0 lg:right-[420px]">
         {scenarioId ? (
           <HostLockMap
             scenarioId={scenarioId}
-            activeTags={activeTags}
-            otherTags={otherTags}
+            editingTags={editingTags}
+            groupTags={groupTags}
+            excludedTags={showExcluded ? excludedTags : NO_TAGS}
             onNationClick={handleMapClick}
             onNationsChange={setNations}
-            onHoverChange={setHovered}
+            onHoverChange={handleHover}
             focusRequest={focusRequest}
           />
         ) : (
-          <div className="gm-backdrop flex h-full w-full items-center justify-center p-8 lg:pr-[500px]">
+          <div className="flex h-full w-full items-center justify-center bg-[#0f1d21] p-8">
             <div className="max-w-md text-center">
-              <div className="text-6xl opacity-80">{category?.emoji ?? "🗺️"}</div>
-              <p className="mt-4 text-2xl font-black text-white/80">
-                {mode ? mode.label : "Pick a game mode"}
-              </p>
+              {mode ? <ModeIcon mode={mode.value} className="mx-auto h-10 w-10 text-ink-500" strokeWidth={1.5} /> : <MapIcon aria-hidden className="mx-auto h-10 w-10 text-ink-500" strokeWidth={1.5} />}
+              <p className="gm-title mt-4 text-[28px]">{mode ? mode.label : "Pick a game mode"}</p>
               <p className="mt-2 text-sm text-ink-400">
                 {mode
-                  ? "This mode has no interactive map yet — nation locks can still be added by name."
-                  : "Its map appears here, and you can click nations to lock them."}
+                  ? "This mode has no map yet. Nation locks can still be added by name."
+                  : "Its map shows here, and you can click nations to lock them."}
               </p>
             </div>
           </div>
@@ -479,118 +506,100 @@ export default function GameSetupApp({
       </div>
 
       {/* Top bar */}
-      <header className="absolute inset-x-0 top-0 z-[1000] border-b border-white/10 bg-ink-950/55 backdrop-blur-md">
-        <div className="flex h-16 items-center gap-3 px-3 sm:px-5">
-          <Link
-            href="/schedule"
-            className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-ink-200 transition hover:border-brand-300/40"
-          >
-            ← Calendar
-          </Link>
-          <div className="min-w-0 leading-tight">
-            <p className="truncate text-sm font-black text-white">
-              {editing ? "Edit game" : "New game"} · {formatDateLong(form.date)}
-            </p>
-            <p className="truncate text-[11px] font-semibold text-ink-400">
-              {mode ? (
-                <span className={category?.text}>
-                  {category?.emoji} {mode.label}
-                </span>
-              ) : (
-                "No mode picked yet"
-              )}{" "}
-              · {form.time}
-            </p>
-          </div>
-          {host.demo && (
-            <span className="hidden rounded-full border border-fuchsia-400/40 bg-fuchsia-500/15 px-3 py-1 text-[11px] font-bold text-fuchsia-200 md:inline">
-              PREVIEW MODE
-            </span>
-          )}
-          <div className="ml-auto flex items-center gap-2">
+      <header className="absolute inset-x-0 top-0 z-[1000] flex h-14 items-center gap-3 border-b border-ink-800 bg-ink-950 px-3 sm:px-4">
+        <Link href="/schedule" className="gm-btn gm-btn-quiet h-9 w-9 p-0" aria-label="Back to the calendar">
+          <ChevronLeft aria-hidden strokeWidth={1.75} />
+        </Link>
+        <span className="gm-cut hidden h-9 w-9 shrink-0 place-items-center bg-ink-800 text-ink-100 sm:grid">
+          {mode ? <ModeIcon mode={mode.value} className="h-[18px] w-[18px]" strokeWidth={1.75} /> : <MapIcon aria-hidden className="h-[18px] w-[18px]" strokeWidth={1.75} />}
+        </span>
+        <div className="min-w-0 leading-tight">
+          <p className="truncate text-xs text-ink-400">
+            {editing ? "Edit game" : "New game"}
+            {mode ? `, ${mode.label}` : ""}
+          </p>
+          <p className="gm-title truncate text-[22px]">
+            {formatDateLong(form.date)}, {form.time}
+          </p>
+        </div>
+        {host.demo && <span className="gm-tag hidden bg-fuchsia-500/15 text-fuchsia-200 md:inline-flex">Preview: sample data</span>}
+        <div className="ml-auto flex items-center gap-2">
+          <span className="hidden sm:block">
             <TimeZonePicker value={timeZone} onChange={setTimeZone} />
-            <span className="hidden sm:block">
-              <HostAvatar host={host} />
-            </span>
-            <MenuButton current="calendar" label={false} />
-          </div>
+          </span>
+          {/* Room for the Help button (it sits here, see useTutorialFacts). */}
+          <span aria-hidden className="w-[92px] shrink-0" />
+          <span className="hidden sm:block">
+            <HostAvatar host={host} />
+          </span>
+          <MenuButton current="calendar" label={false} />
         </div>
       </header>
 
-      {/* Hovered nation */}
-      {scenarioId && hovered && (
-        <div className="pointer-events-none absolute left-1/2 top-20 z-[950] -translate-x-1/2 rounded-full border border-white/15 bg-ink-950/80 px-4 py-1.5 text-xs font-semibold text-ink-100 shadow-xl backdrop-blur-md lg:left-[calc(50%-240px)]">
-          {boardDisplayName(scenarioId, hovered.tag, hovered.name)}
-          <span className="ml-2 text-ink-400">
-            {activeGroup.nations.includes(hovered.slot_key ?? "")
-              ? "click to unlock"
-              : form.lockGroups.some((group) => group.nations.includes(hovered.slot_key ?? ""))
-                ? `click to move into “${activeGroup.label}”`
-                : `click to lock in “${activeGroup.label}”`}
-          </span>
-        </div>
-      )}
+      {scenarioId && <HoverPill listenerRef={hoverListenerRef} describe={describeHover} />}
 
-      {/* Map legend */}
+      {/* What the map's colours mean */}
       {scenarioId && (
-        <div className="absolute bottom-4 left-4 z-[950] rounded-2xl border border-white/10 bg-ink-950/75 px-3.5 py-2.5 text-[11px] font-semibold text-ink-300 shadow-xl backdrop-blur-md">
-          <p className="flex items-center gap-2">
-            <span className="h-2.5 w-2.5 rounded-sm bg-[#ff5266] shadow-[0_0_8px_#ff2442]" />
-            Editing: {activeGroup.label} ({activeGroup.nations.length})
-          </p>
-          {form.lockGroups.length > 1 && (
-            <p className="mt-1 flex items-center gap-2">
-              <span className="h-2.5 w-2.5 rounded-sm bg-[#3cc4ff] shadow-[0_0_8px_#1f6bff]" />
-              Other lock groups
-            </p>
+        <div className="absolute left-3 right-3 top-[68px] z-[950] hidden flex-wrap items-center gap-2 lg:right-[436px] lg:flex">
+          <div className="gm-cut flex flex-wrap items-center gap-x-4 gap-y-1 bg-ink-950 px-3 py-2 text-xs text-ink-300 shadow-[inset_0_0_0_1px_var(--color-ink-800)] [--cut:8px]">
+            <Legend color={EDITING} label={`Editing: ${activeGroup.label} (${activeGroup.nations.length})`} />
+            {form.lockGroups.length > 1 && <Legend color={GROUP} label="Other lock groups" />}
+            {showExcluded && excludedTags.length > 0 && <Legend color={EXCLUDED} label={`Not playable (${notPlayable.length})`} />}
+          </div>
+          {excludedTags.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowExcluded((value) => !value)}
+              aria-pressed={showExcluded}
+              className={`gm-btn h-8 bg-ink-950 px-3 text-xs [--cut:7px] ${showExcluded ? "gm-btn-danger" : "gm-btn-secondary"}`}
+              title="Players see not-playable nations greyed out and locked. The red borders are only here, to make them easy to spot."
+            >
+              <span aria-hidden className={`h-2.5 w-2.5 shrink-0 rounded-full ${showExcluded ? "bg-rose-400" : "border border-rose-400"}`} />
+              {showExcluded ? "Hide" : "Show"} not playable ({notPlayable.length})
+            </button>
           )}
-          <p className="mt-1 text-ink-500">Click a nation to lock / unlock it</p>
         </div>
       )}
 
-      {/* Drawer */}
+      {/* Panel */}
       <aside
-        className={`absolute bottom-3 right-3 top-[76px] z-[1000] flex w-[min(480px,calc(100vw-24px))] flex-col overflow-hidden rounded-3xl transition-transform duration-300 ${GLASS} ${
-          drawerOpen ? "translate-x-0" : "translate-x-[calc(100%+16px)]"
+        className={`absolute bottom-0 right-0 top-14 z-[1000] flex w-full flex-col border-l border-ink-800 bg-ink-950 transition-transform duration-300 lg:w-[420px] lg:translate-x-0 ${
+          drawerOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >
-        <nav className="flex items-center gap-1 border-b border-white/10 p-2">
-          {tabs.map((entry) => {
+        <nav className="flex shrink-0 border-b border-ink-800 px-2" aria-label="Steps">
+          {tabs.map((entry, index) => {
             const active = entry.id === tab;
+            const Icon = entry.icon;
+            const flagged = entry.id !== "review" && issueSections.has(entry.id);
             return (
               <button
                 key={entry.id}
                 type="button"
                 data-tour={`setup.tab.${entry.id} setup.tabs`}
                 onClick={() => setTab(entry.id)}
-                className={`relative flex flex-1 flex-col items-center gap-0.5 rounded-xl px-1 py-1.5 text-[10px] font-bold uppercase tracking-wide transition ${
-                  active ? "bg-brand-400 text-ink-950" : "text-ink-400 hover:bg-white/5 hover:text-white"
+                aria-current={active ? "step" : undefined}
+                className={`relative flex h-[54px] flex-1 flex-col items-center justify-center gap-[3px] text-xs font-semibold transition-colors ${
+                  active ? "text-ink-100 shadow-[inset_0_-2px_0_var(--color-brand-400)]" : "text-ink-400 hover:text-ink-100"
                 }`}
               >
-                <span className="text-base leading-none">{entry.icon}</span>
+                <Icon
+                  aria-hidden
+                  className={`h-[17px] w-[17px] ${active ? "text-brand-400" : index < tabIndex && !flagged ? "text-emerald-300" : ""}`}
+                  strokeWidth={1.75}
+                />
                 <span className="hidden sm:block">{entry.label}</span>
-                {entry.id !== "review" && issueSections.has(entry.id) && (
-                  <span className="absolute right-1.5 top-1 h-2 w-2 rounded-full bg-rose-500 ring-2 ring-ink-900" />
-                )}
+                {flagged && <span className="absolute right-[calc(50%-18px)] top-2 h-2 w-2 rounded-full bg-rose-400" aria-label="Needs a fix" />}
               </button>
             );
           })}
-          <button
-            type="button"
-            onClick={() => setDrawerOpen(false)}
-            className="ml-1 rounded-lg px-2 py-1 text-ink-500 hover:text-white"
-            aria-label="Hide panel"
-            title="Hide panel to see the map"
-          >
-            <span className="text-[10px] font-black sm:hidden">MAP</span>
-            <span className="hidden sm:inline">▸</span>
-          </button>
         </nav>
 
-        <div key={tab} className="roster-scroll gm-fade-up flex-1 overflow-y-auto p-3 sm:p-4">
+        <div key={tab} className="roster-scroll gm-fade-up min-h-0 flex-1 space-y-3 overflow-y-auto p-3.5">
           {editing && editLoad.message && (
-            <p className="mb-3 rounded-2xl border border-sky-400/30 bg-sky-500/10 px-3 py-2 text-xs text-sky-100">
-              📣 {editLoad.message}
+            <p className="gm-cut flex gap-2.5 bg-sky-950/60 px-3 py-2.5 text-[12.5px] text-ink-300 shadow-[inset_3px_0_0_var(--color-sky-300)] [--cut:10px]">
+              <Info aria-hidden className="mt-px h-4 w-4 shrink-0 text-sky-300" strokeWidth={1.75} />
+              <span>{editLoad.message}</span>
             </p>
           )}
           {tab === "game" && (
@@ -612,31 +621,25 @@ export default function GameSetupApp({
             />
           )}
           {tab === "announce" && (
-            <div className="space-y-4">
-              <AnnounceTab form={form} update={update} derived={derived} timeZone={timeZone} nowSec={nowSec} host={host} />
-              <Timeline nowSec={nowSec} gameSec={derived.gameSec} markers={markers} timeZone={timeZone} />
-            </div>
+            <AnnounceTab form={form} update={update} derived={derived} timeZone={timeZone} nowSec={nowSec} host={host} />
           )}
-          {tab === "access" && (
-            <div className="space-y-4">
+          {tab === "players" && (
+            <>
               <AccessTab form={form} update={update} derived={derived} timeZone={timeZone} nowSec={nowSec} />
-              <Timeline nowSec={nowSec} gameSec={derived.gameSec} markers={markers} timeZone={timeZone} />
-            </div>
-          )}
-          {tab === "nations" && (
-            <NationsTab
-              form={form}
-              update={update}
-              derived={derived}
-              timeZone={timeZone}
-              nowSec={nowSec}
-              scenarioId={scenarioId}
-              nations={nations}
-              onToggleNations={toggleNations}
-              onFocusNation={(tag) => setFocusRequest({ tag, nonce: Date.now() })}
-              notPlayable={notPlayable}
-              presetName={form.presetName}
-            />
+              <NationsTab
+                form={form}
+                update={update}
+                derived={derived}
+                timeZone={timeZone}
+                nowSec={nowSec}
+                scenarioId={scenarioId}
+                nations={nations}
+                onToggleNations={toggleNations}
+                onFocusNation={(tag) => setFocusRequest({ tag, nonce: Date.now() })}
+                notPlayable={notPlayable}
+                presetName={form.presetName}
+              />
+            </>
           )}
           {tab === "extras" && <ExtrasTab form={form} update={update} modeDefaults={modeDefaults} />}
           {tab === "review" && (
@@ -653,52 +656,56 @@ export default function GameSetupApp({
           )}
         </div>
 
-        <footer data-tour="setup.footer" className="border-t border-white/10 bg-ink-950/40 p-3">
-          {submitError && (
-            <p className="mb-2 rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-1.5 text-xs text-rose-100">
-              {submitError}
-            </p>
-          )}
+        {tab !== "review" && (
+          <div className="shrink-0 px-3.5 pb-2.5">
+            <Timeline nowSec={nowSec} gameSec={derived.gameSec} markers={markers} timeZone={timeZone} compact />
+          </div>
+        )}
+
+        <footer data-tour="setup.footer" className="shrink-0 border-t border-ink-800 px-3.5 py-3">
+          {submitError && <p className="gm-cut mb-2 bg-rose-950/60 px-3 py-1.5 text-xs text-rose-200">{submitError}</p>}
           <div className="flex items-center gap-2">
             {derived.issues.length > 0 ? (
               <button
                 type="button"
-                onClick={() => setTab(derived.issues[0].section)}
-                className="min-w-0 flex-1 truncate text-left text-xs font-semibold text-rose-300 hover:text-rose-200"
+                onClick={() => setTab(tabOfSection(derived.issues[0].section))}
+                className="flex min-w-0 flex-1 items-center gap-1.5 truncate text-left text-xs font-semibold text-rose-300 hover:text-rose-200"
                 title={derived.issues.map((issue) => issue.message).join("\n")}
               >
-                ● {derived.issues.length} to fix
-                <span className="hidden sm:inline"> — {derived.issues[0].message}</span>
+                <CircleAlert aria-hidden className="h-3.5 w-3.5 shrink-0" strokeWidth={2} />
+                <span className="truncate">
+                  {derived.issues.length} to fix<span className="hidden sm:inline">: {derived.issues[0].message}</span>
+                </span>
               </button>
             ) : (
-              <span className="flex-1 text-xs font-semibold text-emerald-300">
-                ✓ Ready to {editing ? "save" : "schedule"}
+              <span className="min-w-0 flex-1 truncate text-xs text-ink-500">
+                <span className="hidden sm:inline">Ready to {editing ? "save" : "schedule"}</span>
               </span>
             )}
-            {tabIndex < tabs.length - 1 && (
-              <button
-                type="button"
-                onClick={() => setTab(tabs[tabIndex + 1].id)}
-                className="rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-xs font-bold text-ink-200 hover:border-white/25"
-              >
-                Next ›
+            <button
+              type="button"
+              onClick={() => setDrawerOpen(false)}
+              className="gm-btn gm-btn-quiet h-9 px-2.5 lg:hidden"
+              aria-label="Show the map"
+            >
+              <MapIcon aria-hidden strokeWidth={1.75} /> Map
+            </button>
+            {nextTab && (
+              <button type="button" onClick={() => setTab(nextTab.id)} className="gm-btn gm-btn-secondary h-9 px-3">
+                <span className="hidden sm:inline">Next: {nextTab.label}</span>
+                <span className="sm:hidden">Next</span>
+                <ChevronRight aria-hidden strokeWidth={1.75} />
               </button>
             )}
-            {tab === "review" && (
-              <button
-                type="button"
-                onClick={handleSchedule}
-                disabled={submitting}
-                className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-black transition ${
-                  derived.payload
-                    ? "reserve-cta-glow bg-brand-400 text-ink-950 hover:bg-brand-300"
-                    : "bg-ink-700 text-ink-400"
-                }`}
-              >
-                {submitting && <Spinner className="h-3.5 w-3.5" />}
-                {editing ? "Save changes" : "Schedule game"}
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={handleSchedule}
+              disabled={submitting}
+              className="gm-btn gm-btn-primary h-10 px-[18px] font-display text-[17px] font-extrabold uppercase tracking-[0.02em] [--cut:9px]"
+            >
+              {submitting && <Spinner className="h-3.5 w-3.5" />}
+              {editing ? "Save" : "Schedule"}
+            </button>
           </div>
         </footer>
       </aside>
@@ -707,42 +714,37 @@ export default function GameSetupApp({
         <button
           type="button"
           onClick={() => setDrawerOpen(true)}
-          className="absolute right-3 top-[76px] z-[1000] rounded-2xl bg-brand-400 px-4 py-3 text-sm font-black text-ink-950 shadow-xl shadow-brand-500/30"
+          className="gm-btn gm-btn-primary absolute bottom-4 left-1/2 z-[1000] h-11 -translate-x-1/2 px-5 lg:hidden"
         >
-          ◂ {editing ? "Edit game" : "Game setup"}
+          <PanelRightOpen aria-hidden strokeWidth={1.75} /> Back to the game
         </button>
       )}
 
       {toast && (
-        <div className="gm-fade-up absolute bottom-6 left-1/2 z-[1500] -translate-x-1/2 rounded-full border border-white/15 bg-ink-900/90 px-4 py-2 text-xs font-semibold text-ink-100 shadow-xl backdrop-blur-md">
+        <div
+          role="status"
+          className="gm-cut gm-fade-up absolute bottom-20 left-1/2 z-[1500] max-w-[calc(100vw-32px)] -translate-x-1/2 bg-ink-800 px-4 py-2.5 text-[13px] font-semibold text-ink-100 lg:left-[calc(50%-210px)]"
+        >
           {toast}
         </div>
       )}
 
       {askConflict && (
-        <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-ink-950/70 p-4 backdrop-blur-sm">
-          <div className={`gm-fade-up w-full max-w-sm rounded-3xl p-6 ${GLASS}`}>
-            <p className="text-3xl">⚠️</p>
-            <h2 className="mt-2 text-lg font-black text-white">Another host has that day</h2>
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-ink-950/75 p-4">
+          <div role="dialog" aria-modal="true" className="gm-plate gm-fade-up w-full max-w-sm bg-ink-950 p-6 [--cut:16px]">
+            <TriangleAlert aria-hidden className="h-7 w-7 text-yellow-300" strokeWidth={1.75} />
+            <h2 className="gm-title mt-3 text-[26px]">Another host has that day</h2>
             <p className="mt-2 text-sm text-ink-300">
               {derived.conflicts
-                .map((slot) => `${slot.host_username ? `@${slot.host_username}` : "A host"} — ${modeOption(slot.mode)?.label ?? slot.mode}`)
-                .join(", ")}
-              . Multiple hosts can run the same category on one day, so this won&apos;t block you or change their game.
+                .map((slot) => `${slot.host_username ? `@${slot.host_username}` : "A host"}, ${modeOption(slot.mode)?.label ?? slot.mode}`)
+                .join("; ")}
+              . Several hosts can run the same kind of game on one day, so this won&apos;t block you or change their game.
             </p>
             <div className="mt-5 flex gap-2">
-              <button
-                type="button"
-                onClick={() => void send()}
-                className="flex-1 rounded-xl bg-brand-400 px-4 py-2.5 text-sm font-black text-ink-950 hover:bg-brand-300"
-              >
+              <button type="button" onClick={() => void send()} className="gm-btn gm-btn-primary flex-1">
                 Continue anyway
               </button>
-              <button
-                type="button"
-                onClick={() => setAskConflict(false)}
-                className="rounded-xl border border-white/10 px-4 py-2.5 text-sm font-bold text-ink-300"
-              >
+              <button type="button" onClick={() => setAskConflict(false)} className="gm-btn gm-btn-secondary">
                 Cancel
               </button>
             </div>
@@ -766,6 +768,46 @@ export default function GameSetupApp({
           }}
         />
       )}
+    </div>
+  );
+}
+
+const NO_TAGS: readonly string[] = [];
+// The map overlays' colours (components/nationHighlights.ts).
+const EDITING = "#c07dff";
+const GROUP = "#3cc4ff";
+const EXCLUDED = "#ff2442";
+
+function Legend({ color, label }: { color: string; label: string }) {
+  return (
+    <span className="flex items-center gap-2 whitespace-nowrap">
+      <span className="gm-cut h-3 w-3 shrink-0 [--cut:3px]" style={{ background: color }} />
+      {label}
+    </span>
+  );
+}
+
+/** The hovered nation's name and what a click does, kept apart so hovering never re-renders the panel. */
+function HoverPill({
+  listenerRef,
+  describe,
+}: {
+  listenerRef: RefObject<((nation: NationFeatureProps | null) => void) | null>;
+  describe: (nation: NationFeatureProps) => { name: string; status: string };
+}) {
+  const [hovered, setHovered] = useState<NationFeatureProps | null>(null);
+  useEffect(() => {
+    listenerRef.current = setHovered;
+    return () => {
+      listenerRef.current = null;
+    };
+  }, [listenerRef]);
+  if (!hovered) return null;
+  const { name, status } = describe(hovered);
+  return (
+    <div className="gm-cut pointer-events-none absolute bottom-20 left-1/2 z-[950] -translate-x-1/2 whitespace-nowrap bg-ink-950 px-3.5 py-1.5 text-xs font-semibold text-ink-100 shadow-[inset_0_0_0_1px_var(--color-ink-700)] lg:bottom-6 lg:left-[calc(50%-210px)]">
+      {name}
+      {status && <span className="ml-2 font-normal text-ink-400">{status}</span>}
     </div>
   );
 }

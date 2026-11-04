@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GameMaster Game Setup Mock-up</title>
+<!-- Design mock-up of the game setup form (Calendar → set up a game) in the
+     cut-plate style (docs/branding.md). Not part of the app. The map stays a
+     picture: it is rebuilt with the WebGL switch. Drawn at 1440x900 (desktop)
+     or 390x844 (phone). -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Big+Shoulders+Stencil+Display:wght@800&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+<style>
+  :root {
+    --ink-950: oklch(11.8% 0.009 152); --ink-900: oklch(19.2% 0.011 152); --ink-800: oklch(26.6% 0.012 152);
+    --ink-700: oklch(36.2% 0.013 152); --ink-600: oklch(44.4% 0.014 152); --ink-500: oklch(55.4% 0.015 152); --ink-400: oklch(70.4% 0.015 152);
+    --ink-300: oklch(86.4% 0.012 152); --ink-100: oklch(96.6% 0.006 152);
+    --brand-400: oklch(76.4% 0.186 146); --brand-950: oklch(19.4% 0.046 146);
+    --scheduled: oklch(86% 0.15 95); --announced: oklch(79.4% 0.118 174); --live: oklch(74% 0.13 240); --addon: oklch(66% 0.2 312);
+    --red: oklch(70% 0.17 22); --sky: oklch(76% 0.11 235); --yellow: oklch(86% 0.15 95);
+    --display: "Big Shoulders Display", "Arial Narrow", sans-serif; --stencil: "Big Shoulders Stencil Display", var(--display); --body: "Public Sans", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: oklch(8% 0.006 152); color: var(--ink-300); font: 400 14px/1.45 var(--body); font-variant-numeric: tabular-nums; display: flex; flex-direction: column; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
+  svg.lucide { width: 16px; height: 16px; stroke-width: 1.75; flex: none; }
+  .switches { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; padding: 10px 16px; border-bottom: 1px solid var(--ink-800); background: var(--ink-950); }
+  .switches h1 { margin: 0 6px 0 0; font: 800 22px/1 var(--display); text-transform: uppercase; color: var(--ink-100); }
+  .seg { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-500); }
+  .seg div { display: flex; border: 1px solid var(--ink-700); border-radius: 4px; overflow: hidden; }
+  .seg button { padding: 5px 10px; font-size: 12px; font-weight: 600; color: var(--ink-400); }
+  .seg button + button { border-left: 1px solid var(--ink-700); }
+  .seg button[aria-pressed="true"] { background: var(--ink-800); color: var(--ink-100); }
+  .viewport { flex: 1; min-height: 0; display: grid; place-items: center; padding: 16px; overflow: hidden; }
+  .frame { position: relative; overflow: hidden; outline: 1px solid var(--ink-800); }
+  .stage { position: absolute; left: 0; top: 0; transform-origin: 0 0; overflow: hidden; background: var(--ink-950); }
+  .stage.desk { width: 1440px; height: 900px; } .stage.phone { width: 390px; height: 844px; }
+  [hidden] { display: none !important; }
+  .cut, .btn, .plate, .field { clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut)); }
+  .cut, .btn, .field { --cut: 8px; }
+  .plate { --cut: 14px; --line: var(--ink-800); background-color: var(--ink-900); }
+  .plate, .field, .btn-secondary { border: 1px solid var(--line);
+    background-image: linear-gradient(135deg, var(--line) calc(var(--cut) * .7071 + 1px), transparent 0), linear-gradient(315deg, var(--line) calc(var(--cut) * .7071 + 1px), transparent 0); background-origin: border-box; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; height: 34px; padding: 0 13px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+  .btn-primary { background-color: var(--brand-400); color: var(--brand-950); }
+  .btn-secondary { --line: var(--ink-700); color: var(--ink-100); background-color: var(--ink-950); }
+  .btn-quiet { color: var(--ink-300); } .btn-icon { width: 34px; padding: 0; }
+  .btn-sm { height: 30px; padding: 0 11px; font-size: 12.5px; --cut: 7px; }
+  .field { --line: var(--ink-700); display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 10px; background-color: var(--ink-950); color: var(--ink-500); font-size: 13px; }
+  .field b { flex: 1; font-weight: 600; color: var(--ink-100); }
+  .tag { display: inline-flex; align-items: center; gap: 6px; height: 21px; padding: 0 11px; font-size: 11.5px; font-weight: 600; white-space: nowrap; clip-path: polygon(7px 0, calc(100% - 7px) 0, 100% 50%, calc(100% - 7px) 100%, 7px 100%, 0 50%); }
+  .tag svg { width: 12px; height: 12px; }
+  .t-ink { color: var(--ink-300); background: var(--ink-800); }
+  .title { font-family: var(--display); font-weight: 800; text-transform: uppercase; line-height: .95; color: var(--ink-100); }
+  .small { font-size: 12px; color: var(--ink-400); }
+  .avatar { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; flex: none; background: var(--ink-800); color: var(--ink-100); font-size: 12px; font-weight: 700; }
+
+  /* editor frame (same as the preset editor) */
+  .map { position: absolute; top: 56px; bottom: 0; width: calc(100% - 420px); height: calc(100% - 56px); object-fit: cover; }
+  .left .map { left: 420px; } .right .map { left: 0; }
+  .ed-top { position: absolute; inset: 0 0 auto 0; height: 56px; display: flex; align-items: center; gap: 12px; padding: 0 16px; background: var(--ink-950); border-bottom: 1px solid var(--ink-800); z-index: 3; }
+  .ed-top .title { font-size: 22px; } .ed-top .end { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  .zone { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; --cut: 7px; background: var(--ink-900); font-size: 12px; color: var(--ink-300); }
+  .help { display: inline-flex; align-items: center; gap: 6px; }
+  .panel { position: absolute; top: 56px; bottom: 0; width: 420px; background: var(--ink-950); display: flex; flex-direction: column; z-index: 2; }
+  .left .panel { left: 0; border-right: 1px solid var(--ink-800); } .right .panel { right: 0; border-left: 1px solid var(--ink-800); }
+  .phone .panel { width: 100%; }
+  .steps { display: flex; padding: 0 8px; border-bottom: 1px solid var(--ink-800); flex: none; }
+  .steps button { flex: 1; position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px; height: 54px; justify-content: center; font-size: 12px; font-weight: 600; color: var(--ink-400); box-shadow: inset 0 -2px 0 transparent; }
+  .steps button svg { width: 17px; height: 17px; } .steps button[aria-current] { color: var(--ink-100); box-shadow: inset 0 -2px 0 var(--brand-400); } .steps button[aria-current] svg { color: var(--brand-400); }
+  .steps .dot { position: absolute; top: 9px; right: calc(50% - 16px); width: 7px; height: 7px; border-radius: 50%; background: var(--red); }
+  .phone .steps button span { display: none; }
+  .body { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--ink-700) transparent; padding: 14px; display: grid; gap: 10px; align-content: start; }
+  .sec { padding: 12px 14px; --cut: 10px; background: var(--ink-900); }
+  .sec-h { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
+  .sec-h > svg { color: var(--brand-400); width: 17px; height: 17px; margin-top: 1px; }
+  .sec-h strong { display: block; font-size: 14px; font-weight: 600; color: var(--ink-100); } .sec-h small { display: block; font-size: 12px; color: var(--ink-400); }
+  .sec-h .right { margin-left: auto; }
+  .count { --cut: 4px; padding: 2px 8px; font-size: 11px; font-weight: 600; background: var(--ink-800); color: var(--ink-300); }
+  .label { margin: 10px 0 6px; font-size: 12px; font-weight: 600; color: var(--ink-500); display: flex; align-items: center; gap: 6px; } .label svg { width: 13px; height: 13px; }
+  .modes { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+  .mode { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 10px; --cut: 7px; background: var(--ink-950); font-size: 13px; font-weight: 600; color: var(--ink-300); }
+  .mode.on { background: var(--brand-400); color: var(--brand-950); }
+  .mode.off { opacity: .35; }
+  .preset { display: flex; align-items: center; gap: 10px; padding: 8px 10px; --cut: 8px; background: var(--ink-950); }
+  .preset + .preset { margin-top: 4px; }
+  .preset.on { box-shadow: inset 3px 0 0 var(--brand-400); }
+  .preset b { font-size: 13px; color: var(--ink-100); display: flex; align-items: center; gap: 6px; } .preset b svg { width: 13px; height: 13px; color: var(--brand-400); }
+  .preset small { display: block; font-size: 11.5px; color: var(--ink-400); }
+  .preset .btn { margin-left: auto; }
+  .days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .day { display: grid; place-items: center; gap: 1px; height: 52px; --cut: 7px; background: var(--ink-950); font-size: 11px; color: var(--ink-500); position: relative; }
+  .day b { font: 800 20px/1 var(--display); color: var(--ink-100); }
+  .day.on { background: var(--brand-400); color: var(--brand-950); } .day.on b { color: var(--brand-950); }
+  .day.today::after { content: "today"; position: absolute; bottom: 3px; font-size: 9.5px; color: var(--brand-400); }
+  .day.on.today::after { color: var(--brand-950); }
+  .day.lock { background: repeating-linear-gradient(135deg, var(--ink-950) 0 5px, var(--ink-900) 5px 10px); color: var(--ink-600); } .day.lock b { color: var(--ink-600); }
+  .day.far { opacity: .35; }
+  .note { display: flex; gap: 8px; margin-top: 8px; font-size: 12px; color: var(--ink-400); } .note svg { width: 14px; height: 14px; margin-top: 1px; color: var(--ink-500); }
+  .bigtime { display: flex; align-items: baseline; gap: 10px; }
+  .bigtime .title { font-size: 44px; } .bigtime small { font-size: 12px; color: var(--ink-400); }
+  .hours { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 8px; }
+  .hours button { height: 30px; --cut: 6px; background: var(--ink-950); font-size: 12px; font-weight: 600; color: var(--ink-300); }
+  .hours button.on { background: var(--brand-400); color: var(--brand-950); }
+  .track { position: relative; height: 26px; margin-top: 8px; }
+  .track .bar { position: absolute; left: 0; right: 0; top: 11px; height: 4px; background: var(--ink-800); }
+  .track .fill { position: absolute; left: 0; top: 11px; height: 4px; background: var(--brand-400); }
+  .track .knob { position: absolute; top: 5px; width: 16px; height: 16px; --cut: 4px; background: var(--ink-100); }
+  .ticks { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--ink-500); }
+  .rows { display: grid; gap: 2px; }
+  .row { display: flex; align-items: center; gap: 10px; padding: 5px 0; font-size: 13px; border-bottom: 1px solid var(--ink-800); } .row:last-child { border-bottom: 0; }
+  .row span { width: 110px; flex: none; font-size: 12px; color: var(--ink-500); } .row b { font-weight: 500; color: var(--ink-100); } .row code { font: 12px ui-monospace, monospace; color: var(--ink-300); }
+  .row .btn { margin-left: auto; }
+  .fold { display: flex; align-items: center; gap: 8px; width: 100%; font-size: 13px; font-weight: 600; color: var(--ink-300); } .fold svg:last-child { margin-left: auto; }
+  .same { display: flex; align-items: center; gap: 10px; padding: 7px 10px; --cut: 7px; background: var(--ink-950); font-size: 13px; }
+  .same i { width: 8px; height: 8px; border-radius: 50%; } .same .yours { margin-left: auto; font-size: 11px; color: var(--brand-400); }
+  .opts { display: grid; gap: 4px; }
+  .opt { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 10px; align-items: center; padding: 9px 10px; --cut: 8px; background: var(--ink-950); text-align: left; }
+  .opt .ico { width: 30px; height: 30px; --cut: 6px; display: grid; place-items: center; background: var(--ink-800); color: var(--ink-300); }
+  .opt b { display: block; font-size: 13px; color: var(--ink-100); } .opt small { display: block; font-size: 12px; color: var(--ink-400); }
+  .opt.on { box-shadow: inset 0 0 0 1px var(--brand-400); } .opt.on .ico { background: var(--brand-400); color: var(--brand-950); }
+  .opt.off { opacity: .4; }
+  .opt.addon.on { box-shadow: inset 0 0 0 1px var(--addon); } .opt.addon.on .ico { background: var(--addon); color: #fff; }
+  .discord { padding: 12px; --cut: 8px; background: #2b2d31; color: #dbdee1; font-size: 13px; }
+  .discord .who { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; } .discord .who i { width: 28px; height: 28px; border-radius: 50%; background: var(--brand-400); }
+  .discord .who b { color: #fff; } .discord .who em { font-style: normal; font-size: 10px; padding: 1px 4px; border-radius: 3px; background: #5865f2; color: #fff; }
+  .discord p { margin: 2px 0; } .discord .lnk { color: #00a8fc; }
+  .segc { display: flex; gap: 2px; padding: 2px; --cut: 8px; background: var(--ink-950); box-shadow: inset 0 0 0 1px var(--ink-700); }
+  .segc button { flex: 1; height: 28px; --cut: 6px; font-size: 12px; font-weight: 600; color: var(--ink-300); }
+  .segc button.on { background: var(--brand-400); color: var(--brand-950); }
+  .tgl { display: flex; align-items: flex-start; gap: 10px; margin-top: 10px; }
+  .tgl i { position: relative; width: 34px; height: 20px; border-radius: 10px; background: var(--ink-700); flex: none; margin-top: 1px; }
+  .tgl i::after { content: ""; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: #fff; }
+  .tgl.on i { background: var(--brand-400); } .tgl.on i::after { left: 17px; }
+  .tgl b { display: block; font-size: 13px; color: var(--ink-100); } .tgl small { display: block; font-size: 12px; color: var(--ink-400); }
+  .chips { display: flex; flex-wrap: wrap; gap: 4px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 9px; --cut: 6px; background: var(--ink-950); font-size: 12px; font-weight: 600; color: var(--ink-300); }
+  .chip em { font-style: normal; font-weight: 500; color: var(--ink-500); } .chip svg { width: 13px; height: 13px; }
+  .lockrow { display: flex; align-items: center; gap: 10px; padding: 7px 10px; --cut: 7px; background: var(--ink-800); box-shadow: inset 3px 0 0 var(--brand-400); font-size: 13px; }
+  .lockrow b { color: var(--ink-100); } .lockrow small { display: block; font-size: 11.5px; color: var(--ink-400); } .lockrow svg { color: oklch(72% 0.16 305); }
+  .warnline { display: flex; gap: 8px; padding: 9px 11px; --cut: 8px; background: color-mix(in oklab, var(--red) 14%, var(--ink-950)); font-size: 12.5px; color: var(--ink-100); } .warnline svg { color: var(--red); margin-top: 1px; }
+  .sum .row span { width: 120px; }
+  .timeline { flex: none; margin: 0 14px 10px; padding: 9px 12px; --cut: 9px; background: var(--ink-900); }
+  .tl { position: relative; height: 18px; margin: 4px 6px 2px; }
+  .tl .ln { position: absolute; left: 0; right: 0; top: 8px; height: 2px; background: var(--ink-700); }
+  .tl .mk { position: absolute; top: 2px; width: 14px; height: 14px; --cut: 4px; transform: translateX(-50%); }
+  .tl-l { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--ink-400); } .tl-l b { color: var(--ink-100); font-weight: 600; }
+  .foot { flex: none; display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-top: 1px solid var(--ink-800); }
+  .foot .grow { flex: 1; min-width: 0; font-size: 12px; color: var(--ink-500); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .foot .grow.bad { color: var(--red); font-weight: 600; }
+  .go { height: 38px; padding: 0 18px; font: 800 17px/1 var(--display); text-transform: uppercase; letter-spacing: .02em; --cut: 9px; }
+  .legend { position: absolute; top: 68px; display: flex; align-items: center; gap: 10px; z-index: 2; }
+  .left .legend { left: 436px; } .right .legend { left: 16px; }
+  .legend .box { display: flex; align-items: center; gap: 14px; padding: 8px 12px; --cut: 8px; background: var(--ink-950); box-shadow: inset 0 0 0 1px var(--ink-800); font-size: 12px; color: var(--ink-300); }
+  .legend .box span { display: flex; align-items: center; gap: 7px; } .legend .box i { width: 12px; height: 12px; --cut: 3px; }
+  .legend .btn { background-color: var(--ink-950); }
+  .mapbtn { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 4; }
+</style>
+</head>
+<body>
+<div class="switches">
+  <h1>Game setup mock-up</h1>
+  <div class="seg">Panel <div data-k="side"><button data-v="left">Left (like the preset editor)</button><button data-v="right">Right (today)</button></div></div>
+  <div class="seg">Steps <div data-k="steps"><button data-v="six">6 (today)</button><button data-v="five">5 (Access and Nations together)</button></div></div>
+  <div class="seg">Show <div data-k="view"></div></div>
+  <div class="seg">Size <div data-k="size"><button data-v="desk">Desktop</button><button data-v="phone">Phone</button></div></div>
+</div>
+<div class="viewport"><div class="frame" id="frame">
+  <div class="stage desk" id="desk"><div data-screen></div></div>
+  <div class="stage phone" id="phone" hidden><div data-screen-phone></div></div>
+</div></div>
+<script>
+  const TANK = '<svg class="lucide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="14" width="20" height="6" rx="3"/><path d="M5 14v-2h14v2"/><path d="M8 12V9.5A1.5 1.5 0 0 1 9.5 8h4A1.5 1.5 0 0 1 15 9.5V12"/><path d="M15 10h7"/></svg>';
+  const MASKS = '<i data-lucide="drama"></i>';
+  const state = { side: "left", steps: "five", view: "game", size: "desk" };
+  const STEPS = {
+    six: [["game", "gamepad-2", "Game"], ["announce", "megaphone", "Announce"], ["access", "shield-check", "Access"], ["nations", "lock", "Nations"], ["extras", "sparkles", "Extras"], ["review", "check", "Review"]],
+    five: [["game", "gamepad-2", "Game"], ["announce", "megaphone", "Announce"], ["players", "users", "Players"], ["extras", "sparkles", "Extras"], ["review", "check", "Review"]],
+  };
+  const sec = (icon, title, sub, body, right = "") => `<section class="sec cut"><div class="sec-h"><i data-lucide="${icon}"></i><div><strong>${title}</strong>${sub ? `<small>${sub}</small>` : ""}</div>${right ? `<span class="right">${right}</span>` : ""}</div>${body}</section>`;
+  const seg = (items, on) => `<div class="segc cut">${items.map((t) => `<button class="cut ${t === on ? "on" : ""}">${t}</button>`).join("")}</div>`;
+
+  function game() {
+    const rp = ["Roleplay", "Millennium Dawn", "Novum Vexillum", "Kaiserreich", "The Fire Rises"], hi = ["Vanilla", "Their Finest Bruh", "Hearts of Oak", "Horstorical", "BFFU 2"];
+    const modes = `<p class="label" style="margin-top:0">${MASKS}Roleplay</p><div class="modes">${rp.map((m, i) => `<button class="mode cut ${i === 0 ? "on" : ""}">${MASKS}${m}</button>`).join("")}</div>
+      <p class="label">${TANK}Historical</p><div class="modes">${hi.map((m) => `<button class="mode cut off" title="Only Historical hosts">${TANK}${m}</button>`).join("")}</div>`;
+    const days = ["Wed 4", "Thu 5", "Fri 6", "Sat 7", "Sun 8", "Mon 9", "Tue 10"].map((d, i) => { const [w, n] = d.split(" "); return `<button class="day cut ${i === 0 ? "on today" : ""} ${i === 4 ? "lock" : ""} ${i > 2 && i !== 4 ? "far" : ""}">${w}<b>${n}</b>${i === 4 ? '<i data-lucide="lock" style="position:absolute;top:4px;right:4px;width:11px;height:11px"></i>' : ""}</button>`; }).join("");
+    return sec("gamepad-2", "Game mode", "What are you hosting?", modes) +
+      sec("layers", "Preset", "Loads a saved Roleplay setup: nations, locks, rules and mods.", `
+        <div class="preset cut on"><div><b>Road to 56<i data-lucide="star"></i></b><small>Loaded: 7 groups, 57 nations, standard rules and mods</small></div><button class="btn btn-quiet btn-sm">Remove</button></div>
+        <div class="preset cut"><div><b>Europe only</b><small>2 groups, 36 nations, 2 locked, 3 mods</small></div><button class="btn btn-secondary btn-sm">Load</button></div>`, '<button class="btn btn-quiet btn-sm"><i data-lucide="plus"></i>New</button>') +
+      sec("calendar-days", "Day", "Hatched days are locked by staff.", `<div class="days">${days}</div>
+        <p class="note"><i data-lucide="info"></i>As a Full host you can book up to 5 days ahead.</p>`) +
+      sec("clock", "Start time", "Your time, Tbilisi (UTC+4). Everyone sees it in their own time.", `
+        <div class="bigtime"><span class="title">20:00</span><small>Wed 4 Nov, in 5 hours</small></div>
+        <div class="track"><div class="bar"></div><div class="fill" style="width:83%"></div><div class="knob cut" style="left:calc(83% - 8px)"></div></div>
+        <div class="ticks"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>
+        <div class="hours">${["16", "17", "18", "19", "20", "21", "22"].map((h) => `<button class="cut ${h === "20" ? "on" : ""}">${h}:00</button>`).join("")}</div>`) +
+      sec("globe", "Other time zones", "", `<button class="fold"><span>London 16:00, New York 11:00, Moscow 19:00, and Discord tag</span><i data-lucide="chevron-down"></i></button>`) +
+      sec("users", "Same day", "Other games on the board that day", `<div class="same cut"><i style="background:var(--announced)"></i><b style="font-weight:600;color:var(--ink-100)">15:00</b> Roleplay, Senior Host<span class="yours"></span></div>`);
+  }
+  function announce() {
+    const opt = (ic, t, s, on) => `<button class="opt cut ${on ? "on" : ""}"><span class="ico cut"><i data-lucide="${ic}"></i></span><span><b>${t}</b><small>${s}</small></span></button>`;
+    return sec("megaphone", "Announcement", "When the bot posts the game in Discord.", `<div class="opts">
+        ${opt("timer", "Before the game", "A set time before the start.", true)}${opt("calendar-clock", "At an exact time", "Pick the date and time.", false)}${opt("zap", "Right away", "As soon as the game is saved.", false)}</div>
+        <p class="label">How long before</p>
+        <div class="hours" style="grid-template-columns:repeat(6,1fr)">${["1h", "3h", "6h", "12h", "1 day", "2 days"].map((h) => `<button class="cut ${h === "6h" ? "on" : ""}">${h}</button>`).join("")}</div>
+        <p class="note"><i data-lucide="info"></i>Posts Wed 4 Nov at 14:00, in 1 hour.</p>`) +
+      sec("eye", "Preview", "Roughly what players see in Discord", `<div class="discord cut"><div class="who"><i></i><b>GameMaster</b><em>APP</em></div>
+        <p><b style="color:#fff">Game Announcement</b></p><p>Wednesday, 4 November 2026 at 20:00 (in 5 hours)</p><p>Host: <span class="lnk">@Demo Host</span></p><p>Reserve here: <span class="lnk">map link</span></p></div>`);
+  }
+  function access(withLocks) {
+    const level = (icon, t, s, on, auto) => sec(icon, t, s, `${seg(["VIP+", "Trusted+", "Verified+", "Everyone"], on)}
+      <div class="tgl ${auto ? "on" : ""}"><i></i><span><b>Open up by itself</b><small>${auto ? "Everyone can reserve from 12 hours before the game." : "Widen access at a set time before the game."}</small></span></div>`);
+    let out = level("crown", "Major nations", "Germany, USA, Soviet Union… (usually Trusted+)", "Trusted+", true) +
+      level("flag", "Minor nations", "Everyone else (usually Everyone)", "Everyone", false) +
+      sec("shield-check", "IronLegion", "Do players need to authenticate their Steam account with IronLegion?", seg(["Server setting", "Required", "Not required"], "Server setting"));
+    if (withLocks) out += locks();
+    return out;
+  }
+  function locks() {
+    return sec("layers", "Nation groups", "From the preset Road to 56. Change them on the Presets page.", `<div class="chips">${[["Majors", 7], ["Europe", 21], ["Asia", 12], ["Oceania", 4], ["North America", 4], ["South America", 6], ["Africa", 3]].map(([n, c]) => `<span class="chip cut">${n} <em>${c}</em></span>`).join("")}</div>
+        <p class="note"><i data-lucide="ban"></i>43 nations aren't playable in this game: players see them greyed out.</p>`) +
+      sec("lock", "Nation locks", "Click nations on the map, or pick a whole group below.", `<div class="lockrow cut"><i data-lucide="lock"></i><span><b>Locked nations</b><small>2 nations, locked all game</small></span><span style="margin-left:auto;font-size:11px;color:var(--brand-400);font-weight:600">Editing</span></div>
+        <button class="btn btn-secondary btn-sm" style="margin-top:6px;width:100%"><i data-lucide="plus"></i>Add a lock group</button>
+        <p class="label">Lock a whole group</p><div class="chips">${[["crown", "Majors", 7], ["flag", "Minors", 50], [null, "Europe", 21], [null, "Asia", 12], [null, "Africa", 3]].map(([ic, n, c]) => `<button class="chip cut">${ic ? `<i data-lucide="${ic}"></i>` : ""}${n} <em>${c}</em></button>`).join("")}</div>`, '<span class="count cut">2 locked</span>');
+  }
+  function extras() {
+    const opt = (ic, t, s, on, off) => `<button class="opt addon cut ${on ? "on" : ""} ${off ? "off" : ""}"><span class="ico cut"><i data-lucide="${ic}"></i></span><span><b>${t}</b><small>${s}</small></span></button>`;
+    return sec("sparkles", "Add-on", "Add-on games show purple on the calendar.", `<div class="opts">${opt("circle-off", "No add-on", "A normal game.", true)}${opt("skull", "Zombies", "Needs the submod.", false)}${opt("waves", "Leviathan", "Needs the submod.", false)}${opt("dices", "Casino", "Not available right now.", false, true)}</div>`) +
+      sec("clipboard-check", "Attendance", "How no-shows are warned after the game", seg(["Strict", "Casual"], "Strict") + '<p class="note"><i data-lucide="info"></i>Strict: every no-show is warned, Majors count double.</p>') +
+      sec("bell-ring", "Reminder", "DM every reserved player an hour before the game", `<div class="tgl on" style="margin-top:0"><i></i><span><b>Send a reminder</b><small>Players confirm with the code <b style="display:inline;color:var(--ink-100)">5AQQ</b>.</small></span></div>`) +
+      sec("swords", "Draft game", "Two captains draft players onto their team's nations.", `<div class="tgl" style="margin-top:0"><i></i><span><b>Normal game</b><small>Turn on to let captains draft instead of first come, first served.</small></span></div>`) +
+      sec("scroll-text", "Rules and mods", "From the preset Road to 56", `<div class="rows"><div class="row"><span>Rules</span><b>Road to 56 Ruleset</b></div><div class="row"><span>Mods</span><b>Road to 56, RP Submod, TommyKay R56RP</b></div></div>`, '<button class="btn btn-quiet btn-sm"><i data-lucide="pencil"></i>Change</button>');
+  }
+  function review() {
+    const rows = [["Mode", "Roleplay, preset Road to 56"], ["Starts", "Wed 4 Nov, 20:00 (your time)"], ["Announced", "Wed 4 Nov, 14:00 (6 hours before)"], ["Majors", "Trusted+, everyone from 12h before"], ["Minors", "Everyone"], ["IronLegion", "Server setting"], ["Nation locks", "2 nations, all game"], ["Add-on", "None"], ["Attendance", "Strict"], ["Reminder", "On, code 5AQQ"], ["Draft", "No"]];
+    return `<div class="warnline cut"><i data-lucide="triangle-alert"></i><span>Fix this first: the Day is locked by staff. <u>Go to Game</u></span></div>` +
+      sec("clipboard-list", "Roleplay game", "Everything at a glance. Click a line to change it.", `<div class="rows sum">${rows.map(([a, b]) => `<div class="row"><span>${a}</span><b>${b}</b></div>`).join("")}</div>`);
+  }
+  function legend(view) {
+    if (state.size === "phone") return "";
+    const nationsShown = view === "nations" || view === "players";
+    return `<div class="legend">${nationsShown ? `<div class="box cut"><span><i class="cut" style="background:oklch(72% 0.16 305)"></i>Editing: Locked nations (2)</span><span><i class="cut" style="background:oklch(74% 0.13 240)"></i>Other lock groups</span></div><button class="btn btn-secondary btn-sm"><span style="width:10px;height:10px;border-radius:50%;border:1px solid var(--red)"></span>Show not playable (43)</button>` : `<div class="box cut"><span>Click a nation to lock it. Locks are on the ${state.steps === "five" ? "Players" : "Nations"} step.</span></div>`}</div>`;
+  }
+  const SCREENS = { game, announce, access: () => access(false), nations: locks, players: () => access(true), extras, review };
+
+  function screen() {
+    const steps = STEPS[state.steps];
+    if (!steps.some(([id]) => id === state.view)) state.view = state.view === "access" || state.view === "nations" ? "players" : state.view === "players" ? "access" : "game";
+    const phone = state.size === "phone";
+    const index = steps.findIndex(([id]) => id === state.view);
+    const next = steps[index + 1];
+    const showMap = !phone;
+    const timeline = `<div class="timeline cut"><div class="tl-l"><span>Announced <b>Wed 14:00</b></span><span>Starts <b>Wed 20:00</b></span></div><div class="tl"><div class="ln"></div><div class="mk cut" style="left:15%;background:var(--scheduled)"></div><div class="mk cut" style="left:85%;background:var(--brand-400)"></div></div></div>`;
+    return `<div class="${state.side}">
+      ${showMap ? '<img class="map" src="assets/map-teal.jpg" alt="">' : ""}
+      <div class="ed-top"><button class="btn btn-quiet btn-icon"><i data-lucide="chevron-left"></i></button>${phone ? "" : '<span class="cut" style="width:36px;height:36px;display:grid;place-items:center;background:var(--ink-800);color:var(--ink-100);--cut:8px">' + MASKS + "</span>"}
+        <div><div class="small">${phone ? "New game" : "New game, Roleplay"}</div><div class="title">Wed 4 Nov, 20:00</div></div>
+        ${phone ? "" : '<span class="tag" style="color:oklch(80% 0.12 330);background:oklch(24% 0.06 330)">Preview: sample data</span>'}
+        <div class="end">${phone ? "" : '<span class="zone cut"><i data-lucide="globe" style="width:14px;height:14px"></i>Tbilisi, UTC+4<i data-lucide="chevron-down" style="width:13px;height:13px"></i></span>'}<button class="btn btn-primary btn-sm help"><i data-lucide="circle-help"></i>Help</button>${phone ? "" : '<span class="avatar">D</span>'}<button class="btn btn-quiet btn-icon"><i data-lucide="menu"></i></button></div></div>
+      ${legend(state.view)}
+      <aside class="panel">
+        <nav class="steps">${steps.map(([id, ic, label]) => `<button ${id === state.view ? "aria-current" : ""}><i data-lucide="${ic}"></i><span>${label}</span>${id === "game" && state.view !== "game" ? '<i class="dot"></i>' : ""}</button>`).join("")}</nav>
+        <div class="body">${SCREENS[state.view]()}</div>
+        ${timeline}
+        <div class="foot"><span class="grow bad">${state.view === "review" ? "1 to fix" : "1 to fix: the day is locked"}</span>${phone ? '<button class="btn btn-quiet btn-sm"><i data-lucide="map"></i>Map</button>' : ""}${next ? `<button class="btn btn-secondary">${phone ? "Next" : `Next: ${next[2]}`}<i data-lucide="chevron-right"></i></button>` : ""}<button class="btn btn-primary go">Schedule</button></div>
+      </aside></div>`;
+  }
+
+  function render() {
+    const views = STEPS[state.steps];
+    if (!views.some(([id]) => id === state.view)) state.view = state.view === "access" || state.view === "nations" ? "players" : state.view === "players" ? "access" : "game";
+    document.querySelector('[data-k="view"]').innerHTML = views.map(([id, , label]) => `<button data-v="${id}">${label}</button>`).join("");
+    document.querySelectorAll(".seg > div").forEach((seg) => seg.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(state[seg.dataset.k] === b.dataset.v))));
+    document.querySelector(state.size === "desk" ? "[data-screen]" : "[data-screen-phone]").innerHTML = screen();
+    document.getElementById("desk").hidden = state.size !== "desk";
+    document.getElementById("phone").hidden = state.size !== "phone";
+    lucide.createIcons();
+    fit();
+  }
+  function fit() {
+    const stage = document.getElementById(state.size);
+    const w = state.size === "desk" ? 1440 : 390, h = state.size === "desk" ? 900 : 844;
+    const vp = document.querySelector(".viewport");
+    const s = Math.min((vp.clientWidth - 32) / w, (vp.clientHeight - 32) / h, state.size === "desk" ? 1 : 1.2);
+    stage.style.transform = `scale(${s})`;
+    const frame = document.getElementById("frame"); frame.style.width = `${w * s}px`; frame.style.height = `${h * s}px`;
+  }
+  document.querySelector(".switches").addEventListener("click", (e) => { const b = e.target.closest(".seg button"); if (!b) return; state[b.parentElement.dataset.k] = b.dataset.v; render(); });
+  addEventListener("resize", fit);
+  render();
+</script>
+</body>
+</html>

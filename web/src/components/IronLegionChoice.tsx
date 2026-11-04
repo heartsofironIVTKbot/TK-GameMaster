@@ -22,7 +22,7 @@ export default function IronLegionChoice({
       : `${IRONLEGION_RULE_LABELS.server} (${serverRequires ? "required" : "not required"})`;
   return (
     <div>
-      <p className="mb-1.5 text-[11px] font-semibold text-ink-400">🛡️ IronLegion Steam authentication</p>
+      <p className="mb-1.5 text-xs font-semibold text-ink-500">IronLegion Steam authentication</p>
       <Segmented<IronLegionRule>
         ariaLabel="Require IronLegion Steam authentication"
         size="sm"

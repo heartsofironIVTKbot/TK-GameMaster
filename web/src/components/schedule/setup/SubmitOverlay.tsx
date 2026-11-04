@@ -1,8 +1,9 @@
 "use client";
 
+import { CalendarCheck, Check, Settings, X } from "lucide-react";
 import Link from "next/link";
 import { formatInZone } from "@/lib/timeEngine";
-import { GLASS, Spinner } from "../ui";
+import { Spinner } from "../ui";
 import { useRequestPoller } from "../useRequestPoller";
 
 /**
@@ -47,18 +48,20 @@ export default function SubmitOverlay({
   ];
 
   return (
-    <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-ink-950/70 p-4 backdrop-blur-sm">
-      <div className={`gm-fade-up w-full max-w-md rounded-3xl p-6 ${GLASS}`}>
+    <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-ink-950/75 p-4">
+      <div role="dialog" aria-modal="true" className="gm-plate gm-fade-up w-full max-w-md bg-ink-950 p-6 [--cut:16px]">
         {state === "done" ? (
-          <div className="text-center">
-            <div className="text-5xl">{editing ? "✅" : "🎉"}</div>
-            <h2 className="mt-3 text-2xl font-black text-white">{editing ? "Changes saved!" : "Game scheduled!"}</h2>
+          <div className="flex flex-col items-center text-center">
+            <span className="gm-cut grid h-12 w-12 place-items-center bg-brand-400 text-brand-950 [--cut:10px]">
+              <CalendarCheck aria-hidden className="h-6 w-6" strokeWidth={1.75} />
+            </span>
+            <h2 className="gm-title mt-3 text-[32px]">{editing ? "Changes saved" : "Game scheduled"}</h2>
             <p className="mt-1 text-sm text-ink-300">
-              {modeLabel} · {formatInZone(gameSec * 1000, timeZone)}
+              {modeLabel}, {formatInZone(gameSec * 1000, timeZone)}
             </p>
             <p className="mt-3 text-xs text-ink-400">
               {demo
-                ? "Preview mode — nothing was sent to Discord."
+                ? "Preview mode: nothing was sent to Discord."
                 : editing
                   ? "The calendar is updated."
                   : "It's on the calendar now. Check your DMs for your host key and panel link."}
@@ -67,7 +70,7 @@ export default function SubmitOverlay({
           </div>
         ) : (
           <>
-            <h2 className="text-lg font-black text-white">
+            <h2 className="gm-title text-[26px]">
               {state === "error"
                 ? editing ? "Not saved" : "Not scheduled"
                 : editing ? "Saving your changes…" : "Scheduling your game…"}
@@ -76,31 +79,39 @@ export default function SubmitOverlay({
               {steps.map((step) => (
                 <li key={step.label} className="flex items-center gap-3 text-sm">
                   <span
-                    className={`flex h-7 w-7 items-center justify-center rounded-full border text-xs font-bold ${
+                    className={`gm-cut grid h-7 w-7 place-items-center text-xs font-semibold [--cut:6px] ${
                       step.state === "done"
-                        ? "border-emerald-400/60 bg-emerald-500/20 text-emerald-200"
+                        ? "bg-emerald-950 text-emerald-300"
                         : step.state === "active"
-                          ? "border-brand-300/60 bg-brand-400/15 text-brand-200"
+                          ? "bg-brand-950 text-brand-300"
                           : step.state === "error"
-                            ? "border-rose-400/60 bg-rose-500/20 text-rose-200"
-                            : "border-white/10 text-ink-600"
+                            ? "bg-rose-950 text-rose-300"
+                            : "bg-ink-900 text-ink-600"
                     }`}
                   >
-                    {step.state === "done" ? "✓" : step.state === "active" ? <Spinner className="h-3.5 w-3.5" /> : step.state === "error" ? "✕" : "·"}
+                    {step.state === "done" ? (
+                      <Check aria-hidden className="h-3.5 w-3.5" strokeWidth={2} />
+                    ) : step.state === "active" ? (
+                      <Spinner className="h-3.5 w-3.5" />
+                    ) : step.state === "error" ? (
+                      <X aria-hidden className="h-3.5 w-3.5" strokeWidth={2} />
+                    ) : (
+                      "·"
+                    )}
                   </span>
                   <span className={step.state === "todo" ? "text-ink-500" : "text-ink-100"}>{step.label}</span>
                 </li>
               ))}
             </ol>
             {state === "error" && (
-              <p className="mt-4 rounded-xl border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">
+              <p className="gm-cut mt-4 bg-rose-950/60 px-3 py-2 text-sm text-rose-100 [--cut:8px]">
                 {status?.error ?? "The bot could not schedule this game."}
               </p>
             )}
             {state === "pending" && waitedSec >= 25 && (
-              <p className="mt-4 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-ink-300">
-                The bot normally answers within a few seconds — it may be restarting. Your request is saved and will be
-                processed as soon as it&apos;s back; you can leave this page and check the calendar later.
+              <p className="gm-cut mt-4 bg-ink-900 px-3 py-2 text-xs text-ink-300 [--cut:8px]">
+                The bot normally answers within a few seconds, so it may be restarting. Your request is saved and runs as
+                soon as it&apos;s back: you can leave this page and check the calendar later.
               </p>
             )}
           </>
@@ -112,27 +123,23 @@ export default function SubmitOverlay({
               href={panelUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded-xl bg-brand-400 px-4 py-3 text-center text-sm font-black text-ink-950 hover:bg-brand-300"
+              className="gm-btn gm-btn-primary h-11"
             >
-              ⚙️ Open Host Scheduling Panel
+              <Settings aria-hidden strokeWidth={1.75} /> Open the Host Scheduling Panel
             </a>
           )}
           {state === "error" ? (
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl bg-brand-400 px-4 py-3 text-sm font-black text-ink-950 hover:bg-brand-300"
+              className="gm-btn gm-btn-primary h-11"
             >
               Fix and try again
             </button>
           ) : (
             <Link
               href="/schedule"
-              className={`rounded-xl px-4 py-3 text-center text-sm font-bold ${
-                state === "done" && !panelUrl
-                  ? "bg-brand-400 text-ink-950 hover:bg-brand-300"
-                  : "border border-white/10 bg-white/5 text-ink-200 hover:border-white/25"
-              }`}
+              className={`gm-btn h-11 ${state === "done" && !panelUrl ? "gm-btn-primary" : "gm-btn-secondary"}`}
             >
               Back to the calendar
             </Link>
@@ -141,7 +148,7 @@ export default function SubmitOverlay({
             <button
               type="button"
               onClick={onScheduleAnother}
-              className="text-xs font-semibold text-ink-400 hover:text-brand-200"
+              className="gm-btn gm-btn-quiet"
             >
               Schedule another game
             </button>

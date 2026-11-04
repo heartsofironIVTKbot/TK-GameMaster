@@ -441,57 +441,51 @@ const SETUP_TAB_STEPS = [
   {
     target: "setup.tab.game",
     placement: "left" as const,
-    title: "🎮 Game",
+    title: "Game",
     body:
       "The **game mode**, the **day** and the **start time**. Other games on the board that day are listed, so you don't clash.\n\n" +
-      "A **preset** loads a saved setup (nation groups, locks, access, rules and mods) in one go.",
+      "A **preset** loads a saved setup (nation groups, locks, access, rules and mods) in one go. A mode's default preset " +
+      "loads by itself.",
   },
   {
     target: "setup.tab.announce",
     placement: "left" as const,
-    title: "📣 Announce",
+    title: "Announce",
     body:
       "When the bot posts the announcement in Discord, with a preview of what players will see. " +
       "Its link opens the map on this game.",
   },
   {
-    target: "setup.tab.access",
+    target: "setup.tab.players",
     placement: "left" as const,
-    title: "🔐 Access",
+    title: "Players",
     body:
-      "Who can reserve **Majors** and **Minors** (VIP+, Trusted+, Verified+ or Everyone) and when they open up to everyone. " +
-      "If your server uses IronLegion, also whether players need to be authenticated to reserve.",
-  },
-  {
-    target: "setup.tab.nations",
-    placement: "left" as const,
-    title: "🗺️ Nations",
-    body:
-      "**Nation groups**: how nations are listed on the board.\n" +
-      "**Nation locks**: nations nobody can reserve, for the whole game or until a set time. " +
+      "Who can reserve **Majors** and **Minors** (VIP+, Trusted+, Verified+ or Everyone), and when that opens up. " +
+      "If your server uses IronLegion, also whether players need to authenticate to reserve.\n\n" +
+      "Below that, **nation locks**: nations nobody can reserve, for the whole game or until a set time. " +
       "Click nations on the map to lock or unlock them.",
   },
   {
     target: "setup.tab.extras",
     placement: "left" as const,
-    title: "✨ Extras",
+    title: "Extras",
     body:
-      "A **draft** game with two captains, add-ons for special events, how attendance is logged, " +
-      "and the automatic reminder an hour before the start.",
+      "Add-ons for special events, how attendance is logged, the reminder an hour before the start, a **draft** game " +
+      "with two captains, and the rules and mods.",
   },
   {
     target: "setup.tab.review",
     placement: "left" as const,
-    title: "✅ Review",
-    body: "Everything on one page before you send it. Click a line to go back to its tab.",
+    title: "Review",
+    body: "Everything on one page before you send it. Click a problem to go to its step.",
   },
 ];
 
 const GAME_SETUP: Tour = {
   id: "game-setup",
-  version: 1,
+  version: 2,
   title: "Setting up a game",
-  summary: "The six tabs of the game setup, and what happens when you schedule.",
+  summary: "The five steps of the game setup, and what happens when you schedule.",
   paths: ["/schedule/new", "/schedule/edit"],
   auto: "visit",
   anchor: "setup.tabs",
@@ -499,8 +493,8 @@ const GAME_SETUP: Tour = {
     {
       title: "Setting up a game",
       body:
-        "Six tabs, left to right. Only **Game** needs filling in: the rest starts from the mode's usual settings.\n\n" +
-        "A **red dot** on a tab means something there still needs fixing.",
+        "Five steps, left to right. Only **Game** needs filling in: the rest starts from the mode's usual settings.\n\n" +
+        "A **red dot** on a step means something there still needs fixing.",
     },
     ...SETUP_TAB_STEPS,
     {
@@ -508,8 +502,9 @@ const GAME_SETUP: Tour = {
       placement: "top",
       title: "Schedule it",
       body:
-        "**Next ›** walks through the tabs. On Review, **Schedule game** sends it to the bot.\n\n" +
-        "The left side says what's still to fix, or **✓ Ready to schedule**.",
+        "**Next** walks through the steps, and **Schedule** sends the game to the bot from any step. If something still " +
+        "needs fixing, Schedule takes you to it.\n\n" +
+        "The strip above shows when the game is announced and when it starts.",
     },
     {
       title: "After you schedule",
