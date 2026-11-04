@@ -1,5 +1,22 @@
 "use client";
 
+import {
+  Bot,
+  CalendarCheck,
+  ChevronDown,
+  ChevronRight,
+  Dot,
+  Filter,
+  Gamepad2,
+  Gavel,
+  Mail,
+  Repeat,
+  Settings,
+  Star,
+  Tag,
+  Target,
+  type LucideIcon,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import type { AuditEvent, AuditPage } from "@/lib/auditTypes";
 import { detectTimeZone, formatInZone, formatRelative } from "@/lib/timeEngine";
@@ -8,18 +25,20 @@ import { Spinner } from "@/components/schedule/ui";
 
 /** The audit feed (the /audit page and a player's History on the Database page). */
 
-export const CATEGORY_ICON: Record<string, string> = {
-  reservation: "📍",
-  roster: "🔁",
-  game: "🎮",
-  draft: "🎯",
-  moderation: "⚖️",
-  host: "⭐",
-  roles: "🏷️",
-  message: "✉️",
-  settings: "⚙️",
-  system: "🤖",
+/** Each category's line icon and colour. */
+export const CATEGORY_ICON: Record<string, { icon: LucideIcon; tone: string }> = {
+  reservation: { icon: CalendarCheck, tone: "text-sky-300" },
+  roster: { icon: Repeat, tone: "text-sky-300" },
+  game: { icon: Gamepad2, tone: "text-emerald-300" },
+  draft: { icon: Target, tone: "text-violet-300" },
+  moderation: { icon: Gavel, tone: "text-rose-300" },
+  host: { icon: Star, tone: "text-yellow-300" },
+  roles: { icon: Tag, tone: "text-ink-300" },
+  message: { icon: Mail, tone: "text-ink-300" },
+  settings: { icon: Settings, tone: "text-yellow-300" },
+  system: { icon: Bot, tone: "text-ink-300" },
 };
+const FALLBACK_ICON = { icon: Dot, tone: "text-ink-500" };
 
 const SOURCE_LABEL: Record<string, string> = { web: "Website", bot: "Bot", discord: "Discord" };
 
@@ -73,7 +92,7 @@ export function useAuditFeed(query: string, refreshMs = 15_000) {
         });
       })
       .catch(() => {
-        if (!cancelled) setFeed((previous) => (previous ? { ...previous, error: "Network error — retrying." } : null));
+        if (!cancelled) setFeed((previous) => (previous ? { ...previous, error: "Network error. Trying again." } : null));
       });
     return () => {
       cancelled = true;
@@ -99,7 +118,7 @@ export function useAuditFeed(query: string, refreshMs = 15_000) {
           };
         });
       })
-      .catch(() => setFeed((previous) => (previous ? { ...previous, error: "Network error — try again." } : previous)))
+      .catch(() => setFeed((previous) => (previous ? { ...previous, error: "Network error. Try again." } : previous)))
       .finally(() => setLoadingMore(false));
   };
 
@@ -108,7 +127,7 @@ export function useAuditFeed(query: string, refreshMs = 15_000) {
 }
 
 function DetailValue({ value }: { value: unknown }) {
-  if (value == null || value === "") return <span className="text-ink-500">—</span>;
+  if (value == null || value === "") return <span className="text-ink-500">none</span>;
   if (typeof value === "object") {
     return <span className="break-all font-mono text-[11px] text-ink-300">{JSON.stringify(value)}</span>;
   }
@@ -127,13 +146,15 @@ function AuditRow({
   onPerson?: (id: string) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const meta = CATEGORY_ICON[event.category] ?? FALLBACK_ICON;
+  const Icon = meta.icon;
   const details = Object.entries(event.details ?? {}).filter(([, value]) => value != null && value !== "");
   const person = (id: string | null, name: string | null, role: string) =>
     id ? (
       <span className="inline-flex items-center gap-1">
         <a
           href={`/database?player=${id}`}
-          className="font-semibold text-brand-200 hover:underline"
+          className="font-semibold text-brand-300 hover:underline"
           title={`Open ${name ?? id}'s record`}
           onClick={(click) => click.stopPropagation()}
         >
@@ -146,9 +167,10 @@ function AuditRow({
               click.stopPropagation();
               onPerson(id);
             }}
-            className="rounded px-1 text-[10px] text-ink-500 hover:bg-white/5 hover:text-white"
+            className="inline-flex items-center gap-0.5 px-1 text-[11px] text-ink-500 hover:text-ink-100"
             title={`Only show actions by or on ${name ?? id}`}
           >
+            <Filter aria-hidden className="h-3 w-3" strokeWidth={1.75} />
             filter
           </button>
         )}
@@ -157,19 +179,17 @@ function AuditRow({
     ) : null;
 
   return (
-    <li className="border-b border-white/5 last:border-b-0">
+    <li className="gm-cut bg-ink-900 [--cut:7px]">
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
-        className="flex w-full items-start gap-3 px-3 py-2.5 text-left hover:bg-white/[0.03]"
+        className="flex w-full items-start gap-3 px-3 py-2.5 text-left transition-colors hover:bg-ink-800"
       >
-        <span className="mt-0.5 text-base" title={event.category}>
-          {CATEGORY_ICON[event.category] ?? "•"}
-        </span>
+        <Icon aria-hidden className={`mt-0.5 h-4 w-4 shrink-0 ${meta.tone}`} strokeWidth={1.75} />
         <span className="min-w-0 flex-1">
-          <span className="block text-sm text-ink-100">{event.summary}</span>
-          <span className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-ink-500">
+          <span className="block text-[13.5px] text-ink-100">{event.summary}</span>
+          <span className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-ink-500">
             <span title={formatInZone(event.created_at * 1000, zone, { dateStyle: "full", timeStyle: "medium" })}>
               {formatInZone(event.created_at * 1000, zone, {
                 day: "numeric",
@@ -177,8 +197,8 @@ function AuditRow({
                 hour: "2-digit",
                 minute: "2-digit",
                 hourCycle: "h23",
-              })}{" "}
-              · {formatRelative(event.created_at * 1000, now)}
+              })}
+              , {formatRelative(event.created_at * 1000, now)}
             </span>
             <span>
               {event.category} / {event.action}
@@ -186,10 +206,14 @@ function AuditRow({
             <span>{SOURCE_LABEL[event.source] ?? event.source}</span>
           </span>
         </span>
-        <span className="mt-0.5 text-xs text-ink-500">{open ? "▾" : "▸"}</span>
+        {open ? (
+          <ChevronDown aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-ink-500" strokeWidth={1.75} />
+        ) : (
+          <ChevronRight aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-ink-500" strokeWidth={1.75} />
+        )}
       </button>
       {open && (
-        <div className="space-y-1.5 px-3 pb-3 pl-11 text-xs">
+        <div className="space-y-1.5 px-3 pb-3 pl-10 text-xs">
           <div className="flex flex-wrap gap-x-4 gap-y-1">
             {person(event.actor_id, event.actor_name, "by")}
             {person(event.target_id, event.target_name, "player")}
@@ -200,7 +224,7 @@ function AuditRow({
             )}
           </div>
           {details.length > 0 && (
-            <dl className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-3 gap-y-1 rounded-lg border border-white/5 bg-ink-950/40 p-2">
+            <dl className="gm-cut grid grid-cols-[max-content_minmax(0,1fr)] gap-x-3 gap-y-1 bg-ink-950 p-2.5 [--cut:6px]">
               {details.map(([key, value]) => (
                 <div key={key} className="contents">
                   <dt className="text-ink-500">{key}</dt>
@@ -237,18 +261,18 @@ export default function AuditList({
   return (
     <div>
       {feed?.error && (
-        <p className="mb-2 rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-100">{feed.error}</p>
+        <p className="gm-cut mb-2 bg-rose-950 px-3 py-2 text-[13px] text-rose-200 [--cut:8px]">{feed.error}</p>
       )}
       {loading && (
-        <div className="flex items-center gap-2 px-2 py-6 text-xs text-ink-400">
+        <div className="flex items-center gap-2 px-2 py-6 text-[13px] text-ink-400">
           <Spinner className="h-3.5 w-3.5 text-brand-300" /> Loading…
         </div>
       )}
       {feed && feed.events.length === 0 && !feed.error && (
-        <p className="px-2 py-8 text-center text-xs text-ink-500">{empty}</p>
+        <p className="px-2 py-8 text-center text-[13px] text-ink-500">{empty}</p>
       )}
       {feed && feed.events.length > 0 && (
-        <ul className="overflow-hidden rounded-2xl border border-white/5 bg-ink-950/30">
+        <ul className="space-y-[3px]">
           {feed.events.map((event) => (
             <AuditRow key={event.id} event={event} zone={zone} now={now} onPerson={onPerson} />
           ))}
@@ -260,7 +284,7 @@ export default function AuditList({
             type="button"
             onClick={loadMore}
             disabled={loadingMore}
-            className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold text-ink-200 hover:border-brand-300/40 hover:text-white disabled:opacity-60"
+            className="gm-btn gm-btn-secondary"
           >
             {loadingMore && <Spinner className="h-3 w-3" />}Load more
           </button>

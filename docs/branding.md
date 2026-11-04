@@ -105,6 +105,17 @@ red number for problems, yellow for warnings, a lock until reached. On
 phones the list folds behind "All steps" / "All settings". The save bar
 sticks to the bottom and leaves room on the right for the Help button.
 
+**Small pages** (`docs/design/small-pages.html`): the log-in page is
+`LoginScreen` (`components/schedule/HostGate.tsx`): what the page does on
+the left (three line-icon features each page passes in), the Discord card
+on the right; errors and "hosts only" use `GateMessage`, a card in the
+middle. Profile has the Database record's layout. Tickets are rows. The
+roleplay archive and its games are the one purple place (`gm-plate-rp`,
+violet chips and bars). Status opens with a big plate tinted by the
+state. The audit log keeps its filters on top, with a line icon and
+colour per category (`CATEGORY_ICON`). The crash report has three
+numbered steps.
+
 **The calendars** (`docs/design/calendar.html`): a game's colour is its
 status and nothing else: yellow scheduled, green announced, blue on-going,
 grey ended, red cancelled (`GameState` in `web/src/lib/scheduleOptions.ts`,

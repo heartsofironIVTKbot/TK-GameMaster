@@ -1,7 +1,9 @@
 "use client";
 
+import { Activity, CircleX, Radio, RotateCcw, Server, Timer, type LucideIcon } from "lucide-react";
+import type { CSSProperties } from "react";
 import SiteHeader from "@/components/site/SiteHeader";
-import { GLASS, Spinner } from "@/components/schedule/ui";
+import { Spinner } from "@/components/schedule/ui";
 import { UptimeBars, usePublicStatus } from "./UptimeCard";
 
 /**
@@ -20,21 +22,31 @@ function dateTime(sec: number): string {
   return new Date(sec * 1000).toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 }
 
+/** The status plate's colour, dot and heading for each state. */
+const STATE = {
+  online: { text: "GameMaster is online", tone: "oklch(79.4% 0.118 174)", dot: "bg-emerald-400" },
+  offline: { text: "GameMaster is offline", tone: "oklch(70.4% 0.191 22.2)", dot: "bg-rose-400" },
+  unknown: { text: "Status not available yet", tone: "", dot: "bg-ink-500" },
+} as const;
+
 export default function StatusPage() {
   const { status, error } = usePublicStatus();
 
   // The server's clock at the last check (durations stay right whatever the viewer's clock says).
   const now = status?.checked_at ?? 0;
   const state = status?.state ?? "unknown";
-  const banner = {
-    online: { text: "GameMaster is online", tone: "border-emerald-400/40 bg-emerald-500/10", dot: "bg-emerald-400" },
-    offline: { text: "GameMaster is offline", tone: "border-rose-400/50 bg-rose-500/15", dot: "bg-rose-500" },
-    unknown: { text: "Status not available yet", tone: "border-white/15 bg-white/5", dot: "bg-ink-500" },
-  }[state];
+  const meta = STATE[state];
+
+  const facts: { icon: LucideIcon; label: string; value: string }[] = [];
+  if (status && state === "online" && status.started_at) facts.push({ icon: Timer, label: "Running for", value: duration(now - status.started_at) });
+  if (status && state === "online" && status.latency_ms !== null) facts.push({ icon: Radio, label: "Reply time to Discord", value: `${status.latency_ms} ms` });
+  if (status && status.servers !== null) {
+    facts.push({ icon: Server, label: "Serving", value: `${status.servers} ${status.servers === 1 ? "community" : "communities"}` });
+  }
 
   return (
-    <div className="gm-backdrop min-h-screen w-full text-ink-100">
-      <SiteHeader page="status" title="Status" subtitle="GameMaster"></SiteHeader>
+    <div className="min-h-screen w-full bg-ink-950 text-ink-100">
+      <SiteHeader page="status" title="Status" subtitle="Is GameMaster online" />
 
       <main className="mx-auto max-w-3xl space-y-4 px-4 py-6 sm:px-6">
         {!status && !error && (
@@ -42,55 +54,86 @@ export default function StatusPage() {
             <Spinner className="h-4 w-4 text-emerald-300" /> Checking…
           </p>
         )}
-        {error && !status && <p className="rounded-xl border border-rose-400/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">{error}</p>}
+        {error && !status && <p className="gm-cut bg-rose-950 px-4 py-3 text-sm text-rose-200 [--cut:9px]">{error}</p>}
 
         {status && (
           <>
-            <section className={`rounded-3xl border p-5 ${banner.tone}`}>
-              <div className="flex items-center gap-3">
-                <span className="relative flex h-3.5 w-3.5">
-                  {state === "online" && <span className={`gm-live-ping absolute inline-flex h-full w-full rounded-full ${banner.dot}`} />}
-                  <span className={`relative inline-flex h-3.5 w-3.5 rounded-full ${banner.dot}`} />
+            <section
+              className="gm-plate p-5 sm:px-6 sm:py-[22px]"
+              style={
+                meta.tone
+                  ? ({
+                      backgroundColor: `color-mix(in oklab, ${meta.tone} 9%, var(--color-ink-900))`,
+                      "--line": `color-mix(in oklab, ${meta.tone} 35%, var(--color-ink-800))`,
+                    } as CSSProperties)
+                  : undefined
+              }
+            >
+              <div className="flex items-center gap-3.5">
+                <span className="relative flex h-3.5 w-3.5 shrink-0">
+                  {state === "online" && <span className={`gm-live-ping absolute inline-flex h-full w-full rounded-full ${meta.dot}`} />}
+                  <span className={`relative inline-flex h-3.5 w-3.5 rounded-full ${meta.dot}`} />
                 </span>
-                <h1 className="text-xl font-black text-white">{banner.text}</h1>
+                <h1 className="gm-title text-[32px] sm:text-[40px]">{meta.text}</h1>
               </div>
-              <p className="mt-1.5 text-sm text-ink-300">
-                {state === "online" && status.started_at
-                  ? `Running for ${duration(now - status.started_at)}${status.latency_ms !== null ? ` · ${status.latency_ms} ms to Discord` : ""}${
-                      status.servers !== null ? ` · serving ${status.servers} ${status.servers === 1 ? "community" : "communities"}` : ""
-                    }.`
-                  : state === "offline" && status.last_beat
-                    ? `Last heard from ${duration(now - status.last_beat)} ago. Games, reminders and website requests resume when it's back.`
-                    : "GameMaster reports here once it runs the latest update."}
+              <p className="mt-2 text-[13px] text-ink-400">
+                {state === "offline" && status.last_beat
+                  ? `Last heard from ${duration(now - status.last_beat)} ago. Games, reminders and website requests start again when it's back. `
+                  : state === "unknown"
+                    ? "GameMaster reports here once it runs the latest update. "
+                    : ""}
+                Checked {dateTime(status.checked_at)}, refreshes every minute.
               </p>
-              <p className="mt-1 text-[11px] text-ink-500">Checked {dateTime(status.checked_at)} · refreshes every minute</p>
+              {facts.length > 0 && (
+                <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                  {facts.map(({ icon: Icon, label, value }) => (
+                    <div key={label} className="gm-cut bg-ink-950 p-3 [--cut:9px]">
+                      <p className="flex items-center gap-1.5 text-xs text-ink-400">
+                        <Icon aria-hidden className="h-3.5 w-3.5" strokeWidth={1.75} />
+                        {label}
+                      </p>
+                      <p className="mt-1.5 font-display text-[26px] font-extrabold leading-none text-ink-100">{value}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </section>
 
-            <section className={`rounded-3xl p-5 ${GLASS}`}>
+            <section className="gm-plate p-4 sm:p-5">
               <UptimeBars status={status} />
             </section>
 
-            <section className={`rounded-3xl p-5 ${GLASS}`}>
-              <h2 className="text-sm font-black text-white">Incidents</h2>
+            <section className="gm-plate p-4 sm:p-5">
+              <h2 className="flex items-center gap-2.5">
+                <Activity aria-hidden className="h-[18px] w-[18px] text-brand-400" strokeWidth={1.75} />
+                <span className="gm-title text-[22px]">Incidents</span>
+              </h2>
               {status.incidents.length === 0 ? (
-                <p className="mt-2 text-sm text-ink-400">No incidents in the last 30 days.</p>
+                <p className="mt-2 text-[13px] text-ink-400">No incidents in the last 30 days.</p>
               ) : (
-                <ul className="mt-3 divide-y divide-white/5 overflow-hidden rounded-xl border border-white/10">
-                  {status.incidents.map((incident, index) => (
-                    <li key={`${incident.started_at}-${index}`} className="flex items-start gap-3 bg-ink-950/40 px-3 py-2.5 text-sm">
-                      <span>{incident.kind === "outage" ? (incident.ended_at === null ? "🔴" : "🟠") : "🔁"}</span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block font-semibold text-ink-100">
-                          {incident.kind === "outage" ? (incident.ended_at === null ? "Offline now" : "Outage") : "Restart"}
+                <ul className="mt-3 space-y-1">
+                  {status.incidents.map((incident, index) => {
+                    const outage = incident.kind === "outage";
+                    const ongoing = outage && incident.ended_at === null;
+                    const Icon = outage ? CircleX : RotateCcw;
+                    return (
+                      <li key={`${incident.started_at}-${index}`} className="gm-cut flex items-start gap-3 bg-ink-950 px-3 py-2.5 text-[13px] [--cut:7px]">
+                        <Icon
+                          aria-hidden
+                          className={`mt-0.5 h-4 w-4 shrink-0 ${ongoing ? "text-rose-400" : outage ? "text-yellow-300" : "text-sky-300"}`}
+                          strokeWidth={1.75}
+                        />
+                        <span className="min-w-0 flex-1">
+                          <span className="block font-semibold text-ink-100">{ongoing ? "Offline now" : outage ? "Outage" : "Restart"}</span>
+                          <span className="block text-xs text-ink-500">
+                            {dateTime(incident.started_at)}
+                            {outage &&
+                              `, ${incident.ended_at === null ? `for ${duration(now - incident.started_at)} so far` : `lasted ${duration(incident.ended_at - incident.started_at)}`}`}
+                          </span>
                         </span>
-                        <span className="block text-xs text-ink-400">
-                          {dateTime(incident.started_at)}
-                          {incident.kind === "outage" &&
-                            ` · ${incident.ended_at === null ? `for ${duration(now - incident.started_at)} so far` : `lasted ${duration(incident.ended_at - incident.started_at)}`}`}
-                        </span>
-                      </span>
-                    </li>
-                  ))}
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </section>

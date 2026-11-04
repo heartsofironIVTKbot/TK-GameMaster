@@ -3,7 +3,8 @@
 import SiteHeader from "@/components/site/SiteHeader";
 import { useEffect, useMemo, useState } from "react";
 import ServerSwitcher from "@/components/ServerSwitcher";
-import { GLASS, Spinner } from "@/components/schedule/ui";
+import { Download, List, RefreshCw, Search, X } from "lucide-react";
+import { Spinner } from "@/components/schedule/ui";
 import { AUDIT_CATEGORIES, AUDIT_CATEGORY_LABELS } from "@/lib/auditTypes";
 import type { HostProfile } from "@/lib/scheduleTypes";
 import AuditList, { CATEGORY_ICON, useAuditFeed } from "./AuditList";
@@ -14,8 +15,7 @@ import AuditList, { CATEGORY_ICON, useAuditFeed } from "./AuditList";
  * and admins only; read-only. ?player=<id> / ?game=<id> pre-filter it.
  */
 
-const INPUT =
-  "rounded-lg border border-white/10 bg-ink-950/60 px-3 py-1.5 text-xs text-ink-100 placeholder:text-ink-500 focus:border-brand-300/50 focus:outline-none";
+const INPUT = "gm-input h-[34px] min-h-0 text-[13px]";
 
 interface Filters {
   category: string;
@@ -72,67 +72,74 @@ export default function AuditApp({ host }: { host: HostProfile }) {
   const filtered = Boolean(filters.category || filters.q || filters.player || filters.game || filters.from || filters.to);
 
   return (
-    <div className="gm-backdrop min-h-screen w-full text-ink-100">
-      <SiteHeader page="audit" title="Audit log" subtitle="GameMaster · Who did what, and when">
+    <div className="min-h-screen w-full bg-ink-950 text-ink-100">
+      <SiteHeader page="audit" title="Audit log" subtitle="Who did what, and when">
           {host.demo && (
-            <span className="rounded-full border border-fuchsia-400/40 bg-fuchsia-500/15 px-3 py-1 text-[11px] font-bold text-fuchsia-200">
-              PREVIEW MODE · sample data
-            </span>
+            <span className="gm-tag bg-violet-950 text-violet-300">Preview: sample data</span>
           )}
           <ServerSwitcher host={host} />
       </SiteHeader>
 
       <main className="mx-auto max-w-[1400px] space-y-4 px-4 py-5 sm:px-6">
-        <section className={`space-y-3 rounded-3xl p-4 sm:p-5 ${GLASS}`}>
+        <section className="gm-plate space-y-3 p-3.5 sm:p-4">
           <div className="flex flex-wrap gap-1.5">
             <button
               type="button"
               onClick={() => set({ category: "" })}
               className={chip(!filters.category)}
             >
+              <List aria-hidden className="h-3.5 w-3.5" strokeWidth={1.75} />
               All
             </button>
-            {AUDIT_CATEGORIES.map((category) => (
+            {AUDIT_CATEGORIES.map((category) => {
+              const { icon: Icon, tone } = CATEGORY_ICON[category];
+              const on = filters.category === category;
+              return (
               <button
                 key={category}
                 type="button"
                 onClick={() => set({ category: filters.category === category ? "" : category })}
                 className={chip(filters.category === category)}
-                title={`${AUDIT_CATEGORY_LABELS[category]} — ${counts[category] ?? 0} in the last 7 days`}
+                title={`${AUDIT_CATEGORY_LABELS[category]}: ${counts[category] ?? 0} in the last 7 days`}
               >
-                {CATEGORY_ICON[category]} {AUDIT_CATEGORY_LABELS[category]}
-                <span className="ml-1 text-[10px] font-semibold opacity-70">{counts[category] ?? 0}</span>
+                <Icon aria-hidden className={`h-3.5 w-3.5 ${on ? "" : tone}`} strokeWidth={1.75} />
+                {AUDIT_CATEGORY_LABELS[category]}
+                <span className="text-[11px] opacity-65">{counts[category] ?? 0}</span>
               </button>
-            ))}
+              );
+            })}
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <input
-              type="search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search the text (a name, a nation, a reason…)"
-              className={`${INPUT} min-w-[240px] flex-1`}
-              aria-label="Search the audit log"
-            />
+            <label className="relative min-w-[240px] flex-1">
+              <Search aria-hidden className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-500" strokeWidth={1.75} />
+              <input
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search the text (a name, a nation, a reason)"
+                className={`${INPUT} w-full pl-8`}
+                aria-label="Search the audit log"
+              />
+            </label>
             <input
               value={filters.player}
               onChange={(event) => set({ player: event.target.value.replace(/\D/g, "").slice(0, 25) })}
               placeholder="Player's Discord ID"
-              className={`${INPUT} w-[170px] font-mono`}
+              className={`${INPUT} w-[170px]`}
               aria-label="Only actions by or on this player"
             />
             <input
               value={filters.game}
               onChange={(event) => set({ game: event.target.value.replace(/\D/g, "").slice(0, 25) })}
               placeholder="Game ID"
-              className={`${INPUT} w-[170px] font-mono`}
+              className={`${INPUT} w-[150px]`}
               aria-label="Only actions in this game"
             />
-            <label className="flex items-center gap-1.5 text-[11px] text-ink-400">
+            <label className="flex items-center gap-1.5 text-xs text-ink-400">
               From
               <input type="date" value={filters.from} onChange={(event) => set({ from: event.target.value })} className={INPUT} />
             </label>
-            <label className="flex items-center gap-1.5 text-[11px] text-ink-400">
+            <label className="flex items-center gap-1.5 text-xs text-ink-400">
               To
               <input type="date" value={filters.to} onChange={(event) => set({ to: event.target.value })} className={INPUT} />
             </label>
@@ -143,8 +150,9 @@ export default function AuditApp({ host }: { host: HostProfile }) {
                   setSearch("");
                   setFilters({ category: "", q: "", player: "", game: "", from: "", to: "" });
                 }}
-                className="rounded-lg px-2 py-1.5 text-[11px] font-bold text-ink-400 hover:bg-white/5 hover:text-white"
+                className="gm-btn gm-btn-quiet h-[30px] px-2.5 text-[12.5px] [--cut:7px]"
               >
+                <X aria-hidden strokeWidth={1.75} />
                 Clear filters
               </button>
             )}
@@ -152,26 +160,28 @@ export default function AuditApp({ host }: { host: HostProfile }) {
               <button
                 type="button"
                 onClick={refresh}
-                className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[11px] font-bold text-ink-400 hover:bg-white/5 hover:text-white"
+                className="gm-btn gm-btn-quiet h-[30px] px-2.5 text-[12.5px] [--cut:7px]"
                 aria-label="Refresh"
               >
-                {loading && <Spinner className="h-3 w-3" />}↻ Refresh
+                {loading ? <Spinner className="h-3.5 w-3.5" /> : <RefreshCw aria-hidden strokeWidth={1.75} />}
+                Refresh
               </button>
               <a
                 href={`/api/audit/export${query ? `?${query}` : ""}`}
-                className="rounded-lg border border-brand-300/40 bg-brand-400/10 px-3 py-1.5 text-[11px] font-bold text-brand-200 hover:bg-brand-400/20"
-                title="Download what's shown (with these filters) as a spreadsheet file — up to 10,000 rows"
+                className="gm-btn gm-btn-secondary h-[30px] px-3 text-[12.5px] [--cut:7px]"
+                title="Download what's shown (with these filters) as a spreadsheet file, up to 10,000 rows"
               >
-                ⬇ Export CSV
+                <Download aria-hidden strokeWidth={1.75} />
+                Export CSV
               </a>
             </div>
           </div>
-          <p className="text-[11px] text-ink-500">
-            Updates every 15 seconds. Click a row for the details. Rows can&apos;t be edited or deleted; they&apos;re kept for 400 days.
+          <p className="text-xs text-ink-500">
+            Updates every 15 seconds. Click a row for the details. Rows can&apos;t be changed or deleted and are kept for 400 days.
           </p>
         </section>
 
-        <section className={`rounded-3xl p-3 sm:p-4 ${GLASS}`}>
+        <section>
           <AuditList
             feed={feed}
             loading={loading}
@@ -187,9 +197,7 @@ export default function AuditApp({ host }: { host: HostProfile }) {
 }
 
 function chip(active: boolean): string {
-  return `rounded-full border px-3 py-1 text-xs font-bold transition ${
-    active
-      ? "border-brand-300 bg-brand-400 text-ink-950"
-      : "border-white/10 bg-white/5 text-ink-300 hover:border-brand-300/40 hover:text-white"
+  return `gm-cut inline-flex h-[30px] items-center gap-1.5 px-3 text-[12.5px] font-semibold transition-colors [--cut:7px] ${
+    active ? "bg-brand-400 text-brand-950" : "bg-ink-950 text-ink-300 hover:bg-ink-800 hover:text-ink-100"
   }`;
 }

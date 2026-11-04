@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import Avatar from "@/components/database/Avatar";
-import { GLASS, Spinner } from "@/components/schedule/ui";
+import { ArrowRight, Award, PenLine, ScrollText, Search, Users } from "lucide-react";
+import { Spinner } from "@/components/schedule/ui";
 import { modeOption } from "@/lib/scheduleOptions";
 import type { RpGameCard, RpListResponse } from "@/lib/rpArchiveTypes";
 import { Flag, ModeBadge, RpHeader, ServerChip, VerdictBadge, playedOn, words } from "./shared";
@@ -97,28 +98,24 @@ export default function RoleplayArchive() {
   };
 
   return (
-    <div className="gm-backdrop min-h-screen w-full text-ink-100">
+    <div className="min-h-screen w-full bg-ink-950 text-ink-100">
       <RpHeader />
 
       <main className="mx-auto max-w-[1500px] px-4 py-6 sm:px-6">
-        <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-violet-950/60 via-ink-900/70 to-fuchsia-950/40 p-6 shadow-2xl sm:p-8">
-          <div className="pointer-events-none absolute -right-16 -top-24 h-72 w-72 rounded-full bg-fuchsia-500/10 blur-3xl" aria-hidden />
-          <p className="text-[11px] font-black uppercase tracking-[0.24em] text-fuchsia-300/90">The roleplay archive</p>
-          <h1 className="mt-2 max-w-2xl text-3xl font-black tracking-tight text-white sm:text-4xl">Every game&apos;s story, and its best roleplay</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-ink-300">
+        <section className="gm-plate gm-plate-rp p-5 sm:px-8 sm:py-7">
+          <h1 className="gm-title max-w-3xl text-[36px] sm:text-[54px]">Every game&apos;s story, and its best roleplay</h1>
+          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-ink-400">
             Read what happened in every graded game: who allied, who betrayed, and the lines that made it. The AI reads each
             game&apos;s chat log and scores the roleplay; hosts give the rewards.
           </p>
-          <label className="relative mt-5 block max-w-2xl" data-tour="rp.search">
-            <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-lg" aria-hidden>
-              🔎
-            </span>
+          <label className="relative mt-5 block max-w-[680px]" data-tour="rp.search">
+            <Search aria-hidden className="pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-ink-500" strokeWidth={1.75} />
             <input
               value={q}
               onChange={(event) => setQ(event.target.value.slice(0, 120))}
               placeholder="Search a player, nation, game or line…"
               aria-label="Search the roleplay archive"
-              className="w-full rounded-2xl border border-white/15 bg-ink-950/70 py-3.5 pl-12 pr-4 text-base text-white placeholder:text-ink-500 shadow-inner focus:border-fuchsia-300/60 focus:outline-none"
+              className="gm-input h-12 w-full pl-11 text-[15px] [--cut:10px] focus:shadow-[inset_0_0_0_1px_var(--color-violet-400)]"
             />
           </label>
         </section>
@@ -128,9 +125,9 @@ export default function RoleplayArchive() {
           {(data?.modes ?? []).map((value) => (
             <FilterChip key={value} active={mode === value} onClick={() => setMode(mode === value ? "" : value)} label={modeOption(value)?.label ?? value} />
           ))}
-          <span className="mx-1 hidden h-5 w-px bg-white/10 sm:block" aria-hidden />
-          <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1 text-xs font-semibold text-ink-300">
-            <input type="checkbox" checked={rewarded} onChange={(event) => setRewarded(event.target.checked)} className="h-3.5 w-3.5 accent-fuchsia-400" />
+          <span className="mx-1 hidden h-5 w-px bg-ink-800 sm:block" aria-hidden />
+          <label className="gm-cut flex h-[30px] cursor-pointer items-center gap-2 bg-ink-900 px-3 text-[12.5px] font-semibold text-ink-300 [--cut:7px]">
+            <input type="checkbox" checked={rewarded} onChange={(event) => setRewarded(event.target.checked)} className="h-3.5 w-3.5 accent-violet-400" />
             Rewarded roleplay only
           </label>
           <div className="ml-auto flex flex-wrap items-center gap-2">
@@ -139,7 +136,7 @@ export default function RoleplayArchive() {
                 value={server}
                 onChange={(event) => setServer(event.target.value)}
                 aria-label="Server"
-                className="rounded-lg border border-white/10 bg-ink-900/80 px-2.5 py-1.5 text-xs font-semibold text-ink-200 [color-scheme:dark]"
+                className="gm-input h-[30px] min-h-0 text-[12.5px]"
               >
                 <option value="">All servers</option>
                 {data?.servers.map((entry) => (
@@ -153,7 +150,7 @@ export default function RoleplayArchive() {
               value={sort}
               onChange={(event) => setSort(event.target.value as Sort)}
               aria-label="Sort"
-              className="rounded-lg border border-white/10 bg-ink-900/80 px-2.5 py-1.5 text-xs font-semibold text-ink-200 [color-scheme:dark]"
+              className="gm-input h-[30px] min-h-0 text-[12.5px]"
             >
               <option value="newest">Newest first</option>
               <option value="oldest">Oldest first</option>
@@ -165,7 +162,7 @@ export default function RoleplayArchive() {
         <p className="mt-4 flex items-center gap-2 px-1 text-xs text-ink-400" aria-live="polite">
           {loading ? (
             <>
-              <Spinner className="h-3.5 w-3.5 text-fuchsia-300" /> Looking…
+              <Spinner className="h-3.5 w-3.5 text-violet-300" /> Looking…
             </>
           ) : data ? (
             `${data.total.toLocaleString()} game${data.total === 1 ? "" : "s"}${debounced.trim() ? ` matching “${debounced.trim()}”` : ""}`
@@ -173,13 +170,13 @@ export default function RoleplayArchive() {
         </p>
 
         {loaded?.error && !loading && (
-          <p className="mt-3 rounded-2xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">{loaded.error}</p>
+          <p className="gm-cut mt-3 bg-rose-950 px-4 py-3 text-sm text-rose-200 [--cut:9px]">{loaded.error}</p>
         )}
 
         {!loading && data && games.length === 0 && (
-          <div className={`mt-4 rounded-3xl p-10 text-center ${GLASS}`}>
-            <p className="text-4xl">📜</p>
-            <p className="mt-3 text-sm font-semibold text-ink-200">
+          <div className="gm-plate mt-4 flex flex-col items-center p-10 text-center">
+            <ScrollText aria-hidden className="h-9 w-9 text-violet-300" strokeWidth={1.5} />
+            <p className="mt-3 text-sm font-semibold text-ink-100">
               {debounced.trim() || mode || rewarded || server ? "Nothing matches that." : "No graded games yet."}
             </p>
             <p className="mt-1 text-xs text-ink-500">
@@ -190,7 +187,7 @@ export default function RoleplayArchive() {
           </div>
         )}
 
-        <div className={`mt-3 grid gap-4 md:grid-cols-2 2xl:grid-cols-3 ${loading ? "opacity-60" : ""}`} data-tour="rp.list">
+        <div className={`mt-3 grid gap-3 md:grid-cols-2 2xl:grid-cols-3 ${loading ? "opacity-60" : ""}`} data-tour="rp.list">
           {games.map((game) => (
             <GameCard key={game.id} game={game} />
           ))}
@@ -202,7 +199,7 @@ export default function RoleplayArchive() {
               type="button"
               onClick={() => void loadMore()}
               disabled={loadingMore}
-              className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-5 py-2.5 text-sm font-bold text-ink-200 hover:border-fuchsia-300/40 disabled:opacity-50"
+              className="gm-btn gm-btn-secondary"
             >
               {loadingMore && <Spinner className="h-4 w-4" />} Show more games
             </button>
@@ -219,8 +216,8 @@ function FilterChip({ active, onClick, label }: { active: boolean; onClick: () =
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`rounded-lg border px-2.5 py-1 text-xs font-semibold transition ${
-        active ? "border-fuchsia-300/70 bg-fuchsia-400/15 text-fuchsia-100" : "border-white/10 bg-white/[0.03] text-ink-300 hover:border-white/25"
+      className={`gm-cut h-[30px] px-3 text-[12.5px] font-semibold transition-colors [--cut:7px] ${
+        active ? "bg-violet-400 text-ink-950" : "bg-ink-900 text-ink-300 hover:bg-ink-800 hover:text-ink-100"
       }`}
     >
       {label}
@@ -232,19 +229,19 @@ function GameCard({ game }: { game: RpGameCard }) {
   return (
     <Link
       href={`/roleplay/${game.id}`}
-      className={`group flex flex-col rounded-3xl p-5 transition hover:-translate-y-0.5 hover:border-fuchsia-300/40 ${GLASS}`}
+      className="gm-plate group flex flex-col p-4 transition-colors hover:[--line:color-mix(in_oklab,var(--color-violet-400)_45%,var(--color-ink-800))] sm:p-[18px]"
     >
       <div className="flex flex-wrap items-center gap-2">
         <ModeBadge mode={game.mode} />
-        <span className="ml-auto text-[11px] font-semibold text-ink-500">{playedOn(game.ts)}</span>
+        <span className="ml-auto text-xs text-ink-500">{playedOn(game.ts)}</span>
       </div>
-      <h2 className="mt-2.5 text-lg font-black leading-snug tracking-tight text-white group-hover:text-fuchsia-100">{game.name}</h2>
+      <h2 className="gm-title mt-2.5 text-[24px] group-hover:text-violet-100">{game.name}</h2>
       <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
         <ServerChip name={game.server_name} icon={game.server_icon_url} />
-        {game.host_name && <span className="text-[11px] text-ink-500">hosted by {game.host_name}</span>}
+        {game.host_name && <span className="text-xs text-ink-500">hosted by {game.host_name}</span>}
       </div>
       {game.summary ? (
-        <p className="mt-3 line-clamp-3 text-sm italic leading-relaxed text-ink-300">“{game.summary}”</p>
+        <p className="mt-3 line-clamp-3 text-[13px] italic leading-relaxed text-ink-300">“{game.summary}”</p>
       ) : (
         <p className="mt-3 text-sm text-ink-500">No story recap for this game.</p>
       )}
@@ -254,17 +251,33 @@ function GameCard({ game }: { game: RpGameCard }) {
             <li key={`${player.tag}-${index}`} className="flex items-center gap-2">
               <Avatar url={player.avatar_url} name={player.name} size={22} />
               <Flag tag={player.tag} className="h-3.5 w-5" />
-              <span className="min-w-0 flex-1 truncate text-xs font-semibold text-ink-200">{player.name}</span>
+              <span className="min-w-0 flex-1 truncate text-[12.5px] text-ink-300">{player.name}</span>
               <VerdictBadge verdict={player.verdict} small />
             </li>
           ))}
         </ul>
       )}
-      <div className="mt-auto flex items-center gap-3 pt-4 text-[11px] font-semibold text-ink-400">
-        <span>👥 {game.players} players</span>
-        <span>✍️ {words(game.ic_words)} RP words</span>
-        {game.rewarded > 0 && <span className="text-emerald-300">🏅 {game.rewarded} rewarded</span>}
-        <span className="ml-auto text-fuchsia-300 opacity-0 transition group-hover:opacity-100">Read →</span>
+      <div className="mt-auto pt-4">
+        <div className="flex w-full flex-wrap items-center gap-x-3.5 gap-y-1 border-t border-ink-800 pt-2.5 text-xs text-ink-400">
+          <span className="inline-flex items-center gap-1.5">
+            <Users aria-hidden className="h-3.5 w-3.5" strokeWidth={1.75} />
+            {game.players} players
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <PenLine aria-hidden className="h-3.5 w-3.5" strokeWidth={1.75} />
+            {words(game.ic_words)} RP words
+          </span>
+          {game.rewarded > 0 && (
+            <span className="inline-flex items-center gap-1.5 text-emerald-300">
+              <Award aria-hidden className="h-3.5 w-3.5" strokeWidth={1.75} />
+              {game.rewarded} rewarded
+            </span>
+          )}
+          <span className="ml-auto inline-flex items-center gap-1 text-violet-300 opacity-0 transition-opacity group-hover:opacity-100">
+            Read
+            <ArrowRight aria-hidden className="h-3.5 w-3.5" strokeWidth={1.75} />
+          </span>
+        </div>
       </div>
     </Link>
   );

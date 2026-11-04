@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GameMaster Small Pages Mock-up</title>
+<!-- Design mock-up of the small pages (log-in card, profile, tickets,
+     roleplay archive, status, audit log, crash report) in the cut-plate
+     style (docs/branding.md). Not part of the app. Drawn at 1440x900
+     (desktop) or 390x844 (phone). -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Big+Shoulders+Stencil+Display:wght@800&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+<style>
+  :root {
+    --ink-950: oklch(11.8% 0.009 152); --ink-900: oklch(19.2% 0.011 152); --ink-800: oklch(26.6% 0.012 152);
+    --ink-700: oklch(36.2% 0.013 152); --ink-600: oklch(44.4% 0.014 152); --ink-500: oklch(55.4% 0.015 152); --ink-400: oklch(70.4% 0.015 152);
+    --ink-300: oklch(86.4% 0.012 152); --ink-100: oklch(96.6% 0.006 152);
+    --brand-400: oklch(76.4% 0.186 146); --brand-950: oklch(19.4% 0.046 146);
+    --mint: oklch(79.4% 0.118 174); --yellow: oklch(86% 0.15 95); --red: oklch(70% 0.17 22); --sky: oklch(76% 0.11 235);
+    --display: "Big Shoulders Display", "Arial Narrow", sans-serif; --stencil: "Big Shoulders Stencil Display", var(--display); --body: "Public Sans", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: oklch(8% 0.006 152); color: var(--ink-300); font: 400 14px/1.45 var(--body); font-variant-numeric: tabular-nums; display: flex; flex-direction: column; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
+  svg.lucide { width: 16px; height: 16px; stroke-width: 1.75; flex: none; }
+  .switches { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; padding: 10px 16px; border-bottom: 1px solid var(--ink-800); background: var(--ink-950); }
+  .switches h1 { margin: 0 6px 0 0; font: 800 22px/1 var(--display); text-transform: uppercase; color: var(--ink-100); }
+  .seg { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-500); }
+  .seg div { display: flex; border: 1px solid var(--ink-700); border-radius: 4px; overflow: hidden; }
+  .seg button { padding: 5px 10px; font-size: 12px; font-weight: 600; color: var(--ink-400); }
+  .seg button + button { border-left: 1px solid var(--ink-700); }
+  .seg button[aria-pressed="true"] { background: var(--ink-800); color: var(--ink-100); }
+  .seg.off { opacity: .35; pointer-events: none; }
+  .viewport { flex: 1; min-height: 0; display: grid; place-items: center; padding: 16px; overflow: hidden; }
+  .frame { position: relative; overflow: hidden; outline: 1px solid var(--ink-800); }
+  .stage { position: absolute; left: 0; top: 0; transform-origin: 0 0; overflow: hidden; background: var(--ink-950); }
+  .stage.desk { width: 1440px; height: 900px; } .stage.phone { width: 390px; height: 844px; }
+  .stage > div { height: 100%; display: flex; flex-direction: column; }
+  [hidden] { display: none !important; }
+  .cut, .btn, .plate, .field { clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut)); }
+  .cut, .btn, .field { --cut: 8px; }
+  .plate { --cut: 14px; --line: var(--ink-800); background-color: var(--ink-900); }
+  .plate, .field, .btn-secondary { border: 1px solid var(--line);
+    background-image: linear-gradient(135deg, var(--line) calc(var(--cut) * .7071 + 1px), transparent 0), linear-gradient(315deg, var(--line) calc(var(--cut) * .7071 + 1px), transparent 0); background-origin: border-box; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; height: 34px; padding: 0 13px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+  .btn-primary { background-color: var(--brand-400); color: var(--brand-950); }
+  .btn-secondary { --line: var(--ink-700); color: var(--ink-100); background-color: var(--ink-950); }
+  .btn-quiet { color: var(--ink-300); } .btn-icon { width: 34px; padding: 0; }
+  .btn-sm { height: 30px; padding: 0 11px; font-size: 12.5px; --cut: 7px; }
+  .btn-discord { background: #5865f2; color: #fff; }
+  .tag { display: inline-flex; align-items: center; gap: 6px; height: 21px; padding: 0 11px; font-size: 11.5px; font-weight: 600; white-space: nowrap; clip-path: polygon(7px 0, calc(100% - 7px) 0, 100% 50%, calc(100% - 7px) 100%, 7px 100%, 0 50%); }
+  .tag svg { width: 12px; height: 12px; }
+  .dot::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .t { color: var(--c); background: color-mix(in oklab, var(--c) 16%, var(--ink-950)); }
+  .t-ink { color: var(--ink-300); background: var(--ink-800); }
+  .title { font-family: var(--display); font-weight: 800; text-transform: uppercase; line-height: .95; color: var(--ink-100); }
+  .small { font-size: 12px; color: var(--ink-400); }
+  .mark { width: 30px; height: 30px; --cut: 7px; display: grid; place-items: center; background: var(--brand-400); color: var(--brand-950); font: 800 17px/1 var(--stencil); }
+  .avatar { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; flex: none; background: var(--ink-800); color: var(--ink-100); font-size: 12px; font-weight: 700; }
+  .sicon { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; flex: none; font: 700 14px/1 var(--body); color: #fff; }
+  .top { flex: none; height: 56px; display: flex; align-items: center; gap: 12px; padding: 0 20px; border-bottom: 1px solid var(--ink-800); background: var(--ink-950); }
+  .top .title { font-size: 26px; } .top small { display: block; font-size: 12px; color: var(--ink-400); }
+  .top .end { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  .phone .top { padding: 0 10px; } .phone .top .title { font-size: 20px; }
+  .body { flex: 1; min-height: 0; overflow: hidden; display: flex; }
+  .wrap { flex: 1; min-width: 0; overflow: hidden; padding: 20px 24px; }
+  .phone .wrap { padding: 12px; }
+  .center { max-width: 1060px; margin: 0 auto; }
+  .h { display: flex; align-items: center; gap: 10px; } .h > svg { width: 20px; height: 20px; color: var(--brand-400); } .h .title { font-size: 30px; }
+  .lead { margin: 4px 0 16px; font-size: 13px; color: var(--ink-400); }
+  :root { --purple: oklch(72% 0.15 305); --gold: oklch(82% 0.13 85); --orange: oklch(76% 0.15 55); }
+  .scroll { overflow-y: auto; }
+  .narrow { max-width: 860px; margin: 0 auto; }
+  .wide { max-width: 1240px; margin: 0 auto; }
+  .row { display: flex; align-items: center; gap: 10px; }
+  .muted { color: var(--ink-500); }
+  .lbl2 { font-size: 13px; font-weight: 600; color: var(--ink-100); }
+  .input { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 10px; --cut: 7px; background: var(--ink-950); box-shadow: inset 0 0 0 1px var(--ink-700); font-size: 13px; color: var(--ink-500); }
+  .input svg { color: var(--ink-500); } .input .chev { margin-left: auto; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 11px; --cut: 7px; background: var(--ink-900); font-size: 12.5px; font-weight: 600; color: var(--ink-300); white-space: nowrap; }
+  .chip.on { background: var(--acc, var(--brand-400)); color: var(--ink-950); } .chip .c { font-size: 11px; opacity: .65; }
+  .chips { display: flex; flex-wrap: wrap; gap: 5px; }
+  /* login */
+  .gate { flex: 1; display: grid; place-items: center; padding: 24px; }
+  .gcard { width: 440px; max-width: 100%; padding: 32px; text-align: center; display: flex; flex-direction: column; align-items: center; }
+  .gcard .gi { width: 52px; height: 52px; --cut: 10px; display: grid; place-items: center; background: var(--ink-800); color: var(--brand-400); } .gcard .gi svg { width: 26px; height: 26px; }
+  .gcard .title { font-size: 36px; margin-top: 16px; } .gcard p { margin: 8px 0 0; font-size: 13.5px; color: var(--ink-400); }
+  .gsplit { flex: 1; display: grid; grid-template-columns: 1fr 460px; }
+  .gsplit .l { padding: 72px 64px; border-right: 1px solid var(--ink-800); display: flex; flex-direction: column; justify-content: center; }
+  .gsplit .l .title { font-size: 64px; } .gsplit .l .lead { font-size: 15px; max-width: 520px; margin: 12px 0 28px; }
+  .gsplit .r { display: grid; place-items: center; padding: 32px; background: var(--ink-950); }
+  .feat { display: flex; gap: 12px; padding: 12px 0; border-top: 1px solid var(--ink-800); max-width: 560px; } .feat svg { color: var(--brand-400); width: 20px; height: 20px; margin-top: 1px; }
+  .feat b { display: block; color: var(--ink-100); font-size: 14px; } .feat span { font-size: 13px; color: var(--ink-400); }
+  .phone .gsplit { grid-template-columns: 1fr; } .phone .gsplit .l { padding: 28px 18px 10px; border: 0; justify-content: flex-start; } .phone .gsplit .l .title { font-size: 42px; } .phone .gsplit .r { padding: 16px 18px 24px; align-items: start; }
+  .who { display: flex; align-items: center; gap: 10px; padding: 10px 12px; --cut: 9px; background: var(--ink-950); margin-top: 18px; width: 100%; text-align: left; font-size: 12.5px; color: var(--ink-400); }
+  /* profile */
+  .phead { padding: 18px 20px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .bigav { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; background: oklch(45% 0.1 250); color: #fff; font: 700 24px/1 var(--body); flex: none; }
+  .phead .title { font-size: 38px; }
+  .roles { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
+  .rl { display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 8px; --cut: 5px; background: var(--ink-950); font-size: 11.5px; font-weight: 600; color: var(--ink-300); } .rl i { width: 8px; height: 8px; border-radius: 50%; }
+  .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .phone .stats { grid-template-columns: repeat(2, 1fr); }
+  .stat { padding: 12px; --cut: 9px; background: var(--ink-950); } .stat .v { font: 800 30px/1 var(--display); color: var(--ink-100); } .stat .k { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: 12px; color: var(--ink-400); } .stat .k svg { width: 14px; height: 14px; }
+  .sec { padding: 16px; } .sec h3 { margin: 0 0 10px; display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: var(--ink-100); } .sec h3 svg { color: var(--brand-400); }
+  .two { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 12px; align-items: start; }
+  .phone .two { grid-template-columns: 1fr; }
+  .lrow { display: flex; align-items: center; gap: 10px; padding: 9px 10px; --cut: 7px; background: var(--ink-950); font-size: 13px; } .lrow + .lrow { margin-top: 4px; }
+  .lrow .grow { flex: 1; min-width: 0; } .lrow .grow b { display: block; color: var(--ink-100); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .lrow .grow span { font-size: 11.5px; color: var(--ink-500); }
+  .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--ink-800); margin-bottom: 12px; overflow: hidden; }
+  .tab { display: inline-flex; align-items: center; gap: 7px; height: 40px; padding: 0 14px; font-size: 13px; font-weight: 600; color: var(--ink-400); white-space: nowrap; }
+  .tab.on { color: var(--ink-100); box-shadow: inset 0 -2px 0 var(--brand-400); } .tab.on svg { color: var(--brand-400); }
+  .bar2 { height: 6px; background: var(--ink-800); margin-top: 6px; } .bar2 i { display: block; height: 100%; }
+  /* tickets */
+  .trows { display: grid; gap: 4px; }
+  .trow { display: grid; grid-template-columns: 64px 180px minmax(0, 1fr) 110px 190px; align-items: center; gap: 12px; padding: 11px 14px; --cut: 8px; background: var(--ink-900); font-size: 13px; }
+  .trow .no { font-variant-numeric: tabular-nums; color: var(--ink-500); } .trow b { color: var(--ink-100); font-weight: 600; } .trow .when { text-align: right; font-size: 12px; color: var(--ink-500); }
+  .phone .trow { grid-template-columns: 1fr auto; gap: 4px 10px; } .phone .trow .hide { display: none; } .phone .trow .when { text-align: left; grid-column: 1 / -1; }
+  .tcards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; } .phone .tcards { grid-template-columns: 1fr; }
+  .tcard { padding: 14px; display: flex; flex-direction: column; gap: 8px; } .tcard b { font-size: 15px; color: var(--ink-100); font-weight: 600; }
+  .msgs { padding: 6px 0; } .m { display: flex; gap: 12px; padding: 10px 16px; } .m + .m { border-top: 1px solid var(--ink-800); }
+  .m .avatar { width: 36px; height: 36px; font-size: 14px; } .m .who2 { display: flex; align-items: baseline; gap: 8px; font-size: 13px; } .m .who2 b { color: var(--ink-100); } .m p { margin: 3px 0 0; font-size: 13.5px; color: var(--ink-300); }
+  .embed { margin-top: 6px; padding: 9px 12px; --cut: 6px; background: var(--ink-950); box-shadow: inset 3px 0 0 #5865f2; font-size: 12.5px; max-width: 520px; } .embed b { color: var(--ink-100); }
+  .file { display: inline-flex; align-items: center; gap: 8px; margin-top: 6px; height: 32px; padding: 0 11px; --cut: 7px; background: var(--ink-950); box-shadow: inset 0 0 0 1px var(--ink-700); font-size: 12.5px; color: var(--ink-100); }
+  .botb { --cut: 3px; padding: 1px 5px; background: #5865f2; color: #fff; font-size: 10px; font-weight: 700; }
+  /* roleplay */
+  .hero { padding: 28px 30px; } .hero .title { font-size: 54px; max-width: 760px; } .hero p { max-width: 640px; color: var(--ink-400); font-size: 14px; margin: 10px 0 18px; }
+  .phone .hero { padding: 18px; } .phone .hero .title { font-size: 36px; }
+  .bigsearch { display: flex; align-items: center; gap: 10px; height: 48px; max-width: 680px; padding: 0 16px; --cut: 10px; background: var(--ink-950); box-shadow: inset 0 0 0 1px var(--ink-700); color: var(--ink-500); font-size: 15px; } .bigsearch svg { width: 18px; height: 18px; }
+  .rpgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; } .phone .rpgrid { grid-template-columns: 1fr; }
+  .rpc { padding: 16px; display: flex; flex-direction: column; gap: 8px; } .rpc .title { font-size: 24px; } .rpc q { font-size: 13px; font-style: italic; color: var(--ink-300); line-height: 1.5; }
+  .rpc .pl { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-300); } .rpc .pl .avatar { width: 22px; height: 22px; font-size: 10px; } .rpc .pl .grow { flex: 1; }
+  .flag { width: 20px; height: 13px; flex: none; background: linear-gradient(var(--f1) 33%, var(--f2) 33% 66%, var(--f3) 66%); }
+  .rpc .foot { margin-top: auto; padding-top: 10px; border-top: 1px solid var(--ink-800); display: flex; gap: 14px; font-size: 12px; color: var(--ink-400); } .rpc .foot span { display: inline-flex; align-items: center; gap: 5px; } .rpc .foot svg { width: 14px; height: 14px; }
+  /* status */
+  .banner { padding: 22px 24px; } .banner .title { font-size: 40px; }
+  .pulse { width: 14px; height: 14px; border-radius: 50%; background: var(--mint); box-shadow: 0 0 0 5px color-mix(in oklab, var(--mint) 22%, transparent); flex: none; }
+  .uptime { display: flex; gap: 3px; height: 38px; margin-top: 12px; } .uptime i { flex: 1; background: var(--mint); } .uptime i.part { background: var(--yellow); } .uptime i.down { background: var(--red); }
+  .facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; } .phone .facts { grid-template-columns: 1fr; }
+  /* audit */
+  .arow { display: grid; grid-template-columns: 22px 120px minmax(0, 1fr) 130px; gap: 12px; align-items: center; padding: 9px 12px; --cut: 7px; background: var(--ink-900); font-size: 13px; } .arow + .arow { margin-top: 3px; }
+  .arow svg { color: var(--c); } .arow b { color: var(--ink-100); font-weight: 600; } .arow .when { text-align: right; font-size: 12px; color: var(--ink-500); }
+  .phone .arow { grid-template-columns: 22px minmax(0, 1fr); } .phone .arow .hide { display: none; } .phone .arow .when { grid-column: 2; text-align: left; }
+  .filters { flex: none; width: 272px; border-right: 1px solid var(--ink-800); background: var(--ink-950); padding: 16px 14px; display: flex; flex-direction: column; gap: 14px; overflow: hidden; }
+  .filters .item { height: 34px; }
+  /* crash */
+  .drop { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 26px; --cut: 12px; background: var(--ink-950); box-shadow: inset 0 0 0 1px var(--ink-700); text-align: center; font-size: 13px; color: var(--ink-400); } .drop svg { width: 28px; height: 28px; color: var(--brand-400); } .drop b { color: var(--ink-100); font-size: 14px; }
+  .area { height: 96px; padding: 10px; --cut: 8px; background: var(--ink-950); box-shadow: inset 0 0 0 1px var(--ink-700); font-size: 13px; color: var(--ink-500); }
+  .steprow { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 14px; } .steprow + .steprow { margin-top: 16px; }
+  .sn { width: 32px; height: 32px; --cut: 7px; display: grid; place-items: center; background: var(--ink-800); color: var(--ink-100); font: 800 18px/1 var(--display); } .sn.on { background: var(--brand-400); color: var(--brand-950); } .sn.ok { background: color-mix(in oklab, var(--mint) 20%, var(--ink-900)); color: var(--mint); }
+  .reward { display: flex; gap: 10px; padding: 12px; --cut: 9px; background: color-mix(in oklab, var(--gold) 9%, var(--ink-900)); box-shadow: inset 3px 0 0 var(--gold); font-size: 13px; } .reward svg { color: var(--gold); }
+</style>
+</head>
+<body>
+<div class="switches">
+  <h1>Small pages mock-up</h1>
+  <div class="seg">Page <div data-k="page"><button data-v="login">Log-in card</button><button data-v="profile">Profile</button><button data-v="tickets">Tickets</button><button data-v="ticket">A ticket</button><button data-v="rp">Roleplay archive</button><button data-v="status">Status</button><button data-v="audit">Audit log</button><button data-v="crash">Crash report</button></div></div>
+  <div class="seg" id="opt"></div>
+  <div class="seg">Size <div data-k="size"><button data-v="desk">Desktop</button><button data-v="phone">Phone</button></div></div>
+</div>
+<div class="viewport"><div class="frame" id="frame">
+  <div class="stage desk" id="desk"><div data-screen></div></div>
+  <div class="stage phone" id="phone" hidden><div data-screen-phone></div></div>
+</div></div>
+<script>
+  // One switch per page: the choice that changes the most.
+  const OPTIONS = {
+    login: ["Log-in card", [["card", "Card in the middle (today)"], ["split", "What's here + log in"]]],
+    profile: ["Layout", [["record", "Like a Database record"], ["tabs", "Tabs"]]],
+    tickets: ["List", [["rows", "Rows"], ["cards", "Cards"]]],
+    ticket: null,
+    rp: ["Accent", [["purple", "Purple for roleplay"], ["green", "Green like the rest"]]],
+    status: ["Top", [["banner", "Big status plate"], ["quiet", "Quiet line, uptime first"]]],
+    audit: ["Filters", [["top", "On top (today)"], ["side", "List on the left"]]],
+    crash: ["Form", [["one", "One form"], ["steps", "Three numbered steps"]]],
+  };
+  const state = { page: "login", size: "desk", login: "split", profile: "record", tickets: "rows", rp: "purple", status: "banner", audit: "side", crash: "steps" };
+  const phone = () => state.size === "phone";
+  const topBar = (title, sub, extra = "") => `<header class="top"><span class="mark cut">GM</span><div style="min-width:0"><div class="title" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${title}</div>${phone() ? "" : `<small>${sub}</small>`}</div>${phone() ? "" : extra}<div class="end">${phone() ? "" : '<span class="avatar">D</span>'}<button class="btn btn-quiet ${phone() ? "btn-icon" : ""}"><i data-lucide="menu"></i>${phone() ? "" : "Menu"}</button></div></header>`;
+  const discord = `<button class="btn btn-discord" style="height:42px;padding:0 20px;font-size:14px;--cut:9px"><svg width="20" height="16" viewBox="0 0 71 55" fill="currentColor"><path d="M60.1 4.9A58.5 58.5 0 0 0 45.5.4a40.8 40.8 0 0 0-2 3.8 54 54 0 0 0-16.2 0A37.4 37.4 0 0 0 25.4.5 58.4 58.4 0 0 0 10.6 5C1.5 18.7-1 32.1.3 45.4a58.8 58.8 0 0 0 18 9.1 42 42 0 0 0 3.6-5.9 38.7 38.7 0 0 1-5.6-2.7l1.3-1a42 42 0 0 0 35.6 0l1.3 1a36.3 36.3 0 0 1-5.6 2.7 47.2 47.2 0 0 0 3.6 5.9 58.6 58.6 0 0 0 18-9.1c1.5-15.4-2.5-28.7-10.5-40.5ZM23.7 37.3c-3.5 0-6.4-3.2-6.4-7.2s2.8-7.2 6.4-7.2 6.5 3.3 6.4 7.2-2.8 7.2-6.4 7.2Zm23.6 0c-3.5 0-6.4-3.2-6.4-7.2s2.8-7.2 6.4-7.2 6.5 3.3 6.4 7.2-2.8 7.2-6.4 7.2Z"/></svg>Log in with Discord</button>`;
+  const page = (title, sub, body, extra = "") => topBar(title, sub, extra) + `<div class="body"><div class="wrap scroll">${body}</div></div>`;
+  const flag = (a, b, c) => `<span class="flag" style="--f1:${a};--f2:${b};--f3:${c}"></span>`;
+
+  function login() {
+    if (state.login === "card") {
+      return topBar("Host Calendar", "Schedule games") + `<div class="gate"><div class="gcard plate"><span class="gi cut"><i data-lucide="calendar-days"></i></span><div class="title">Host Calendar</div>
+        <p>Schedule games, set nation locks and plan announcements. Log in with the Discord account you host with.</p><div style="margin-top:22px">${discord}</div>
+        <button class="btn btn-quiet btn-sm" style="margin-top:14px"><i data-lucide="arrow-left"></i>Back to the map</button></div></div>`;
+    }
+    const feats = [["calendar-plus", "Schedule a game in a minute", "Pick the mode, the day and the nations. GameMaster posts the announcement for you."], ["lock", "Lock nations before anyone reserves", "Presets and lock groups, set once and reused for every game."], ["users", "See who's coming", "Reservations, attendance and the draft, live."]];
+    return topBar("Host Calendar", "Schedule games") + `<div class="gsplit"><div class="l"><div class="title">Host Calendar</div><p class="lead">Everything a host needs for a game, in one place. For members with a Host role on a GameMaster server.</p>
+      ${phone() ? "" : feats.map(([i, b, s]) => `<div class="feat"><i data-lucide="${i}"></i><div><b>${b}</b><span>${s}</span></div></div>`).join("")}</div>
+      <div class="r"><div class="gcard plate" style="width:380px"><span class="gi cut"><i data-lucide="log-in"></i></span><div class="title" style="font-size:30px">Log in to continue</div><p>Use the Discord account you host with. GameMaster only reads your name, picture and servers.</p><div style="margin-top:20px">${discord}</div>
+      <div class="who cut"><i data-lucide="info" style="color:var(--sky)"></i>Logged in but not a host? Ask Host Management for the Host role, then reload.</div>
+      <button class="btn btn-quiet btn-sm" style="margin-top:10px"><i data-lucide="arrow-left"></i>Back to the map</button></div></div></div>`;
+  }
+
+  function profile() {
+    const head = `<div class="plate phead"><span class="bigav">R</span><div style="min-width:0;flex:1"><div class="title">Rommel_Fan</div><div class="small">@rommelfan, TommyKay's HOI4 Community</div>
+      <div class="roles"><span class="rl cut"><i style="background:#3498db"></i>RP Verified</span><span class="rl cut"><i style="background:#2ecc71"></i>Trusted</span><span class="rl cut"><i style="background:#e91e63"></i>VIP</span><span class="rl cut"><i style="background:var(--gold)"></i>Hearts of Valor</span></div></div>
+      ${phone() ? "" : '<span class="tag t" style="--c:var(--gold)"><i data-lucide="medal"></i>Hearts of Valor</span>'}</div>`;
+    const stats = `<div class="stats">${[["62", "Games played", "gamepad-2", "var(--sky)"], ["94%", "Attendance", "calendar-check", "var(--mint)"], ["18", "Commends", "star", "var(--mint)"], ["1", "Warnings", "triangle-alert", "var(--yellow)"], ["27", "Merit", "medal", "var(--gold)"]].map(([v, k, i, c]) => `<div class="stat"><div class="v">${v}</div><div class="k"><i data-lucide="${i}" style="color:${c}"></i>${k}</div></div>`).join("")}</div>`;
+    const games = `<div class="sec plate"><h3><i data-lucide="history"></i>Recent games</h3>${[["Road to 56, Sunday RP", "Germany, attended", "var(--mint)", "Attended"], ["Kaiserreich FFA", "Russia, attended", "var(--mint)", "Attended"], ["Historical, Saturday", "Italy, no-show", "var(--red)", "No-show"], ["Road to 56, Wednesday", "Japan, attended", "var(--mint)", "Attended"]].map(([g, s, c, t]) => `<div class="lrow cut"><div class="grow"><b>${g}</b><span>${s}</span></div><span class="tag dot t" style="--c:${c}">${t}</span></div>`).join("")}</div>`;
+    const ai = `<div class="sec plate"><h3><i data-lucide="drama"></i>AI roleplay results<span class="small" style="margin-left:auto;font-weight:400">Archive</span></h3>${[["Road to 56, Sunday RP", "Germany, 1,240 in-character words, creativity 8/10", "2 commends", "var(--mint)"], ["Kaiserreich FFA", "Russia, 310 words, creativity 5/10", "3 Merit", "var(--gold)"]].map(([g, s, r, c]) => `<div class="lrow cut"><div class="grow"><b>${g}</b><span>${s}</span></div><b style="color:${c};font-size:12.5px;white-space:nowrap">${r}</b></div>`).join("")}</div>`;
+    const host = `<div class="sec plate"><h3><i data-lucide="mic"></i>Your hosting</h3><div class="small" style="margin-bottom:8px"><b style="font:800 28px/1 var(--display);color:var(--ink-100)">14</b> games hosted</div>${[["RP", "Full host", 9, 0], ["HIST", "No rank", 0, 0]].map(([b, r, a, v]) => `<div class="lrow cut"><b style="width:44px;color:var(--ink-100)">${b}</b><span class="grow small">${r}</span><span class="small" style="color:var(--mint)">${a} acclaimed</span><span class="small" style="color:var(--red)">${v} violations</span></div>`).join("")}</div>`;
+    const valor = `<div class="sec plate"><h3><i data-lucide="medal" style="color:var(--gold)"></i>Road to Valor</h3><div class="small">Merit 27 of 25</div><div class="bar2"><i style="width:100%;background:var(--gold)"></i></div><div class="small" style="margin-top:10px">Attended games 50 of 50</div><div class="bar2"><i style="width:100%;background:var(--sky)"></i></div></div>`;
+    const about = `<div class="sec plate"><h3><i data-lucide="info"></i>About your record</h3><p class="small" style="margin:0">Records are kept per server. Commends come from hosts after good games. Think something is wrong? Open a ticket on the server.</p></div>`;
+    let body;
+    if (state.profile === "record") {
+      body = `<div class="wide" style="display:grid;gap:12px">${head}<div class="two"><div style="display:grid;gap:12px"><div class="sec plate"><h3><i data-lucide="layout-dashboard"></i>Your record</h3>${stats}</div>${games}</div><div style="display:grid;gap:12px">${ai}${host}${about}</div></div></div>`;
+    } else {
+      const tabs = [["layout-dashboard", "Overview", 1], ["history", "Games"], ["drama", "Roleplay"], ["mic", "Hosting"]];
+      body = `<div class="wide" style="display:grid;gap:12px">${head}<div><div class="tabs">${tabs.map(([i, t, on]) => `<button class="tab ${on ? "on" : ""}"><i data-lucide="${i}"></i>${t}</button>`).join("")}</div>
+        <div style="display:grid;gap:12px">${stats}<div class="two"><div>${games}</div><div style="display:grid;gap:12px">${valor}${about}</div></div></div></div></div>`;
+    }
+    return page("My profile", "Your record on this server", body);
+  }
+
+  const TICKETS = [["0412", "Player report", "you", "Resolved", "var(--mint)", "2 Nov, 18:40", 24], ["0409", "Ban appeal", "Kaiser_Wilhelm", "Unresolved", "var(--red)", "1 Nov, 21:05", 41], ["0405", "Host application", "you", "Resolved", "var(--mint)", "30 Oct, 14:12", 12], ["0398", "Question", "Tito_RP", "Resolved", "var(--mint)", "28 Oct, 09:50", 6], ["0391", "Bug report", "Mannerheim", "Unresolved", "var(--red)", "26 Oct, 20:31", 18]];
+  function tickets() {
+    const filt = `<div class="row" style="flex-wrap:wrap;margin-bottom:12px"><div class="input cut" style="flex:1;min-width:220px"><i data-lucide="search"></i>Search by name or ticket number</div><div class="input cut" style="width:170px;color:var(--ink-300)">All types<i data-lucide="chevron-down" class="chev"></i></div><div class="input cut" style="width:200px;color:var(--ink-300)">Resolved and unresolved<i data-lucide="chevron-down" class="chev"></i></div></div>`;
+    const list = state.tickets === "rows"
+      ? `<div class="trows">${TICKETS.map(([n, k, by, s, c, w, m]) => `<div class="trow"><span class="no">#${n}</span><b>${k}</b><span class="small hide">by ${by}</span><span class="tag dot t" style="--c:${c};justify-self:start">${s}</span><span class="when">Closed ${w}, ${m} messages</span></div>`).join("")}</div>`
+      : `<div class="tcards">${TICKETS.map(([n, k, by, s, c, w, m]) => `<div class="tcard plate"><div class="row"><span class="small">#${n}</span><span class="tag dot t" style="--c:${c};margin-left:auto">${s}</span></div><b>${k}</b><span class="small">Opened by ${by}</span><span class="small muted" style="margin-top:auto;padding-top:8px;border-top:1px solid var(--ink-800)">Closed ${w}, ${m} messages</span></div>`).join("")}</div>`;
+    return page("Tickets", "Closed tickets you can read", `<div class="wide"><div class="h"><i data-lucide="ticket"></i><span class="title">Closed tickets</span></div><p class="lead">Your own tickets, and the kinds your roles handle on the server.</p>${filt}${list}<p class="small muted" style="margin-top:12px">Only tickets closed since this page went live are here. Older ones are in the Discord transcript channels.</p></div>`);
+  }
+  function ticket() {
+    const m = (ini, color, name, bot, when, text, extra = "") => `<div class="m"><span class="avatar" style="background:${color}">${ini}</span><div style="min-width:0"><div class="who2"><b>${name}</b>${bot ? '<span class="botb cut">BOT</span>' : ""}<span class="small muted">${when}</span></div>${text ? `<p>${text}</p>` : ""}${extra}</div></div>`;
+    const body = `<div class="narrow" style="display:grid;gap:12px"><button class="btn btn-quiet btn-sm" style="justify-self:start"><i data-lucide="arrow-left"></i>All tickets</button>
+      <div class="plate" style="padding:18px 20px"><div class="row" style="flex-wrap:wrap"><span class="title" style="font-size:34px">Player report</span><span class="small" style="font-size:15px">#0412</span><span class="tag dot t" style="--c:var(--mint)">Resolved</span></div>
+      <div style="display:grid;grid-template-columns:${phone() ? "1fr" : "1fr 1fr"};gap:6px 20px;margin-top:10px;font-size:12.5px"><span class="muted">Opened by <b style="color:var(--ink-100)">you</b>, 2 Nov 16:02</span><span class="muted">Closed by <b style="color:var(--ink-100)">ModMarshal</b>, 2 Nov 18:40</span><span class="muted" style="grid-column:1/-1">Why: <span style="color:var(--ink-300)">Warning given to the player, thanks for the report.</span></span></div></div>
+      <div class="plate msgs">${m("G", "#5865f2", "GameMaster", true, "2 Nov 16:02", "", `<div class="embed cut"><b>Player report</b><div class="small" style="margin-top:3px">Who: Kaiser_Wilhelm. Game: Road to 56, Sunday RP.</div></div>`)}
+      ${m("R", "oklch(45% 0.1 250)", "Rommel_Fan", false, "2 Nov 16:04", "He left in the middle of the war with France and didn't come back. Screenshot attached.", '<div class="file cut"><i data-lucide="image"></i>screenshot.png, 812 KB<i data-lucide="download" style="color:var(--ink-500)"></i></div>')}
+      ${m("M", "oklch(48% 0.12 150)", "ModMarshal", false, "2 Nov 18:37", "Thanks. He gets a warning for leaving early. Closing this one.")}</div></div>`;
+    return page("Tickets", "Closed ticket", body);
+  }
+
+  function rp() {
+    const acc = state.rp === "purple" ? "var(--purple)" : "var(--brand-400)";
+    const games = [["Road to 56, Sunday RP", "TommyKay's HOI4", "Germany betrayed Italy in 1941 and the Axis fell apart; Japan held the Pacific alone until the last session.", [["Rommel_Fan", ["#000", "#d00", "#fc0"], "2 commends", "var(--mint)"], ["Duce_Real", ["#090", "#fff", "#c00"], "3 Merit", "var(--gold)"], ["Tenno", ["#fff", "#fff", "#fff"], "No reward", "var(--ink-400)"]], 11, "18,400", 5], ["Kaiserreich FFA", "TommyKay's HOI4", "The Syndicalist bloc split over the Canadian question; the Entente returned home in 1943.", [["Mannerheim", ["#fff", "#036", "#fff"], "1 commend", "var(--mint)"], ["Kaiser_W", ["#000", "#fff", "#d00"], "2 Merit", "var(--gold)"]], 9, "11,250", 3], ["Historical, Saturday", "Baltic HOI4 League", "A quiet historical run; the Soviets pushed to Berlin by early 1945.", [["Zhukov_Main", ["#c00", "#c00", "#c00"], "No reward", "var(--ink-400)"]], 14, "2,080", 0]];
+    const card = ([name, server, sum, top, pl, w, rew]) => `<div class="rpc plate"><div class="row"><span class="tag t" style="--c:${acc}"><i data-lucide="drama"></i>Roleplay</span><span class="small" style="margin-left:auto">2 Nov</span></div><div class="title">${name}</div><span class="small">${server}, hosted by TommyKay</span><q>${sum}</q>
+      <div style="display:grid;gap:6px;margin-top:4px">${top.map(([n, f, r, c]) => `<div class="pl"><span class="avatar">${n[0]}</span>${flag(...f)}<span class="grow">${n}</span><b style="color:${c};font-size:12px">${r}</b></div>`).join("")}</div>
+      <div class="foot"><span><i data-lucide="users"></i>${pl} players</span><span><i data-lucide="pen-line"></i>${w} RP words</span>${rew ? `<span style="color:var(--mint)"><i data-lucide="award"></i>${rew} rewarded</span>` : ""}</div></div>`;
+    const heroBg = state.rp === "purple" ? `background-color:color-mix(in oklab, var(--purple) 9%, var(--ink-900));--line:color-mix(in oklab, var(--purple) 30%, var(--ink-800))` : "";
+    const body = `<div class="wide" style="display:grid;gap:14px"><div class="plate hero" style="${heroBg}"><div class="title">Every game's story, and its best roleplay</div><p>Who allied, who betrayed, and the lines that made it. The AI reads each game's chat log and scores the roleplay; hosts give the rewards.</p><div class="bigsearch cut"><i data-lucide="search"></i>Search a player, nation, game or line</div></div>
+      <div class="row" style="flex-wrap:wrap"><div class="chips" style="--acc:${acc}"><span class="chip cut on">All modes</span><span class="chip cut">Road to 56</span><span class="chip cut">Kaiserreich</span><span class="chip cut">Historical</span></div>${phone() ? "" : `<span class="chip cut"><i data-lucide="square" style="width:14px;height:14px"></i>Rewarded only</span><div class="input cut" style="margin-left:auto;width:160px;color:var(--ink-300)">Newest first<i data-lucide="chevron-down" class="chev"></i></div>`}</div>
+      <span class="small">214 games</span><div class="rpgrid">${games.map(card).join("")}</div></div>`;
+    return page("Roleplay archive", "Every graded game, on every server", body);
+  }
+
+  function status() {
+    const bars = Array.from({ length: 30 }, (_, i) => `<i class="${i === 11 ? "down" : i === 22 ? "part" : ""}"></i>`).join("");
+    const incidents = `<div class="sec plate"><h3><i data-lucide="activity"></i>Incidents</h3>${[["circle-x", "var(--red)", "Outage", "24 Oct, 03:12, lasted 42 min"], ["rotate-ccw", "var(--sky)", "Restart", "4 Nov, 09:00 (update)"], ["triangle-alert", "var(--yellow)", "Slow replies", "15 Oct, 20:40, lasted 8 min"]].map(([i, c, t, s]) => `<div class="lrow cut"><i data-lucide="${i}" style="color:${c}"></i><div class="grow"><b>${t}</b><span>${s}</span></div></div>`).join("")}</div>`;
+    const uptime = `<div class="sec plate"><h3><i data-lucide="chart-no-axes-column"></i>Uptime, last 30 days<span style="margin-left:auto;font:800 24px/1 var(--display);color:var(--ink-100)">99.8%</span></h3><div class="uptime">${bars}</div><div class="row small" style="margin-top:6px"><span>30 days ago</span><span style="margin-left:auto">Today</span></div></div>`;
+    const facts = `<div class="facts">${[["timer", "Running for", "12 days 4 h"], ["radio", "Reply time to Discord", "48 ms"], ["server", "Serving", "37 communities"]].map(([i, k, v]) => `<div class="stat"><div class="k" style="margin:0 0 6px"><i data-lucide="${i}"></i>${k}</div><div class="v" style="font-size:26px">${v}</div></div>`).join("")}</div>`;
+    let body;
+    if (state.status === "banner") {
+      body = `<div class="narrow" style="display:grid;gap:12px"><div class="plate banner" style="background-color:color-mix(in oklab, var(--mint) 9%, var(--ink-900));--line:color-mix(in oklab, var(--mint) 35%, var(--ink-800))"><div class="row"><span class="pulse"></span><span class="title">GameMaster is online</span></div><p class="small" style="margin:8px 0 0">Checked 09:41, refreshes every minute.</p>${facts}</div>${uptime}${incidents}</div>`;
+    } else {
+      body = `<div class="narrow" style="display:grid;gap:12px"><div class="row" style="padding:4px 2px"><span class="pulse"></span><b style="font-size:16px;color:var(--ink-100)">GameMaster is online</b><span class="small" style="margin-left:auto">Checked 09:41</span></div>${uptime}${facts}${incidents}</div>`;
+    }
+    return page("Status", "Is GameMaster online", body);
+  }
+
+  const CATS = [["calendar-check", "Reservations", 128, "var(--sky)"], ["users", "Roster", 42, "var(--sky)"], ["gavel", "Moderation", 17, "var(--red)"], ["gamepad-2", "Games", 31, "var(--mint)"], ["settings", "Settings", 6, "var(--yellow)"], ["shield-check", "Staff", 4, "var(--purple)"]];
+  function audit() {
+    const rows = [["calendar-check", "var(--sky)", "Reservations", "<b>Rommel_Fan</b> reserved Germany in Road to 56, Sunday RP", "2 min ago"], ["gavel", "var(--red)", "Moderation", "<b>ModMarshal</b> warned <b>Kaiser_Wilhelm</b>: left early", "14 min ago"], ["users", "var(--sky)", "Roster", "<b>TommyKay</b> moved <b>Tenno</b> from Japan to Manchukuo", "40 min ago"], ["gamepad-2", "var(--mint)", "Games", "<b>TommyKay</b> started Road to 56, Sunday RP", "1 h ago"], ["settings", "var(--yellow)", "Settings", "<b>Admin_Ivan</b> changed the lobby voice channel", "3 h ago"], ["calendar-check", "var(--sky)", "Reservations", "<b>Duce_Real</b> dropped Italy", "3 h ago"], ["shield-check", "var(--purple)", "Staff", "<b>Admin_Ivan</b> gave Host Management to <b>ModMarshal</b>", "Yesterday"]];
+    const list = rows.map(([i, c, cat, t, w]) => `<div class="arow cut" style="--c:${c}"><i data-lucide="${i}"></i><span class="small hide">${cat}</span><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t}</span><span class="when">${w}</span></div>`).join("");
+    const actions = `<button class="btn btn-quiet btn-sm"><i data-lucide="refresh-cw"></i>Refresh</button><button class="btn btn-secondary btn-sm"><i data-lucide="download"></i>Export CSV</button>`;
+    const note = `<p class="small muted" style="margin-top:10px">Updates every 15 seconds. Click a row for the details. Rows can't be changed or deleted and are kept for 400 days.</p>`;
+    if (state.audit === "side" && !phone()) {
+      const side = `<aside class="filters"><div class="input cut"><i data-lucide="search"></i>Search the text</div><div><div class="small" style="margin-bottom:6px">What</div><button class="item cut on"><i data-lucide="list" class="ic"></i>Everything<span class="end small">228</span></button>${CATS.map(([i, t, n, c]) => `<button class="item cut"><i data-lucide="${i}" class="ic" style="color:${c}"></i>${t}<span class="end small">${n}</span></button>`).join("")}</div>
+        <div><div class="small" style="margin-bottom:6px">Who and where</div><div class="input cut" style="margin-bottom:6px"><i data-lucide="user"></i>Player's Discord ID</div><div class="input cut"><i data-lucide="gamepad-2"></i>Game ID</div></div>
+        <div><div class="small" style="margin-bottom:6px">When</div><div class="row"><div class="input cut" style="flex:1">From</div><div class="input cut" style="flex:1">To</div></div></div><span class="small muted">Counts are the last 7 days.</span></aside>`;
+      return topBar("Audit log", "Who did what, and when") + `<div class="body">${side}<div class="wrap scroll"><div class="wide"><div class="row" style="margin-bottom:12px"><div class="h"><i data-lucide="scroll-text"></i><span class="title">Audit log</span></div><span style="margin-left:auto" class="row">${actions}</span></div>${list}${note}</div></div></div>`;
+    }
+    const filt = `<div class="plate" style="padding:14px;margin-bottom:12px;display:grid;gap:10px"><div class="chips"><span class="chip cut on">All</span>${CATS.map(([i, t, n, c]) => `<span class="chip cut"><i data-lucide="${i}" style="color:${c};width:14px;height:14px"></i>${t}<span class="c">${n}</span></span>`).join("")}</div>
+      <div class="row" style="flex-wrap:wrap"><div class="input cut" style="flex:1;min-width:220px"><i data-lucide="search"></i>Search the text (a name, a nation, a reason)</div>${phone() ? "" : '<div class="input cut" style="width:170px">Player\'s Discord ID</div><div class="input cut" style="width:130px">Game ID</div><div class="input cut" style="width:120px">From</div><div class="input cut" style="width:120px">To</div>'}<span class="row" style="margin-left:auto">${actions}</span></div></div>`;
+    return page("Audit log", "Who did what, and when", `<div class="wide">${filt}${list}${note}</div>`);
+  }
+
+  function crash() {
+    const gameBox = `<div class="plate" style="padding:16px 18px;display:flex;align-items:center;gap:12px"><span class="gi cut" style="width:40px;height:40px;--cut:8px;display:grid;place-items:center;background:var(--ink-800);color:var(--brand-400)"><i data-lucide="gamepad-2"></i></span><div style="flex:1;min-width:0"><b style="color:var(--ink-100)">Road to 56, Sunday RP</b><div class="small">On-going, you play Germany</div></div><span class="tag dot t" style="--c:var(--sky)">On-going</span></div>`;
+    const reward = `<div class="reward cut"><i data-lucide="medal"></i><div><b style="color:var(--ink-100)">2 Merit for your report</b><div class="small">1 Merit if you're not Verified yet. The mod developers get the zip; the bot checks it first.</div></div></div>`;
+    const drop = `<div class="drop"><i data-lucide="file-archive"></i><b>Drop your crash zip here</b>or pick the file. Zip the whole crash folder, 500 KB to 15 MB.<button class="btn btn-secondary btn-sm" style="margin-top:6px"><i data-lucide="folder-open"></i>Pick a file</button></div>`;
+    const what = `<div><div class="lbl2" style="margin-bottom:6px">What happened</div><div class="area">The game froze when Italy declared war on Yugoslavia, then closed.</div></div>`;
+    const notes = `<div><div class="lbl2" style="margin-bottom:6px">Anything else <span class="small">(optional)</span></div><div class="area" style="height:60px">Mods, when it started</div></div>`;
+    const send = `<div class="row"><span class="small grow" style="flex:1">The report goes to the crash-report channel.</span><button class="btn btn-primary"><i data-lucide="send"></i>Send crash report</button></div>`;
+    let form;
+    if (state.crash === "one") {
+      form = `<div class="plate" style="padding:18px;display:grid;gap:14px">${drop}${what}${notes}${send}</div>`;
+    } else {
+      const step = (n, cls, title, help, inner) => `<div class="steprow"><span class="sn cut ${cls}">${cls === "ok" ? '<i data-lucide="check"></i>' : n}</span><div><div class="lbl2" style="font-size:15px">${title}</div><div class="small" style="margin:2px 0 10px">${help}</div>${inner}</div></div>`;
+      form = `<div class="plate" style="padding:20px">${step(1, "ok", "Find the crash folder", "Documents, Paradox Interactive, Hearts of Iron IV, crashes. Zip the newest folder.", "")}${step(2, "on", "Add the zip", "The whole folder, with the minidump and the logs.", drop)}${step(3, "", "Say what happened", "What you were doing when it crashed.", `<div style="display:grid;gap:10px">${what}${notes}${send}</div>`)}</div>`;
+    }
+    return page("Report a crash", "Send your crash logs to the mod developers", `<div class="narrow" style="display:grid;gap:12px"><div class="h"><i data-lucide="siren"></i><span class="title">Report a crash</span></div>${gameBox}${reward}${form}</div>`);
+  }
+
+  function render() {
+    const opt = OPTIONS[state.page];
+    const seg = document.getElementById("opt");
+    seg.innerHTML = opt ? `${opt[0]} <div data-k="${state.page}">${opt[1].map(([v, l]) => `<button data-v="${v}">${l}</button>`).join("")}</div>` : "";
+    document.querySelectorAll(".seg > div").forEach((s) => s.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(state[s.dataset.k] === b.dataset.v))));
+    const html = { login, profile, tickets, ticket, rp, status, audit, crash }[state.page]();
+    document.querySelector(state.size === "desk" ? "[data-screen]" : "[data-screen-phone]").innerHTML = `<div class="${state.size}" style="height:100%;display:flex;flex-direction:column">${html}</div>`;
+    document.getElementById("desk").hidden = state.size !== "desk";
+    document.getElementById("phone").hidden = state.size !== "phone";
+    lucide.createIcons();
+    fit();
+  }
+  function fit() {
+    const stage = document.getElementById(state.size);
+    const w = state.size === "desk" ? 1440 : 390, h = state.size === "desk" ? 900 : 844;
+    const vp = document.querySelector(".viewport");
+    const s = Math.min((vp.clientWidth - 32) / w, (vp.clientHeight - 32) / h, state.size === "desk" ? 1 : 1.2);
+    stage.style.transform = `scale(${s})`;
+    const frame = document.getElementById("frame"); frame.style.width = `${w * s}px`; frame.style.height = `${h * s}px`;
+  }
+  document.querySelector(".switches").addEventListener("click", (e) => { const b = e.target.closest(".seg button"); if (!b) return; state[b.parentElement.dataset.k] = b.dataset.v; render(); });
+  addEventListener("resize", fit);
+  render();
+</script>
+</body>
+</html>

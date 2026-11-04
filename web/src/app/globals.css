@@ -63,6 +63,11 @@
     --line: var(--color-ink-800);
     background-color: var(--color-ink-900);
   }
+  /* The roleplay archive's purple plate (its hero and story). */
+  .gm-plate-rp {
+    --line: color-mix(in oklab, oklch(70.2% 0.183 293.5) 30%, var(--color-ink-800));
+    background-color: color-mix(in oklab, oklch(70.2% 0.183 293.5) 9%, var(--color-ink-900));
+  }
 
   .gm-btn {
     display: inline-flex;

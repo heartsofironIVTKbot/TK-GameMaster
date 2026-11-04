@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Avatar from "@/components/database/Avatar";
-import { GLASS, Spinner } from "@/components/schedule/ui";
+import { ArrowLeft, ScrollText, Search } from "lucide-react";
+import { Spinner } from "@/components/schedule/ui";
 import { searchTerms, type RpGameDetail, type RpLine, type RpPlayer } from "@/lib/rpArchiveTypes";
 import { Flag, ModeBadge, RpHeader, ServerChip, VerdictBadge, playedOn, words } from "./shared";
 
@@ -28,7 +29,7 @@ function Highlight({ text, terms }: { text: string; terms: string[] }): ReactNod
   const pattern = new RegExp(`(${terms.map((term) => term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`, "gi");
   return text.split(pattern).map((part, index) =>
     index % 2 === 1 ? (
-      <mark key={index} className="rounded bg-fuchsia-400/30 px-0.5 text-white">
+      <mark key={index} className="bg-violet-400/30 px-0.5 text-ink-100">
         {part}
       </mark>
     ) : (
@@ -61,23 +62,25 @@ export default function RoleplayGame() {
   const game = state?.id === id ? state.game : null;
 
   return (
-    <div className="gm-backdrop min-h-screen w-full text-ink-100">
+    <div className="min-h-screen w-full bg-ink-950 text-ink-100">
       <RpHeader>
-        <Link href="/roleplay" className="rounded-lg px-2 py-1 text-xs font-bold text-ink-400 hover:text-white">
-          ← All games
+        <Link href="/roleplay" className="gm-btn gm-btn-quiet h-[30px] px-2.5 text-[12.5px] [--cut:7px]">
+          <ArrowLeft aria-hidden strokeWidth={1.75} />
+          All games
         </Link>
       </RpHeader>
       <main className="mx-auto max-w-[1300px] space-y-6 px-4 py-6 sm:px-6">
         {!state || state.id !== id ? (
           <div className="flex items-center gap-2 px-2 py-10 text-sm text-ink-400">
-            <Spinner className="h-4 w-4 text-fuchsia-300" /> Loading the game…
+            <Spinner className="h-4 w-4 text-violet-300" /> Loading the game…
           </div>
         ) : !game ? (
-          <div className={`rounded-3xl p-10 text-center ${GLASS}`}>
-            <p className="text-4xl">📜</p>
-            <p className="mt-3 text-sm font-semibold text-ink-200">{state.error}</p>
-            <Link href="/roleplay" className="mt-4 inline-block text-xs font-bold text-fuchsia-300 hover:text-fuchsia-200">
-              ← Back to the archive
+          <div className="gm-plate flex flex-col items-center p-10 text-center">
+            <ScrollText aria-hidden className="h-9 w-9 text-violet-300" strokeWidth={1.5} />
+            <p className="mt-3 text-sm font-semibold text-ink-100">{state.error}</p>
+            <Link href="/roleplay" className="gm-btn gm-btn-secondary mt-4">
+              <ArrowLeft aria-hidden strokeWidth={1.75} />
+              Back to the archive
             </Link>
           </div>
         ) : (
@@ -94,23 +97,22 @@ function GameView({ game }: { game: RpGameDetail }) {
 
   return (
     <>
-      <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-violet-950/60 via-ink-900/70 to-fuchsia-950/40 p-6 shadow-2xl sm:p-8">
-        <div className="pointer-events-none absolute -left-20 -top-28 h-72 w-72 rounded-full bg-violet-500/10 blur-3xl" aria-hidden />
+      <section className="gm-plate gm-plate-rp p-5 sm:px-8 sm:py-7">
         <div className="flex flex-wrap items-center gap-2">
           <ModeBadge mode={card.mode} />
-          <span className="text-xs font-semibold text-ink-400">{playedOn(card.ts)}</span>
+          <span className="text-xs text-ink-400">{playedOn(card.ts)}</span>
         </div>
-        <h1 className="mt-3 text-2xl font-black tracking-tight text-white sm:text-3xl">{card.name}</h1>
+        <h1 className="gm-title mt-3 text-[36px] sm:text-[48px]">{card.name}</h1>
         <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
           <ServerChip name={card.server_name} icon={card.server_icon_url} />
           {card.host_name && <span className="text-xs text-ink-400">hosted by {card.host_name}</span>}
         </div>
         {card.summary && (
-          <blockquote className="mt-5 max-w-3xl border-l-4 border-fuchsia-300/60 pl-4 text-base italic leading-relaxed text-ink-200" data-tour="rp.story">
+          <blockquote className="mt-5 max-w-3xl border-l-[3px] border-violet-300/70 pl-4 text-[15px] italic leading-relaxed text-ink-200" data-tour="rp.story">
             {card.summary}
           </blockquote>
         )}
-        <div className="mt-5 flex flex-wrap gap-2 text-xs font-semibold">
+        <div className="mt-5 flex flex-wrap gap-2 text-xs">
           <Stat label="players" value={String(card.players)} />
           <Stat label="words of roleplay" value={words(card.ic_words)} />
           <Stat label="rewarded" value={String(card.rewarded)} />
@@ -119,8 +121,8 @@ function GameView({ game }: { game: RpGameDetail }) {
       </section>
 
       <section data-tour="rp.players">
-        <h2 className="px-1 text-[11px] font-black uppercase tracking-[0.2em] text-ink-400">The players</h2>
-        <div className="mt-3 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <h2 className="gm-title px-1 text-[26px]">The players</h2>
+        <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {game.players.map((player) => (
             <PlayerCard
               key={player.key}
@@ -136,7 +138,7 @@ function GameView({ game }: { game: RpGameDetail }) {
 
       <LogView game={game} focusTag={focusTag} onFocusTag={setFocusTag} />
 
-      <p className="px-1 pb-6 text-[11px] leading-relaxed text-ink-500">
+      <p className="px-1 pb-6 text-xs leading-relaxed text-ink-500">
         Graded {playedOn(game.graded_at)}. The AI scores how good the roleplay is; the bot counts the in-character words and
         applies the server&apos;s rules; the host gives the rewards.
       </p>
@@ -146,8 +148,8 @@ function GameView({ game }: { game: RpGameDetail }) {
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <span className="rounded-xl border border-white/10 bg-ink-950/50 px-3 py-1.5 text-ink-400">
-      <b className="text-sm text-white">{value}</b> {label}
+    <span className="gm-cut bg-ink-950 px-3 py-1.5 text-ink-400 [--cut:7px]">
+      <b className="font-display text-[19px] font-extrabold text-ink-100">{value}</b> {label}
     </span>
   );
 }
@@ -157,32 +159,32 @@ function PlayerCard({ player, onRead }: { player: RpPlayer; onRead: () => void }
   const shown = more ? player.snippets : player.snippets.slice(0, 1);
   const share = player.words > 0 ? Math.round((player.ic_words / player.words) * 100) : 0;
   return (
-    <article className={`flex flex-col rounded-3xl p-5 ${GLASS} ${player.verdict.kind === "no_rp" ? "opacity-70" : ""}`}>
+    <article className={`gm-plate flex flex-col p-4 sm:p-[18px] ${player.verdict.kind === "no_rp" ? "opacity-70" : ""}`}>
       <div className="flex items-center gap-3">
         <Avatar url={player.avatar_url} name={player.name} size={40} />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-black text-white">{player.name}</p>
+          <p className="truncate text-sm font-semibold text-ink-100">{player.name}</p>
           <p className="flex items-center gap-1.5 truncate text-xs text-ink-400">
             <Flag tag={player.tag} className="h-3.5 w-5" />
             {player.nation}
-            {player.role === "COOP" ? " · Co-op" : ""}
-            {player.left_early ? " · left early" : ""}
+            {player.role === "COOP" ? ", co-op" : ""}
+            {player.left_early ? ", left early" : ""}
           </p>
         </div>
         <span className="flex flex-col items-end gap-1">
           <VerdictBadge verdict={player.verdict} />
-          {player.given && <span className="text-[10px] font-bold text-emerald-300">✓ Given</span>}
+          {player.given && <span className="text-[11px] font-semibold text-emerald-300">Given</span>}
         </span>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-3 text-[11px] text-ink-400">
+      <div className="mt-4 grid grid-cols-2 gap-3 text-xs text-ink-400">
         <div>
           <p className="flex justify-between">
             <span>In character</span>
             <b className="text-ink-200">{words(player.ic_words)}</b>
           </p>
-          <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-white/5">
-            <div className="h-full rounded-full bg-gradient-to-r from-sky-400 to-violet-400" style={{ width: `${share}%` }} />
+          <div className="mt-1 h-1.5 bg-ink-800">
+            <div className="h-full bg-sky-300" style={{ width: `${share}%` }} />
           </div>
         </div>
         <div>
@@ -190,19 +192,19 @@ function PlayerCard({ player, onRead }: { player: RpPlayer; onRead: () => void }
             <span>Creativity</span>
             <b className="text-ink-200">{player.creativity}/10</b>
           </p>
-          <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-white/5">
-            <div className="h-full rounded-full bg-gradient-to-r from-brand-300 to-fuchsia-400" style={{ width: `${player.creativity * 10}%` }} />
+          <div className="mt-1 h-1.5 bg-ink-800">
+            <div className="h-full bg-violet-400" style={{ width: `${player.creativity * 10}%` }} />
           </div>
         </div>
       </div>
 
-      {player.summary && <p className="mt-3 text-xs leading-relaxed text-ink-300">{player.summary}</p>}
-      {player.why && <p className="mt-1 text-[11px] text-ink-500">{player.why}</p>}
+      {player.summary && <p className="mt-3 text-[13px] leading-relaxed text-ink-300">{player.summary}</p>}
+      {player.why && <p className="mt-1 text-xs text-ink-500">{player.why}</p>}
 
       {shown.length > 0 && (
         <div className="mt-3 space-y-2">
           {shown.map((line) => (
-            <blockquote key={line} className="border-l-2 border-fuchsia-300/40 pl-3 text-xs italic leading-relaxed text-ink-200">
+            <blockquote key={line} className="border-l-2 border-violet-300/50 pl-3 text-[13px] italic leading-relaxed text-ink-200">
               “{line}”
             </blockquote>
           ))}
@@ -210,13 +212,13 @@ function PlayerCard({ player, onRead }: { player: RpPlayer; onRead: () => void }
       )}
       <div className="mt-auto flex items-center gap-3 pt-4">
         {player.snippets.length > 1 && (
-          <button type="button" onClick={() => setMore((value) => !value)} className="text-[11px] font-bold text-ink-400 hover:text-white">
+          <button type="button" onClick={() => setMore((value) => !value)} className="text-xs font-semibold text-ink-400 hover:text-ink-100">
             {more ? "Fewer quotes" : `${player.snippets.length - 1} more quote${player.snippets.length > 2 ? "s" : ""}`}
           </button>
         )}
         {player.tag && (
-          <button type="button" onClick={onRead} className="ml-auto text-[11px] font-bold text-fuchsia-300 hover:text-fuchsia-200">
-            Read all of {player.nation} →
+          <button type="button" onClick={onRead} className="ml-auto text-xs font-semibold text-violet-300 hover:text-violet-200">
+            Read all of {player.nation}
           </button>
         )}
       </div>
@@ -258,19 +260,22 @@ function LogView({ game, focusTag, onFocusTag }: { game: RpGameDetail; focusTag:
   }
 
   return (
-    <section id="rp-log" className={`scroll-mt-20 rounded-3xl ${GLASS}`} data-tour="rp.log">
-      <div className="sticky top-[61px] z-10 rounded-t-3xl border-b border-white/10 bg-ink-950/85 px-4 py-3 backdrop-blur-xl sm:px-5">
+    <section id="rp-log" className="scroll-mt-20 border border-ink-800 bg-ink-900" data-tour="rp.log">
+      <div className="sticky top-[57px] z-10 border-b border-ink-800 bg-ink-950 px-4 py-3 sm:px-5">
         <div className="flex flex-wrap items-center gap-2">
-          <h2 className="mr-2 text-[11px] font-black uppercase tracking-[0.2em] text-ink-400">The roleplay</h2>
-          <input
-            value={query}
-            onChange={(event) => setQuery(event.target.value.slice(0, 80))}
-            placeholder="🔎 Search the log"
-            aria-label="Search the log"
-            className="min-w-[180px] flex-1 rounded-lg border border-white/10 bg-ink-900/80 px-3 py-1.5 text-xs text-white placeholder:text-ink-500 focus:border-fuchsia-300/50 focus:outline-none"
-          />
+          <h2 className="gm-title mr-2 text-[24px]">The roleplay</h2>
+          <label className="relative min-w-[180px] flex-1">
+            <Search aria-hidden className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-500" strokeWidth={1.75} />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value.slice(0, 80))}
+              placeholder="Search the log"
+              aria-label="Search the log"
+              className="gm-input h-[32px] min-h-0 w-full pl-8 text-[13px]"
+            />
+          </label>
           <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-ink-300">
-            <input type="checkbox" checked={hideOoc} onChange={(event) => setHideOoc(event.target.checked)} className="h-3.5 w-3.5 accent-fuchsia-400" />
+            <input type="checkbox" checked={hideOoc} onChange={(event) => setHideOoc(event.target.checked)} className="h-3.5 w-3.5 accent-violet-400" />
             Hide out-of-character
           </label>
         </div>
@@ -302,7 +307,7 @@ function LogView({ game, focusTag, onFocusTag }: { game: RpGameDetail; focusTag:
             ))}
           </ol>
         )}
-        <div className="flex flex-wrap items-center justify-between gap-2 px-2 pt-3 text-[11px] text-ink-500">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-2 pt-3 text-xs text-ink-500">
           <span>
             Showing {Math.min(limit, shown.length).toLocaleString()} of {shown.length.toLocaleString()} lines
             {game.truncated ? " (the log is very long; only its start is on the website)" : ""}
@@ -311,7 +316,7 @@ function LogView({ game, focusTag, onFocusTag }: { game: RpGameDetail; focusTag:
             <button
               type="button"
               onClick={() => setLimit((value) => value + PAGE_LINES)}
-              className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-ink-200 hover:border-fuchsia-300/40"
+              className="gm-btn gm-btn-secondary h-[30px] px-3 text-[12.5px] [--cut:7px]"
             >
               Show {Math.min(PAGE_LINES, shown.length - limit)} more
             </button>
@@ -328,8 +333,8 @@ function NationChip({ active, onClick, children }: { active: boolean; onClick: (
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`flex shrink-0 items-center gap-1.5 rounded-lg border px-2 py-1 text-[11px] font-semibold transition ${
-        active ? "border-fuchsia-300/70 bg-fuchsia-400/15 text-fuchsia-100" : "border-white/10 bg-white/[0.03] text-ink-300 hover:border-white/25"
+      className={`gm-cut flex h-7 shrink-0 items-center gap-1.5 px-2.5 text-xs font-semibold transition-colors [--cut:6px] ${
+        active ? "bg-violet-400 text-ink-950" : "bg-ink-950 text-ink-300 hover:bg-ink-800 hover:text-ink-100"
       }`}
     >
       {children}
@@ -352,21 +357,21 @@ function LogLine({
   return (
     <>
       {fileChanged && (
-        <li className="my-3 flex items-center gap-3 px-2 text-[10px] font-black uppercase tracking-[0.18em] text-sky-300/80">
-          <span className="h-px flex-1 bg-sky-300/20" />
+        <li className="my-3 flex items-center gap-3 px-2 text-xs font-semibold text-sky-300">
+          <span className="h-px flex-1 bg-sky-300/25" />
           Part {line.file}: {files[line.file - 1]?.filename ?? ""} (rehost)
-          <span className="h-px flex-1 bg-sky-300/20" />
+          <span className="h-px flex-1 bg-sky-300/25" />
         </li>
       )}
       <li
         id={`L${line.n}`}
-        className={`group flex gap-3 rounded-lg px-2 py-1 hover:bg-white/[0.03] ${line.ooc ? "text-[11px] text-ink-500" : "text-[13px] leading-relaxed text-ink-200"}`}
+        className={`group flex gap-3 px-2 py-1 hover:bg-ink-800/50 ${line.ooc ? "text-xs text-ink-500" : "text-[13.5px] leading-relaxed text-ink-200"}`}
       >
         <span className="w-10 shrink-0 select-none pt-0.5 text-right text-[10px] tabular-nums text-ink-600">{line.n}</span>
         {line.tag ? (
           <span className="flex w-36 shrink-0 items-start gap-1.5 truncate pt-0.5 sm:w-44">
             <Flag tag={line.tag} className="mt-0.5 h-3 w-[18px]" />
-            <span className="truncate text-xs font-bold" style={{ color: tagColour(line.tag) }} title={line.speaker ?? line.tag}>
+            <span className="truncate text-xs font-semibold" style={{ color: tagColour(line.tag) }} title={line.speaker ?? line.tag}>
               {line.speaker || line.tag}
             </span>
           </span>

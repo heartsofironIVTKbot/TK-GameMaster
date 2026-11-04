@@ -1,33 +1,31 @@
 "use client";
 
-import Link from "next/link";
-import HostGate from "@/components/schedule/HostGate";
-import { GLASS } from "@/components/schedule/ui";
+import { CalendarCheck, Download, Gavel, Lock } from "lucide-react";
+import HostGate, { GateMessage, GateScreen } from "@/components/schedule/HostGate";
 import AuditApp from "./AuditApp";
 
 export default function AuditPage() {
   return (
     <HostGate
       returnPath="/audit"
-      icon="📜"
+      page="audit"
       title="Audit log"
-      intro="Every action on this server — reservations, roster moves, moderation, games and settings — in one searchable list. For Host Management and server admins."
+      intro="Every action on this server, in one searchable list."
+      audience="For Host Management and server admins."
+      features={[
+        { icon: CalendarCheck, title: "Reservations and roster moves", text: "Who reserved, dropped or moved which nation, and when." },
+        { icon: Gavel, title: "Moderation and games", text: "Commends, warnings, bans, and every game started, ended or cancelled." },
+        { icon: Download, title: "Search and export", text: "Filter by player, game or day, and download what you see." },
+      ]}
       area="the Audit log"
     >
       {(host) =>
         host.is_staff ? (
           <AuditApp host={host} />
         ) : (
-          <div className="gm-backdrop flex min-h-screen items-center justify-center p-6 text-ink-100">
-            <div className={`max-w-md rounded-3xl p-6 text-center ${GLASS}`}>
-              <p className="text-3xl">📜</p>
-              <h1 className="mt-2 text-lg font-black">Audit log</h1>
-              <p className="mt-2 text-sm text-ink-300">Only Host Management can see the audit log.</p>
-              <Link href="/" className="mt-4 inline-block text-xs font-bold text-brand-300 hover:underline">
-                ← Back to the map
-              </Link>
-            </div>
-          </div>
+          <GateScreen page="audit" title="Audit log">
+            <GateMessage icon={Lock} title="Host Management only" text="The audit log is for Host Management and server admins." />
+          </GateScreen>
         )
       }
     </HostGate>

@@ -1,9 +1,24 @@
 "use client";
 
+import {
+  Check,
+  CircleAlert,
+  CircleCheck,
+  FileArchive,
+  FolderOpen,
+  Info,
+  ListChecks,
+  Medal,
+  Send,
+  Siren,
+  Wrench,
+} from "lucide-react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import ModeIcon from "@/components/schedule/ModeIcon";
+import { GateMessage, GateScreen, LoginScreen } from "@/components/schedule/HostGate";
+import { Spinner } from "@/components/schedule/ui";
 import SiteHeader from "@/components/site/SiteHeader";
-import { useEffect, useRef, useState } from "react";
-import { DiscordGlyph, GateMessage } from "@/components/schedule/HostGate";
-import { GLASS, Spinner } from "@/components/schedule/ui";
+import { modeOption } from "@/lib/scheduleOptions";
 import { usePlayerRequest } from "@/components/usePlayerRequest";
 import {
   CRASH_MERIT_UNVERIFIED,
@@ -28,13 +43,12 @@ type Load =
   | { kind: "error"; message: string }
   | { kind: "ok"; data: CrashPageData };
 
-const FIELD =
-  "w-full rounded-lg border border-white/10 bg-ink-900/80 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:border-rose-300/50 focus:outline-none";
+const FIELD = "gm-input w-full py-2 text-[13.5px]";
 
 async function fetchPage(id: string): Promise<Load> {
   const response = await fetch(`/api/crash-reports?game=${encodeURIComponent(id)}`, { cache: "no-store" }).catch(() => null);
   const body = (await response?.json().catch(() => null)) as (CrashPageData & { error?: string }) | null;
-  if (!response) return { kind: "error", message: "Network error — check your connection and reload." };
+  if (!response) return { kind: "error", message: "Network error. Check your connection and reload." };
   if (response.status === 401) return { kind: "login" };
   if (!response.ok || !body) return { kind: "error", message: body?.error ?? "Couldn't load this page." };
   return { kind: "ok", data: body };
@@ -80,28 +94,33 @@ export default function CrashReportApp() {
     setFile(null);
   }
 
+  if (load.kind === "login") {
+    return (
+      <LoginScreen
+        page="crash"
+        title="Report a crash"
+        intro="Send your HOI4 logs to the mod developers when a game crashes."
+        returnPath={`/crash?game=${gameId}`}
+        features={[
+          { icon: FileArchive, title: "Straight to the developers", text: "The bot checks your zip and posts it to the crash-report channel." },
+          { icon: Medal, title: "Merit for every accepted report", text: `${CRASH_MERIT_VERIFIED} if you're HOI4 Verified, ${CRASH_MERIT_UNVERIFIED} if not.` },
+          { icon: ListChecks, title: "See what happened to it", text: "Your reports for each game, delivered or not." },
+        ]}
+      />
+    );
+  }
   if (load.kind !== "ok") {
     return (
-      <main className="gm-backdrop flex min-h-screen w-full items-center justify-center p-4">
+      <GateScreen page="crash" title="Report a crash">
         {load.kind === "loading" ? (
           <div className="flex items-center gap-3 text-ink-300">
-            <Spinner className="h-5 w-5 text-rose-400" />
+            <Spinner className="h-5 w-5 text-brand-400" />
             <span className="text-sm font-semibold">Loading…</span>
           </div>
-        ) : load.kind === "login" ? (
-          <GateMessage icon="🚨" title="Report a crash" text="Log in with your Discord account to send your crash logs to the mod developers.">
-            <a
-              href={`/api/auth/login?next=${encodeURIComponent(`/crash?game=${gameId}`)}`}
-              className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#5865F2] px-6 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-500/30 transition hover:bg-[#4752c4]"
-            >
-              <DiscordGlyph />
-              Log in with Discord
-            </a>
-          </GateMessage>
         ) : (
-          <GateMessage icon="🛠️" title="Report a crash" text={load.message} />
+          <GateMessage icon={Wrench} title="Report a crash" text={load.message} />
         )}
-      </main>
+      </GateScreen>
     );
   }
 
@@ -114,9 +133,9 @@ export default function CrashReportApp() {
       : !/\.zip$/i.test(picked.name)
         ? "Please compress your logs folder into a .zip file and pick that."
         : picked.size < CRASH_ZIP_MIN_BYTES
-          ? "That file is too small — zip the whole crash folder (with the minidump and logs)."
+          ? "That file is too small. Zip the whole logs folder."
           : picked.size > CRASH_ZIP_MAX_BYTES
-            ? `That file is too big (the limit is ${CRASH_ZIP_MAX_BYTES / 1024 / 1024} MB) — zip only the logs folder.`
+            ? `That file is too big (the limit is ${CRASH_ZIP_MAX_BYTES / 1024 / 1024} MB). Zip only the logs folder.`
             : null;
     setFileError(problem);
     setFile(problem ? null : picked);
@@ -133,117 +152,164 @@ export default function CrashReportApp() {
     void request.submit("POST", form);
   };
 
-  return (
-    <div className="gm-backdrop min-h-screen w-full text-ink-100">
-      <SiteHeader page="crash" title="Report a crash" subtitle={`GameMaster · ${game?.name ?? "Crash logs"}`}></SiteHeader>
+  const phase = !game ? "" : game.finished ? "Ended" : game.started ? "On-going" : "Not started";
+  const phaseTone = game?.finished ? "bg-ink-800 text-ink-300" : game?.started ? "bg-sky-950 text-sky-300" : "bg-yellow-950 text-yellow-300";
 
-      <main className="mx-auto max-w-[900px] space-y-4 px-4 py-5 sm:px-6">
+  return (
+    <div className="min-h-screen w-full bg-ink-950 text-ink-100">
+      <SiteHeader page="crash" title="Report a crash" subtitle={game?.name ?? "Send your crash logs to the mod developers"} />
+
+      <main className="mx-auto max-w-[860px] space-y-3 px-4 py-5 sm:px-6">
+        <div className="flex items-center gap-2.5">
+          <Siren aria-hidden className="h-5 w-5 text-brand-400" strokeWidth={1.75} />
+          <h1 className="gm-title text-[30px]">Report a crash</h1>
+        </div>
         {!game ? (
-          <section className={`rounded-3xl p-5 ${GLASS}`}>
+          <section className="gm-plate p-5">
             <p className="text-sm text-ink-300">That game wasn&apos;t found. Open this page from the link in your game DM, or from the map.</p>
           </section>
         ) : (
           <>
-            <section className={`rounded-3xl p-4 sm:p-6 ${GLASS}`}>
-              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-rose-300">{game.mode}</p>
-              <h1 className="mt-0.5 text-xl font-black tracking-tight text-white">{game.name}</h1>
-              {!open ? (
-                <p className="mt-3 rounded-xl border border-brand-400/30 bg-brand-500/10 px-3 py-2 text-sm text-brand-100">
-                  {game.finished
-                    ? "This game has ended — crash reports are no longer accepted for it."
-                    : "This game hasn't started yet — come back if it crashes once you're playing."}
-                </p>
-              ) : (
-                <>
-                  <p className="mt-2 text-sm text-ink-300">
-                    Game crashed? Send your logs to the mod developers. Every accepted report earns Merit:{" "}
-                    <b>+{CRASH_MERIT_VERIFIED}</b> if you&apos;re HOI4 Verified, <b>+{CRASH_MERIT_UNVERIFIED}</b> otherwise (one reward
-                    every 6 hours).
-                  </p>
-                  <ol className="mt-3 list-decimal space-y-1 pl-5 text-[13px] text-ink-300">
-                    <li>
-                      Open <code className="rounded bg-ink-900/80 px-1">Documents\Paradox Interactive\Hearts of Iron IV</code>.
-                    </li>
-                    <li>
-                      Right-click the <b>logs</b> folder → <b>Compress to ZIP file</b> (or <b>Send to → Compressed (zipped) folder</b>).
-                    </li>
-                    <li>Pick that .zip below and tell the developers what happened.</li>
-                  </ol>
+            <section className="gm-plate flex items-center gap-3 px-4 py-3.5 sm:px-[18px]">
+              <span className="gm-cut grid h-10 w-10 shrink-0 place-items-center bg-ink-800 text-brand-400 [--cut:8px]">
+                <ModeIcon mode={game.mode} aria-hidden className="h-5 w-5" strokeWidth={1.75} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[15px] font-semibold text-ink-100">{game.name}</p>
+                <p className="text-xs text-ink-400">{modeOption(game.mode)?.label ?? game.mode}</p>
+              </div>
+              <span className={`gm-tag gm-tag-dot shrink-0 ${phaseTone}`}>{phase}</span>
+            </section>
 
-                  <div className="mt-4 space-y-3">
-                    <label className="block">
-                      <span className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-ink-400">What happened right before the crash?</span>
-                      <textarea
-                        value={whatHappened}
-                        onChange={(event) => setWhatHappened(event.target.value.slice(0, CRASH_TEXT_MAX))}
-                        rows={3}
-                        placeholder="What did you click? What in-game date was it?"
-                        className={FIELD}
-                      />
-                    </label>
-                    <label className="block">
-                      <span className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-ink-400">Anything else? (optional)</span>
-                      <textarea
-                        value={notes}
-                        onChange={(event) => setNotes(event.target.value.slice(0, CRASH_NOTES_MAX))}
-                        rows={2}
-                        className={FIELD}
-                      />
-                    </label>
-                    <div className="flex flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-xs">
-                      <span className="min-w-0 flex-1 text-ink-300">
-                        {file ? (
-                          <>
-                            📦 <b>{file.name}</b> · {size(file.size)}
-                          </>
-                        ) : (
-                          "No file picked yet (.zip, 500 KB – 15 MB)."
-                        )}
-                      </span>
-                      <input
-                        ref={fileRef}
-                        type="file"
-                        accept=".zip,application/zip"
-                        aria-label="Zipped logs folder"
-                        className="hidden"
-                        onChange={(event) => pick(event.target.files?.[0] ?? null)}
-                      />
+            {!open ? (
+              <p className="gm-cut flex gap-2.5 bg-ink-900 px-3.5 py-3 text-[13px] text-ink-300 shadow-[inset_3px_0_0_var(--color-sky-300)] [--cut:9px]">
+                <Info aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-sky-300" strokeWidth={1.75} />
+                {game.finished
+                  ? "This game has ended, so it doesn't take crash reports any more."
+                  : "This game hasn't started yet. Come back if it crashes once you're playing."}
+              </p>
+            ) : (
+              <>
+                <p className="gm-cut flex gap-2.5 bg-yellow-950/60 px-3.5 py-3 text-[13px] text-ink-300 shadow-[inset_3px_0_0_var(--color-yellow-300)] [--cut:9px]">
+                  <Medal aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-yellow-300" strokeWidth={1.75} />
+                  <span>
+                    <b className="font-semibold text-ink-100">Merit for every accepted report: </b>
+                    {CRASH_MERIT_VERIFIED} if you&apos;re HOI4 Verified, {CRASH_MERIT_UNVERIFIED} if not. One reward every 6 hours.
+                  </span>
+                </p>
+
+                <section className="gm-plate space-y-5 p-4 sm:p-5">
+                  <Step n={1} state={file ? "done" : "open"} title="Zip your logs folder">
+                    <p className="text-[13px] text-ink-400">
+                      Open <code className="bg-ink-950 px-1 text-ink-200">Documents\Paradox Interactive\Hearts of Iron IV</code>, right-click the{" "}
+                      <b className="font-semibold text-ink-200">logs</b> folder and choose <b className="font-semibold text-ink-200">Compress to ZIP file</b> (or{" "}
+                      <b className="font-semibold text-ink-200">Send to, Compressed (zipped) folder</b>).
+                    </p>
+                  </Step>
+
+                  <Step n={2} state={file ? "done" : "on"} title="Add the zip">
+                    <input
+                      ref={fileRef}
+                      type="file"
+                      accept=".zip,application/zip"
+                      aria-label="Zipped logs folder"
+                      className="hidden"
+                      onChange={(event) => pick(event.target.files?.[0] ?? null)}
+                    />
+                    <div
+                      onDragOver={(event) => event.preventDefault()}
+                      onDrop={(event) => {
+                        event.preventDefault();
+                        if (!request.busy) pick(event.dataTransfer.files?.[0] ?? null);
+                      }}
+                      className="gm-cut flex flex-col items-center gap-1.5 bg-ink-950 px-4 py-6 text-center text-[13px] text-ink-400 shadow-[inset_0_0_0_1px_var(--color-ink-700)] [--cut:12px]"
+                    >
+                      <FileArchive aria-hidden className="h-7 w-7 text-brand-400" strokeWidth={1.5} />
+                      {file ? (
+                        <>
+                          <b className="text-sm font-semibold text-ink-100">{file.name}</b>
+                          {size(file.size)}
+                        </>
+                      ) : (
+                        <>
+                          <b className="text-sm font-semibold text-ink-100">Drop the zip here</b>
+                          or pick the file. A .zip of {CRASH_ZIP_MIN_BYTES / 1024} KB to {CRASH_ZIP_MAX_BYTES / 1024 / 1024} MB.
+                        </>
+                      )}
                       <button
                         type="button"
                         disabled={request.busy}
                         onClick={() => fileRef.current?.click()}
-                        className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs font-bold text-ink-200 hover:border-rose-300/40 hover:text-white disabled:opacity-50"
+                        className="gm-btn gm-btn-secondary mt-1.5 h-[30px] px-3 text-[12.5px] [--cut:7px]"
                       >
-                        📁 {file ? "Pick another" : "Pick the .zip"}
+                        <FolderOpen aria-hidden strokeWidth={1.75} />
+                        {file ? "Pick another" : "Pick a file"}
                       </button>
                     </div>
-                    {fileError && <p className="text-xs text-rose-300">{fileError}</p>}
-                    <button
-                      type="button"
-                      disabled={!file || !whatHappened.trim() || request.busy}
-                      onClick={send}
-                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-rose-400 px-4 py-2.5 text-sm font-black text-ink-950 hover:bg-rose-300 disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                      {request.busy && <Spinner className="h-4 w-4" />}
-                      {request.state.phase === "sending" ? "Uploading…" : request.busy ? "The bot is checking your logs…" : "🚨 Send to the developers"}
-                    </button>
-                    {request.state.phase === "error" && (
-                      <p className="rounded-xl border border-rose-400/40 bg-rose-500/10 px-3 py-2 text-xs text-rose-100">{request.state.message}</p>
-                    )}
-                    {delivered && (
-                      <p className="rounded-xl border border-emerald-400/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-50">
-                        ✅ Delivered to the mod developers — thank you!
-                        {delivered.merit
-                          ? ` You earned +${delivered.merit} Merit.`
-                          : delivered.cooldown
-                            ? " No Merit this time (one reward every 6 hours)."
-                            : ""}
+                    {fileError && (
+                      <p className="mt-2 flex gap-1.5 text-xs text-rose-300">
+                        <CircleAlert aria-hidden className="mt-px h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
+                        {fileError}
                       </p>
                     )}
-                  </div>
-                </>
-              )}
-            </section>
+                  </Step>
+
+                  <Step n={3} state={file ? "on" : "open"} title="Say what happened">
+                    <div className="space-y-3">
+                      <label className="block">
+                        <span className="mb-1.5 block text-[13px] font-semibold text-ink-100">What happened right before the crash?</span>
+                        <textarea
+                          value={whatHappened}
+                          onChange={(event) => setWhatHappened(event.target.value.slice(0, CRASH_TEXT_MAX))}
+                          rows={3}
+                          placeholder="What did you click? What in-game date was it?"
+                          className={FIELD}
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="mb-1.5 block text-[13px] font-semibold text-ink-100">
+                          Anything else? <span className="font-normal text-ink-500">(optional)</span>
+                        </span>
+                        <textarea
+                          value={notes}
+                          onChange={(event) => setNotes(event.target.value.slice(0, CRASH_NOTES_MAX))}
+                          rows={2}
+                          className={FIELD}
+                        />
+                      </label>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <span className="min-w-0 flex-1 text-xs text-ink-500">The report goes to the mod developers&apos; crash-report channel.</span>
+                        <button
+                          type="button"
+                          disabled={!file || !whatHappened.trim() || request.busy}
+                          onClick={send}
+                          className="gm-btn gm-btn-primary"
+                        >
+                          {request.busy ? <Spinner className="h-4 w-4" /> : <Send aria-hidden strokeWidth={1.75} />}
+                          {request.state.phase === "sending" ? "Uploading…" : request.busy ? "The bot is checking your logs…" : "Send crash report"}
+                        </button>
+                      </div>
+                      {request.state.phase === "error" && (
+                        <p className="gm-cut bg-rose-950 px-3 py-2 text-[13px] text-rose-200 [--cut:8px]">{request.state.message}</p>
+                      )}
+                      {delivered && (
+                        <p className="gm-cut flex gap-2 bg-emerald-950 px-3 py-2.5 text-[13px] text-emerald-200 [--cut:8px]">
+                          <CircleCheck aria-hidden className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={1.75} />
+                          <span>
+                            Sent to the mod developers. Thank you!
+                            {delivered.merit
+                              ? ` You earned ${delivered.merit} Merit.`
+                              : delivered.cooldown
+                                ? " No Merit this time (one reward every 6 hours)."
+                                : ""}
+                          </span>
+                        </p>
+                      )}
+                    </div>
+                  </Step>
+                </section>
+              </>
+            )}
             {reports.length > 0 && <MyReports reports={reports} />}
           </>
         )}
@@ -252,31 +318,55 @@ export default function CrashReportApp() {
   );
 }
 
+/** One numbered step: a check once done, green while it's the one to do. */
+function Step({ n, state, title, children }: { n: number; state: "done" | "on" | "open"; title: string; children: ReactNode }) {
+  return (
+    <div className="grid grid-cols-[32px_minmax(0,1fr)] gap-3.5">
+      <span
+        className={`gm-cut grid h-8 w-8 place-items-center font-display text-lg font-extrabold [--cut:7px] ${
+          state === "done" ? "bg-emerald-950 text-emerald-300" : state === "on" ? "bg-brand-400 text-brand-950" : "bg-ink-800 text-ink-100"
+        }`}
+      >
+        {state === "done" ? <Check aria-hidden className="h-4 w-4" strokeWidth={2} /> : n}
+      </span>
+      <div className="min-w-0">
+        <h2 className="mb-2 mt-1 text-[15px] font-semibold text-ink-100">{title}</h2>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+const REPORT_STATUS: Record<string, { label: string; tone: string }> = {
+  delivered: { label: "Delivered", tone: "bg-emerald-950 text-emerald-300" },
+  rejected: { label: "Not accepted", tone: "bg-rose-950 text-rose-300" },
+};
+
 function MyReports({ reports }: { reports: CrashReportView[] }) {
   return (
-    <section className={`rounded-2xl p-4 ${GLASS}`}>
-      <h2 className="text-[11px] font-black uppercase tracking-[0.18em] text-ink-400">Your reports for this game</h2>
-      <ul className="mt-2 space-y-1.5">
-        {reports.map((report) => (
-          <li key={report.id} className="rounded-xl border border-white/10 bg-ink-950/40 px-3 py-2 text-xs">
-            <div className="flex items-center gap-2">
-              <span className="min-w-0 flex-1 truncate font-bold text-ink-100">
-                {report.filename} <span className="font-normal text-ink-500">· {size(report.bytes)}</span>
-              </span>
-              <span
-                className={`shrink-0 font-black ${
-                  report.status === "delivered" ? "text-emerald-300" : report.status === "rejected" ? "text-rose-300" : "text-brand-300"
-                }`}
-              >
-                {report.status === "delivered" ? "Delivered" : report.status === "rejected" ? "Not accepted" : "Being checked"}
-              </span>
-            </div>
-            <p className="mt-0.5 text-[11px] text-ink-400">
-              {new Date(report.created_at * 1000).toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
-              {report.note ? ` · ${report.note.replace(/^❌\s*/, "")}` : ""}
-            </p>
-          </li>
-        ))}
+    <section className="gm-plate p-4 sm:p-[18px]">
+      <h2 className="flex items-center gap-2.5">
+        <ListChecks aria-hidden className="h-[18px] w-[18px] text-brand-400" strokeWidth={1.75} />
+        <span className="gm-title text-[22px]">Your reports for this game</span>
+      </h2>
+      <ul className="mt-3 space-y-1">
+        {reports.map((report) => {
+          const status = REPORT_STATUS[report.status] ?? { label: "Being checked", tone: "bg-yellow-950 text-yellow-300" };
+          return (
+            <li key={report.id} className="gm-cut bg-ink-950 px-3 py-2 text-[13px] [--cut:7px]">
+              <div className="flex items-center gap-2">
+                <span className="min-w-0 flex-1 truncate font-semibold text-ink-100">
+                  {report.filename} <span className="font-normal text-ink-500">{size(report.bytes)}</span>
+                </span>
+                <span className={`gm-tag gm-tag-dot shrink-0 ${status.tone}`}>{status.label}</span>
+              </div>
+              <p className="mt-0.5 text-xs text-ink-500">
+                {new Date(report.created_at * 1000).toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                {report.note ? `, ${report.note.replace(/^❌\s*/, "")}` : ""}
+              </p>
+            </li>
+          );
+        })}
       </ul>
     </section>
   );

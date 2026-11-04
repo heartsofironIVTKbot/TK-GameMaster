@@ -2,18 +2,18 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { GLASS, Spinner } from "@/components/schedule/ui";
+import { Search, Ticket } from "lucide-react";
+import { Spinner } from "@/components/schedule/ui";
 import { TICKET_KINDS } from "@/lib/ticketAccess";
 import type { TicketListPage, TicketSummary } from "@/lib/ticketTypes";
-import { LoginPrompt, STATUS_STYLE, TicketsShell, when } from "./TicketsShell";
+import { STATUS_STYLE, TicketsLogin, TicketsShell, when } from "./TicketsShell";
 
 /**
  * /tickets — closed tickets: your own, plus the kinds your roles handle (the
  * same people who could see the ticket channel in Discord).
  */
 
-const INPUT =
-  "rounded-lg border border-white/10 bg-ink-950/60 px-3 py-1.5 text-xs text-ink-100 placeholder:text-ink-500 focus:border-brand-300/50 focus:outline-none";
+const INPUT = "gm-input h-[34px] min-h-0 text-[13px]";
 
 interface State {
   key: string;
@@ -54,7 +54,7 @@ export default function TicketsApp() {
         } else setState({ key, tickets: body.tickets, next: body.next_before, error: null, anonymous: false });
       })
       .catch(() => {
-        if (!cancelled) setState({ key, tickets: [], next: null, error: "Network error — try again.", anonymous: false });
+        if (!cancelled) setState({ key, tickets: [], next: null, error: "Network error. Try again.", anonymous: false });
       });
     return () => {
       cancelled = true;
@@ -77,17 +77,30 @@ export default function TicketsApp() {
       .finally(() => setLoadingMore(false));
   };
 
-  if (current?.anonymous) {
-    return (
-      <TicketsShell subtitle="GameMaster · Closed tickets">
-        <LoginPrompt next="/tickets" />
-      </TicketsShell>
-    );
-  }
+  if (current?.anonymous) return <TicketsLogin next="/tickets" />;
 
   return (
-    <TicketsShell subtitle="GameMaster · Closed tickets">
-      <section className={`flex flex-wrap items-center gap-2 rounded-3xl p-4 ${GLASS}`}>
+    <TicketsShell subtitle="Closed tickets you can read">
+      <div>
+        <div className="flex items-center gap-2.5">
+          <Ticket aria-hidden className="h-5 w-5 text-brand-400" strokeWidth={1.75} />
+          <h1 className="gm-title text-[30px]">Closed tickets</h1>
+        </div>
+        <p className="mt-1 text-[13px] text-ink-400">Your own tickets, and the kinds your roles handle on the server.</p>
+      </div>
+
+      <section className="flex flex-wrap items-center gap-2">
+        <label className="relative min-w-[220px] flex-1">
+          <Search aria-hidden className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-500" strokeWidth={1.75} />
+          <input
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search by name or ticket number"
+            className={`${INPUT} w-full pl-8`}
+            aria-label="Search tickets"
+          />
+        </label>
         <select value={kind} onChange={(event) => setKind(event.target.value)} className={INPUT} aria-label="Ticket type">
           <option value="">All types</option>
           {Object.entries(TICKET_KINDS).map(([value, spec]) => (
@@ -101,46 +114,38 @@ export default function TicketsApp() {
           <option value="Resolved">Resolved</option>
           <option value="Unresolved">Unresolved</option>
         </select>
-        <input
-          type="search"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search by name or ticket number"
-          className={`${INPUT} min-w-[220px] flex-1`}
-          aria-label="Search tickets"
-        />
       </section>
 
-      <section className={`rounded-3xl p-3 sm:p-4 ${GLASS}`}>
-        {current?.error && (
-          <p className="mb-2 rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-100">{current.error}</p>
-        )}
+      <section>
+        {current?.error && <p className="gm-cut mb-2 bg-rose-950 px-3 py-2 text-[13px] text-rose-200 [--cut:8px]">{current.error}</p>}
         {!current && (
-          <div className="flex items-center gap-2 px-2 py-6 text-xs text-ink-400">
+          <div className="flex items-center gap-2 px-2 py-6 text-[13px] text-ink-400">
             <Spinner className="h-3.5 w-3.5 text-brand-300" /> Loading…
           </div>
         )}
         {current && !current.error && current.tickets.length === 0 && (
-          <p className="px-2 py-8 text-center text-xs text-ink-500">
+          <div className="gm-plate px-4 py-10 text-center text-[13px] text-ink-400">
             {key ? "No tickets match these filters." : "No closed tickets to show yet. Tickets appear here once they're closed."}
-          </p>
+          </div>
         )}
         {current && current.tickets.length > 0 && (
-          <ul className="overflow-hidden rounded-2xl border border-white/5 bg-ink-950/30">
+          <ul className="space-y-1">
             {current.tickets.map((ticket) => (
-              <li key={ticket.id} className="border-b border-white/5 last:border-b-0">
-                <Link href={`/tickets/${ticket.id}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2.5 hover:bg-white/[0.03]">
-                  <span className="font-mono text-xs text-ink-500">#{String(ticket.number).padStart(4, "0")}</span>
-                  <span className="text-sm font-semibold text-ink-100">{ticket.kind_label}</span>
-                  <span className="text-xs text-ink-400">
-                    by {ticket.mine ? "you" : (ticket.opener_name ?? ticket.opener_id)}
+              <li key={ticket.id}>
+                <Link
+                  href={`/tickets/${ticket.id}`}
+                  className="gm-cut grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 bg-ink-900 px-3.5 py-2.5 text-[13px] transition-colors [--cut:8px] hover:bg-ink-800 md:grid-cols-[64px_minmax(0,180px)_minmax(0,1fr)_110px_auto]"
+                >
+                  <span className="hidden text-ink-500 md:block">#{String(ticket.number).padStart(4, "0")}</span>
+                  <span className="min-w-0 truncate font-semibold text-ink-100">
+                    <span className="text-ink-500 md:hidden">#{String(ticket.number).padStart(4, "0")} </span>
+                    {ticket.kind_label}
                   </span>
-                  <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold ${STATUS_STYLE[ticket.status] ?? ""}`}>
-                    {ticket.status}
-                  </span>
-                  <span className="ml-auto text-[11px] text-ink-500">
-                    closed {when(ticket.closed_at, true)}
-                    {ticket.guild_name ? ` · ${ticket.guild_name}` : ""} · {ticket.message_count} messages
+                  <span className="hidden min-w-0 truncate text-ink-400 md:block">by {ticket.mine ? "you" : (ticket.opener_name ?? ticket.opener_id)}</span>
+                  <span className={`justify-self-end md:justify-self-start ${STATUS_STYLE[ticket.status] ?? "gm-tag bg-ink-800 text-ink-300"}`}>{ticket.status}</span>
+                  <span className="col-span-2 text-xs text-ink-500 md:col-span-1 md:text-right">
+                    Closed {when(ticket.closed_at, true)}
+                    {ticket.guild_name ? `, ${ticket.guild_name}` : ""}, {ticket.message_count} messages
                   </span>
                 </Link>
               </li>
@@ -149,18 +154,13 @@ export default function TicketsApp() {
         )}
         {current?.next && (
           <div className="mt-3 flex justify-center">
-            <button
-              type="button"
-              onClick={loadMore}
-              disabled={loadingMore}
-              className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold text-ink-200 hover:border-brand-300/40 hover:text-white disabled:opacity-60"
-            >
+            <button type="button" onClick={loadMore} disabled={loadingMore} className="gm-btn gm-btn-secondary">
               {loadingMore && <Spinner className="h-3 w-3" />}Load more
             </button>
           </div>
         )}
       </section>
-      <p className="px-2 text-[11px] text-ink-500">
+      <p className="px-1 text-xs text-ink-500">
         Only tickets closed since this page went live are here. Older ones are in the Discord transcript channels. If a
         message shows as &ldquo;text not available&rdquo;, the bot couldn&apos;t read it in Discord.
       </p>

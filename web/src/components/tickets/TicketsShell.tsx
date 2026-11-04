@@ -1,41 +1,42 @@
 "use client";
 
-import SiteHeader from "@/components/site/SiteHeader";
+import { Search, ShieldCheck, Ticket } from "lucide-react";
 import type { ReactNode } from "react";
-import { GLASS } from "@/components/schedule/ui";
+import { LoginScreen } from "@/components/schedule/HostGate";
+import SiteHeader from "@/components/site/SiteHeader";
 import { detectTimeZone, formatInZone } from "@/lib/timeEngine";
 
-/** Header + login prompt shared by /tickets and /tickets/<id>. */
-
+/** Header + login page shared by /tickets and /tickets/<id>. */
 
 export function TicketsShell({ children, subtitle }: { children: ReactNode; subtitle: string }) {
   return (
-    <div className="gm-backdrop min-h-screen w-full text-ink-100">
-      <SiteHeader page="tickets" title="Tickets" subtitle={`${subtitle}`}></SiteHeader>
+    <div className="min-h-screen w-full bg-ink-950 text-ink-100">
+      <SiteHeader page="tickets" title="Tickets" subtitle={subtitle} />
       <main className="mx-auto max-w-[1100px] space-y-4 px-4 py-5 sm:px-6">{children}</main>
     </div>
   );
 }
 
-export function LoginPrompt({ next }: { next: string }) {
+export function TicketsLogin({ next }: { next: string }) {
   return (
-    <div className={`mx-auto mt-10 max-w-md rounded-3xl p-6 text-center ${GLASS}`}>
-      <p className="text-3xl">🎫</p>
-      <h1 className="mt-2 text-lg font-black">Your tickets</h1>
-      <p className="mt-2 text-sm text-ink-300">Log in with Discord to read your closed tickets (and the ones your role handles).</p>
-      <a
-        href={`/api/auth/login?next=${encodeURIComponent(next)}`}
-        className="mt-4 inline-block rounded-lg bg-indigo-500 px-4 py-2 text-sm font-bold text-white hover:bg-indigo-400"
-      >
-        Log in with Discord
-      </a>
-    </div>
+    <LoginScreen
+      page="tickets"
+      title="Tickets"
+      intro="Read your closed tickets, the way they looked in Discord."
+      returnPath={next}
+      features={[
+        { icon: Ticket, title: "Your own tickets", text: "Every message, picture and file, after the ticket is closed." },
+        { icon: ShieldCheck, title: "The ones your role handles", text: "Staff see the kinds of ticket they could see in Discord." },
+        { icon: Search, title: "Search", text: "By name or ticket number, resolved or not." },
+      ]}
+    />
   );
 }
 
+/** A closed ticket's status tag. */
 export const STATUS_STYLE: Record<string, string> = {
-  Resolved: "border-emerald-400/40 bg-emerald-500/10 text-emerald-200",
-  Unresolved: "border-rose-400/40 bg-rose-500/10 text-rose-200",
+  Resolved: "gm-tag gm-tag-dot bg-emerald-950 text-emerald-300",
+  Unresolved: "gm-tag gm-tag-dot bg-rose-950 text-rose-300",
 };
 
 let zone: string | null = null;
