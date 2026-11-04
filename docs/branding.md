@@ -97,6 +97,14 @@ and starts; Schedule is in the footer on every step. The map uses the preset
 editor's border glows: purple for the lock group being edited, blue for the
 others, red on not-playable nations when "Show not playable" is on.
 
+**Server setup** (`docs/design/servers.html`): a 272px list on the left
+holds the ten setup steps (during setup) or Dashboard, Health, the
+sections and History (once set up); each entry has its line icon from
+`STEP_ICON` (`components/servers/shared.tsx`), a green check when done, a
+red number for problems, yellow for warnings, a lock until reached. On
+phones the list folds behind "All steps" / "All settings". The save bar
+sticks to the bottom and leaves room on the right for the Help button.
+
 **The calendars** (`docs/design/calendar.html`): a game's colour is its
 status and nothing else: yellow scheduled, green announced, blue on-going,
 grey ended, red cancelled (`GameState` in `web/src/lib/scheduleOptions.ts`,

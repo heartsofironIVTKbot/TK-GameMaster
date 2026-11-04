@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GameMaster Server Setup Mock-up</title>
+<!-- Design mock-up of /servers (your servers, the setup wizard and the
+     settings) in the cut-plate style (docs/branding.md). Not part of the
+     app. Drawn at 1440x900 (desktop) or 390x844 (phone). -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Big+Shoulders+Stencil+Display:wght@800&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+<style>
+  :root {
+    --ink-950: oklch(11.8% 0.009 152); --ink-900: oklch(19.2% 0.011 152); --ink-800: oklch(26.6% 0.012 152);
+    --ink-700: oklch(36.2% 0.013 152); --ink-600: oklch(44.4% 0.014 152); --ink-500: oklch(55.4% 0.015 152); --ink-400: oklch(70.4% 0.015 152);
+    --ink-300: oklch(86.4% 0.012 152); --ink-100: oklch(96.6% 0.006 152);
+    --brand-400: oklch(76.4% 0.186 146); --brand-950: oklch(19.4% 0.046 146);
+    --mint: oklch(79.4% 0.118 174); --yellow: oklch(86% 0.15 95); --red: oklch(70% 0.17 22); --sky: oklch(76% 0.11 235);
+    --display: "Big Shoulders Display", "Arial Narrow", sans-serif; --stencil: "Big Shoulders Stencil Display", var(--display); --body: "Public Sans", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: oklch(8% 0.006 152); color: var(--ink-300); font: 400 14px/1.45 var(--body); font-variant-numeric: tabular-nums; display: flex; flex-direction: column; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
+  svg.lucide { width: 16px; height: 16px; stroke-width: 1.75; flex: none; }
+  .switches { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; padding: 10px 16px; border-bottom: 1px solid var(--ink-800); background: var(--ink-950); }
+  .switches h1 { margin: 0 6px 0 0; font: 800 22px/1 var(--display); text-transform: uppercase; color: var(--ink-100); }
+  .seg { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-500); }
+  .seg div { display: flex; border: 1px solid var(--ink-700); border-radius: 4px; overflow: hidden; }
+  .seg button { padding: 5px 10px; font-size: 12px; font-weight: 600; color: var(--ink-400); }
+  .seg button + button { border-left: 1px solid var(--ink-700); }
+  .seg button[aria-pressed="true"] { background: var(--ink-800); color: var(--ink-100); }
+  .seg.off { opacity: .35; pointer-events: none; }
+  .viewport { flex: 1; min-height: 0; display: grid; place-items: center; padding: 16px; overflow: hidden; }
+  .frame { position: relative; overflow: hidden; outline: 1px solid var(--ink-800); }
+  .stage { position: absolute; left: 0; top: 0; transform-origin: 0 0; overflow: hidden; background: var(--ink-950); }
+  .stage.desk { width: 1440px; height: 900px; } .stage.phone { width: 390px; height: 844px; }
+  .stage > div { height: 100%; display: flex; flex-direction: column; }
+  [hidden] { display: none !important; }
+  .cut, .btn, .plate, .field { clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut)); }
+  .cut, .btn, .field { --cut: 8px; }
+  .plate { --cut: 14px; --line: var(--ink-800); background-color: var(--ink-900); }
+  .plate, .field, .btn-secondary { border: 1px solid var(--line);
+    background-image: linear-gradient(135deg, var(--line) calc(var(--cut) * .7071 + 1px), transparent 0), linear-gradient(315deg, var(--line) calc(var(--cut) * .7071 + 1px), transparent 0); background-origin: border-box; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; height: 34px; padding: 0 13px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+  .btn-primary { background-color: var(--brand-400); color: var(--brand-950); }
+  .btn-secondary { --line: var(--ink-700); color: var(--ink-100); background-color: var(--ink-950); }
+  .btn-quiet { color: var(--ink-300); } .btn-icon { width: 34px; padding: 0; }
+  .btn-sm { height: 30px; padding: 0 11px; font-size: 12.5px; --cut: 7px; }
+  .btn-discord { background: #5865f2; color: #fff; }
+  .tag { display: inline-flex; align-items: center; gap: 6px; height: 21px; padding: 0 11px; font-size: 11.5px; font-weight: 600; white-space: nowrap; clip-path: polygon(7px 0, calc(100% - 7px) 0, 100% 50%, calc(100% - 7px) 100%, 7px 100%, 0 50%); }
+  .tag svg { width: 12px; height: 12px; }
+  .dot::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .t { color: var(--c); background: color-mix(in oklab, var(--c) 16%, var(--ink-950)); }
+  .t-ink { color: var(--ink-300); background: var(--ink-800); }
+  .title { font-family: var(--display); font-weight: 800; text-transform: uppercase; line-height: .95; color: var(--ink-100); }
+  .small { font-size: 12px; color: var(--ink-400); }
+  .mark { width: 30px; height: 30px; --cut: 7px; display: grid; place-items: center; background: var(--brand-400); color: var(--brand-950); font: 800 17px/1 var(--stencil); }
+  .avatar { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; flex: none; background: var(--ink-800); color: var(--ink-100); font-size: 12px; font-weight: 700; }
+  .sicon { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; flex: none; font: 700 14px/1 var(--body); color: #fff; }
+  .top { flex: none; height: 56px; display: flex; align-items: center; gap: 12px; padding: 0 20px; border-bottom: 1px solid var(--ink-800); background: var(--ink-950); }
+  .top .title { font-size: 26px; } .top small { display: block; font-size: 12px; color: var(--ink-400); }
+  .top .end { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  .phone .top { padding: 0 10px; } .phone .top .title { font-size: 20px; }
+  .body { flex: 1; min-height: 0; overflow: hidden; display: flex; }
+  .wrap { flex: 1; min-width: 0; overflow: hidden; padding: 20px 24px; }
+  .phone .wrap { padding: 12px; }
+  .center { max-width: 1060px; margin: 0 auto; }
+  .h { display: flex; align-items: center; gap: 10px; } .h > svg { width: 20px; height: 20px; color: var(--brand-400); } .h .title { font-size: 30px; }
+  .lead { margin: 4px 0 16px; font-size: 13px; color: var(--ink-400); }
+  /* server list */
+  .servers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .phone .servers { grid-template-columns: 1fr; }
+  .scard { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+  .scard .row1 { display: flex; align-items: center; gap: 12px; }
+  .scard .name { font-size: 15px; font-weight: 600; color: var(--ink-100); }
+  .scard p { margin: 0; font-size: 13px; color: var(--ink-400); }
+  .scard .acts { margin-top: auto; padding-top: 10px; border-top: 1px solid var(--ink-800); display: flex; gap: 6px; }
+  /* steps */
+  .pills { display: flex; gap: 4px; overflow: hidden; margin-bottom: 14px; }
+  .pill { display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 12px; --cut: 7px; background: var(--ink-900); font-size: 12.5px; font-weight: 600; color: var(--ink-400); white-space: nowrap; flex: none; }
+  .pill.on { background: var(--brand-400); color: var(--brand-950); } .pill.done svg.st { color: var(--mint); } .pill.lock { opacity: .4; }
+  .pill .n { font-size: 11px; opacity: .7; }
+  .side { flex: none; width: 272px; border-right: 1px solid var(--ink-800); background: var(--ink-950); padding: 14px 10px; display: flex; flex-direction: column; gap: 2px; overflow: hidden; }
+  .side .hd { padding: 4px 10px 10px; font-size: 12px; color: var(--ink-500); }
+  .side .hd b { display: block; color: var(--ink-100); font-size: 13px; }
+  .bar { height: 4px; margin-top: 8px; background: var(--ink-800); } .bar i { display: block; height: 100%; background: var(--brand-400); }
+  .item { display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 10px; --cut: 7px; font-size: 13px; font-weight: 600; color: var(--ink-300); text-align: left; }
+  .item svg.ic { color: var(--ink-500); } .item .end { margin-left: auto; display: flex; align-items: center; }
+  .item.on { background: var(--ink-800); color: var(--ink-100); box-shadow: inset 3px 0 0 var(--brand-400); } .item.on svg.ic { color: var(--brand-400); }
+  .item.lock { opacity: .4; } .item .ok { color: var(--mint); width: 15px; height: 15px; }
+  .item .num { --cut: 4px; min-width: 18px; height: 18px; padding: 0 5px; display: grid; place-items: center; font-size: 11px; font-weight: 700; background: var(--red); color: var(--ink-950); }
+  .item .num.warn { background: var(--yellow); }
+  .side .sep { height: 1px; background: var(--ink-800); margin: 8px 6px; }
+  /* content */
+  .panel { padding: 20px; }
+  .ph { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 16px; }
+  .ph .ico { width: 40px; height: 40px; --cut: 8px; display: grid; place-items: center; background: var(--ink-800); color: var(--brand-400); flex: none; } .ph .ico svg { width: 20px; height: 20px; }
+  .ph .title { font-size: 28px; } .ph p { margin: 3px 0 0; font-size: 13px; color: var(--ink-400); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .phone .grid2 { grid-template-columns: 1fr; }
+  .fld { padding: 12px; --cut: 10px; background: var(--ink-950); }
+  .fld .lbl { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--ink-100); } .fld .lbl svg { color: var(--ink-500); width: 15px; height: 15px; }
+  .fld .help { margin: 3px 0 8px; font-size: 12px; color: var(--ink-400); }
+  .role { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 10px; --cut: 7px; background: var(--ink-900); font-size: 13px; color: var(--ink-100); }
+  .role i { width: 10px; height: 10px; border-radius: 50%; } .role .chev { margin-left: auto; color: var(--ink-500); }
+  .role.empty { color: var(--ink-500); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--red) 55%, transparent); }
+  .msg { display: flex; gap: 7px; margin-top: 7px; font-size: 12px; } .msg svg { width: 14px; height: 14px; margin-top: 1px; }
+  .msg.err { color: oklch(78% 0.13 22); } .msg.warn { color: var(--yellow); }
+  .savebar { flex: none; display: flex; align-items: center; gap: 8px; padding: 12px 20px; border-top: 1px solid var(--ink-800); background: var(--ink-950); }
+  .savebar .grow { flex: 1; font-size: 12px; color: var(--ink-500); }
+  .phone .savebar { padding: 10px 12px; }
+  .note { display: flex; gap: 9px; padding: 10px 12px; --cut: 10px; background: color-mix(in oklab, var(--sky) 10%, var(--ink-900)); box-shadow: inset 3px 0 0 var(--sky); font-size: 12.5px; color: var(--ink-300); margin-bottom: 12px; } .note svg { color: var(--sky); margin-top: 1px; }
+  /* settings tiles */
+  .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .phone .tiles { grid-template-columns: 1fr 1fr; }
+  .tile { position: relative; padding: 14px; height: 128px; display: flex; flex-direction: column; justify-content: space-between; text-align: left; }
+  .tile .ico { width: 38px; height: 38px; --cut: 8px; display: grid; place-items: center; background: var(--ink-800); color: var(--brand-400); } .tile .ico svg { width: 19px; height: 19px; }
+  .tile b { font-size: 14px; color: var(--ink-100); } .tile small { display: block; font-size: 11.5px; color: var(--ink-400); }
+  .tile .badge { position: absolute; top: 12px; right: 12px; }
+  .phone .tile { height: 112px; }
+  .chans { display: grid; gap: 6px; }
+  .chan { display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 12px; align-items: center; padding: 9px 12px; --cut: 9px; background: var(--ink-950); }
+  .phone .chan { grid-template-columns: 1fr; gap: 6px; }
+  .chan .lbl { font-size: 13px; font-weight: 600; color: var(--ink-100); } .chan .lbl small { display: block; font-weight: 400; font-size: 11.5px; color: var(--ink-400); }
+  .ch { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 10px; --cut: 7px; background: var(--ink-900); font-size: 13px; color: var(--ink-100); } .ch svg { color: var(--ink-500); } .ch .chev { margin-left: auto; }
+</style>
+</head>
+<body>
+<div class="switches">
+  <h1>Server setup mock-up</h1>
+  <div class="seg">Show <div data-k="view"><button data-v="list">Your servers</button><button data-v="wizard">Setup (a step)</button><button data-v="home">Settings home</button><button data-v="section">A settings section</button></div></div>
+  <div class="seg" id="navseg">Moving around <div data-k="nav"><button data-v="top">Steps along the top (today)</button><button data-v="side">List on the left</button></div></div>
+  <div class="seg">Size <div data-k="size"><button data-v="desk">Desktop</button><button data-v="phone">Phone</button></div></div>
+</div>
+<div class="viewport"><div class="frame" id="frame">
+  <div class="stage desk" id="desk"><div data-screen></div></div>
+  <div class="stage phone" id="phone" hidden><div data-screen-phone></div></div>
+</div></div>
+<script>
+  const state = { view: "wizard", nav: "side", size: "desk" };
+  const STEPS = [["bot", "Bot check", "Permissions and role position"], ["tag", "Basics", "Name and host branches"], ["shield", "Staff and access", "Host Management and who edits settings"], ["medal", "Host ranks", "Assistant, Full and Senior hosts"], ["id-card", "Player roles", "Verified, Trusted, bans, VIP"], ["hash", "Channels", "Logs, schedule, voice"], ["gamepad-2", "Game modes", "Modes, their channels and ping roles"], ["sparkles", "Features", "Hearts of Valor and more"], ["ticket", "Tickets", "Ticket staff, channels and auto-close"], ["check", "Review", "Check everything and finish"]];
+  const EXTRA = [["layout-dashboard", "Dashboard", "Usage, games, problems and staff activity"], ["heart-pulse", "Health", "Live checks, uptime, permissions"], ["history", "History", "Every change, who made it and when"]];
+  const phone = () => state.size === "phone";
+  const topBar = (title, sub, extra = "") => `<header class="top"><span class="mark cut">GM</span><div style="min-width:0"><div class="title" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${title}</div>${phone() ? "" : `<small>${sub}</small>`}</div>${phone() ? "" : extra}<div class="end">${phone() ? "" : '<span class="avatar">D</span>'}<button class="btn btn-quiet ${phone() ? "btn-icon" : ""}"><i data-lucide="menu"></i>${phone() ? "" : "Menu"}</button></div></header>`;
+  const serverTag = `<span class="tag t-ink" style="margin-left:4px"><i data-lucide="arrow-left"></i>Your servers</span><span class="sicon" style="width:26px;height:26px;font-size:11px;background:oklch(45% 0.12 30)">BH</span><span class="tag dot t" style="--c:var(--yellow)">Needs setup</span>`;
+
+  function list() {
+    const card = (ini, color, name, status, tone, role, members, text, act) => `<div class="scard plate"><div class="row1"><span class="sicon" style="background:${color}">${ini}</span><div style="min-width:0"><div class="name">${name}</div><div class="small">${role}${members ? `, ${members} members` : ""}</div></div></div>
+      <div><span class="tag dot t" style="--c:${tone}">${status}</span></div><p>${text}</p><div class="acts">${act}</div></div>`;
+    return topBar("Your servers", "Set up GameMaster and change its settings") + `<div class="body"><div class="wrap"><div class="center">
+      <div class="h" style="justify-content:space-between;flex-wrap:wrap;gap:10px"><div class="h"><i data-lucide="server"></i><span class="title">Your servers</span></div><button class="btn btn-primary"><i data-lucide="plus"></i>Add GameMaster to a server</button></div>
+      <p class="lead">Servers you own or admin, and ones whose owner lets Host Management change settings.</p>
+      <div class="servers">
+        ${card("TH", "oklch(52% 0.14 150)", "TommyKay's HOI4 Community", "Set up", "var(--mint)", "Admin, home server", "4,300", "Running on these settings. Changes apply within 30 seconds.", '<button class="btn btn-secondary btn-sm"><i data-lucide="settings"></i>Settings</button><button class="btn btn-quiet btn-sm"><i data-lucide="layout-dashboard"></i>Dashboard</button>')}
+        ${card("BH", "oklch(45% 0.12 30)", "Baltic HOI4 League", "Needs setup", "var(--yellow)", "Owner", "655", "GameMaster is in, but its roles and channels aren't set up yet. Step 5 of 10.", '<button class="btn btn-primary btn-sm"><i data-lucide="arrow-right"></i>Continue setup</button>')}
+        ${card("PF", "oklch(42% 0.1 250)", "Pacific Front MP", "Bot not added", "var(--ink-400)", "Admin", "", "GameMaster isn't in this server yet.", '<button class="btn btn-discord btn-sm"><i data-lucide="bot"></i>Add GameMaster</button>')}
+      </div>
+      <p class="small" style="margin-top:14px">Don't see a server? You need to own it or have Administrator. <u>Refresh the list from Discord</u></p></div></div></div>`;
+  }
+
+  const roleField = (icon, label, help, value, color, msg) => `<div class="fld cut"><div class="lbl"><i data-lucide="${icon}"></i>${label}</div><p class="help">${help}</p>
+    ${value ? `<div class="role cut"><i style="background:${color}"></i>${value}<i data-lucide="chevron-down" class="chev"></i></div>` : `<div class="role cut empty">Pick a role<i data-lucide="chevron-down" class="chev"></i></div>`}
+    ${msg ? `<p class="msg ${msg[0]}"><i data-lucide="${msg[0] === "err" ? "circle-alert" : "triangle-alert"}"></i>${msg[1]}</p>` : ""}</div>`;
+  function rolesStep() {
+    return `<div class="ph"><span class="ico cut"><i data-lucide="id-card"></i></span><div><div class="title">Player roles</div><p>Verified, Trusted, bans and VIP. GameMaster gives and checks these roles.</p></div></div>
+      <div class="grid2">
+        ${roleField("badge-check", "Roleplay Verified", "Players with it can reserve in Roleplay games.", "RP Verified", "#3498db")}
+        ${roleField("badge-check", "Historical Verified", "The same for Historical games. Leave empty to use Roleplay's.", "Hist Verified", "#1abc9c")}
+        ${roleField("star", "Trusted", "Can reserve Majors that are Trusted+.", "Trusted", "#2ecc71", ["warn", "This role is above GameMaster's, so it can't give it out."])}
+        ${roleField("gem", "VIP", "Never warned for no-shows, can reserve VIP+ nations.", "VIP", "#e91e63")}
+        ${roleField("ban", "Roleplay ban", "Players with it can't reserve in Roleplay games.", null, null, ["err", "Pick a role: bans need one."])}
+        ${roleField("ban", "Historical ban", "The same for Historical games.", "Hist Banned", "#95a5a6")}
+      </div>`;
+  }
+  function stepsTop(activeIndex) {
+    return `<p class="small" style="margin:0 0 8px">Setup, step ${activeIndex + 1} of ${STEPS.length}</p><div class="pills">${STEPS.map(([ic, label], i) => `<span class="pill cut ${i === activeIndex ? "on" : i < activeIndex ? "done" : i > activeIndex + 1 ? "lock" : ""}"><i data-lucide="${ic}"></i><span class="n">${i + 1}</span>${label}${i < activeIndex ? '<i data-lucide="check" class="st" style="width:13px;height:13px"></i>' : i > activeIndex + 1 ? '<i data-lucide="lock" style="width:12px;height:12px"></i>' : ""}</span>`).join("")}</div>`;
+  }
+  function sideList(activeIndex, done) {
+    const items = STEPS.map(([ic, label], i) => {
+      const lock = !done && i > activeIndex + 1;
+      const end = lock ? '<i data-lucide="lock" style="width:13px;height:13px;color:var(--ink-500)"></i>' : i === 4 && done ? '<span class="num cut">1</span>' : i === 2 && done ? '<span class="num warn cut">2</span>' : (done || i < activeIndex) ? '<i data-lucide="check" class="ok"></i>' : i === activeIndex && !done ? '<span class="num cut">1</span>' : "";
+      return `<button class="item cut ${i === activeIndex ? "on" : ""} ${lock ? "lock" : ""}"><i data-lucide="${ic}" class="ic"></i>${done && i === 0 ? "Health" : done && i === 9 ? "Overview" : label}<span class="end">${end}</span></button>`;
+    }).join("");
+    const head = done ? `<div class="hd"><b>Settings</b>Every part of GameMaster on this server</div>` : `<div class="hd"><b>Setup, step ${activeIndex + 1} of 10</b>Your progress is saved at every step.<div class="bar"><i style="width:${(activeIndex / 10) * 100}%"></i></div></div>`;
+    const extra = done ? `<div class="sep"></div>${EXTRA.filter(([, l]) => l !== "Health").map(([ic, l]) => `<button class="item cut"><i data-lucide="${ic}" class="ic"></i>${l}</button>`).join("")}` : "";
+    return `<aside class="side">${head}${done ? `<button class="item cut"><i data-lucide="layout-dashboard" class="ic"></i>Dashboard</button><div class="sep"></div>` : ""}${items}${extra}</aside>`;
+  }
+  function wizard() {
+    const side = state.nav === "side" && !phone();
+    const content = `<div class="plate panel">${rolesStep()}</div>`;
+    return topBar("Baltic HOI4 League", "Server setup", serverTag) + `<div class="body">${side ? sideList(4, false) : ""}<div class="wrap" style="overflow-y:auto"><div class="center">
+      ${side ? "" : phone() ? `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><span class="small">Step 5 of 10</span><button class="btn btn-secondary btn-sm"><i data-lucide="list"></i>All steps</button></div><div class="bar" style="margin:0 0 12px"><i style="width:40%"></i></div>` : stepsTop(4)}
+      ${content}</div></div></div>
+      <div class="savebar"><span class="grow">${phone() ? "Saved at every step" : "Your progress is saved at every step."}</span><button class="btn btn-secondary"><i data-lucide="arrow-left"></i>Back</button><button class="btn btn-primary">Save and continue<i data-lucide="arrow-right"></i></button></div>`;
+  }
+  function home() {
+    const side = state.nav === "side" && !phone();
+    if (side) return section(true);
+    const tiles = [EXTRA[0], ["heart-pulse", "Health", "Live checks, uptime, permissions"], ...STEPS.slice(1, 9), ["check", "Overview", "Everything at a glance"], EXTRA[2]];
+    const badge = (i) => i === 6 ? '<span class="tag t badge" style="--c:var(--red)">1 problem</span>' : i === 4 ? '<span class="tag t badge" style="--c:var(--yellow)">2 warnings</span>' : i > 1 && i < 11 ? '<i data-lucide="check" class="badge" style="color:var(--mint);width:16px;height:16px"></i>' : "";
+    return topBar("TommyKay's HOI4 Community", "Server settings", serverTag.replace("Baltic", "x").replace("oklch(45% 0.12 30)", "oklch(52% 0.14 150)").replace(">BH<", ">TH<").replace('--c:var(--yellow)">Needs setup', '--c:var(--mint)">Set up')) + `<div class="body"><div class="wrap"><div class="center">
+      <div class="h"><i data-lucide="settings"></i><span class="title">Settings</span></div><p class="lead">Pick a section. A red tag means a problem, yellow a warning.</p>
+      <div class="tiles">${tiles.map(([ic, label, blurb], i) => `<button class="tile plate"><span class="ico cut"><i data-lucide="${ic}"></i></span>${badge(i)}<span><b>${label}</b><small>${blurb}</small></span></button>`).join("")}</div></div></div></div>`;
+  }
+  function section(asHome = false) {
+    const side = state.nav === "side" && !phone();
+    const chan = (label, sub, value, warn) => `<div class="chan cut"><div class="lbl">${label}<small>${sub}</small></div><div>${value ? `<div class="ch cut"><i data-lucide="hash"></i>${value}<i data-lucide="chevron-down" class="chev"></i></div>` : '<div class="ch cut" style="color:var(--ink-500)"><i data-lucide="hash"></i>Not set<i data-lucide="chevron-down" class="chev"></i></div>'}${warn ? `<p class="msg warn"><i data-lucide="triangle-alert"></i>${warn}</p>` : ""}</div></div>`;
+    const body = `<div class="plate panel"><div class="ph"><span class="ico cut"><i data-lucide="hash"></i></span><div><div class="title">Channels</div><p>Where GameMaster posts logs and the schedule, and its voice channels.</p></div></div>
+      <div class="chans">${chan("Host log", "Everything hosts do", "host-logs")}${chan("Moderation log", "Commends, warnings, bans", "mod-log")}${chan("Schedule", "The Host Panel and the week's games", "schedule")}${chan("Game voice category", "Where each game's voice channels go", "GAMES (voice)")}${chan("Lobby voice", "Players wait here before the game", "lobby", "GameMaster can't move people out of this channel.")}${chan("Chat logs forum", "A thread per finished game", null)}</div></div>`;
+    const tag = serverTag.replace(">BH<", ">TH<").replace("oklch(45% 0.12 30)", "oklch(52% 0.14 150)").replace('--c:var(--yellow)">Needs setup', '--c:var(--mint)">Set up');
+    return topBar("TommyKay's HOI4 Community", "Server settings", tag) + `<div class="body">${side ? sideList(5, true) : ""}<div class="wrap" style="overflow-y:auto"><div class="center">
+      ${side ? "" : '<button class="btn btn-quiet btn-sm" style="margin-bottom:10px"><i data-lucide="arrow-left"></i>All settings</button>'}${body}</div></div></div>
+      <div class="savebar"><span class="grow">You have unsaved changes.</span><button class="btn btn-quiet">Discard</button><button class="btn btn-primary">Save changes</button></div>`;
+  }
+
+  function render() {
+    document.querySelectorAll(".seg > div").forEach((seg) => seg.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(state[seg.dataset.k] === b.dataset.v))));
+    document.getElementById("navseg").classList.toggle("off", state.view === "list" || state.size === "phone");
+    const html = state.view === "list" ? list() : state.view === "wizard" ? wizard() : state.view === "home" ? home() : section();
+    document.querySelector(state.size === "desk" ? "[data-screen]" : "[data-screen-phone]").innerHTML = `<div class="${state.size}" style="height:100%;display:flex;flex-direction:column">${html}</div>`;
+    document.getElementById("desk").hidden = state.size !== "desk";
+    document.getElementById("phone").hidden = state.size !== "phone";
+    lucide.createIcons();
+    fit();
+  }
+  function fit() {
+    const stage = document.getElementById(state.size);
+    const w = state.size === "desk" ? 1440 : 390, h = state.size === "desk" ? 900 : 844;
+    const vp = document.querySelector(".viewport");
+    const s = Math.min((vp.clientWidth - 32) / w, (vp.clientHeight - 32) / h, state.size === "desk" ? 1 : 1.2);
+    stage.style.transform = `scale(${s})`;
+    const frame = document.getElementById("frame"); frame.style.width = `${w * s}px`; frame.style.height = `${h * s}px`;
+  }
+  document.querySelector(".switches").addEventListener("click", (e) => { const b = e.target.closest(".seg button"); if (!b) return; state[b.parentElement.dataset.k] = b.dataset.v; render(); });
+  addEventListener("resize", fit);
+  render();
+</script>
+</body>
+</html>

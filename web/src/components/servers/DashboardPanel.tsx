@@ -1,5 +1,6 @@
 "use client";
 
+import { CalendarDays, CircleAlert, CircleCheck, Flag, FlaskConical, Hand, KeyRound, Radio, RefreshCw, Stethoscope, Terminal, TrendingUp, TriangleAlert, Users, Wrench, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Avatar from "@/components/database/Avatar";
@@ -24,11 +25,24 @@ import { Callout, Card, Rich, type StepContext } from "./shared";
  * the Health tab's live checks, and the fix-it buttons (docs/server-setup.md).
  */
 
-const LEVEL: Record<CheckLevel, { icon: string; tone: string }> = {
-  ok: { icon: "✅", tone: "text-emerald-300" },
-  warning: { icon: "⚠️", tone: "text-brand-300" },
-  error: { icon: "⛔", tone: "text-rose-300" },
+const LEVEL: Record<CheckLevel, { icon: LucideIcon; tone: string }> = {
+  ok: { icon: CircleCheck, tone: "text-emerald-300" },
+  warning: { icon: TriangleAlert, tone: "text-yellow-300" },
+  error: { icon: CircleAlert, tone: "text-rose-300" },
 };
+
+/** The fix-it buttons' icons (FIX_ACTIONS in lib/serverDashboardTypes.ts). */
+const FIX_ICON: Record<string, LucideIcon> = { refresh: RefreshCw, commands: Terminal, test: FlaskConical, panel: CalendarDays, welcome: Hand };
+
+function LevelIcon({ level }: { level: CheckLevel }) {
+  const Icon = LEVEL[level].icon;
+  return <Icon aria-hidden className={`mt-0.5 h-4 w-4 shrink-0 ${LEVEL[level].tone}`} strokeWidth={1.75} />;
+}
+
+function FixIcon({ name }: { name: string }) {
+  const Icon = FIX_ICON[name] ?? Wrench;
+  return <Icon aria-hidden className="h-3.5 w-3.5" strokeWidth={1.75} />;
+}
 
 function when(sec: number): string {
   const diff = sec - Math.floor(Date.now() / 1000);
@@ -108,18 +122,18 @@ export function FixToolbar({ fix, setupDone, reinvite }: { fix: ReturnType<typeo
             title={action.hint}
             disabled={fix.op !== null}
             onClick={() => void fix.run(action.op)}
-            className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs font-bold text-ink-200 hover:border-brand-300/40 hover:text-white disabled:opacity-50"
+            className="flex items-center gap-1.5 gm-cut [--cut:7px] border border-ink-800 bg-ink-800 px-2.5 py-1.5 text-xs font-bold text-ink-200 hover:border-brand-300/40 hover:text-ink-100 disabled:opacity-50"
           >
-            {fix.op === action.op ? <Spinner className="h-3 w-3 text-brand-300" /> : <span>{action.icon}</span>}
+            {fix.op === action.op ? <Spinner className="h-3 w-3 text-brand-300" /> : <FixIcon name={action.icon} />}
             {action.label}
           </button>
         ))}
         <a
           href={reinvite}
           title="Re-add GameMaster with every permission it needs (your settings stay)."
-          className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs font-bold text-ink-200 hover:border-brand-300/40 hover:text-white"
+          className="flex items-center gap-1.5 gm-cut [--cut:7px] border border-ink-800 bg-ink-800 px-2.5 py-1.5 text-xs font-bold text-ink-200 hover:border-brand-300/40 hover:text-ink-100"
         >
-          🔑 Fix permissions
+          <KeyRound aria-hidden className="h-3.5 w-3.5" strokeWidth={1.75} /> Fix permissions
         </a>
       </div>
       {fix.op && <p className="text-[11px] text-ink-400">Waiting for GameMaster…</p>}
@@ -159,10 +173,10 @@ function FixLink({ check, ctx, fix }: { check: StatusCheck; ctx: StepContext; fi
 
 export function LiveChecks({ checks, ctx, fix }: { checks: StatusCheck[]; ctx: StepContext; fix: ReturnType<typeof useFixAction> }) {
   return (
-    <ul className="divide-y divide-white/5 overflow-hidden rounded-xl border border-white/10">
+    <ul className="divide-y divide-ink-800 overflow-hidden gm-cut [--cut:9px] border border-ink-800">
       {checks.map((check) => (
         <li key={check.id} className="flex items-start gap-2.5 bg-ink-950/40 px-3 py-2.5">
-          <span className="text-sm leading-5">{LEVEL[check.level].icon}</span>
+          <LevelIcon level={check.level} />
           <div className="min-w-0 flex-1">
             <p className={`text-xs font-bold ${check.level === "ok" ? "text-ink-100" : LEVEL[check.level].tone}`}>{check.title}</p>
             <p className="text-[11px] text-ink-400">{check.detail}</p>
@@ -206,7 +220,7 @@ export function HealthLive({ ctx, reinvite }: { ctx: StepContext; reinvite: stri
 
   return (
     <div className="space-y-4">
-      <Card icon="🩺" title="Live checks" subtitle="Is GameMaster online and working in this server right now?">
+      <Card icon={Stethoscope} title="Live checks" subtitle="Is GameMaster online and working in this server right now?">
         {error && <Callout tone="error">{error}</Callout>}
         {!status && !error && (
           <p className="flex items-center gap-2 text-xs text-ink-400">
@@ -225,7 +239,7 @@ export function HealthLive({ ctx, reinvite }: { ctx: StepContext; reinvite: stri
 function UptimeHealthCard() {
   const { status, error } = usePublicStatus();
   return (
-    <Card icon="📡" title="Uptime" subtitle="How much of each day GameMaster was online (all servers share one bot).">
+    <Card icon={Radio} title="Uptime" subtitle="How much of each day GameMaster was online (all servers share one bot).">
       {status ? (
         <UptimeBars status={status} />
       ) : error ? (
@@ -246,9 +260,9 @@ function UptimeHealthCard() {
 
 function Tile({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-ink-950/40 px-3 py-2.5">
-      <p className="text-[10px] font-black uppercase tracking-wider text-ink-500">{label}</p>
-      <p className="mt-0.5 text-2xl font-black text-white">{value}</p>
+    <div className="gm-cut [--cut:9px] border border-ink-800 bg-ink-950/40 px-3 py-2.5">
+      <p className="text-xs font-semibold text-ink-500">{label}</p>
+      <p className="mt-0.5 text-2xl font-bold text-ink-100">{value}</p>
       {hint && <p className="text-[10px] text-ink-500">{hint}</p>}
     </div>
   );
@@ -257,7 +271,7 @@ function Tile({ label, value, hint }: { label: string; value: string; hint?: str
 function GameList({ games, empty, upcoming }: { games: DashboardGame[]; empty: string; upcoming?: boolean }) {
   if (games.length === 0) return <p className="text-xs text-ink-500">{empty}</p>;
   return (
-    <ul className="divide-y divide-white/5 overflow-hidden rounded-xl border border-white/10">
+    <ul className="divide-y divide-ink-800 overflow-hidden gm-cut [--cut:9px] border border-ink-800">
       {games.map((game) => (
         <li key={game.id} className="flex items-center gap-2 bg-ink-950/40 px-3 py-2 text-xs">
           <span className="min-w-0 flex-1">
@@ -267,10 +281,15 @@ function GameList({ games, empty, upcoming }: { games: DashboardGame[]; empty: s
               {game.host_name ? ` · ${game.host_name}` : ""}
             </span>
           </span>
-          {game.players !== null && <span className="shrink-0 text-ink-400">👥 {game.players}</span>}
+          {game.players !== null && (
+            <span className="flex shrink-0 items-center gap-1 text-ink-400">
+              <Users aria-hidden className="h-3.5 w-3.5" strokeWidth={1.75} />
+              {game.players}
+            </span>
+          )}
           {game.url && (
             <a href={game.url} className="shrink-0 text-[11px] font-bold text-sky-300 hover:text-sky-200">
-              Attendance →
+              Attendance
             </a>
           )}
         </li>
@@ -302,17 +321,17 @@ function ProblemList({
     <div className="space-y-2">
       {live.length > 0 && <LiveChecks checks={live} ctx={ctx} fix={fix} />}
       {shown.length > 0 && (
-        <ul className="divide-y divide-white/5 overflow-hidden rounded-xl border border-white/10">
+        <ul className="divide-y divide-ink-800 overflow-hidden gm-cut [--cut:9px] border border-ink-800">
           {shown.map((issue, index) => (
             <li key={`${issue.path}-${index}`} className="flex items-start gap-2.5 bg-ink-950/40 px-3 py-2.5">
-              <span className="text-sm leading-5">{LEVEL[issue.level].icon}</span>
-              <p className={`min-w-0 flex-1 text-xs ${issue.level === "error" ? "text-rose-100" : "text-brand-100"}`}>
+              <LevelIcon level={issue.level} />
+              <p className={`min-w-0 flex-1 text-xs ${issue.level === "error" ? "text-rose-100" : "text-yellow-100"}`}>
                 <Rich text={issue.message} />
               </p>
               {issue.path.startsWith("perm.") || issue.path === "bot" ? (
                 <a
                   href={reinvite}
-                  className="shrink-0 rounded-md border border-white/10 px-2 py-0.5 text-[11px] font-bold text-brand-200 hover:border-brand-300/50"
+                  className="shrink-0 gm-cut [--cut:5px] border border-ink-800 px-2 py-0.5 text-[11px] font-bold text-brand-200 hover:border-brand-300/50"
                 >
                   Fix
                 </a>
@@ -320,7 +339,7 @@ function ProblemList({
                 <button
                   type="button"
                   onClick={() => ctx.goTo(issue.step)}
-                  className="shrink-0 rounded-md border border-white/10 px-2 py-0.5 text-[11px] font-bold text-brand-200 hover:border-brand-300/50"
+                  className="shrink-0 gm-cut [--cut:5px] border border-ink-800 px-2 py-0.5 text-[11px] font-bold text-brand-200 hover:border-brand-300/50"
                 >
                   Fix
                 </button>
@@ -383,43 +402,39 @@ export function DashboardPanel({ ctx, history, reinvite }: { ctx: StepContext; h
     <div className="space-y-4">
       <div className="grid gap-2 sm:grid-cols-3">
         <div
-          className={`rounded-xl border px-3 py-2.5 ${
-            online === false ? "border-rose-400/40 bg-rose-500/10" : online ? "border-emerald-400/30 bg-emerald-500/10" : "border-white/10 bg-ink-950/40"
-          }`}
+          className={`gm-cut [--cut:9px] border px-3 py-2.5 ${ online === false ? "border-rose-400/40 bg-rose-500/10" : online ? "border-emerald-400/30 bg-emerald-500/10" : "border-ink-800 bg-ink-950/40" }`}
         >
-          <p className="text-[10px] font-black uppercase tracking-wider text-ink-400">GameMaster</p>
-          <p className="mt-0.5 text-lg font-black text-white">{online === null ? "No status yet" : online ? "🟢 Online" : "🔴 Offline"}</p>
+          <p className="text-xs font-semibold text-ink-400">GameMaster</p>
+          <p className="mt-0.5 text-lg font-bold text-ink-100">{online === null ? "No status yet" : online ? "Online" : "Offline"}</p>
           <p className="text-[10px] text-ink-400">
             {status.last_beat ? `Last heartbeat ${when(status.last_beat)}` : "Waiting for the first heartbeat"} ·{" "}
-            <Link href="/status" className="underline hover:text-white">
+            <Link href="/status" className="underline hover:text-ink-100">
               status page
             </Link>
           </p>
         </div>
         <div
-          className={`rounded-xl border px-3 py-2.5 ${
-            errors ? "border-rose-400/40 bg-rose-500/10" : warnings ? "border-brand-400/30 bg-brand-500/10" : "border-emerald-400/30 bg-emerald-500/10"
-          }`}
+          className={`gm-cut [--cut:9px] border px-3 py-2.5 ${ errors ? "border-rose-400/40 bg-rose-500/10" : warnings ? "border-brand-400/30 bg-brand-500/10" : "border-emerald-400/30 bg-emerald-500/10" }`}
         >
-          <p className="text-[10px] font-black uppercase tracking-wider text-ink-400">Problems</p>
-          <p className="mt-0.5 text-lg font-black text-white">{errors === 0 && warnings === 0 ? "✅ None" : `${errors} to fix · ${warnings} warnings`}</p>
+          <p className="text-xs font-semibold text-ink-400">Problems</p>
+          <p className="mt-0.5 text-lg font-bold text-ink-100">{errors === 0 && warnings === 0 ? "None" : `${errors} to fix, ${warnings} warnings`}</p>
           <p className="text-[10px] text-ink-400">Settings and live checks</p>
         </div>
-        <div className="rounded-xl border border-white/10 bg-ink-950/40 px-3 py-2.5">
-          <p className="text-[10px] font-black uppercase tracking-wider text-ink-400">Roles & channels</p>
-          <p className="mt-0.5 text-lg font-black text-white">{status.snapshot_at ? `Read ${when(status.snapshot_at)}` : "Not read yet"}</p>
+        <div className="gm-cut [--cut:9px] border border-ink-800 bg-ink-950/40 px-3 py-2.5">
+          <p className="text-xs font-semibold text-ink-400">Roles & channels</p>
+          <p className="mt-0.5 text-lg font-bold text-ink-100">{status.snapshot_at ? `Read ${when(status.snapshot_at)}` : "Not read yet"}</p>
           <p className="text-[10px] text-ink-400">
             {status.commands?.count != null ? `${status.commands.count} slash commands` : "Slash commands: —"}
           </p>
         </div>
       </div>
 
-      <Card icon="🛠️" title="Problems to fix" subtitle="Everything wrong right now, with a fix for each.">
+      <Card icon={Wrench} title="Problems to fix" subtitle="Everything wrong right now, with a fix for each.">
         <ProblemList issues={ctx.issues} checks={status.checks} ctx={ctx} fix={fix} reinvite={reinvite} />
         <FixToolbar fix={fix} setupDone={ctx.setupDone} reinvite={reinvite} />
       </Card>
 
-      <Card icon="📈" title={`Last ${usage.days} days`} subtitle="Games that started in this server.">
+      <Card icon={TrendingUp} title={`Last ${usage.days} days`} subtitle="Games that started in this server.">
         <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
           <Tile label="Games hosted" value={String(usage.games_hosted)} />
           <Tile label="Players" value={String(usage.players)} hint="Different people who reserved" />
@@ -432,11 +447,11 @@ export function DashboardPanel({ ctx, history, reinvite }: { ctx: StepContext; h
         </div>
         {usage.modes.length > 0 && (
           <div className="space-y-1.5">
-            <p className="text-[10px] font-black uppercase tracking-wider text-ink-500">Busiest modes</p>
+            <p className="text-xs font-semibold text-ink-500">Busiest modes</p>
             {usage.modes.map((mode) => (
               <div key={mode.mode} className="flex items-center gap-2 text-xs">
                 <span className="w-36 shrink-0 truncate text-ink-300">{modeLabel(mode.mode)}</span>
-                <span className="h-2 flex-1 overflow-hidden rounded-full bg-white/5">
+                <span className="h-2 flex-1 overflow-hidden rounded-full bg-ink-800">
                   <span className="block h-full rounded-full bg-brand-400" style={{ width: `${(mode.games / maxMode) * 100}%` }} />
                 </span>
                 <span className="w-6 shrink-0 text-right font-bold text-ink-200">{mode.games}</span>
@@ -447,18 +462,18 @@ export function DashboardPanel({ ctx, history, reinvite }: { ctx: StepContext; h
       </Card>
 
       <div className="grid gap-4 xl:grid-cols-2">
-        <Card icon="🗓️" title="Upcoming games" subtitle="Next on the calendar.">
+        <Card icon={CalendarDays} title="Upcoming games" subtitle="Next on the calendar.">
           <GameList games={data.upcoming} empty="Nothing scheduled yet." upcoming />
         </Card>
-        <Card icon="🏁" title="Recently finished" subtitle="The latest ended games.">
+        <Card icon={Flag} title="Recently finished" subtitle="The latest ended games.">
           <GameList games={data.recent} empty="No finished games yet." />
         </Card>
       </div>
 
-      <Card icon="👥" title="Staff activity" subtitle={`Top hosts (last ${usage.days} days), recent moderation and settings changes.`}>
+      <Card icon={Users} title="Staff activity" subtitle={`Top hosts (last ${usage.days} days), recent moderation and settings changes.`}>
         <div className="grid gap-4 xl:grid-cols-3">
           <div>
-            <p className="mb-1.5 text-[10px] font-black uppercase tracking-wider text-ink-500">Top hosts</p>
+            <p className="mb-1.5 text-xs font-semibold text-ink-500">Top hosts</p>
             {data.staff.top_hosts.length === 0 ? (
               <p className="text-xs text-ink-500">No games hosted yet.</p>
             ) : (
@@ -474,7 +489,7 @@ export function DashboardPanel({ ctx, history, reinvite }: { ctx: StepContext; h
             )}
           </div>
           <div>
-            <p className="mb-1.5 text-[10px] font-black uppercase tracking-wider text-ink-500">Recent moderation</p>
+            <p className="mb-1.5 text-xs font-semibold text-ink-500">Recent moderation</p>
             {data.staff.moderation.length === 0 ? (
               <p className="text-xs text-ink-500">Nothing yet.</p>
             ) : (
@@ -493,7 +508,7 @@ export function DashboardPanel({ ctx, history, reinvite }: { ctx: StepContext; h
             )}
           </div>
           <div>
-            <p className="mb-1.5 text-[10px] font-black uppercase tracking-wider text-ink-500">Settings changes</p>
+            <p className="mb-1.5 text-xs font-semibold text-ink-500">Settings changes</p>
             {history.length === 0 ? (
               <p className="text-xs text-ink-500">No changes yet.</p>
             ) : (
@@ -509,7 +524,7 @@ export function DashboardPanel({ ctx, history, reinvite }: { ctx: StepContext; h
               </ul>
             )}
             <button type="button" onClick={() => ctx.goTo("review")} className="mt-2 text-[11px] font-bold text-sky-300 hover:text-sky-200">
-              All settings →
+              All settings
             </button>
           </div>
         </div>

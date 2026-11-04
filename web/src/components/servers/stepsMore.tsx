@@ -1,5 +1,6 @@
 "use client";
 
+import { AlarmClock, Briefcase, CalendarDays, Dices, FolderOpen, Medal, Scale, ShieldCheck, Siren, Sofa, Sparkles, Ticket, Tv, Volume2 } from "lucide-react";
 import { useState } from "react";
 import {
   BRANCHES,
@@ -17,7 +18,7 @@ import {
 import { Spinner, Toggle } from "@/components/schedule/ui";
 import { useFixAction } from "./DashboardPanel";
 import { ChannelMultiPicker, ChannelPicker, RoleMultiPicker, RolePicker } from "./pickers";
-import { Callout, Card, Field, inputClass, issuesAt, type StepContext } from "./shared";
+import { BRANCH_ICON, Callout, Card, Field, inputClass, issuesAt, type StepContext } from "./shared";
 import { RuleNumber } from "./stepsStart";
 
 const enabledBranches = (ctx: StepContext) => BRANCHES.filter((branch) => ctx.draft.branches[branch].enabled);
@@ -64,7 +65,7 @@ export function RolesStep({ ctx }: { ctx: StepContext }) {
   return (
     <div className="space-y-4">
       {enabledBranches(ctx).map((branch) => (
-        <Card key={branch} icon={BRANCH_INFO[branch].emoji} title={`${BRANCH_INFO[branch].long} players`}>
+        <Card key={branch} icon={BRANCH_ICON[branch]} title={`${BRANCH_INFO[branch].long} players`}>
           <div className="grid gap-4 md:grid-cols-3">
             {BRANCH_ROLE_FIELDS.map((field) => (
               <Field
@@ -87,13 +88,13 @@ export function RolesStep({ ctx }: { ctx: StepContext }) {
           </div>
         </Card>
       ))}
-      <Card icon="⚖️" title="Moderation numbers" subtitle="Counted separately for each branch.">
+      <Card icon={Scale} title="Moderation numbers" subtitle="Counted separately for each branch.">
         <div className="grid gap-4 sm:grid-cols-2">
           <RuleNumber ctx={ctx} rule="trusted_commends" />
           <RuleNumber ctx={ctx} rule="warnings_for_ban" />
         </div>
       </Card>
-      <Card icon="🌟" title="VIP" subtitle="Given on the Database page. VIP comes with every Verified and Trusted role.">
+      <Card icon={Sparkles} title="VIP" subtitle="Given on the Database page. VIP comes with every Verified and Trusted role.">
         <Field
           label="VIP roles"
           hint="Anyone with any of these roles counts as VIP. Giving VIP adds the first role; taking VIP away removes all of them."
@@ -126,7 +127,7 @@ export function ChannelsStep({ ctx }: { ctx: StepContext }) {
   const fix = useFixAction(ctx.serverId, ctx.refreshSnapshot);
   return (
     <div className="space-y-4">
-      <Card icon="📺" title="GameMaster's channels">
+      <Card icon={Tv} title="GameMaster's channels">
         <div className="grid gap-4 md:grid-cols-2">
           {CHANNEL_FIELDS.map((field) => (
             <Field key={field.key} label={field.label} hint={field.hint} required={field.required} issues={issuesAt(ctx.issues, `channels.${field.key}`)}>
@@ -144,9 +145,9 @@ export function ChannelsStep({ ctx }: { ctx: StepContext }) {
                     type="button"
                     disabled={fix.op !== null || !draft.channels.schedule_panel}
                     onClick={() => void fix.run("schedule_panel")}
-                    className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs font-bold text-ink-200 hover:border-brand-300/40 hover:text-white disabled:opacity-50"
+                    className="flex items-center gap-1.5 gm-cut [--cut:7px] border border-ink-800 bg-ink-800 px-2.5 py-1.5 text-xs font-bold text-ink-200 hover:border-brand-300/40 hover:text-ink-100 disabled:opacity-50"
                   >
-                    {fix.op === "schedule_panel" ? <Spinner className="h-3 w-3 text-brand-300" /> : "📅"} Post / re-post the panel
+                    {fix.op === "schedule_panel" ? <Spinner className="h-3 w-3 text-brand-300" /> : <CalendarDays aria-hidden className="h-3.5 w-3.5" strokeWidth={1.75} />} Post or re-post the panel
                   </button>
                   <p className="text-[11px] text-ink-500">Save a new channel first. The old panel is removed and the new one pinned.</p>
                   {fix.message && <Callout tone={fix.message.tone === "ok" ? "ok" : "error"}>{fix.message.text}</Callout>}
@@ -156,7 +157,7 @@ export function ChannelsStep({ ctx }: { ctx: StepContext }) {
           ))}
         </div>
       </Card>
-      <Card icon="🛋️" title="Game lobby voice channels">
+      <Card icon={Sofa} title="Game lobby voice channels">
         <Field
           label="Lobby voice channels"
           required
@@ -178,14 +179,14 @@ export function ChannelsStep({ ctx }: { ctx: StepContext }) {
         </Callout>
       </Card>
       <Card
-        icon="🔊"
+        icon={Volume2}
         title="Game voice channels"
         subtitle="When a game starts, GameMaster makes a voice channel for every nation, grouped into categories. Choose where they go."
       >
         {enabledBranches(ctx).map((branch) => (
           <div key={branch} className="grid gap-4 md:grid-cols-2">
             <Field
-              label={`${BRANCH_INFO[branch].emoji} ${branch}: put them right after`}
+              label={`${branch}: put them right after`}
               hint="New game categories go directly below this category."
               issues={issuesAt(ctx.issues, `voice.${branch}.after_category`)}
             >
@@ -215,7 +216,7 @@ export function ChannelsStep({ ctx }: { ctx: StepContext }) {
         ))}
       </Card>
       {hasCasino(ctx.serverId) && (
-        <Card icon="🎰" title="Casino" subtitle="Only on this server.">
+        <Card icon={Dices} title="Casino" subtitle="Only on this server.">
           <div className="grid gap-4 md:grid-cols-2">
             <Field label="Casino panel" hint="The casino access panel lives here.">
               <ChannelPicker
@@ -244,7 +245,7 @@ function LinkList({ title, value, onChange }: { title: string; value: LinkEntry[
       <ul className="space-y-1">
         {value.length === 0 && <li className="text-xs text-ink-500">None.</li>}
         {value.map((entry, index) => (
-          <li key={`${entry.link}-${index}`} className="flex items-center gap-2 rounded-lg border border-white/5 bg-white/[0.03] px-2 py-1 text-xs">
+          <li key={`${entry.link}-${index}`} className="flex items-center gap-2 gm-cut [--cut:7px] border border-ink-800 bg-ink-950 px-2 py-1 text-xs">
             <a href={entry.link} target="_blank" rel="noreferrer" className="min-w-0 flex-1 truncate font-semibold text-sky-300 hover:underline">
               {entry.name}
             </a>
@@ -257,7 +258,7 @@ function LinkList({ title, value, onChange }: { title: string; value: LinkEntry[
                 [next[index - 1], next[index]] = [next[index], next[index - 1]];
                 onChange(next);
               }}
-              className="rounded px-1 text-ink-400 hover:text-white disabled:opacity-20"
+              className="gm-cut [--cut:4px] px-1 text-ink-400 hover:text-ink-100 disabled:opacity-20"
             >
               ↑
             </button>
@@ -265,7 +266,7 @@ function LinkList({ title, value, onChange }: { title: string; value: LinkEntry[
               type="button"
               aria-label={`Remove ${entry.name}`}
               onClick={() => onChange(value.filter((_, i) => i !== index))}
-              className="rounded px-1 text-ink-400 hover:text-rose-300"
+              className="gm-cut [--cut:4px] px-1 text-ink-400 hover:text-rose-300"
             >
               ×
             </button>
@@ -284,7 +285,7 @@ function LinkList({ title, value, onChange }: { title: string; value: LinkEntry[
               setName("");
               setLink("");
             }}
-            className="rounded-lg border border-brand-300/40 px-3 py-1.5 text-xs font-bold text-brand-200 hover:bg-brand-400/10 disabled:opacity-30"
+            className="gm-cut [--cut:7px] border border-brand-300/40 px-3 py-1.5 text-xs font-bold text-brand-200 hover:bg-brand-400/10 disabled:opacity-30"
           >
             Add
           </button>
@@ -372,15 +373,13 @@ function BranchSharing({ ctx, branch }: { ctx: StepContext; branch: Branch }) {
       type="button"
       aria-pressed={shared === value}
       onClick={() => choose(value)}
-      className={`flex-1 rounded-lg border px-3 py-1.5 text-xs font-bold transition ${
-        shared === value ? "border-brand-300/60 bg-brand-400/15 text-brand-100" : "border-white/10 text-ink-300 hover:border-white/25"
-      }`}
+      className={`flex-1 gm-cut [--cut:7px] border px-3 py-1.5 text-xs font-bold transition ${ shared === value ? "border-brand-300/60 bg-brand-400/15 text-brand-100" : "border-ink-800 text-ink-300 hover:border-ink-600" }`}
     >
       {label}
     </button>
   );
   return (
-    <div className="space-y-3 rounded-2xl border border-white/10 bg-ink-950/40 p-3">
+    <div className="space-y-3 gm-cut [--cut:12px] border border-ink-800 bg-ink-950/40 p-3">
       <div className="flex flex-col gap-1.5 sm:flex-row">
         {option(true, `One set for all ${branch} modes`)}
         {option(false, "Set up each mode separately")}
@@ -414,7 +413,7 @@ function ModeCard({ ctx, modeKey }: { ctx: StepContext; modeKey: string }) {
   const siblings = MODE_CATALOG.filter((entry) => entry.branch === mode.branch && entry.key !== modeKey && ctx.draft.modes[entry.key]?.enabled);
   const set = (mutate: (m: ModeSettings) => void) => ctx.update((s) => mutate(s.modes[modeKey]));
   return (
-    <div className={`rounded-2xl border ${settings.enabled ? "border-white/10 bg-ink-950/40" : "border-white/5 bg-ink-950/20"}`}>
+    <div className={`gm-cut [--cut:12px] border ${settings.enabled ? "border-ink-800 bg-ink-950/40" : "border-ink-800 bg-ink-950/20"}`}>
       <div className="flex flex-wrap items-center gap-3 p-3">
         <Toggle checked={settings.enabled} onChange={(checked) => set((m) => void (m.enabled = checked))} label={mode.label} description={`Mod: ${mode.mod}`} />
         <span className="ml-auto flex items-center gap-2">
@@ -429,7 +428,7 @@ function ModeCard({ ctx, modeKey }: { ctx: StepContext; modeKey: string }) {
               type="button"
               aria-expanded={open}
               onClick={() => setOpen((current) => !current)}
-              className="rounded-lg border border-white/10 px-2.5 py-1 text-xs font-bold text-ink-300 hover:border-white/25 hover:text-white"
+              className="gm-cut [--cut:7px] border border-ink-800 px-2.5 py-1 text-xs font-bold text-ink-300 hover:border-ink-600 hover:text-ink-100"
             >
               {open ? "Close" : "Edit"}
             </button>
@@ -437,7 +436,7 @@ function ModeCard({ ctx, modeKey }: { ctx: StepContext; modeKey: string }) {
         </span>
       </div>
       {settings.enabled && open && (
-        <div className="space-y-4 border-t border-white/10 p-3">
+        <div className="space-y-4 border-t border-ink-800 p-3">
           {shared && (
             <p className="text-xs text-ink-400">Uses the shared {mode.branch} channels and ping role above.</p>
           )}
@@ -455,7 +454,7 @@ function ModeCard({ ctx, modeKey }: { ctx: StepContext; modeKey: string }) {
                       s.modes[modeKey].ping_role = from.ping_role;
                     })
                   }
-                  className="rounded-md border border-white/10 px-2 py-0.5 font-bold text-ink-200 hover:border-brand-300/40"
+                  className="gm-cut [--cut:5px] border border-ink-800 px-2 py-0.5 font-bold text-ink-200 hover:border-brand-300/40"
                 >
                   {sibling.label}
                 </button>
@@ -495,8 +494,8 @@ export function ModesStep({ ctx }: { ctx: StepContext }) {
         ))}
       {branches.map((branch) => (
         <div key={branch} className="space-y-2">
-          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-ink-400">
-            {BRANCH_INFO[branch].emoji} {BRANCH_INFO[branch].long}
+          <p className="text-xs font-semibold text-ink-400">
+            {BRANCH_INFO[branch].long}
           </p>
           <BranchSharing ctx={ctx} branch={branch} />
           {modesOf(branch).map((mode) => (
@@ -514,10 +513,10 @@ export function ModesStep({ ctx }: { ctx: StepContext }) {
 // ————— 9. Tickets —————
 
 const TICKET_ACCESS = [
-  ["✅ Verification (RP and Historical)", "Ticket Support, Host Management"],
-  ["🎤 Host application · ⚠️ Report host", "Host Management only (a reported host never sees the report)"],
-  ["⚖️ Appeal · 😠 Player report · ⭐ Commend · ❓ Question", "Every host and Host Management; the game's host is pinged"],
-  ["🐞 Bug report / suggestion", "Developers, Host Management"],
+  ["Verification (Roleplay and Historical)", "Ticket Support, Host Management"],
+  ["Host application, Report a host", "Host Management only (a reported host never sees the report)"],
+  ["Appeal, Player report, Commend, Question", "Every host and Host Management; the game's host is pinged"],
+  ["Bug report or suggestion", "Developers, Host Management"],
 ] as const;
 
 export function TicketsStep({ ctx }: { ctx: StepContext }) {
@@ -525,13 +524,13 @@ export function TicketsStep({ ctx }: { ctx: StepContext }) {
   return (
     <div className="space-y-4">
       <Card
-        icon="🎫"
+        icon={Ticket}
         title="How tickets work"
         subtitle="Players press a button on the ticket panel; GameMaster makes a private channel for them and the staff who handle that kind of ticket."
       >
-        <ul className="divide-y divide-white/5 overflow-hidden rounded-xl border border-white/10 text-xs">
+        <ul className="divide-y divide-ink-800 overflow-hidden gm-cut [--cut:9px] border border-ink-800 text-xs">
           {TICKET_ACCESS.map(([kind, who]) => (
-            <li key={kind} className="flex flex-wrap gap-x-3 gap-y-0.5 bg-white/[0.02] px-3 py-2">
+            <li key={kind} className="flex flex-wrap gap-x-3 gap-y-0.5 bg-ink-950 px-3 py-2">
               <span className="min-w-[220px] flex-1 font-bold text-ink-100">{kind}</span>
               <span className="text-ink-400">{who}</span>
             </li>
@@ -540,10 +539,10 @@ export function TicketsStep({ ctx }: { ctx: StepContext }) {
         <p className="text-[11px] text-ink-500">
           Server admins can open and close every ticket. Resolving a verification ticket gives the player that branch&apos;s Verified role;
           resolving a host application gives the Assistant host role of the branch they applied for. Staff post the panel with{" "}
-          <code className="rounded bg-ink-900/80 px-1">/spawn</code> in the ticket panel channel.
+          <code className="gm-cut [--cut:4px] bg-ink-900/80 px-1">/spawn</code> in the ticket panel channel.
         </p>
       </Card>
-      <Card icon="🧑‍💼" title="Ticket staff">
+      <Card icon={Briefcase} title="Ticket staff">
         <div className="grid gap-4 md:grid-cols-2">
           <Field
             label="Ticket Support roles"
@@ -575,7 +574,7 @@ export function TicketsStep({ ctx }: { ctx: StepContext }) {
           </Field>
         </div>
       </Card>
-      <Card icon="📂" title="Ticket channels">
+      <Card icon={FolderOpen} title="Ticket channels">
         <div className="grid gap-4 md:grid-cols-2">
           {TICKET_CHANNEL_FIELDS.map((field) => (
             <Field key={field.key} label={field.label} hint={field.hint} required={field.required} issues={issuesAt(ctx.issues, `channels.${field.key}`)}>
@@ -591,7 +590,7 @@ export function TicketsStep({ ctx }: { ctx: StepContext }) {
           ))}
         </div>
       </Card>
-      <Card icon="⏰" title="Inactive tickets">
+      <Card icon={AlarmClock} title="Inactive tickets">
         <Toggle
           checked={draft.features.ticket_inactivity_close}
           onChange={(checked) => ctx.update((s) => void (s.features.ticket_inactivity_close = checked))}
@@ -609,7 +608,7 @@ export function FeaturesStep({ ctx }: { ctx: StepContext }) {
   const { draft } = ctx;
   return (
     <div className="space-y-4">
-      <Card icon="🎖️" title="Hearts of Valor & Merit">
+      <Card icon={Medal} title="Hearts of Valor & Merit">
         <Toggle
           checked={draft.features.valor_merit}
           onChange={(checked) => ctx.update((s) => void (s.features.valor_merit = checked))}
@@ -633,7 +632,7 @@ export function FeaturesStep({ ctx }: { ctx: StepContext }) {
           </div>
         )}
       </Card>
-      <Card icon="🛡️" title="Automation">
+      <Card icon={ShieldCheck} title="Automation">
         <Toggle
           checked={draft.features.daily_role_check}
           onChange={(checked) => ctx.update((s) => void (s.features.daily_role_check = checked))}
@@ -644,7 +643,7 @@ export function FeaturesStep({ ctx }: { ctx: StepContext }) {
           <RuleNumber ctx={ctx} rule="hosting_success_avg" />
         </div>
       </Card>
-      <Card icon="📅" title="How far ahead hosts can schedule">
+      <Card icon={CalendarDays} title="How far ahead hosts can schedule">
         <Toggle
           checked={draft.features.booking_limits}
           onChange={(checked) => ctx.update((s) => void (s.features.booking_limits = checked))}
@@ -659,7 +658,7 @@ export function FeaturesStep({ ctx }: { ctx: StepContext }) {
           </div>
         )}
       </Card>
-      <Card icon="🚨" title="Other servers">
+      <Card icon={Siren} title="Other servers">
         <Toggle
           checked={draft.features.cross_server_ban_alerts}
           onChange={(checked) => ctx.update((s) => void (s.features.cross_server_ban_alerts = checked))}
@@ -673,7 +672,7 @@ export function FeaturesStep({ ctx }: { ctx: StepContext }) {
           description="Our games appear on the Shared Calendar, and our hosts can see the games of every other server that shares. It helps hosts avoid running the same kind of game at the same hour. Other servers see the server's name and icon, each game's day, time, mode and status. They never see hosts, players or nations."
         />
       </Card>
-      <Card icon="🛡️" title="IronLegion Steam authentication">
+      <Card icon={ShieldCheck} title="IronLegion Steam authentication">
         <Toggle
           checked={draft.features.ironlegion}
           onChange={(checked) => ctx.update((s) => void (s.features.ironlegion = checked))}

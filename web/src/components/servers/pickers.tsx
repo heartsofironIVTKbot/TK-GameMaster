@@ -1,5 +1,7 @@
 "use client";
 
+import { Hash } from "lucide-react";
+
 import { useCallback, useMemo, useState } from "react";
 import { hasPermission, type SnapshotChannel, type SnapshotRole } from "@/lib/serverSettingsTypes";
 import { Spinner } from "@/components/schedule/ui";
@@ -79,7 +81,7 @@ function RoleMenu({
   );
   return (
     <div
-      className={`absolute left-0 z-30 w-72 min-w-full max-w-[85vw] rounded-xl border border-white/15 bg-ink-900 p-2 shadow-2xl shadow-black/60 ${menuPlacement(up)}`}
+      className={`absolute left-0 z-30 w-72 min-w-full max-w-[85vw] gm-cut [--cut:9px] border border-ink-700 bg-ink-900 p-2 shadow-2xl shadow-black/60 ${menuPlacement(up)}`}
     >
       <input
         autoFocus
@@ -102,14 +104,12 @@ function RoleMenu({
                 aria-selected={active}
                 disabled={problem?.block}
                 onClick={() => pick(role.id)}
-                className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs transition disabled:cursor-not-allowed disabled:opacity-40 ${
-                  active ? "bg-brand-400/15 text-brand-100" : "text-ink-200 hover:bg-white/5"
-                }`}
+                className={`flex w-full items-center gap-2 gm-cut [--cut:7px] px-2 py-1.5 text-left text-xs transition disabled:cursor-not-allowed disabled:opacity-40 ${ active ? "bg-brand-400/15 text-brand-100" : "text-ink-200 hover:bg-ink-900" }`}
               >
                 <RoleDot role={role} />
                 <span className="min-w-0 flex-1 truncate font-semibold">{role.name}</span>
                 {problem && (
-                  <span className={`shrink-0 rounded px-1 text-[10px] font-bold ${problem.block ? "text-ink-500" : "bg-brand-400/15 text-brand-300"}`}>
+                  <span className={`shrink-0 gm-cut [--cut:4px] px-1 text-[10px] font-bold ${problem.block ? "text-ink-500" : "bg-brand-400/15 text-brand-300"}`}>
                     {problem.text}
                   </span>
                 )}
@@ -119,13 +119,13 @@ function RoleMenu({
           );
         })}
       </ul>
-      <div className="mt-1.5 border-t border-white/10 pt-1.5">
+      <div className="mt-1.5 border-t border-ink-800 pt-1.5">
         {!creating ? (
           <div className="flex gap-1">
             <button
               type="button"
               onClick={() => setCreating(true)}
-              className="flex-1 rounded-lg px-2 py-1.5 text-left text-xs font-bold text-brand-300 hover:bg-brand-400/10"
+              className="flex-1 gm-cut [--cut:7px] px-2 py-1.5 text-left text-xs font-bold text-brand-300 hover:bg-brand-400/10"
             >
               ＋ Create a new role…
             </button>
@@ -136,7 +136,7 @@ function RoleMenu({
                   onPick(null);
                   onClose();
                 }}
-                className="rounded-lg px-2 py-1.5 text-xs font-bold text-ink-400 hover:bg-white/5 hover:text-white"
+                className="gm-cut [--cut:7px] px-2 py-1.5 text-xs font-bold text-ink-400 hover:bg-ink-900 hover:text-ink-100"
               >
                 Clear
               </button>
@@ -157,7 +157,7 @@ function RoleMenu({
                 value={color}
                 onChange={(event) => setColor(event.target.value)}
                 aria-label="Role colour"
-                className="h-8 w-9 shrink-0 cursor-pointer rounded border border-white/10 bg-transparent"
+                className="h-8 w-9 shrink-0 cursor-pointer gm-cut [--cut:4px] border border-ink-800 bg-transparent"
               />
             </div>
             <label className="flex items-center gap-2 text-[11px] text-ink-300">
@@ -170,12 +170,12 @@ function RoleMenu({
                 type="button"
                 disabled={!name.trim() || creator.state.phase === "working"}
                 onClick={() => void creator.create({ op: "create_role", name: name.trim(), color, mentionable })}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-brand-400 px-2 py-1.5 text-xs font-black text-ink-950 hover:bg-brand-300 disabled:opacity-40"
+                className="flex flex-1 items-center justify-center gap-1.5 gm-btn gm-btn-primary h-9 px-4 text-[13px] disabled:opacity-40"
               >
                 {creator.state.phase === "working" && <Spinner className="h-3 w-3" />}
                 {creator.state.phase === "working" ? "GameMaster is creating it…" : "Create role"}
               </button>
-              <button type="button" onClick={() => setCreating(false)} className="rounded-lg px-2 text-xs font-bold text-ink-400 hover:text-white">
+              <button type="button" onClick={() => setCreating(false)} className="gm-cut [--cut:7px] px-2 text-xs font-bold text-ink-400 hover:text-ink-100">
                 Cancel
               </button>
             </div>
@@ -218,9 +218,7 @@ export function RolePicker({
           setUp(opensUp(ref.current));
           setOpen((current) => !current);
         }}
-        className={`flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition disabled:opacity-50 ${
-          open ? "border-brand-300/60 bg-ink-950" : "border-white/10 bg-ink-950/70 hover:border-white/25"
-        }`}
+        className={`flex w-full items-center gap-2 gm-cut [--cut:7px] border px-3 py-2 text-left text-sm transition disabled:opacity-50 ${ open ? "border-brand-300/60 bg-ink-950" : "border-ink-800 bg-ink-950/70 hover:border-ink-600" }`}
       >
         {role ? (
           <>
@@ -260,19 +258,19 @@ export function RoleMultiPicker({
   const ref = useDismiss(open, close);
   return (
     <div ref={ref} className="relative">
-      <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-white/10 bg-ink-950/70 p-1.5">
+      <div className="flex flex-wrap items-center gap-1.5 gm-cut [--cut:7px] border border-ink-800 bg-ink-950/70 p-1.5">
         {value.length === 0 && <span className="px-1.5 text-sm text-ink-500">None yet</span>}
         {value.map((id) => {
           const role = roleById(ctx.snapshot, id);
           return (
-            <span key={id} className="flex items-center gap-1.5 rounded-md border border-white/10 bg-white/5 py-0.5 pl-2 pr-1 text-xs font-semibold text-ink-100">
+            <span key={id} className="flex items-center gap-1.5 gm-cut [--cut:5px] border border-ink-800 bg-ink-800 py-0.5 pl-2 pr-1 text-xs font-semibold text-ink-100">
               {role ? <RoleDot role={role} /> : null}
               <span className={role ? "" : "text-rose-300"}>{role?.name ?? `Deleted (#${id})`}</span>
               <button
                 type="button"
                 aria-label={`Remove ${role?.name ?? id}`}
                 onClick={() => onChange(value.filter((entry) => entry !== id))}
-                className="rounded px-1 text-ink-400 hover:bg-white/10 hover:text-white"
+                className="gm-cut [--cut:4px] px-1 text-ink-400 hover:bg-ink-800 hover:text-ink-100"
               >
                 ×
               </button>
@@ -288,7 +286,7 @@ export function RoleMultiPicker({
             setUp(opensUp(ref.current));
             setOpen((current) => !current);
           }}
-          className="rounded-md px-2 py-0.5 text-xs font-bold text-brand-300 hover:bg-brand-400/10 disabled:opacity-40"
+          className="gm-cut [--cut:5px] px-2 py-0.5 text-xs font-bold text-brand-300 hover:bg-brand-400/10 disabled:opacity-40"
         >
           ＋ Add role
         </button>
@@ -338,15 +336,15 @@ export function ChannelMultiPicker({
             return (
               <span
                 key={id}
-                className="flex items-center gap-1.5 rounded-md border border-white/10 bg-white/5 py-0.5 pl-2 pr-1 text-xs font-semibold text-ink-100"
+                className="flex items-center gap-1.5 gm-cut [--cut:5px] border border-ink-800 bg-ink-800 py-0.5 pl-2 pr-1 text-xs font-semibold text-ink-100"
               >
-                <span className="text-ink-400">{channel ? (CHANNEL_ICON[channel.type] ?? "#") : "#"}</span>
+                <ChannelIcon type={channel?.type} />
                 <span className={channel ? "" : "text-rose-300"}>{channel?.name ?? `Deleted (#${id})`}</span>
                 <button
                   type="button"
                   aria-label={`Remove ${channel?.name ?? id}`}
                   onClick={() => onChange(value.filter((entry) => entry !== id))}
-                  className="rounded px-1 text-ink-400 hover:bg-white/10 hover:text-white"
+                  className="gm-cut [--cut:4px] px-1 text-ink-400 hover:bg-ink-800 hover:text-ink-100"
                 >
                   ×
                 </button>
@@ -427,7 +425,7 @@ export function ChannelPicker({
           { id: "", name: "No category", items: matches.filter((entry) => !entry.parent_id) },
           ...categories.map((category) => ({ id: category.id, name: category.name, items: matches.filter((entry) => entry.parent_id === category.id) })),
         ].filter((group) => group.items.length > 0);
-  const icon = (entry: SnapshotChannel) => CHANNEL_ICON[entry.type] ?? "#";
+
 
   return (
     <div ref={ref} className="relative">
@@ -440,13 +438,11 @@ export function ChannelPicker({
           setUp(opensUp(ref.current));
           setOpen((current) => !current);
         }}
-        className={`flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition disabled:opacity-50 ${
-          open ? "border-brand-300/60 bg-ink-950" : "border-white/10 bg-ink-950/70 hover:border-white/25"
-        }`}
+        className={`flex w-full items-center gap-2 gm-cut [--cut:7px] border px-3 py-2 text-left text-sm transition disabled:opacity-50 ${ open ? "border-brand-300/60 bg-ink-950" : "border-ink-800 bg-ink-950/70 hover:border-ink-600" }`}
       >
         {channel ? (
           <>
-            <span className="w-4 shrink-0 text-center text-ink-400">{icon(channel)}</span>
+            <ChannelIcon type={channel.type} />
             <span className="min-w-0 flex-1 truncate font-semibold text-ink-100">{channel.name}</span>
           </>
         ) : value ? (
@@ -458,7 +454,7 @@ export function ChannelPicker({
       </button>
       {open && (
         <div
-          className={`absolute left-0 z-30 w-72 min-w-full max-w-[85vw] rounded-xl border border-white/15 bg-ink-900 p-2 shadow-2xl shadow-black/60 ${menuPlacement(up)}`}
+          className={`absolute left-0 z-30 w-72 min-w-full max-w-[85vw] gm-cut [--cut:9px] border border-ink-700 bg-ink-900 p-2 shadow-2xl shadow-black/60 ${menuPlacement(up)}`}
         >
           <input
             autoFocus
@@ -472,7 +468,7 @@ export function ChannelPicker({
             {groups.length === 0 && <p className="px-2 py-3 text-center text-xs text-ink-500">Nothing matches.</p>}
             {groups.map((group) => (
               <div key={group.id || "none"}>
-                {group.name && <p className="px-2 pb-0.5 pt-1 text-[10px] font-black uppercase tracking-wider text-ink-500">{group.name}</p>}
+                {group.name && <p className="px-2 pb-0.5 pt-1 text-xs font-semibold text-ink-500">{group.name}</p>}
                 {group.items.map((entry) => {
                   const problem = channelProblem(entry, kind);
                   const active = entry.id === value;
@@ -483,26 +479,24 @@ export function ChannelPicker({
                       role="option"
                       aria-selected={active}
                       onClick={() => pick(entry.id)}
-                      className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs transition ${
-                        active ? "bg-brand-400/15 text-brand-100" : "text-ink-200 hover:bg-white/5"
-                      }`}
+                      className={`flex w-full items-center gap-2 gm-cut [--cut:7px] px-2 py-1.5 text-left text-xs transition ${ active ? "bg-brand-400/15 text-brand-100" : "text-ink-200 hover:bg-ink-900" }`}
                     >
-                      <span className="w-4 shrink-0 text-center text-ink-400">{icon(entry)}</span>
+                      <ChannelIcon type={entry.type} />
                       <span className="min-w-0 flex-1 truncate font-semibold">{entry.name}</span>
-                      {problem && <span className="shrink-0 rounded bg-brand-400/15 px-1 text-[10px] font-bold text-brand-300">{problem}</span>}
+                      {problem && <span className="shrink-0 gm-cut [--cut:4px] bg-brand-400/15 px-1 text-[10px] font-bold text-brand-300">{problem}</span>}
                     </button>
                   );
                 })}
               </div>
             ))}
           </div>
-          <div className="mt-1.5 border-t border-white/10 pt-1.5">
+          <div className="mt-1.5 border-t border-ink-800 pt-1.5">
             {!creating ? (
               <div className="flex gap-1">
                 <button
                   type="button"
                   onClick={() => setCreating(true)}
-                  className="flex-1 rounded-lg px-2 py-1.5 text-left text-xs font-bold text-brand-300 hover:bg-brand-400/10"
+                  className="flex-1 gm-cut [--cut:7px] px-2 py-1.5 text-left text-xs font-bold text-brand-300 hover:bg-brand-400/10"
                 >
                   ＋ Create a new {kind === "category" ? "category" : kind === "voice" ? "voice channel" : "channel"}…
                 </button>
@@ -510,7 +504,7 @@ export function ChannelPicker({
                   <button
                     type="button"
                     onClick={() => pick(null)}
-                    className="rounded-lg px-2 py-1.5 text-xs font-bold text-ink-400 hover:bg-white/5 hover:text-white"
+                    className="gm-cut [--cut:7px] px-2 py-1.5 text-xs font-bold text-ink-400 hover:bg-ink-900 hover:text-ink-100"
                   >
                     Clear
                   </button>
@@ -532,11 +526,9 @@ export function ChannelPicker({
                         key={option}
                         type="button"
                         onClick={() => setCreateKind(option)}
-                        className={`flex-1 rounded-md border px-2 py-1 font-bold ${
-                          createKind === option ? "border-brand-300/60 bg-brand-400/15 text-brand-100" : "border-white/10 text-ink-300"
-                        }`}
+                        className={`flex-1 gm-cut [--cut:5px] border px-2 py-1 font-bold ${ createKind === option ? "border-brand-300/60 bg-brand-400/15 text-brand-100" : "border-ink-800 text-ink-300" }`}
                       >
-                        {option === "text" ? "# Text" : "💬 Forum"}
+                        {option === "text" ? "Text" : "Forum"}
                       </button>
                     ))}
                   </div>
@@ -551,7 +543,7 @@ export function ChannelPicker({
                     <option value="">No category</option>
                     {categories.map((category) => (
                       <option key={category.id} value={category.id}>
-                        📁 {category.name}
+                        {category.name}
                       </option>
                     ))}
                   </select>
@@ -569,12 +561,12 @@ export function ChannelPicker({
                         parent_id: parent || null,
                       })
                     }
-                    className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-brand-400 px-2 py-1.5 text-xs font-black text-ink-950 hover:bg-brand-300 disabled:opacity-40"
+                    className="flex flex-1 items-center justify-center gap-1.5 gm-btn gm-btn-primary h-9 px-4 text-[13px] disabled:opacity-40"
                   >
                     {creator.state.phase === "working" && <Spinner className="h-3 w-3" />}
                     {creator.state.phase === "working" ? "GameMaster is creating it…" : "Create"}
                   </button>
-                  <button type="button" onClick={() => setCreating(false)} className="rounded-lg px-2 text-xs font-bold text-ink-400 hover:text-white">
+                  <button type="button" onClick={() => setCreating(false)} className="gm-cut [--cut:7px] px-2 text-xs font-bold text-ink-400 hover:text-ink-100">
                     Cancel
                   </button>
                 </div>
@@ -585,4 +577,10 @@ export function ChannelPicker({
       )}
     </div>
   );
+}
+
+/** A Discord channel type's line icon (# for text). */
+function ChannelIcon({ type }: { type?: string }) {
+  const Icon = (type && CHANNEL_ICON[type]) || Hash;
+  return <Icon aria-hidden className="h-3.5 w-3.5 shrink-0 text-ink-400" strokeWidth={1.75} />;
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowLeft, ArrowRight, Bot, Check, ChevronDown, HeartPulse, History, LayoutDashboard, List, Lock } from "lucide-react";
 import SiteHeader from "@/components/site/SiteHeader";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -13,8 +14,8 @@ import {
   type ServerSettings,
   type StepId,
 } from "@/lib/serverSettingsTypes";
-import { GLASS, Spinner } from "@/components/schedule/ui";
-import { Callout, inviteUrl, type StepContext } from "./shared";
+import { Spinner } from "@/components/schedule/ui";
+import { Callout, STEP_ICON, inviteUrl, type IconComponent, type StepContext } from "./shared";
 import { BasicsStep, BranchesStep, StaffStep, WelcomeStep } from "./stepsStart";
 import { ChannelsStep, FeaturesStep, ModesStep, RolesStep, TicketsStep } from "./stepsMore";
 import { HistoryPanel, ReviewStep } from "./stepsEnd";
@@ -23,7 +24,9 @@ import { DashboardPanel, HealthLive } from "./DashboardPanel";
 
 /**
  * One server's setup (a step-by-step wizard until it's finished) and, after
- * that, its dashboard and settings page with Health and History. Changes are kept as a
+ * that, its dashboard and settings with Health and History. A list on the
+ * left holds every step (setup) or section (settings); on phones it folds
+ * into "All steps". Changes are kept as a
  * draft until saved; saving checks the version so two editors can't
  * overwrite each other (docs/server-setup.md).
  */
@@ -46,6 +49,8 @@ export default function ServerSetupApp({ serverId, initialStep, added }: { serve
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const [finishing, setFinishing] = useState(false);
   const [finishError, setFinishError] = useState<string | null>(null);
+  /** Phones: the step list, folded until opened. */
+  const [listOpen, setListOpen] = useState(false);
 
   const fetchDetail = useCallback(async (): Promise<ServerDetail | string> => {
     const response = await fetch(`/api/servers/${serverId}`, { cache: "no-store" }).catch(() => null);
@@ -177,14 +182,14 @@ export default function ServerSetupApp({ serverId, initialStep, added }: { serve
   if (!server.bot_present) {
     return (
       <Shell server={server}>
-        <div className={`mx-auto max-w-xl rounded-3xl p-6 text-center ${GLASS}`}>
-          <p className="text-4xl">🤖</p>
-          <h2 className="mt-2 text-xl font-black text-white">GameMaster isn&apos;t in {server.name}</h2>
+        <div className="gm-plate mx-auto mt-6 flex max-w-xl flex-col items-center p-8 text-center">
+          <Bot aria-hidden className="h-9 w-9 text-brand-400" strokeWidth={1.5} />
+          <h2 className="gm-title mt-4 text-[30px]">GameMaster isn&apos;t in {server.name}</h2>
           <p className="mt-2 text-sm text-ink-300">
             Add it first. Discord shows the permissions it needs, then brings you straight back here to set it up.
           </p>
-          <a href={inviteUrl(server.id)} className="mt-5 inline-flex rounded-xl bg-[#5865F2] px-6 py-3 text-sm font-bold text-white hover:bg-[#4752c4]">
-            Add GameMaster to {server.name}
+          <a href={inviteUrl(server.id)} className="gm-btn mt-5 h-10 bg-[#5865F2] px-5 text-white hover:bg-[#4752c4]">
+            <Bot aria-hidden strokeWidth={1.75} /> Add GameMaster to {server.name}
           </a>
         </div>
       </Shell>
@@ -213,6 +218,11 @@ export default function ServerSetupApp({ serverId, initialStep, added }: { serve
       case "dashboard":
         return <DashboardPanel ctx={ctx} history={detail.history} reinvite={reinvite} />;
       case "home":
+        return setupDone ? (
+          <DashboardPanel ctx={ctx} history={detail.history} reinvite={reinvite} />
+        ) : (
+          <WelcomeStep ctx={ctx} added={added} reinviteUrl={reinvite} />
+        );
       case "welcome":
         return setupDone ? (
           <div className="space-y-4">
@@ -268,7 +278,7 @@ export default function ServerSetupApp({ serverId, initialStep, added }: { serve
   const viewLabel = (entry: View) =>
     entry === "history"
       ? "History"
-      : entry === "dashboard"
+      : entry === "dashboard" || (entry === "home" && setupDone)
         ? "Dashboard"
         : entry === "home"
           ? "Settings"
@@ -277,61 +287,57 @@ export default function ServerSetupApp({ serverId, initialStep, added }: { serve
             : setupDone && entry === "review"
               ? "Overview"
               : (STEPS.find((step) => step.id === entry)?.label ?? entry);
-  const viewIcon = (entry: View) =>
-    entry === "history" ? "🕘" : entry === "dashboard" ? "📊" : entry === "home" ? "⚙️" : (STEPS.find((step) => step.id === entry)?.icon ?? "•");
+  const viewIcon = (entry: View): IconComponent =>
+    entry === "history"
+      ? History
+      : entry === "dashboard" || entry === "home"
+        ? LayoutDashboard
+        : setupDone && entry === "welcome"
+          ? HeartPulse
+          : STEP_ICON[entry];
   const viewBlurb = (entry: View) =>
     entry === "history"
       ? "Every change, who made it and when"
-      : entry === "dashboard"
+      : entry === "dashboard" || (entry === "home" && setupDone)
         ? "Usage, games, problems and staff activity"
         : setupDone && entry === "welcome"
           ? "Live checks, uptime, permissions and role position"
           : setupDone && entry === "review"
             ? "Everything at a glance"
             : (STEPS.find((step) => step.id === entry)?.blurb ?? "");
-  const showSaveBar = view !== "history" && view !== "dashboard" && (view !== "home" || dirty);
+  const showSaveBar = view !== "history" && view !== "dashboard" && (view !== "home" || (!setupDone && dirty));
 
   const saveBar = showSaveBar && (
-    <div data-tour="server.save" className={`sticky bottom-3 z-20 mt-4 flex flex-wrap items-center gap-2 rounded-2xl px-4 py-3 ${GLASS}`}>
+    <div
+      data-tour="server.save"
+      className="sticky bottom-0 z-20 -mx-3 mt-4 flex flex-wrap items-center gap-2 border-t border-ink-800 bg-ink-950 py-3 pl-3 pr-[160px] sm:-mx-6 sm:pl-6"
+    >
       {saveError ? (
         <span className="flex-1 text-xs font-semibold text-rose-300">
           {saveError}{" "}
           {saveError.includes("Someone else") && (
-            <button type="button" onClick={() => window.location.reload()} className="font-bold underline">
+            <button type="button" onClick={() => window.location.reload()} className="font-semibold underline">
               Reload
             </button>
           )}
         </span>
       ) : (
-        <span className="flex-1 text-xs text-ink-400">
-          {dirty ? "You have unsaved changes." : savedAt ? "All changes saved ✓" : setupDone ? "No changes." : "Your progress is saved at every step."}
+        <span className="flex-1 text-xs text-ink-500">
+          {dirty ? "You have unsaved changes." : savedAt ? "All changes saved." : setupDone ? "No changes." : "Your progress is saved at every step."}
         </span>
       )}
       {dirty && (
-        <button
-          type="button"
-          onClick={() => saved && setDraft(saved)}
-          className="rounded-xl px-3 py-2 text-xs font-bold text-ink-400 hover:text-white"
-        >
+        <button type="button" onClick={() => saved && setDraft(saved)} className="gm-btn gm-btn-quiet">
           Discard
         </button>
       )}
       {!setupDone && stepIndex > 0 && (
-        <button
-          type="button"
-          onClick={() => goTo(STEPS[stepIndex - 1].id)}
-          className="rounded-xl border border-white/10 px-4 py-2 text-xs font-bold text-ink-200 hover:border-white/25"
-        >
-          ← Back
+        <button type="button" onClick={() => goTo(STEPS[stepIndex - 1].id)} className="gm-btn gm-btn-secondary">
+          <ArrowLeft aria-hidden strokeWidth={1.75} /> Back
         </button>
       )}
       {setupDone ? (
-        <button
-          type="button"
-          disabled={!dirty || saving}
-          onClick={() => void save({})}
-          className="flex items-center gap-2 rounded-xl bg-brand-400 px-5 py-2 text-xs font-black text-ink-950 hover:bg-brand-300 disabled:opacity-40"
-        >
+        <button type="button" disabled={!dirty || saving} onClick={() => void save({})} className="gm-btn gm-btn-primary">
           {saving && <Spinner className="h-3.5 w-3.5" />}Save changes
         </button>
       ) : (
@@ -345,140 +351,141 @@ export default function ServerSetupApp({ serverId, initialStep, added }: { serve
                 goTo(nextStep);
               }
             }}
-            className="flex items-center gap-2 rounded-xl bg-brand-400 px-5 py-2 text-xs font-black text-ink-950 hover:bg-brand-300 disabled:opacity-40"
+            className="gm-btn gm-btn-primary"
           >
-            {saving && <Spinner className="h-3.5 w-3.5" />}Save & continue →
+            {saving && <Spinner className="h-3.5 w-3.5" />}Save and continue <ArrowRight aria-hidden strokeWidth={1.75} />
           </button>
         )
       )}
     </div>
   );
 
-  // Settings home: every section as a tile.
-  if (setupDone && view === "home") {
-    const tiles: View[] = ["dashboard", "welcome", ...STEPS.map((step) => step.id).filter((id) => id !== "welcome" && id !== "review"), "review", "history"];
-    return (
-      <Shell server={server} dirty={dirty} saving={saving} savedAt={savedAt}>
-        <div className="mx-auto max-w-5xl">
-          <div className="mb-5">
-            <h1 className="text-2xl font-black text-white">⚙️ Settings</h1>
-            <p className="text-sm text-ink-400">Pick a section. Problems show as a red number on its tile.</p>
-          </div>
-          <div data-tour="server.tiles" className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            {tiles.map((entry) => {
-              const state = tileState(entry);
-              return (
-                <button
-                  key={entry}
-                  type="button"
-                  onClick={() => goTo(entry)}
-                  className={`group relative flex aspect-square flex-col items-start justify-between rounded-3xl p-4 text-left transition hover:-translate-y-0.5 hover:border-brand-300/40 ${GLASS}`}
-                >
-                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 text-2xl transition group-hover:bg-brand-400/15">
-                    {viewIcon(entry)}
-                  </span>
-                  {state && (state.errors > 0 || state.warnings > 0) ? (
-                    <span
-                      className={`absolute right-3 top-3 rounded-full px-2 py-0.5 text-[11px] font-black ${
-                        state.errors > 0 ? "bg-rose-500/25 text-rose-100" : "bg-brand-400/20 text-brand-100"
-                      }`}
-                      title={`${state.errors} problem(s), ${state.warnings} warning(s)`}
-                    >
-                      {state.errors > 0 ? state.errors : `${state.warnings} ⚠`}
-                    </span>
-                  ) : state ? (
-                    <span className="absolute right-3 top-3 text-sm text-emerald-400">✓</span>
-                  ) : null}
-                  <span className="min-w-0">
-                    <span className="block text-base font-black text-white">{viewLabel(entry)}</span>
-                    <span className="mt-0.5 line-clamp-2 block text-[11px] leading-snug text-ink-400">{viewBlurb(entry)}</span>
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-          {saveBar}
-        </div>
-      </Shell>
-    );
-  }
+  // The list on the left: every setup step, or (set up) every settings section.
+  const entries: (View | "sep")[] = setupDone
+    ? ["home", "sep", ...STEPS.map((step) => step.id), "sep", "history"]
+    : STEPS.map((step) => step.id);
+  const activeEntry: View = setupDone && view === "dashboard" ? "home" : view;
+  const list = (
+    <nav aria-label={setupDone ? "Settings" : "Setup steps"} className="space-y-0.5">
+      <div className="px-2.5 pb-2.5 pt-1 text-xs text-ink-500">
+        <b className="block text-[13px] font-semibold text-ink-100">
+          {setupDone ? "Settings" : `Setup, step ${Math.max(1, stepIndex + 1)} of ${STEPS.length}`}
+        </b>
+        {setupDone ? "Every part of GameMaster on this server" : "Your progress is saved at every step."}
+        {!setupDone && (
+          <span className="mt-2 block h-1 bg-ink-800">
+            <span className="block h-full bg-brand-400" style={{ width: `${(Math.max(0, stepIndex) / STEPS.length) * 100}%` }} />
+          </span>
+        )}
+      </div>
+      {entries.map((entry, position) => {
+        if (entry === "sep") return <div key={`sep-${position}`} className="mx-1.5 my-2 h-px bg-ink-800" />;
+        const index = STEPS.findIndex((step) => step.id === entry);
+        const locked = !setupDone && index > reached;
+        const state = tileState(entry);
+        const done = !setupDone && index >= 0 && index < reached && !blocking.has(entry as StepId);
+        const active = entry === activeEntry;
+        return (
+          <button
+            key={entry}
+            type="button"
+            disabled={locked}
+            onClick={() => {
+              goTo(entry);
+              setListOpen(false);
+            }}
+            aria-current={active ? "page" : undefined}
+            title={locked ? "Press Save and continue to get here" : viewBlurb(entry)}
+            className={`gm-cut flex h-10 w-full items-center gap-2.5 px-2.5 text-left text-[13px] font-semibold [--cut:7px] disabled:cursor-not-allowed disabled:opacity-40 ${
+              active ? "bg-ink-800 text-ink-100 shadow-[inset_3px_0_0_var(--color-brand-400)]" : "text-ink-300 enabled:hover:bg-ink-900"
+            }`}
+          >
+            <ShowIcon icon={viewIcon(entry)} className={`h-4 w-4 shrink-0 ${active ? "text-brand-400" : "text-ink-500"}`} />
+            <span className="min-w-0 flex-1 truncate">{viewLabel(entry)}</span>
+            {locked ? (
+              <Lock aria-label="Not reached yet" className="h-3.5 w-3.5 shrink-0 text-ink-500" strokeWidth={1.75} />
+            ) : state && state.errors > 0 ? (
+              <span className="gm-cut grid h-[18px] min-w-[18px] place-items-center bg-rose-400 px-1 text-[11px] font-bold text-ink-950 [--cut:4px]" title={`${state.errors} problem(s)`}>
+                {state.errors}
+              </span>
+            ) : state && state.warnings > 0 ? (
+              <span className="gm-cut grid h-[18px] min-w-[18px] place-items-center bg-yellow-300 px-1 text-[11px] font-bold text-ink-950 [--cut:4px]" title={`${state.warnings} warning(s)`}>
+                {state.warnings}
+              </span>
+            ) : done || (setupDone && state) ? (
+              <Check aria-label="Done" className="h-[15px] w-[15px] shrink-0 text-emerald-300" strokeWidth={2} />
+            ) : null}
+          </button>
+        );
+      })}
+    </nav>
+  );
 
   return (
     <Shell server={server} dirty={dirty} saving={saving} savedAt={savedAt}>
-      <div className="mx-auto max-w-5xl">
-        {setupDone ? (
-          <button
-            type="button"
-            onClick={() => goTo("home")}
-            className="mb-3 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs font-bold text-ink-300 hover:text-white"
-          >
-            ← All settings
-          </button>
-        ) : (
-          <nav aria-label="Setup steps" data-tour="server.steps" className="mb-4">
-            <p className="mb-2 text-[10px] font-black uppercase tracking-[0.18em] text-ink-500">
-              Setup · step {Math.max(1, stepIndex + 1)} of {STEPS.length}
-            </p>
-            <ol className="flex gap-1.5 overflow-x-auto pb-1 [scrollbar-color:rgba(255,255,255,0.15)_transparent] [scrollbar-width:thin]">
-              {STEPS.map((step, index) => {
-                const active = step.id === view;
-                const locked = index > reached;
-                const errors = issues.filter((issue) => issue.step === step.id && issue.level === "error").length;
-                const done = index < reached && !blocking.has(step.id);
-                return (
-                  <li key={step.id} className="shrink-0">
-                    <button
-                      type="button"
-                      disabled={locked}
-                      onClick={() => goTo(step.id)}
-                      aria-current={active ? "step" : undefined}
-                      title={locked ? "Press Save & continue to get here" : step.blurb}
-                      className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-40 ${
-                        active
-                          ? "border-brand-300/60 bg-brand-400/15 text-white"
-                          : "border-white/10 bg-white/[0.03] text-ink-300 enabled:hover:border-white/25"
-                      }`}
-                    >
-                      <span>{step.icon}</span>
-                      <span>
-                        {index + 1}. {step.label}
-                      </span>
-                      {locked ? (
-                        <span className="text-[10px]">🔒</span>
-                      ) : errors > 0 ? (
-                        <span className="rounded-full bg-rose-500/25 px-1.5 text-[10px] font-black text-rose-100">{errors}</span>
-                      ) : done ? (
-                        <span className="text-emerald-400">✓</span>
-                      ) : null}
-                    </button>
-                  </li>
-                );
-              })}
-            </ol>
-          </nav>
-        )}
-
-        <main className="min-w-0">
-          <div data-tour="server.step" className={`rounded-3xl p-4 sm:p-6 ${GLASS}`}>
-            <div className="mb-5">
-              <h1 className="text-xl font-black text-white">
-                {viewIcon(view)} {viewLabel(view)}
-              </h1>
-              <p className="text-sm text-ink-400">{viewBlurb(view)}</p>
-              {stepIssues.length > 0 && view !== "review" && view !== "welcome" && (
-                <p className="mt-2 text-xs text-ink-400">
-                  {stepIssues.filter((issue) => issue.level === "error").length} problem(s) and{" "}
-                  {stepIssues.filter((issue) => issue.level === "warning").length} warning(s) on this step: shown under each field.
-                </p>
-              )}
+      <div className="flex min-h-[calc(100vh-57px)]">
+        <aside className="sticky top-[57px] hidden h-[calc(100vh-57px)] w-[272px] shrink-0 overflow-y-auto border-r border-ink-800 bg-ink-950 px-2.5 py-3.5 lg:block">
+          {setupDone ? <div data-tour="server.tiles">{list}</div> : <div data-tour="server.steps">{list}</div>}
+        </aside>
+        <main className="flex min-w-0 flex-1 flex-col px-3 pt-4 sm:px-6 sm:pt-5">
+          <div className="mx-auto w-full max-w-5xl flex-1">
+            {/* Phones: the list folds into "All steps". */}
+            <div className="mb-3 lg:hidden">
+              <button
+                type="button"
+                onClick={() => setListOpen((value) => !value)}
+                aria-expanded={listOpen}
+                className="gm-cut flex w-full items-center gap-3 bg-ink-900 px-3 py-2.5 text-left [--cut:9px]"
+              >
+                <List aria-hidden className="h-4 w-4 shrink-0 text-brand-400" strokeWidth={1.75} />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[13px] font-semibold text-ink-100">
+                    {setupDone ? viewLabel(view) : `Step ${Math.max(1, stepIndex + 1)} of ${STEPS.length}: ${viewLabel(view)}`}
+                  </span>
+                  {!setupDone && (
+                    <span className="mt-1.5 block h-1 bg-ink-800">
+                      <span className="block h-full bg-brand-400" style={{ width: `${(Math.max(0, stepIndex) / STEPS.length) * 100}%` }} />
+                    </span>
+                  )}
+                </span>
+                <span className="flex shrink-0 items-center gap-1 text-xs font-semibold text-ink-400">
+                  {setupDone ? "All settings" : "All steps"}
+                  <ChevronDown aria-hidden className={`h-3.5 w-3.5 transition-transform ${listOpen ? "rotate-180" : ""}`} strokeWidth={2} />
+                </span>
+              </button>
+              {listOpen && <div className="gm-cut gm-fade-up mt-1 bg-ink-950 p-2 shadow-[inset_0_0_0_1px_var(--color-ink-800)] [--cut:9px]">{list}</div>}
             </div>
-            {body}
+
+            <div data-tour="server.step" className="gm-plate p-4 sm:p-5">
+              <div className="mb-5 flex items-start gap-3">
+                <span className="gm-cut grid h-10 w-10 shrink-0 place-items-center bg-ink-800 text-brand-400">
+                  <ShowIcon icon={viewIcon(view)} className="h-5 w-5" />
+                </span>
+                <div className="min-w-0">
+                  <h1 className="gm-title text-[28px]">{viewLabel(view)}</h1>
+                  <p className="mt-0.5 text-[13px] text-ink-400">{viewBlurb(view)}</p>
+                  {stepIssues.length > 0 && view !== "review" && view !== "welcome" && (
+                    <p className="mt-1.5 text-xs text-ink-400">
+                      {stepIssues.filter((issue) => issue.level === "error").length} problem(s) and{" "}
+                      {stepIssues.filter((issue) => issue.level === "warning").length} warning(s) on this step, shown under each field.
+                    </p>
+                  )}
+                </div>
+              </div>
+              {body}
+            </div>
           </div>
           {saveBar}
+          {!saveBar && <div className="h-6" />}
         </main>
       </div>
     </Shell>
   );
+}
+
+/** A step's or section's line icon, picked at render time. */
+function ShowIcon({ icon: Icon, className }: { icon: IconComponent; className: string }) {
+  return <Icon aria-hidden className={className} strokeWidth={1.75} />;
 }
 
 function Shell({
@@ -495,30 +502,23 @@ function Shell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="gm-backdrop min-h-screen w-full text-ink-100">
-      <SiteHeader
-        page="servers"
-        title={server?.name ?? "Server setup"}
-        subtitle="GameMaster · server settings"
-      >
-        <Link
-          href="/servers"
-          className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs font-bold text-ink-300 hover:text-white"
-        >
-          ← Your servers
+    <div className="min-h-screen w-full bg-ink-950 text-ink-100">
+      <SiteHeader page="servers" title={server?.name ?? "Server setup"} subtitle="Server settings" wide>
+        <Link href="/servers" className="gm-btn gm-btn-quiet h-8 px-2.5 text-xs [--cut:6px]">
+          <ArrowLeft aria-hidden strokeWidth={1.75} /> Your servers
         </Link>
         {server && (
           <>
             <ServerIcon name={server.name} url={server.icon_url} size={24} />
             <StatusChip setup={server.setup} />
-            <span className="text-[11px] capitalize text-ink-400">You: {server.access}</span>
-            <span className="text-[11px] text-ink-400">
-              {saving ? "Saving…" : dirty ? "● Unsaved changes" : savedAt ? "Saved ✓" : ""}
+            <span className="hidden text-xs capitalize text-ink-400 sm:inline">You: {server.access}</span>
+            <span className={`text-xs ${dirty ? "font-semibold text-yellow-300" : "text-ink-400"}`}>
+              {saving ? "Saving…" : dirty ? "Not saved" : savedAt ? "Saved" : ""}
             </span>
           </>
         )}
       </SiteHeader>
-      <div className="mx-auto max-w-[1400px] px-4 py-5 sm:px-6">{children}</div>
+      {server ? children : <div className="mx-auto max-w-[1400px] px-4 py-5 sm:px-6">{children}</div>}
     </div>
   );
 }

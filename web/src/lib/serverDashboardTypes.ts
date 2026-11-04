@@ -10,16 +10,16 @@ import type { StepId } from "@/lib/serverSettingsTypes";
 export type FixOp = "refresh" | "sync_commands" | "resend_welcome" | "test_post" | "schedule_panel";
 
 export const FIX_ACTIONS: readonly { op: FixOp; label: string; icon: string; hint: string }[] = [
-  { op: "refresh", label: "Re-check now", icon: "🔄", hint: "GameMaster re-reads this server's roles, channels and its own permissions." },
-  { op: "sync_commands", label: "Re-sync commands", icon: "⌨️", hint: "Re-registers GameMaster's slash commands here (when they're missing or outdated)." },
-  { op: "test_post", label: "Test the audit log", icon: "🧪", hint: "Posts a short test message in the audit log channel." },
+  { op: "refresh", label: "Re-check now", icon: "refresh", hint: "GameMaster re-reads this server's roles, channels and its own permissions." },
+  { op: "sync_commands", label: "Re-sync commands", icon: "commands", hint: "Re-registers GameMaster's slash commands here (when they're missing or outdated)." },
+  { op: "test_post", label: "Test the audit log", icon: "test", hint: "Posts a short test message in the audit log channel." },
   {
     op: "schedule_panel",
     label: "Re-post Host Panel",
-    icon: "📅",
+    icon: "panel",
     hint: "Posts the Host Panel again in its channel, pins it and removes the old one.",
   },
-  { op: "resend_welcome", label: "Re-send welcome", icon: "👋", hint: "Sends the setup welcome again (owner's DMs, else the system channel)." },
+  { op: "resend_welcome", label: "Re-send welcome", icon: "welcome", hint: "Sends the setup welcome again (owner's DMs, else the system channel)." },
 ];
 
 export type CheckLevel = "ok" | "warning" | "error";

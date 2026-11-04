@@ -1,5 +1,6 @@
 "use client";
 
+import { Bot, Check, KeyRound, Leaf, ShieldCheck, Tag, TrendingUp, X } from "lucide-react";
 import {
   BRANCHES,
   BRANCH_INFO,
@@ -14,7 +15,7 @@ import {
 } from "@/lib/serverSettingsTypes";
 import { Toggle } from "@/components/schedule/ui";
 import { RoleMultiPicker, RolePicker } from "./pickers";
-import { Callout, Card, Field, NumberField, Rich, inputClass, issuesAt, roleById, type StepContext } from "./shared";
+import { BRANCH_ICON, Callout, Card, Field, NumberField, Rich, inputClass, issuesAt, roleById, type StepContext } from "./shared";
 
 function ago(epochSec: number): string {
   const minutes = Math.max(0, Math.round((Date.now() / 1000 - epochSec) / 60));
@@ -57,7 +58,7 @@ export function WelcomeStep({ ctx, added, reinviteUrl }: { ctx: StepContext; add
   return (
     <div className="space-y-4">
       {added && (
-        <Callout tone="ok" title={`🎉 GameMaster joined ${snap.guild.name}`}>
+        <Callout tone="ok" title={`GameMaster joined ${snap.guild.name}`}>
           Next: tell it which roles and channels to use. It takes about five minutes, and your progress is saved at every step.
         </Callout>
       )}
@@ -67,26 +68,26 @@ export function WelcomeStep({ ctx, added, reinviteUrl }: { ctx: StepContext; add
           hosting is switched on. It then uses exactly what you set here.
         </Callout>
       )}
-      <Card icon="🤖" title="GameMaster in your server" subtitle={`Last reported ${ago(snap.updated_at)} · ${snap.guild.member_count} members`}>
+      <Card icon={Bot} title="GameMaster in your server" subtitle={`Last reported ${ago(snap.updated_at)} · ${snap.guild.member_count} members`}>
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
-            <p className="text-[10px] font-black uppercase tracking-wider text-ink-400">Its highest role</p>
-            <p className="mt-1 flex items-center gap-2 text-sm font-bold text-white">
+          <div className="gm-cut [--cut:9px] border border-ink-800 bg-ink-950 p-3">
+            <p className="text-xs font-semibold text-ink-400">Its highest role</p>
+            <p className="mt-1 flex items-center gap-2 text-sm font-bold text-ink-100">
               <span className="h-2.5 w-2.5 rounded-full" style={{ background: botRole?.color ?? "#99aab5" }} />
               {botRole?.name ?? "Unknown"}
               <span className="text-xs font-normal text-ink-400">· position {snap.bot.top_role_position}</span>
             </p>
             <p className="mt-1 text-[11px] text-ink-500">GameMaster can only give out roles that are below this one.</p>
           </div>
-          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
-            <p className="text-[10px] font-black uppercase tracking-wider text-ink-400">Permissions</p>
+          <div className="gm-cut [--cut:9px] border border-ink-800 bg-ink-950 p-3">
+            <p className="text-xs font-semibold text-ink-400">Permissions</p>
             <p className={`mt-1 text-sm font-bold ${missing.length ? "text-rose-300" : "text-emerald-300"}`}>
               {missing.length ? `${missing.length} missing` : `All ${REQUIRED_PERMISSIONS.length} granted`}
             </p>
             {missing.length > 0 && (
               <a
                 href={reinviteUrl}
-                className="mt-2 inline-flex rounded-lg bg-[#5865F2] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#4752c4]"
+                className="mt-2 inline-flex gm-cut [--cut:7px] bg-[#5865F2] px-3 py-1.5 text-xs font-bold text-ink-100 hover:bg-[#4752c4]"
               >
                 Fix permissions on Discord
               </a>
@@ -97,8 +98,12 @@ export function WelcomeStep({ ctx, added, reinviteUrl }: { ctx: StepContext; add
           {REQUIRED_PERMISSIONS.map((perm) => {
             const ok = hasPermission(snap.bot.permissions, perm.bit);
             return (
-              <li key={perm.bit} className="flex items-start gap-2 rounded-lg px-2 py-1 text-xs">
-                <span className={ok ? "text-emerald-400" : "text-rose-400"}>{ok ? "✓" : "✗"}</span>
+              <li key={perm.bit} className="flex items-start gap-2 gm-cut [--cut:7px] px-2 py-1 text-xs">
+                {ok ? (
+                  <Check aria-label="Has it" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-300" strokeWidth={2} />
+                ) : (
+                  <X aria-label="Missing" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-rose-300" strokeWidth={2} />
+                )}
                 <span>
                   <span className={`font-bold ${ok ? "text-ink-200" : "text-rose-200"}`}>{perm.name}</span>
                   <span className="block text-[11px] text-ink-500">{perm.why}</span>
@@ -133,7 +138,7 @@ export function BasicsStep({ ctx }: { ctx: StepContext }) {
   const { draft } = ctx;
   return (
     <div className="space-y-4">
-      <Card icon="🏷️" title="Your community">
+      <Card icon={Tag} title="Your community">
         <Field label="Community name" hint="Shown on the website and in GameMaster's messages." issues={issuesAt(ctx.issues, "general.community_name")}>
           <input
             value={draft.general.community_name}
@@ -144,19 +149,19 @@ export function BasicsStep({ ctx }: { ctx: StepContext }) {
           />
         </Field>
       </Card>
-      <Card icon="🌿" title="Host branches" subtitle="Each branch has its own hosts, ranks, Verified / Trusted / ban roles and game modes.">
+      <Card icon={Leaf} title="Host branches" subtitle="Each branch has its own hosts, ranks, Verified / Trusted / ban roles and game modes.">
         <div className="grid gap-3 sm:grid-cols-2">
           {BRANCHES.map((branch) => {
             const on = draft.branches[branch].enabled;
             const other = branch === "RP" ? "HIST" : "RP";
             const modes = MODE_CATALOG.filter((mode) => mode.branch === branch);
             return (
-              <div key={branch} className={`rounded-xl border p-3 ${on ? "border-brand-300/40 bg-brand-400/[0.06]" : "border-white/10 bg-white/[0.02]"}`}>
+              <div key={branch} className={`gm-cut [--cut:9px] border p-3 ${on ? "border-brand-300/40 bg-brand-400/[0.06]" : "border-ink-800 bg-ink-950"}`}>
                 <Toggle
                   checked={on}
                   disabled={on && !draft.branches[other].enabled}
                   onChange={(checked) => ctx.update((s) => void (s.branches[branch].enabled = checked))}
-                  label={`${BRANCH_INFO[branch].emoji} ${BRANCH_INFO[branch].long}`}
+                  label={BRANCH_INFO[branch].long}
                   description={`${BRANCH_INFO[branch].games}: ${modes.map((mode) => mode.label.replace("Historical — ", "")).join(", ")}.`}
                 />
               </div>
@@ -181,7 +186,7 @@ export function StaffStep({ ctx }: { ctx: StepContext }) {
   return (
     <div className="space-y-4">
       <Card
-        icon="🛡️"
+        icon={ShieldCheck}
         title="Host Management"
         subtitle="The rank above Senior hosts that oversees everything. Server admins always count as Host Management."
       >
@@ -200,12 +205,21 @@ export function StaffStep({ ctx }: { ctx: StepContext }) {
           />
         </Field>
       </Card>
-      <Card icon="🔑" title="Who can change these settings">
+      <Card icon={KeyRound} title="Who can change these settings">
         <ul className="space-y-1 text-xs text-ink-300">
-          <li>✓ The server owner</li>
-          <li>✓ Anyone with Discord&apos;s Administrator permission</li>
-          <li className={draft.access.staff_can_edit_settings ? "" : "text-ink-500"}>
-            {draft.access.staff_can_edit_settings ? "✓" : "✗"} Host Management ({staffCount} member{staffCount === 1 ? "" : "s"} right now)
+          <li className="flex items-center gap-1.5">
+            <Check aria-hidden className="h-3.5 w-3.5 text-emerald-300" strokeWidth={2} /> The server owner
+          </li>
+          <li className="flex items-center gap-1.5">
+            <Check aria-hidden className="h-3.5 w-3.5 text-emerald-300" strokeWidth={2} /> Anyone with Discord&apos;s Administrator permission
+          </li>
+          <li className={`flex items-center gap-1.5 ${draft.access.staff_can_edit_settings ? "" : "text-ink-500"}`}>
+            {draft.access.staff_can_edit_settings ? (
+              <Check aria-hidden className="h-3.5 w-3.5 text-emerald-300" strokeWidth={2} />
+            ) : (
+              <X aria-hidden className="h-3.5 w-3.5" strokeWidth={2} />
+            )}{" "}
+            Host Management ({staffCount} member{staffCount === 1 ? "" : "s"} right now)
           </li>
         </ul>
         <Toggle
@@ -233,7 +247,7 @@ export function BranchesStep({ ctx }: { ctx: StepContext }) {
       {BRANCHES.filter((branch) => draft.branches[branch].enabled).map((branch) => (
         <Card
           key={branch}
-          icon={BRANCH_INFO[branch].emoji}
+          icon={BRANCH_ICON[branch]}
           title={`${BRANCH_INFO[branch].long} hosts`}
           subtitle={`They host ${BRANCH_INFO[branch].games}. Each rank is one Discord role.`}
         >
@@ -284,7 +298,7 @@ export function BranchesStep({ ctx }: { ctx: StepContext }) {
           </div>
         </Card>
       ))}
-      <Card icon="📈" title="Acclamations and Violations" subtitle="The same numbers apply in each branch, counted separately per branch.">
+      <Card icon={TrendingUp} title="Acclamations and Violations" subtitle="The same numbers apply in each branch, counted separately per branch.">
         <div className="grid gap-4 sm:grid-cols-3">
           {BRANCHES.some((branch) => draft.branches[branch].enabled && draft.branches[branch].ranks_on.Assistant) && (
             <RuleNumber ctx={ctx} rule="host_full_at" />

@@ -931,7 +931,7 @@ const SERVERS_LIST: Tour = {
 
 const SERVER_SETUP: Tour = {
   id: "server-setup",
-  version: 1,
+  version: 2,
   title: "Server setup",
   summary: "The setup steps, the pickers and finishing setup.",
   paths: ["/servers"],
@@ -946,11 +946,12 @@ const SERVER_SETUP: Tour = {
     },
     {
       target: "server.steps",
-      placement: "bottom",
+      placement: "right",
       title: "The steps",
       body:
-        "A **✓** is done, a red number has problems to fix, and **🔒** steps open once you press **Save & continue**. " +
-        "You can go back to any step you've reached.",
+        "All ten steps, down the left. A green check is done, a red number has problems to fix, and locked steps open " +
+        "once you press **Save and continue**. You can go back to any step you've reached.\n\nOn a phone, they're " +
+        "behind **All steps**.",
     },
     {
       target: "server.step",
@@ -963,7 +964,7 @@ const SERVER_SETUP: Tour = {
     {
       target: "server.save",
       placement: "top",
-      title: "Save & continue",
+      title: "Save and continue",
       body:
         "Saves this step and opens the next one. On **Review**, **Finish setup** unlocks once every required field is filled " +
         "and the health check has nothing blocking.",
@@ -973,19 +974,19 @@ const SERVER_SETUP: Tour = {
 
 const SERVER_SETTINGS: Tour = {
   id: "server-settings",
-  version: 1,
+  version: 2,
   title: "Server settings",
-  summary: "The settings tiles, health checks and history.",
+  summary: "The settings list, health checks and history.",
   paths: ["/servers"],
   auto: "visit",
   anchor: "server.tiles",
   steps: [
     {
       target: "server.tiles",
-      placement: "top",
+      placement: "right",
       title: "Settings",
       body:
-        "Setup is done, so every section is a tile. A red number means problems, amber means warnings.\n\n" +
+        "Setup is done, so every section is in the list on the left. A red number means problems, yellow means warnings.\n\n" +
         "**Dashboard**: how the server is doing. **Health**: live checks with fix-it buttons. **History**: every settings change and who made it.",
     },
   ],
