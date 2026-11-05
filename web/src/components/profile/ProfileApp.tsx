@@ -196,7 +196,7 @@ function AiResultsCard({ results }: { results: ProfileAiResult[] }) {
   return (
     <section className="gm-plate p-4 sm:p-[18px]">
       <CardTitle icon={Drama} title="AI roleplay results">
-        <Link href="/roleplay" className="gm-btn gm-btn-quiet h-7 px-2 text-xs [--cut:6px]">
+        <Link href="/archive?tab=roleplay&graded=1" className="gm-btn gm-btn-quiet h-7 px-2 text-xs [--cut:6px]">
           Archive
           <ArrowUpRight aria-hidden strokeWidth={1.75} />
         </Link>

@@ -1,3 +1,4 @@
+import { applyDemoRating } from "@/lib/archiveDemo";
 import crypto from "node:crypto";
 import type { RowDataPacket } from "mysql2";
 import { getPool } from "@/lib/db";
@@ -746,6 +747,14 @@ function processDemoRequests(): void {
 
     if (request.action.startsWith("draft_")) {
       const outcome = applyDemoDraft(request.action, payload, request.host_id);
+      request.status = outcome.status;
+      request.result = outcome.result;
+      request.error = outcome.error;
+      continue;
+    }
+
+    if (request.action === "feedback_rate") {
+      const outcome = applyDemoRating(payload, request.host_id);
       request.status = outcome.status;
       request.result = outcome.result;
       request.error = outcome.error;

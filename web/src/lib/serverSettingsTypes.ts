@@ -51,6 +51,7 @@ export type ModeKey = (typeof MODE_CATALOG)[number]["key"];
 export const MODE_CHANNEL_FIELDS = [
   { key: "announcement_channel", label: "Announcement channel", kind: "text", required: true, hint: "Games are announced here; the post links players to the map to reserve." },
   { key: "game_info_channel", label: "Game info channel", kind: "text", required: false, hint: "Where the lobby ID, password and checksum go (only players with the game's pass see it)." },
+  { key: "live_post_channel", label: "Live game posts", kind: "text", required: false, hint: "Each game gets one post here the moment its host starts it: the time, host, status, who came and its rating, kept up to date. Leave empty for none." },
 ] as const;
 export type ModeChannelField = (typeof MODE_CHANNEL_FIELDS)[number]["key"];
 
@@ -63,6 +64,8 @@ export interface ModeSettings {
   enabled: boolean;
   announcement_channel: string | null;
   game_info_channel: string | null;
+  /** Where the live game post goes (the bot's public_log_channel_id). */
+  live_post_channel: string | null;
   ping_role: string | null;
   mod_links: LinkEntry[];
   rule_links: LinkEntry[];
@@ -349,6 +352,7 @@ function emptyMode(key: string): ModeSettings {
     enabled: false,
     announcement_channel: null,
     game_info_channel: null,
+    live_post_channel: null,
     ping_role: null,
     mod_links: links.mods.map((entry) => ({ ...entry })),
     rule_links: links.rules.map((entry) => ({ ...entry })),
@@ -484,6 +488,7 @@ export function normalizeSettings(raw: unknown, name = ""): ServerSettings {
       enabled: entry.enabled === undefined ? true : Boolean(entry.enabled),
       announcement_channel: sid(entry.announcement_channel),
       game_info_channel: sid(entry.game_info_channel),
+      live_post_channel: sid(entry.live_post_channel),
       ping_role: sid(entry.ping_role),
       mod_links: links(entry.mod_links),
       rule_links: links(entry.rule_links),

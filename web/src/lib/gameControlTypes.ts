@@ -106,6 +106,18 @@ export interface GameControl extends GameControlSummary {
   ai_analysis: GameAiAnalysis | null;
   /** Hot-join requests from the map (running games), waiting ones first. */
   hotjoin: HotJoinRequestView[];
+  /** How the players rated it (ended games): from their end-of-game DM or the archive page. */
+  rating: GameRatingSummary | null;
+}
+
+export interface GameRatingSummary {
+  average: number | null;
+  count: number;
+  /** Players can still rate (24 hours after the end, until the hosting is judged). */
+  open: boolean;
+  closes_at: number | null;
+  /** The hosting judgement once rating closed (3.0 or more is successful). */
+  result: "successful" | "unsuccessful" | null;
 }
 
 export interface GameDraft extends LobbyDraft {

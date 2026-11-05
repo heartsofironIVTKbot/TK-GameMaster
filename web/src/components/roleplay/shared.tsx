@@ -10,7 +10,7 @@ import type { RpVerdict } from "@/lib/rpArchiveTypes";
 
 export function RpHeader({ children }: { children?: ReactNode }) {
   return (
-    <SiteHeader page="roleplay" title="Roleplay Archive" subtitle="Every graded game, on every server">
+    <SiteHeader page="archive" title="Archive" subtitle="A game's roleplay">
       {children}
     </SiteHeader>
   );

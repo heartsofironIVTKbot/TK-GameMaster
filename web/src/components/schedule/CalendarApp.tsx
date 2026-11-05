@@ -89,6 +89,7 @@ const REQUEST_LABELS: Record<RequestAction, string> = {
   hotjoin_cancel: "Hot-join withdrawal",
   hotjoin_decide: "Hot-join decision",
   crash_report: "Crash report",
+  feedback_rate: "Game rating",
   server_setup: "Server setup",
 };
 

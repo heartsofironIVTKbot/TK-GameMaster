@@ -1,3 +1,4 @@
+import { RATING_WINDOW_SEC } from "@/lib/archiveTypes";
 import { HOME_GUILD_ID } from "@/lib/currentGuild";
 import { DEFAULT_AI_RULES, type AiPlayerResult, type AiRules, type AiStatus, type GameAiAnalysis } from "@/lib/aiAnalysisTypes";
 import { chatLogSignature, listChatLogs } from "@/lib/chatLogs";
@@ -12,6 +13,7 @@ import {
   type GameControlPlayer,
   type GameControlSummary,
   type GamePhase,
+  type GameRatingSummary,
   type LifecycleAction,
   type ReminderKind,
 } from "@/lib/gameControlTypes";
@@ -47,6 +49,25 @@ const num = (value: unknown): number => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 const ids = (value: unknown): Set<string> => new Set(Array.isArray(value) ? value.map(String) : []);
+
+/** The players' rating of an ended game (never who gave what). */
+function ratingOf(data: Record<string, unknown>, phase: GamePhase, nowSec: number): GameRatingSummary | null {
+  if (phase !== "ended") return null;
+  const values = Object.values(obj(data.feedback_ratings))
+    .map((value) => Math.round(num(value)))
+    .filter((value) => value >= 1 && value <= 5);
+  const endedAt = num(data.ended_at);
+  const closesAt = endedAt ? endedAt + RATING_WINDOW_SEC : null;
+  const open = data.hosting_evaluated !== true && closesAt !== null && nowSec < closesAt;
+  const result = data.hosting_result === "successful" || data.hosting_result === "unsuccessful" ? data.hosting_result : null;
+  return {
+    average: values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null,
+    count: values.length,
+    open,
+    closes_at: open ? closesAt : null,
+    result: data.hosting_evaluated === true ? result : null,
+  };
+}
 
 export function phaseOf(raw: RawAttendanceGame, nowSec: number): GamePhase {
   const data = raw.data;
@@ -296,6 +317,7 @@ export async function getGameControl(gameId: string, viewer: HostProfile): Promi
     })),
     chat_log_signature: chatLogs.length ? chatLogSignature(chatLogs) : null,
     ai_analysis: parseAiAnalysis(aiRaw, aiPlayers, aiGiven, names),
+    rating: ratingOf(data, summary.phase, Math.floor(Date.now() / 1000)),
     hotjoin: hotJoins.map((entry) => ({
       ...entry,
       name: nameOf(names, entry.user_id) ?? `#${entry.user_id}`,

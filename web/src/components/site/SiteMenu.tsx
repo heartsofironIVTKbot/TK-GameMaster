@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import {
+  Archive,
   Activity,
   CalendarDays,
   ClipboardCheck,
@@ -33,6 +34,7 @@ import { useViewer, type Viewer } from "./viewer";
 
 export type SitePage =
   | "map"
+  | "archive"
   | "roleplay"
   | "profile"
   | "tickets"
@@ -50,6 +52,7 @@ export type SitePage =
 /** Every page's icon: one line-icon set, one colour (green on the page you're on). */
 export const PAGE_ICONS: Record<SitePage, LucideIcon> = {
   map: MapIcon,
+  archive: Archive,
   roleplay: ScrollText,
   profile: UserRound,
   tickets: Ticket,
@@ -74,7 +77,7 @@ export interface SiteLink {
 
 const PLAYER_LINKS: SiteLink[] = [
   { page: "map", href: "/", label: "Map", hint: "Reserve your nation" },
-  { page: "roleplay", href: "/roleplay", label: "Roleplay archive", hint: "Every game's story and roleplay" },
+  { page: "archive", href: "/archive", label: "Archive", hint: "Every game, its players and its roleplay" },
   { page: "profile", href: "/profile", label: "My profile", hint: "Your games, commends and roles" },
   { page: "tickets", href: "/tickets", label: "My tickets", hint: "Closed tickets you can read" },
 ];
@@ -107,8 +110,8 @@ export function menuGroups(viewer: Viewer | null): { title: string; links: SiteL
 export function headerLinks(viewer: Viewer | null): SiteLink[] {
   const byPage = (page: SitePage) => [...PLAYER_LINKS, ...HOST_LINKS].find((link) => link.page === page) as SiteLink;
   return viewer?.isHost
-    ? [byPage("map"), byPage("calendar"), byPage("games"), byPage("database"), byPage("roleplay")]
-    : [byPage("map"), byPage("roleplay"), byPage("profile")];
+    ? [byPage("map"), byPage("calendar"), byPage("games"), byPage("database"), byPage("archive")]
+    : [byPage("map"), byPage("archive"), byPage("profile")];
 }
 
 export function MenuButton({

@@ -344,6 +344,24 @@ export default function GameControlPanel({
                 Attendance page
               </Link>
               .
+              {game.rating && (
+                <span className="mt-1.5 block">
+                  {game.rating.count === 0
+                    ? "Nobody has rated it yet."
+                    : `Rated ${(game.rating.average ?? 0).toFixed(1)} out of 5 by ${game.rating.count} ${game.rating.count === 1 ? "player" : "players"}.`}{" "}
+                  {game.rating.open && game.rating.closes_at
+                    ? `Players rate it from their end-of-game DM until ${dateTime(game.rating.closes_at)}; then the hosting is judged (3.0 or more is successful). `
+                    : game.rating.result === "successful"
+                      ? "Successful hosting. "
+                      : game.rating.result === "unsuccessful"
+                        ? "Not successful hosting (under 3.0). "
+                        : ""}
+                  <Link href={`/archive/${game.id}`} className="font-semibold text-brand-400 hover:underline">
+                    Open it in the archive
+                  </Link>
+                  .
+                </span>
+              )}
             </Notice>
           )}
           {game.phase === "cancelled" && (

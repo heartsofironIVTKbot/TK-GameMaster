@@ -176,6 +176,7 @@ export type RequestAction =
   | "hotjoin_cancel"
   | "hotjoin_decide"
   | "crash_report"
+  | "feedback_rate"
   | "server_setup";
 
 /** A queued web → bot request. */

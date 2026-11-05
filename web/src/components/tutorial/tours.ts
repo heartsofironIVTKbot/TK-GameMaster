@@ -155,7 +155,7 @@ const MAP_PLAYER: Tour = {
       title: "Everything else is in the menu",
       body:
         "**☰ Menu** is on every page. **My profile**: your games, attendance, commends and roles. " +
-        "**Roleplay archive**: every graded game's story and everyone's roleplay, searchable. Your tickets, too.",
+        "**Archive**: every game, who played it, who came and how it was rated, plus every graded game's roleplay. Your tickets, too.",
     },
     {
       target: "help.button",
@@ -641,7 +641,7 @@ const GAMES: Tour = {
         "After the game, add its HOI4 chat log (.txt). Rehosted after a crash? Add every file: the AI reads them as one game, " +
         "in the order shown (↑ ↓ to fix it).\n\n" +
         "**Run the AI analysis**: it grades everyone's roleplay with the strict rules and puts the game on the public " +
-        "**roleplay archive**. Nothing is given until you press **Give**.",
+        "**archive** (its Roleplay tab). Nothing is given until you press **Give**.",
     },
     {
       title: "Every action is logged",
@@ -1027,49 +1027,89 @@ const PROFILE: Tour = {
       target: "site.menu",
       placement: "bottom",
       title: "Your tickets and everything else",
-      body: "**☰ Menu** has every page: your tickets (to read after they're closed), the roleplay archive, the map and more.",
+      body: "**☰ Menu** has every page: your tickets (to read after they're closed), the archive, the map and more.",
     },
   ],
 };
 
 // ---------------------------------------------------------------------------
-// The public roleplay archive
+// The public archive (every game) and a graded game's roleplay
 // ---------------------------------------------------------------------------
 
-const ROLEPLAY_ARCHIVE: Tour = {
-  id: "roleplay-archive",
+const ARCHIVE: Tour = {
+  id: "archive",
   version: 1,
-  title: "Roleplay archive",
-  summary: "Find any game's story and roleplay.",
-  paths: ["/roleplay"],
+  title: "The archive",
+  summary: "Find any game, who played it and how it went.",
+  paths: ["/archive"],
   auto: "visit",
-  anchor: "rp.search",
+  anchor: "archive.search",
   steps: [
     {
-      title: "The roleplay archive",
+      title: "The archive",
       body:
-        "Every game whose chat log was graded, from every server: the story, everyone's result and every line of roleplay. " +
-        "Anyone can read it, no login needed.",
+        "Every game on every GameMaster server, from the moment the host starts it: who played which nation, who came, " +
+        "what they got and how the players rated it. Anyone can read it, no login needed.",
     },
     {
-      target: "rp.search",
+      target: "archive.tabs",
       placement: "bottom",
-      title: "Search",
-      body: "Type a player's name, a nation, a game or a few words from a line. Share the page address to share the search.",
+      title: "Roleplay or Historical",
+      body: "All games, or only one kind. The numbers are how many games each tab has.",
     },
     {
-      target: "rp.filters",
+      target: "archive.search",
       placement: "bottom",
-      title: "Narrow it down",
-      body: "Pick a game mode, only games with rewarded roleplay, a server, or sort by the most roleplay.",
+      title: "Search and narrow it down",
+      body:
+        "Type a player's name, a nation, a game, a host or a server. Pick a mode, only games whose roleplay the AI graded, " +
+        "or sort by the best rated. Share the page address to share the search.",
     },
     {
-      target: "rp.list",
+      target: "archive.list",
       placement: "top",
       missing: "center",
       title: "Open a game",
-      body: "Each card has the AI's recap of the story and the best roleplayers. Click one to read the whole game.",
-      missingBody: "Games appear here once a host uploads the chat log and runs the AI analysis.",
+      body:
+        "Each row has the game's rating, who came (played, no-show, told the host, joined late) and everything the host gave out. " +
+        "The legend under the list explains the icons.",
+      missingBody: "Games appear here the moment a host starts one.",
+    },
+  ],
+};
+
+const ARCHIVE_GAME: Tour = {
+  id: "archive-game",
+  version: 1,
+  title: "A game in the archive",
+  summary: "Its rating, who came and every nation.",
+  paths: ["/archive/*"],
+  auto: "visit",
+  anchor: "archive.board",
+  steps: [
+    {
+      target: "archive.rating",
+      placement: "left",
+      missing: "skip",
+      title: "The rating",
+      body:
+        "How the players rated the game, from 1 to 5 stars, and how many gave each. Players rate it from their end-of-game DM " +
+        "for 24 hours. Nobody sees who gave what.",
+    },
+    {
+      target: "archive.counts",
+      placement: "bottom",
+      missing: "skip",
+      title: "The totals",
+      body: "How many reserved players came, and every commend, Merit, warning, Dishonored and game ban the host gave.",
+    },
+    {
+      target: "archive.board",
+      placement: "top",
+      title: "Every nation",
+      body:
+        "Grouped like the map's reservation list: the nation, its player, whether they came and what they got. " +
+        "**Show nations nobody played** lists the rest.",
     },
   ],
 };
@@ -1125,7 +1165,8 @@ export const TOURS: Tour[] = [
   SERVER_SETUP,
   SERVER_SETTINGS,
   PROFILE,
-  ROLEPLAY_ARCHIVE,
+  ARCHIVE,
+  ARCHIVE_GAME,
   ROLEPLAY_GAME,
 ];
 

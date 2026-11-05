@@ -64,9 +64,9 @@ export default function RoleplayGame() {
   return (
     <div className="min-h-screen w-full bg-ink-950 text-ink-100">
       <RpHeader>
-        <Link href="/roleplay" className="gm-btn gm-btn-quiet h-[30px] px-2.5 text-[12.5px] [--cut:7px]">
+        <Link href={`/archive/${id}`} className="gm-btn gm-btn-quiet h-[30px] px-2.5 text-[12.5px] [--cut:7px]">
           <ArrowLeft aria-hidden strokeWidth={1.75} />
-          All games
+          The game in the archive
         </Link>
       </RpHeader>
       <main className="mx-auto max-w-[1300px] space-y-6 px-4 py-6 sm:px-6">
@@ -78,7 +78,7 @@ export default function RoleplayGame() {
           <div className="gm-plate flex flex-col items-center p-10 text-center">
             <ScrollText aria-hidden className="h-9 w-9 text-violet-300" strokeWidth={1.5} />
             <p className="mt-3 text-sm font-semibold text-ink-100">{state.error}</p>
-            <Link href="/roleplay" className="gm-btn gm-btn-secondary mt-4">
+            <Link href="/archive?tab=roleplay&graded=1" className="gm-btn gm-btn-secondary mt-4">
               <ArrowLeft aria-hidden strokeWidth={1.75} />
               Back to the archive
             </Link>
@@ -265,7 +265,7 @@ function LogView({ game, focusTag, onFocusTag }: { game: RpGameDetail; focusTag:
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="gm-title mr-2 text-[24px]">The roleplay</h2>
           <label className="relative min-w-[180px] flex-1">
-            <Search aria-hidden className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-500" strokeWidth={1.75} />
+            <Search aria-hidden className="pointer-events-none absolute left-2.5 top-1/2 z-[1] h-4 w-4 -translate-y-1/2 text-ink-500" strokeWidth={1.75} />
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value.slice(0, 80))}

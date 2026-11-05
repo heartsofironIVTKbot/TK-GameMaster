@@ -116,6 +116,16 @@ state. The audit log keeps its filters on top, with a line icon and
 colour per category (`CATEGORY_ICON`). The crash report has three
 numbered steps.
 
+**The archive** (`docs/design/archive.html`, `docs/game-archive.md`): one
+public list of every game with tabs (All games, Roleplay, Historical); the
+roleplay archive is its Roleplay tab. Presence and marks have one icon and
+colour each everywhere (`components/archive/parts.tsx`): played mint check,
+no-show red cross, told the host sky door, joined late amber key; commend
+mint star, Merit yellow medal, warning amber triangle, Dishonored orange
+scale, game ban red gavel. Ratings are yellow stars. A game's page copies
+the map's reservation board: count boxes, small region headers, then flag,
+nation, the player's red tag, presence and marks.
+
 **The calendars** (`docs/design/calendar.html`): a game's colour is its
 status and nothing else: yellow scheduled, green announced, blue on-going,
 grey ended, red cancelled (`GameState` in `web/src/lib/scheduleOptions.ts`,

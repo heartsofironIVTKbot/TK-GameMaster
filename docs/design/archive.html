@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GameMaster Archive Mock-up</title>
+<!-- Design mock-up of the public game archive (/archive) and the short
+     Discord post that links to it, in the cut-plate style
+     (docs/branding.md). Not part of the app. Drawn at 1440x900 (desktop)
+     or 390x844 (phone). -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Big+Shoulders+Stencil+Display:wght@800&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+<style>
+  :root {
+    --ink-950: oklch(11.8% 0.009 152); --ink-900: oklch(19.2% 0.011 152); --ink-800: oklch(26.6% 0.012 152);
+    --ink-700: oklch(36.2% 0.013 152); --ink-600: oklch(44.4% 0.014 152); --ink-500: oklch(55.4% 0.015 152); --ink-400: oklch(70.4% 0.015 152);
+    --ink-300: oklch(86.4% 0.012 152); --ink-100: oklch(96.6% 0.006 152);
+    --brand-400: oklch(76.4% 0.186 146); --brand-950: oklch(19.4% 0.046 146);
+    --mint: oklch(79.4% 0.118 174); --yellow: oklch(86% 0.15 95); --red: oklch(70% 0.17 22); --sky: oklch(76% 0.11 235);
+    --display: "Big Shoulders Display", "Arial Narrow", sans-serif; --stencil: "Big Shoulders Stencil Display", var(--display); --body: "Public Sans", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: oklch(8% 0.006 152); color: var(--ink-300); font: 400 14px/1.45 var(--body); font-variant-numeric: tabular-nums; display: flex; flex-direction: column; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
+  svg.lucide { width: 16px; height: 16px; stroke-width: 1.75; flex: none; }
+  .switches { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; padding: 10px 16px; border-bottom: 1px solid var(--ink-800); background: var(--ink-950); }
+  .switches h1 { margin: 0 6px 0 0; font: 800 22px/1 var(--display); text-transform: uppercase; color: var(--ink-100); }
+  .seg { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-500); }
+  .seg div { display: flex; border: 1px solid var(--ink-700); border-radius: 4px; overflow: hidden; }
+  .seg button { padding: 5px 10px; font-size: 12px; font-weight: 600; color: var(--ink-400); }
+  .seg button + button { border-left: 1px solid var(--ink-700); }
+  .seg button[aria-pressed="true"] { background: var(--ink-800); color: var(--ink-100); }
+  .seg.off { opacity: .35; pointer-events: none; }
+  .viewport { flex: 1; min-height: 0; display: grid; place-items: center; padding: 16px; overflow: hidden; }
+  .frame { position: relative; overflow: hidden; outline: 1px solid var(--ink-800); }
+  .stage { position: absolute; left: 0; top: 0; transform-origin: 0 0; overflow: hidden; background: var(--ink-950); }
+  .stage.desk { width: 1440px; height: 900px; } .stage.phone { width: 390px; height: 844px; }
+  .stage > div { height: 100%; display: flex; flex-direction: column; }
+  [hidden] { display: none !important; }
+  .cut, .btn, .plate, .field { clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut)); }
+  .cut, .btn, .field { --cut: 8px; }
+  .plate { --cut: 14px; --line: var(--ink-800); background-color: var(--ink-900); }
+  .plate, .field, .btn-secondary { border: 1px solid var(--line);
+    background-image: linear-gradient(135deg, var(--line) calc(var(--cut) * .7071 + 1px), transparent 0), linear-gradient(315deg, var(--line) calc(var(--cut) * .7071 + 1px), transparent 0); background-origin: border-box; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; height: 34px; padding: 0 13px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+  .btn-primary { background-color: var(--brand-400); color: var(--brand-950); }
+  .btn-secondary { --line: var(--ink-700); color: var(--ink-100); background-color: var(--ink-950); }
+  .btn-quiet { color: var(--ink-300); } .btn-icon { width: 34px; padding: 0; }
+  .btn-sm { height: 30px; padding: 0 11px; font-size: 12.5px; --cut: 7px; }
+  .btn-discord { background: #5865f2; color: #fff; }
+  .tag { display: inline-flex; align-items: center; gap: 6px; height: 21px; padding: 0 11px; font-size: 11.5px; font-weight: 600; white-space: nowrap; clip-path: polygon(7px 0, calc(100% - 7px) 0, 100% 50%, calc(100% - 7px) 100%, 7px 100%, 0 50%); }
+  .tag svg { width: 12px; height: 12px; }
+  .dot::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .t { color: var(--c); background: color-mix(in oklab, var(--c) 16%, var(--ink-950)); }
+  .t-ink { color: var(--ink-300); background: var(--ink-800); }
+  .title { font-family: var(--display); font-weight: 800; text-transform: uppercase; line-height: .95; color: var(--ink-100); }
+  .small { font-size: 12px; color: var(--ink-400); }
+  .mark { width: 30px; height: 30px; --cut: 7px; display: grid; place-items: center; background: var(--brand-400); color: var(--brand-950); font: 800 17px/1 var(--stencil); }
+  .avatar { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; flex: none; background: var(--ink-800); color: var(--ink-100); font-size: 12px; font-weight: 700; }
+  .sicon { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; flex: none; font: 700 14px/1 var(--body); color: #fff; }
+  .top { flex: none; height: 56px; display: flex; align-items: center; gap: 12px; padding: 0 20px; border-bottom: 1px solid var(--ink-800); background: var(--ink-950); }
+  .top .title { font-size: 26px; } .top small { display: block; font-size: 12px; color: var(--ink-400); }
+  .top .end { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  .phone .top { padding: 0 10px; } .phone .top .title { font-size: 20px; }
+  .body { flex: 1; min-height: 0; overflow: hidden; display: flex; }
+  .wrap { flex: 1; min-width: 0; overflow: hidden; padding: 20px 24px; }
+  .phone .wrap { padding: 12px; }
+  .center { max-width: 1060px; margin: 0 auto; }
+  .h { display: flex; align-items: center; gap: 10px; } .h > svg { width: 20px; height: 20px; color: var(--brand-400); } .h .title { font-size: 30px; }
+  .lead { margin: 4px 0 16px; font-size: 13px; color: var(--ink-400); }
+  :root { --purple: oklch(72% 0.15 305); --gold: oklch(86% 0.15 95); --orange: oklch(76% 0.15 55); }
+  .scroll { overflow-y: auto; }
+  .wide { max-width: 1240px; margin: 0 auto; }
+  .row { display: flex; align-items: center; gap: 10px; }
+  .muted { color: var(--ink-500); }
+  .input { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 10px; --cut: 7px; background: var(--ink-950); box-shadow: inset 0 0 0 1px var(--ink-700); font-size: 13px; color: var(--ink-500); }
+  .input .chev { margin-left: auto; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 11px; --cut: 7px; background: var(--ink-900); font-size: 12.5px; font-weight: 600; color: var(--ink-300); white-space: nowrap; }
+  .chip.on { background: var(--brand-400); color: var(--brand-950); }
+  .chips { display: flex; flex-wrap: wrap; gap: 5px; }
+  .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--ink-800); margin-bottom: 14px; }
+  .tab { display: inline-flex; align-items: center; gap: 7px; height: 40px; padding: 0 14px; font-size: 13px; font-weight: 600; color: var(--ink-400); white-space: nowrap; }
+  .tab.on { color: var(--ink-100); box-shadow: inset 0 -2px 0 var(--brand-400); } .tab.on svg { color: var(--brand-400); }
+  .tab .c { font-size: 11.5px; color: var(--ink-500); }
+  /* list */
+  .grows { display: grid; gap: 4px; }
+  .grow2 { display: grid; grid-template-columns: 40px minmax(0, 1.6fr) 150px 120px 150px 120px; align-items: center; gap: 14px; padding: 11px 14px; --cut: 9px; background: var(--ink-900); font-size: 13px; }
+  .grow2 .mi { width: 36px; height: 36px; --cut: 8px; display: grid; place-items: center; background: var(--ink-800); color: var(--brand-400); }
+  .grow2 b { display: block; color: var(--ink-100); font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .grow2 small { font-size: 12px; color: var(--ink-500); }
+  .att { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--ink-400); } .att .b { height: 5px; background: var(--ink-800); } .att .b i { display: block; height: 100%; background: var(--mint); }
+  .rew { display: flex; gap: 10px; font-size: 12.5px; color: var(--ink-300); } .rew span { display: inline-flex; align-items: center; gap: 4px; } .rew svg { width: 14px; height: 14px; }
+  .phone .grow2 { grid-template-columns: 36px minmax(0, 1fr) auto; gap: 4px 10px; } .phone .grow2 .hide { display: none; } .phone .grow2 .mi { grid-row: span 2; }
+  .phone .grow2 .att { grid-column: 2 / -1; flex-direction: row; align-items: center; } .phone .grow2 .att .b { flex: 1; }
+  .rpb { display: inline-flex; align-items: center; gap: 4px; color: var(--purple); font-size: 12px; font-weight: 600; }
+  /* game */
+  .ghead { padding: 18px 20px; } .ghead .title { font-size: 44px; } .phone .ghead .title { font-size: 32px; }
+  .facts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 14px; } .phone .facts { grid-template-columns: 1fr 1fr; }
+  .fact { padding: 10px 12px; --cut: 9px; background: var(--ink-950); } .fact .v { font: 800 26px/1 var(--display); color: var(--ink-100); } .fact .k { margin-top: 4px; font-size: 12px; color: var(--ink-400); }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--ink-400); padding: 10px 2px; } .legend span { display: inline-flex; align-items: center; gap: 5px; } .legend svg { width: 14px; height: 14px; }
+  .regions { columns: 3 320px; column-gap: 12px; } .phone .regions { columns: 1; }
+  .region { break-inside: avoid; margin-bottom: 12px; padding: 14px; }
+  .region h3 { margin: 0 0 8px; display: flex; align-items: center; gap: 8px; font: 800 20px/1 var(--display); text-transform: uppercase; color: var(--ink-100); } .region h3 small { font: 400 12px var(--body); text-transform: none; color: var(--ink-500); margin-left: auto; }
+  .nat { display: grid; grid-template-columns: 18px 22px minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 6px 4px; font-size: 13px; } .nat + .nat { border-top: 1px solid var(--ink-800); }
+  .nat .who { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--ink-300); } .nat .who b { color: var(--ink-100); font-weight: 600; } .nat .who .coop { color: var(--ink-500); font-size: 12px; }
+  .nat.open .who { color: var(--ink-500); font-style: italic; }
+  .marks { display: flex; gap: 4px; } .marks svg { width: 14px; height: 14px; }
+  .flag { width: 22px; height: 14px; background: linear-gradient(var(--f1) 33%, var(--f2) 33% 66%, var(--f3) 66%); }
+  .tbl { display: grid; gap: 3px; }
+  .trow { display: grid; grid-template-columns: 22px 30px 180px minmax(0, 1fr) 140px 120px 110px; align-items: center; gap: 12px; padding: 8px 12px; --cut: 7px; background: var(--ink-900); font-size: 13px; }
+  .trow.hd { background: none; font-size: 12px; color: var(--ink-500); padding-top: 0; padding-bottom: 2px; }
+  .phone .trow { grid-template-columns: 18px 26px minmax(0, 1fr) auto; } .phone .trow .hide { display: none; }
+  /* discord */
+  .dc { flex: 1; background: #313338; padding: 24px; font-family: "gg sans", "Public Sans", sans-serif; color: #dbdee1; overflow: hidden; }
+  .phone .dc { padding: 12px; }
+  .dmsg { display: flex; gap: 14px; max-width: 760px; } .dav { width: 40px; height: 40px; border-radius: 50%; background: var(--brand-400); color: var(--brand-950); display: grid; place-items: center; font: 800 16px/1 var(--stencil); flex: none; }
+  .dname { font-weight: 600; color: #fff; } .dbot { background: #5865f2; color: #fff; font-size: 10px; font-weight: 700; padding: 1px 4px; border-radius: 3px; margin-left: 4px; } .dtime { font-size: 12px; color: #949ba4; margin-left: 6px; }
+  .embed { margin-top: 6px; background: #2b2d31; border-left: 4px solid var(--c, #6a726c); border-radius: 4px; padding: 12px 16px 14px; max-width: 520px; }
+  .embed .et { font-weight: 700; color: #fff; font-size: 16px; } .embed .ed { font-size: 14px; margin-top: 6px; line-height: 1.45; }
+  .ef { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px; } .ef div { font-size: 13.5px; } .ef b { display: block; color: #fff; font-size: 13px; margin-bottom: 2px; }
+  .phone .ef { grid-template-columns: 1fr 1fr; }
+  .dbtn { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; height: 32px; padding: 0 14px; border-radius: 4px; background: #4e5058; color: #fff; font-size: 14px; font-weight: 500; }
+  .dbtn svg { width: 14px; height: 14px; }
+  .before { margin-top: 26px; padding-top: 18px; border-top: 1px solid #3f4147; font-size: 13px; color: #949ba4; max-width: 760px; }
+  .before pre { margin: 8px 0 0; padding: 10px 12px; background: #2b2d31; border-radius: 4px; font: 13px/1.45 "Public Sans", sans-serif; color: #dbdee1; white-space: pre-wrap; max-height: 260px; overflow: hidden; }
+  /* round 2 and 3 */
+  .grow2 { grid-template-columns: 40px minmax(0, 1.5fr) 120px 150px 210px 190px; }
+  .grow2.hd { background: none; padding-top: 0; padding-bottom: 2px; font-size: 12px; color: var(--ink-500); }
+  .pc { display: flex; flex-wrap: wrap; gap: 4px 11px; font-size: 13px; font-weight: 600; color: var(--ink-100); } .pc span { display: inline-flex; align-items: center; gap: 4px; } .pc svg { width: 15px; height: 15px; }
+  .phone .grow2 .pc { grid-column: 2 / -1; }
+  .rt { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; } .rt b { color: var(--ink-100); } .rt small { color: var(--ink-500); font-size: 12px; }
+  .phone .grow2 .rt { grid-column: 3; grid-row: 1; }
+  .stars { display: inline-flex; gap: 1px; } .stars .st { position: relative; width: var(--s); height: var(--s); color: var(--ink-700); } .stars svg { width: var(--s); height: var(--s); }
+  .stars .st.on { color: var(--gold); } .stars .st.on svg { fill: var(--gold); }
+  .stars .st.half svg { fill: url(#half); color: var(--gold); }
+  .gtop { display: flex; gap: 20px; align-items: flex-end; justify-content: space-between; } .phone .gtop { flex-direction: column; align-items: stretch; }
+  .rating { display: flex; gap: 16px; align-items: center; padding: 12px 14px; --cut: 10px; background: var(--ink-950); flex: none; }
+  .rbig { display: flex; flex-direction: column; align-items: center; gap: 4px; } .rbig strong { font: 800 40px/1 var(--display); color: var(--ink-100); } .rbig small { font-size: 11.5px; color: var(--ink-400); }
+  .dist { display: grid; gap: 3px; width: 180px; } .dist div { display: grid; grid-template-columns: 10px 13px 1fr 18px; align-items: center; gap: 5px; font-size: 11.5px; color: var(--ink-400); } .dist svg { width: 12px; height: 12px; fill: var(--gold); }
+  .dist i { height: 6px; background: var(--ink-800); } .dist i b { display: block; height: 100%; background: var(--gold); } .dist small { text-align: right; }
+  .phone .dist { flex: 1; width: auto; }
+  .cboxes { display: grid; grid-template-columns: repeat(9, 1fr); margin-top: 16px; --cut: 10px; background: var(--ink-950); clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut)); }
+  .phone .cboxes { grid-template-columns: repeat(3, 1fr); }
+  .cbox { padding: 10px 4px 9px; text-align: center; } .cbox + .cbox { border-left: 1px solid var(--ink-800); }
+  .phone .cbox:nth-child(3n+1) { border-left: 0; } .phone .cbox:nth-child(n+4) { border-top: 1px solid var(--ink-800); }
+  .cbox strong { display: block; font: 800 24px/1 var(--display); color: var(--ink-100); } .cbox strong small { font-size: 15px; color: var(--ink-500); }
+  .cbox span { margin-top: 6px; display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; color: var(--ink-400); white-space: nowrap; } .cbox span svg { width: 13px; height: 13px; }
+  .rate { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 14px 16px; background-color: color-mix(in oklab, var(--gold) 8%, var(--ink-900)); --line: color-mix(in oklab, var(--gold) 30%, var(--ink-800)); }
+  .rate b { display: block; color: var(--ink-100); font-size: 14px; } .rate .small { display: block; margin-top: 2px; }
+  .sbtns { display: flex; gap: 4px; } .sbtn { display: inline-flex; align-items: center; gap: 5px; height: 34px; padding: 0 11px; --cut: 7px; background: var(--ink-950); box-shadow: inset 0 0 0 1px var(--ink-700); font-size: 13px; font-weight: 600; color: var(--ink-100); } .sbtn svg { width: 14px; height: 14px; color: var(--gold); }
+  .sbtn.on { background: var(--brand-400); color: var(--brand-950); box-shadow: none; } .sbtn.on svg { color: var(--brand-950); fill: var(--brand-950); }
+  .board { padding: 4px 8px 10px; }
+  .bh { display: flex; align-items: baseline; gap: 8px; margin: 0; padding: 12px 8px 5px; font-size: 12px; font-weight: 600; color: var(--ink-500); } .bh span { margin-left: auto; font-weight: 400; }
+  .brow { display: grid; grid-template-columns: 22px 170px minmax(0, 1fr) 150px 90px; align-items: center; gap: 10px; height: 38px; padding: 0 8px; font-size: 13px; } .brow + .brow { border-top: 1px solid color-mix(in oklab, var(--ink-800) 60%, transparent); }
+  .phone .brow { grid-template-columns: 22px minmax(0, 1fr) auto auto; height: auto; padding: 7px 8px; row-gap: 5px; } .phone .brow .ptag, .phone .brow .muted { grid-column: 2; grid-row: 2; justify-self: start; } .phone .brow .pres { grid-column: 3; grid-row: 1 / 3; } .phone .brow .marks { grid-column: 4; grid-row: 1 / 3; }
+  .brow .nn { font-weight: 600; color: var(--ink-100); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .brow.open .nn { color: var(--ink-400); }
+  .ptag { justify-self: start; max-width: 100%; display: inline-flex; align-items: center; height: 22px; padding: 0 11px; font-size: 12px; font-weight: 600; color: oklch(80% 0.1 22); background: color-mix(in oklab, var(--red) 16%, var(--ink-950)); clip-path: polygon(7px 0, calc(100% - 7px) 0, 100% 50%, calc(100% - 7px) 100%, 7px 100%, 0 50%); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pres { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-400); } .pres svg { width: 15px; height: 15px; }
+  .marks { justify-content: flex-end; }
+  .phone .tab { padding: 0 9px; gap: 5px; } .phone .tab .c { display: none; }
+  .dm { color: #c9cdfb; background: rgba(88, 101, 242, .3); border-radius: 3px; padding: 0 2px; font-weight: 500; }
+  .dts { background: rgba(255, 255, 255, .08); border-radius: 3px; padding: 0 2px; }
+  .ea { font-size: 13px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+  .embed .et u { text-decoration: none; color: #00a8fc; }
+  .ef2 { grid-template-columns: repeat(3, 1fr); } .ef2 > div:nth-child(n+4) { grid-column: span 3; } .phone .ef2 { grid-template-columns: 1fr 1fr; } .phone .ef2 > div:nth-child(n+4), .phone .ef2 > div:first-child { grid-column: span 2; }
+  b.in { display: inline; color: #fff; font-size: inherit; margin: 0; }
+  .dsub { font-size: 12.5px; color: #949ba4; }
+  .dbtns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; } .dsb { display: inline-flex; align-items: center; height: 32px; padding: 0 14px; border-radius: 8px; background: #4e5058; color: #fff; font-size: 14px; font-weight: 500; } .dsb.on { background: #248046; } .dsb.link { background: #4e5058; }
+  .dmhead { display: flex; align-items: center; gap: 8px; padding: 0 0 14px; margin-bottom: 18px; border-bottom: 1px solid #3f4147; color: #fff; }
+</style>
+</head>
+<body>
+<div class="switches">
+  <h1>Game archive mock-up, round 3</h1>
+  <div class="seg">Show <div data-k="view"><button data-v="list">The archive</button><button data-v="game">A game</button><button data-v="discord">The Discord post</button><button data-v="dm">The rating DM</button></div></div>
+  <div class="seg" id="s-status">Post <div data-k="status"><button data-v="starting">Starting</button><button data-v="live">On-going</button><button data-v="open">Ended, rating open</button><button data-v="closed">Rating closed</button></div></div>
+  <div class="seg" id="s-viewer">Viewer <div data-k="viewer"><button data-v="anyone">Anyone</button><button data-v="player">Played it, rating open</button></div></div>
+  <div class="seg" id="s-rated">Rated <div data-k="rated"><button data-v="no">Not yet</button><button data-v="yes">Gave 4 stars</button></div></div>
+  <div class="seg">Size <div data-k="size"><button data-v="desk">Desktop</button><button data-v="phone">Phone</button></div></div>
+</div>
+<svg width="0" height="0" style="position:absolute"><defs><linearGradient id="half"><stop offset="50%" stop-color="oklch(86% 0.15 95)"/><stop offset="50%" stop-color="transparent"/></linearGradient></defs></svg>
+<div class="viewport"><div class="frame" id="frame">
+  <div class="stage desk" id="desk"><div data-screen></div></div>
+  <div class="stage phone" id="phone" hidden><div data-screen-phone></div></div>
+</div></div>
+<script>
+  const state = { view: "list", status: "live", viewer: "anyone", rated: "no", size: "desk" };
+  const phone = () => state.size === "phone";
+  const topBar = (title, sub) => `<header class="top"><span class="mark cut">GM</span><div style="min-width:0"><div class="title" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${title}</div>${phone() ? "" : `<small>${sub}</small>`}</div><div class="end">${phone() ? "" : '<span class="avatar">D</span>'}<button class="btn btn-quiet ${phone() ? "btn-icon" : ""}"><i data-lucide="menu"></i>${phone() ? "" : "Menu"}</button></div></header>`;
+  const page = (title, sub, body) => topBar(title, sub) + `<div class="body"><div class="wrap scroll">${body}</div></div>`;
+  const ic = (n, c) => `<i data-lucide="${n}" style="color:${c}"></i>`;
+  const tank = (size = 18) => `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="18" height="6" rx="3"/><path d="M7 12V9h8v3"/><path d="M15 10h6"/></svg>`;
+  // Presence: one icon each, the same everywhere (list, counts, table, legend).
+  const PRES = { here: ["check", "var(--mint)", "Played"], no: ["x", "var(--red)", "No-show"], told: ["door-open", "var(--sky)", "Told the host"], late: ["key-round", "var(--gold)", "Joined late"], open: ["circle-dashed", "var(--ink-500)", "Nobody"] };
+  const MARK = { c: ["star", "var(--mint)", "Commend"], m: ["medal", "var(--gold)", "Merit"], w: ["triangle-alert", "var(--yellow)", "Warning"], d: ["scale", "var(--orange)", "Dishonored"], b: ["gavel", "var(--red)", "Game ban"] };
+  const marks = (s) => `<span class="marks">${[...(s || "")].map((k) => ic(MARK[k][0], MARK[k][1])).join("")}</span>`;
+  const counts = (list) => `<span class="pc">${list.filter(([, n]) => n).map(([k, n]) => `<span title="${(PRES[k] || MARK[k])[2]}">${ic((PRES[k] || MARK[k])[0], (PRES[k] || MARK[k])[1])}${n}</span>`).join("")}</span>`;
+  // Stars: filled to the nearest half, in the rating's gold.
+  const stars = (avg, size = 15) => `<span class="stars" style="--s:${size}px">${[1, 2, 3, 4, 5].map((i) => `<span class="st ${avg >= i ? "on" : avg >= i - 0.5 ? "half" : ""}">${ic("star", "currentColor")}</span>`).join("")}</span>`;
+
+  const GAMES = [
+    ["drama", "Roleplay #87, Road to 56", "TommyKay's HOI4", "Sun 3 Nov, 18:00", "Road to 56", [["here", 28], ["no", 3], ["told", 1], ["late", 3]], [["c", 6], ["m", 4], ["w", 2], ["d", 1], ["b", 1]], true, [4.3, 21]],
+    ["drama", "Kaiserreich FFA #48", "TommyKay's HOI4", "Sat 2 Nov, 19:00", "Kaiserreich", [["here", 19], ["no", 2], ["told", 1]], [["c", 3], ["m", 2]], true, [4.8, 15]],
+    ["tank", "Historical #77, Vanilla 1936", "Baltic HOI4 League", "Fri 1 Nov, 20:00", "Vanilla", [["here", 14], ["no", 4]], [["w", 2], ["d", 1]], false, [2.9, 11]],
+    ["drama", "Roleplay #86, Road to 56", "TommyKay's HOI4", "Thu 31 Oct, 18:00", "Road to 56", [["here", 30], ["told", 1], ["late", 2]], [["c", 9], ["m", 5]], true, [4.1, 24]],
+    ["tank", "Historical #76, Vanilla 1936", "Baltic HOI4 League", "Tue 29 Oct, 20:00", "Vanilla", [["here", 16]], [["m", 1]], false, [3.6, 9]],
+    ["drama", "Kaiserreich FFA #47", "TommyKay's HOI4", "Mon 28 Oct, 19:00", "Kaiserreich", null, null, false, null],
+  ];
+  function list() {
+    const row = ([icon, name, server, when, mode, pres, rew, rp, rating]) => `<div class="grow2"><span class="mi cut">${icon === "tank" ? tank() : `<i data-lucide="${icon}"></i>`}</span><div style="min-width:0"><b>${name}</b><small>${server}, ${when}</small></div>
+      <span class="hide small">${mode}${rp ? `<br><span class="rpb"><i data-lucide="drama" style="width:12px;height:12px"></i>Roleplay graded</span>` : ""}</span>
+      <span class="rt">${rating ? `${stars(rating[0], 13)}<b>${rating[0].toFixed(1)}</b><small>${rating[1]}</small>` : ""}</span>
+      ${pres ? counts(pres) : '<span class="tag dot t" style="--c:var(--red);justify-self:start">Cancelled</span>'}
+      <span class="hide">${rew ? counts(rew) : ""}</span></div>`;
+    const tabs = `<div class="tabs"><button class="tab on"><i data-lucide="archive"></i>All games<span class="c">1,284</span></button><button class="tab"><i data-lucide="drama"></i>Roleplay<span class="c">902</span></button><button class="tab">${tank(16)}Historical<span class="c">382</span></button></div>`;
+    const filters = `<div class="row" style="flex-wrap:wrap;margin-bottom:12px"><div class="input cut" style="flex:1;min-width:220px"><i data-lucide="search"></i>Search a player, nation or game</div>${phone() ? "" : '<div class="chips"><span class="chip cut on">All</span><span class="chip cut">Road to 56</span><span class="chip cut">Kaiserreich</span><span class="chip cut"><i data-lucide="drama" style="width:14px;height:14px;color:var(--purple)"></i>Roleplay graded</span></div><div class="input cut" style="width:150px;color:var(--ink-300)">Newest first<i data-lucide="chevron-down" class="chev"></i></div><div class="input cut" style="width:150px;color:var(--ink-300)">All servers<i data-lucide="chevron-down" class="chev"></i></div>'}</div>`;
+    const head = phone() ? "" : `<div class="grow2 hd"><span></span><span>Game</span><span>Mode</span><span>Rating</span><span>Players</span><span>Given out</span></div>`;
+    return page("Archive", "Every finished game, on every server", `<div class="wide"><div class="h"><i data-lucide="archive"></i><span class="title">Archive</span></div><p class="lead">Every finished game: who played which nation, who came, what they got, and how the players rated it.</p>${tabs}${filters}<div class="grows">${head}${GAMES.map(row).join("")}</div>
+      <div class="legend" style="margin-top:8px">${Object.entries(PRES).filter(([k]) => k !== "open").map(([, [n, c, t]]) => `<span>${ic(n, c)}${t}</span>`).join("")}${Object.values(MARK).map(([n, c, t]) => `<span>${ic(n, c)}${t}</span>`).join("")}</div></div>`);
+  }
+
+  const REG = [
+    ["Majors", [["Germany", ["#000", "#d00", "#fc0"], "Rommel_Fan", "here", "cc"], ["Soviet Union", ["#c00", "#c00", "#c00"], "Nikolai", "here", "cm"], ["United Kingdom", ["#012169", "#c8102e", "#fff"], "Churchill_RP", "here", "m"], ["France", ["#0055a4", "#fff", "#ef4135"], "DeGaulle", "no", "w"], ["Italy", ["#090", "#fff", "#c00"], "Duce_Real", "here", "c"], ["Japan", ["#fff", "#fff", "#fff"], "Tenno", "late", ""], ["United States", ["#3c3b6e", "#fff", "#b22234"], "Liberty", "here", ""]]],
+    ["Europe", [["Poland", ["#fff", "#fff", "#dc143c"], "Pilsudski", "here", "c"], ["Spain", ["#c60b1e", "#ffc400", "#c60b1e"], "Franco_Main", "told", ""], ["Hungary", ["#cd2a3e", "#fff", "#436f4d"], "Horthy", "no", "wb"], ["Romania", ["#002b7f", "#fcd116", "#ce1126"], "Carol", "here", ""], ["Yugoslavia", ["#0c4076", "#fff", "#c6363c"], null, "open", ""], ["Sweden", ["#006aa7", "#fecc00", "#006aa7"], "Hansson", "here", "m"]]],
+    ["Asia", [["China", ["#fe0000", "#fe0000", "#fe0000"], "Chiang", "here", "c"], ["Manchukuo", ["#fff200", "#c00", "#000"], "Puyi", "here", ""], ["Siam", ["#a51931", "#fff", "#2d2a4a"], null, "open", ""], ["Mongolia", ["#c4272f", "#015197", "#c4272f"], "Choibalsan", "here", "d"]]],
+  ];
+  function game() {
+    const box = (v, of, k, lead) => { const [n, c, t] = PRES[k] || MARK[k]; return `<div class="cbox"><strong style="${lead ? "color:var(--brand-400)" : ""}">${v}${of ? `<small>/${of}</small>` : ""}</strong><span>${ic(n, c)}${t}</span></div>`; };
+    const dist = [[5, 12], [4, 6], [3, 2], [2, 1], [1, 0]];
+    const rating = `<div class="rating cut"><div class="rbig"><strong>4.3</strong>${stars(4.3, 17)}<small>21 players rated</small></div><div class="dist">${dist.map(([n, c]) => `<div><span>${n}</span>${ic("star", "var(--gold)")}<i><b style="width:${(c / 21) * 100}%"></b></i><small>${c}</small></div>`).join("")}</div></div>`;
+    const rate = state.viewer === "player" ? `<div class="rate plate"><div style="min-width:0;flex:1"><b>You played this game. How was it?</b><span class="small">Rating is open until Monday 18:40. Your first rating gives 1 Merit. Nobody sees who gave what.</span></div><div class="sbtns">${[1, 2, 3, 4, 5].map((n) => `<button class="sbtn cut ${n === 4 && state.rated === "yes" ? "on" : ""}">${ic("star", "currentColor")}${n}</button>`).join("")}</div></div>` : "";
+    const h = `<div class="plate ghead"><div class="row" style="flex-wrap:wrap;gap:8px"><span class="tag t" style="--c:var(--purple)"><i data-lucide="drama"></i>Road to 56</span><span class="tag dot t" style="--c:var(--ink-400)">Ended</span><span class="small" style="margin-left:auto">Sunday 3 Nov, 18:00 to 22:40</span></div>
+      <div class="gtop"><div style="min-width:0"><div class="title" style="margin-top:10px">Roleplay #87, Road to 56</div><div class="small" style="margin-top:4px">TommyKay's HOI4 Community, hosted by TommyKay</div>
+      <div class="row" style="margin-top:12px;flex-wrap:wrap;gap:8px"><button class="btn btn-secondary btn-sm"><i data-lucide="drama"></i>Read the roleplay</button><button class="btn btn-quiet btn-sm"><i data-lucide="link"></i>Copy link</button></div></div>${rating}</div>
+      <div class="cboxes">${box(28, 32, "here", true)}${box(3, 0, "no")}${box(1, 0, "told")}${box(3, 0, "late")}${box(6, 0, "c")}${box(4, 0, "m")}${box(2, 0, "w")}${box(1, 0, "d")}${box(1, 0, "b")}</div></div>`;
+    const rowHtml = ([n, f, who, p, mk]) => `<div class="brow ${who ? "" : "open"}"><span class="flag" style="--f1:${f[0]};--f2:${f[1]};--f3:${f[2]}"></span><span class="nn">${n}</span>${who ? `<span class="ptag">${who}</span>` : '<span class="small muted">Nobody</span>'}<span class="pres" title="${PRES[p][2]}">${ic(PRES[p][0], PRES[p][1])}${phone() ? "" : `<span>${PRES[p][2]}</span>`}</span>${marks(mk)}</div>`;
+    const board = `<div class="board plate">${REG.map(([r, ns]) => `<h3 class="bh">${r}<span>${ns.filter((n) => n[2]).length} of ${ns.length} played</span></h3>${ns.map(rowHtml).join("")}`).join("")}</div>`;
+    return page("Archive", "Every finished game", `<div class="wide" style="display:grid;gap:10px;max-width:980px"><button class="btn btn-quiet btn-sm" style="justify-self:start"><i data-lucide="arrow-left"></i>All games</button>${h}${rate}<div class="input cut"><i data-lucide="search"></i>Find a nation or player</div>${board}</div>`);
+  }
+
+  const DSTAT = {
+    starting: ["Starting", "#e8c547", "in 5 minutes", "32 reserved", null],
+    live: ["On-going", "#5aa7e6", "1 hour ago", "24 of 32 in game", null],
+    open: ["Ended", "#6a726c", "5 hours ago", "28 of 32 played", "★★★★☆ **4.3** from 14 players<br><span class=\"dsub\">Rating closes <span class=\"dts\">tomorrow at 22:40</span></span>"],
+    closed: ["Ended", "#6a726c", "2 days ago", "28 of 32 played", "★★★★☆ **4.3** from 21 players"],
+  };
+  const embedHead = (time) => `<div class="ea">🎭 Roleplay, Road to 56</div><div class="et"><u>Roleplay #87, Road to 56</u></div>`;
+  function discord() {
+    const [status, color, rel, players, rating] = DSTAT[state.status];
+    const field = (k, v) => `<div><b>${k}</b>${v}</div>`;
+    const fields = [field("Time", `<span class="dts">Sunday 3 November 2026 18:00</span> <span style="color:#949ba4">(${rel})</span>`), field("Host", '<span class="dm">@TommyKay</span>'), field("Status", status), field("Players", players)];
+    if (rating) fields.push(field("Rating", rating.replace(/\*\*(.+?)\*\*/g, "<b class='in'>$1</b>")));
+    return `<div class="dc scroll"><div class="dmsg"><span class="dav">GM</span><div style="min-width:0;flex:1"><div><span class="dname">GameMaster</span><span class="dbot">APP</span><span class="dtime">Today at 18:02</span></div>
+      <div class="embed" style="--c:${color}">${embedHead()}<div class="ef ef2">${fields.join("")}</div></div>
+      <p style="font-size:12.5px;color:#949ba4;margin:10px 0 0;max-width:520px">${{ starting: "Posted the moment the host presses Start game.", live: "Edited as players are counted. Only the count is shown.", open: "The Rating line appears when the game ends and updates as players rate in their DMs, at most once a minute.", closed: "Rating closes 24 hours after the game ends. After this last edit the post never changes again." }[state.status]} The title opens the game in the archive.</p></div></div></div>`;
+  }
+
+  function dm() {
+    const rated = state.rated === "yes";
+    const btn = (n) => `<span class="dsb ${rated && n === 4 ? "on" : ""}">⭐ ${n}</span>`;
+    return `<div class="dc scroll"><div class="dmhead"><span class="dav" style="width:24px;height:24px;font-size:11px">GM</span><b>GameMaster</b><span class="dbot">APP</span></div><div class="dmsg"><span class="dav">GM</span><div style="min-width:0;flex:1"><div><span class="dname">GameMaster</span><span class="dbot">APP</span><span class="dtime">Today at 22:41</span></div>
+      <div class="embed" style="--c:#3fbf5a"><div class="et">Roleplay #87, Road to 56 has ended</div><div class="ed">Thanks for playing! Hosts review the game for commends and warnings.</div>
+      <div class="ed" style="margin-top:10px">${rated ? "✅ You gave it <b class='in'>4 stars</b>. 🎖️ +1 Merit.<br><span class=\"dsub\">You can change it until <span class=\"dts\">tomorrow at 22:40</span>.</span>" : "<b class='in'>How was it?</b> Rate the game from 1 to 5 stars. Your first rating gives 🎖️ 1 Merit. Nobody sees who gave what.<br><span class=\"dsub\">Rating closes <span class=\"dts\">tomorrow at 22:40</span>.</span>"}</div></div>
+      <div class="dbtns">${[1, 2, 3, 4, 5].map(btn).join("")}</div><div class="dbtns"><span class="dsb link">Open in the archive ↗</span></div>
+      <p style="font-size:12.5px;color:#949ba4;margin:12px 0 0;max-width:520px">The DM every present player already gets at the end, now with the rating in it. A click edits this same DM (switch "Rated" to see it); no extra messages, and these edits don't use the bot's rate limit.</p></div></div></div>`;
+  }
+
+  function render() {
+    document.querySelectorAll(".seg > div").forEach((seg) => seg.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(state[seg.dataset.k] === b.dataset.v))));
+    document.getElementById("s-status").classList.toggle("off", state.view !== "discord");
+    document.getElementById("s-viewer").classList.toggle("off", state.view !== "game");
+    document.getElementById("s-rated").classList.toggle("off", !(state.view === "dm" || (state.view === "game" && state.viewer === "player")));
+    const html = { list, game, discord, dm }[state.view]();
+    document.querySelector(state.size === "desk" ? "[data-screen]" : "[data-screen-phone]").innerHTML = `<div class="${state.size}" style="height:100%;display:flex;flex-direction:column">${html}</div>`;
+    document.getElementById("desk").hidden = state.size !== "desk";
+    document.getElementById("phone").hidden = state.size !== "phone";
+    lucide.createIcons();
+    fit();
+  }
+  function fit() {
+    const stage = document.getElementById(state.size);
+    const w = state.size === "desk" ? 1440 : 390, h = state.size === "desk" ? 900 : 844;
+    const vp = document.querySelector(".viewport");
+    const s = Math.min((vp.clientWidth - 32) / w, (vp.clientHeight - 32) / h, state.size === "desk" ? 1 : 1.2);
+    stage.style.transform = `scale(${s})`;
+    const frame = document.getElementById("frame"); frame.style.width = `${w * s}px`; frame.style.height = `${h * s}px`;
+  }
+  document.querySelector(".switches").addEventListener("click", (e) => { const b = e.target.closest(".seg button"); if (!b) return; state[b.parentElement.dataset.k] = b.dataset.v; render(); });
+  addEventListener("resize", fit);
+  render();
+</script>
+</body>
+</html>
