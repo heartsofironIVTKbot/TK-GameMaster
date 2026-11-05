@@ -2261,7 +2261,7 @@ async def _tell_ironlegion_outage(guild_id: int) -> None:
     if now - _ironlegion_outage_told.get(guild_id, 0.0) < _IRONLEGION_OUTAGE_NOTICE_SECONDS:
         return
     _ironlegion_outage_told[guild_id] = now
-    channel = bot.get_channel(G.HOST_MANAGEMENT_CHANNEL_ID) or bot.get_channel(G.HOST_LOG_CHANNEL_ID)
+    channel = _staff_notice_channel()
     if channel is None:
         return
     try:
@@ -6702,6 +6702,8 @@ async def send_host_log_embed(embed: discord.Embed, content: str = None, *, audi
     caller writes its own audit-trail row."""
     if audit:
         _audit_mirror_embed(embed, content)
+    if not _audit_discord_mirror_on():
+        return None
     if G.HOST_LOG_WEBHOOK_URL:
         payload: dict = {"embeds": [embed.to_dict()]}
         if content:
@@ -6722,9 +6724,43 @@ async def send_host_log_embed(embed: discord.Embed, content: str = None, *, audi
     return None
 
 
+def _audit_discord_mirror_on() -> bool:
+    """The server copies its audit log to Discord (server settings → Features →
+    "Copy the audit log to Discord"). Off, everything is still on the website's
+    Audit log page: the audit trail rows are written either way."""
+    return bool(SERVER_FEATURES.get("audit_discord_mirror", False)) and bool(G.HOST_LOG_CHANNEL_ID or G.HOST_LOG_WEBHOOK_URL)
+
+
+def _audit_channel():
+    """The Audit log channel when the server copies its audit log there, else None."""
+    if not (_audit_discord_mirror_on() and G.HOST_LOG_CHANNEL_ID):
+        return None
+    return bot.get_channel(G.HOST_LOG_CHANNEL_ID)
+
+
+async def _audit_channel_fetch():
+    channel = _audit_channel()
+    if channel is None and _audit_discord_mirror_on() and G.HOST_LOG_CHANNEL_ID:
+        try:
+            channel = await bot.fetch_channel(G.HOST_LOG_CHANNEL_ID)
+        except Exception:
+            channel = None
+    return channel
+
+
+def _staff_notice_channel():
+    """Alerts and requests staff must answer (outages, ban alerts, a refused
+    channel, Trusted requests, appeals): Staff notices, else the Audit log
+    channel even when the copy is off. These aren't audit copies, and the
+    website alone would leave them unseen."""
+    return bot.get_channel(G.HOST_MANAGEMENT_CHANNEL_ID) or (bot.get_channel(G.HOST_LOG_CHANNEL_ID) if G.HOST_LOG_CHANNEL_ID else None)
+
+
 async def send_log_message(content: str):
-    """Plain-text host log via webhook or channel fallback."""
+    """Plain-text host log via webhook or channel fallback (only when the server copies its audit log to Discord)."""
     _audit_mirror_embed(None, content)
+    if not _audit_discord_mirror_on():
+        return
     if G.HOST_LOG_WEBHOOK_URL:
         if await _post_webhook({"content": content}):
             return
@@ -8681,7 +8717,7 @@ class ValorTrustedChoiceButton(discord.ui.DynamicItem[discord.ui.Button],
         if existing:
             return await _interaction_notice(interaction, f"⏳ You already asked for **{existing} Trusted** — the host team will get back to you.")
 
-        channel = bot.get_channel(G.HOST_TEAM_CHANNEL_ID)
+        channel = _staff_notice_channel()
         request = discord.Embed(
             title="🎖️ Hearts of Valor — Trusted request",
             description=f"<@{uid}> holds **Hearts of Valor** and asks for **{label} Trusted**.",
@@ -8833,7 +8869,7 @@ class ModerationAppealModal(discord.ui.Modal, title="Appeal"):
         embed.add_field(name="About", value=_trim_field(summary), inline=False)
         embed.add_field(name="Appeal", value=_trim_field(str(self.appeal.value)), inline=False)
         embed.set_footer(text="Answer the player via a ticket / DM. Change the record on the web Database page.")
-        channel = bot.get_channel(G.HOST_TEAM_CHANNEL_ID)
+        channel = _staff_notice_channel()
         try:
             await channel.send(embed=embed)
         except Exception as e:
@@ -10754,7 +10790,7 @@ async def _send_reservation_limit_warning(game: dict, thread, msg_count: int, pe
 
     channel = await _resolve_host_control_center(game, getattr(thread, "id", None))
     if not channel:
-        channel = bot.get_channel(G.HOST_LOG_CHANNEL_ID)
+        channel = _staff_notice_channel()
 
     if channel:
         try:
@@ -16522,8 +16558,12 @@ async def _live_post_blocked_notice(channel_id: int) -> None:
     if time.time() - _live_post_blocked_noticed.get(channel_id, 0) < 3600:
         return
     _live_post_blocked_noticed[channel_id] = time.time()
+    _audit_log("WARN", f"live posts refused in channel {channel_id}")
+    notice = _staff_notice_channel()
+    if notice is None:
+        return
     try:
-        await send_log_message(
+        await notice.send(
             f"⚠️ **Live game posts**: GameMaster can't post in <#{channel_id}> (missing permission). "
             "Give it Send Messages and Embed Links there; it tries again in 30 minutes."
         )
@@ -17567,8 +17607,7 @@ async def _finalize_attendance_results_locked(thread_key: str, guild, delay, sam
                 absent_details = absent_details[:1020] + "..."
             embed.add_field(name="Detailed Absentee Report", value=absent_details, inline=False)
 
-        host_log_id = G.HOST_LOG_CHANNEL_ID
-        host_log = bot.get_channel(host_log_id)
+        host_log = _audit_channel()
         if host_log:
             await host_log.send(embed=embed)
 
@@ -19625,12 +19664,10 @@ async def _forward_crash_report_to_developer(user: discord.User, sess: dict) -> 
         else:
             for f in files:
                 f.fp.seek(0)
-            channel = bot.get_channel(G.HOST_LOG_CHANNEL_ID)
-            if channel is None:
-                channel = await bot.fetch_channel(G.HOST_LOG_CHANNEL_ID)
+            channel = _staff_notice_channel() or await _audit_channel_fetch()
             if channel:
                 await channel.send(content=header, embed=link_embed, files=files)
-                print(f"[CrashReport] Delivered via host-log fallback {G.HOST_LOG_CHANNEL_ID}")
+                print(f"[CrashReport] Delivered via staff-notice fallback {channel.id}")
                 return True
         await send_host_log_embed(link_embed, content=f"{header} (`{user.id}`)")
         print("[CrashReport] Delivered via host-log webhook fallback")
@@ -21635,7 +21672,7 @@ class MasterHostPanel(discord.ui.View):
                 target_channel, game, chat_log_text, self.host_id)
 
             if hasattr(target_channel, "name") and "monday" in target_channel.name.lower():
-                if host_log_channel := interaction.guild.get_channel(G.HOST_LOG_CHANNEL_ID):
+                if host_log_channel := _audit_channel():
                     log_embed = discord.Embed(
                         title="📊 Monday Session Report",
                         description=ai_reply[:4000],
@@ -22923,9 +22960,7 @@ async def _game_cancel_core(guild, actor, thread_id_str: str, *, reason: str, pr
 
     # --- HOST LOG (best-effort) ---
     try:
-        log_chan = bot.get_channel(G.HOST_LOG_CHANNEL_ID)
-        if log_chan is None:
-            log_chan = await bot.fetch_channel(G.HOST_LOG_CHANNEL_ID)
+        log_chan = await _audit_channel_fetch()
         if log_chan:
             log_embed = discord.Embed(title="🗑️ Game Cancelled", color=EmbedColor.DANGER)
             log_embed.add_field(name="Thread", value=str(game.get("thread_name") or thread_id_str), inline=False)
@@ -23588,7 +23623,7 @@ def _host_message_text(payload: dict) -> tuple[str | None, str | None]:
 
 async def _post_host_log_embed(embed: discord.Embed, label: str) -> None:
     _audit_mirror_embed(embed)
-    channel = bot.get_channel(G.HOST_LOG_CHANNEL_ID)
+    channel = _audit_channel()
     if channel is None:
         return
     try:
@@ -24022,7 +24057,7 @@ async def _run_web_game_log_analysis(request_id: str, actor, key: str, game: dic
                 posted, notified = await _archive_game_chat_log(target, key, files)
                 notes.append("Archived the log in the public log channel." if posted else "Couldn't post to the public log archive.")
                 notes.append(f"Told {notified} player(s) where to read the roleplay and their result.")
-            host_log = bot.get_channel(G.HOST_LOG_CHANNEL_ID)
+            host_log = _audit_channel()
             if host_log is not None:
                 try:
                     await _post_attendance_log_mismatch_review(host_log, target, text, int(target.get("host_id") or actor.id))
@@ -30163,8 +30198,6 @@ async def _process_web_day_lock(req: dict, lock: bool) -> tuple[bool, dict | Non
 # Roles and channels come from each server's settings (Tickets step).
 # =============================================================================
 TICKET_CATEGORY_ID = 0             # Server settings → Tickets
-TICKET_LOG_CHANNEL_ID = 0          # closed-ticket transcripts
-TICKET_PRIVATE_LOG_CHANNEL_ID = 0  # host applications / host reports
 TICKET_SUPPORT_ROLES: list[int] = []
 DEVELOPER_ROLES: list[int] = []
 TICKET_REMIND_AFTER_SEC = 24 * 3600
@@ -30574,8 +30607,8 @@ async def _ticket_save_record(channel, messages: list, closer, status: str, meta
 
 
 async def _ticket_transcript(channel, closer, status: str, meta: dict | None, why: str | None = None) -> None:
-    """HTML transcript to the ticket log (private log for host applications /
-    reports) and to the player by DM; the ticket is also saved for the website."""
+    """The ticket is saved for the website (/tickets) and the player gets the
+    HTML transcript by DM. (Transcript channels in Discord were retired.)"""
     closer_name = getattr(closer, "display_name", None) or str(closer)
     try:
         messages = [message async for message in channel.history(limit=None, oldest_first=True)]
@@ -30610,22 +30643,6 @@ async def _ticket_transcript(channel, closer, status: str, meta: dict | None, wh
         )
     parts.append("</body></html>")
     data = "".join(parts).encode("utf-8")
-    private = bool((TICKET_KINDS.get(kind or "") or {}).get("private"))
-    log_id = (G.TICKET_PRIVATE_LOG_CHANNEL_ID if private else G.TICKET_LOG_CHANNEL_ID) or G.TICKET_LOG_CHANNEL_ID
-    log_channel = channel.guild.get_channel(log_id) if log_id else None
-    if log_channel is not None:
-        embed = discord.Embed(title="Ticket closed", color=EmbedColor.DANGER if status == "Unresolved" else EmbedColor.SUCCESS)
-        embed.add_field(name="Ticket", value=channel.name)
-        embed.add_field(name="Type", value=_ticket_kind_label(kind))
-        embed.add_field(name="Closed by", value=closer_name)
-        if meta:
-            embed.add_field(name="Opened by", value=f"<@{meta['opener']}>")
-        if why:
-            embed.add_field(name="Why", value=why[:1024], inline=False)
-        try:
-            await log_channel.send(embed=embed, file=discord.File(io.BytesIO(data), filename=f"{channel.name}.html"))
-        except discord.HTTPException as e:
-            print(f"[WARN] ticket transcript post failed: {e}")
     if meta:
         opener = await _get_member_safe(channel.guild, meta["opener"])
         if opener is not None:
@@ -31000,8 +31017,6 @@ async def spawn_ticket_panel(interaction: discord.Interaction):
     missing = []
     if not G.TICKET_CATEGORY_ID:
         missing.append("a ticket category")
-    if not G.TICKET_LOG_CHANNEL_ID:
-        missing.append("a ticket transcript channel")
     if not TICKET_SUPPORT_ROLES:
         missing.append("a Ticket Support role")
     note = f"\n⚠️ Still to set on the website (server settings → Tickets): {', '.join(missing)}." if missing else ""
@@ -33176,9 +33191,9 @@ async def _self_restart(reason: str):
     )
     print(banner, flush=True)
 
-    # Best-effort alert to the host log before we die (never let it block the exit).
+    # Best-effort alert to staff before we die (never let it block the exit).
     try:
-        channel = bot.get_channel(G.HOST_LOG_CHANNEL_ID)
+        channel = _staff_notice_channel()
         if channel:
             await asyncio.wait_for(
                 channel.send(
@@ -33286,7 +33301,7 @@ MODE_CHANNEL_FIELDS = {
 CASINO_GUILD_IDS = {341585283881631744, 1434977277115891725}
 SETTINGS_CHANNEL_KEYS = (
     "host_log", "staff_notices", "schedule_panel", "host_chatlogs_forum",
-    "tickets", "crash_reports", "ticket_category", "ticket_log", "ticket_private_log",
+    "tickets", "crash_reports", "ticket_category",
 )
 # Host ranks a server can switch off (Full host is always on).
 OPTIONAL_HOST_RANKS = ("Assistant", "Senior")
@@ -33316,7 +33331,7 @@ _PER_GUILD_SCALARS = (
     "HOST_FORUM_CHANNEL_ID", "TICKET_CHANNEL_ID", "CRASH_REPORT_CHANNEL_ID",
     "LOBBY_VC_ID", "TRUSTED_ROLE", "GAME_BANNED_ROLE", "MIN_TRUSTED_COMMENDS", "WARNINGS_FOR_BAN",
     "HOST_TERMINATE_AT", "MERIT_VALOR_THRESHOLD", "MERIT_VALOR_GAMES_REQUIRED", "HOSTING_SUCCESS_MIN_AVG",
-    "HOST_LOG_WEBHOOK_URL", "TICKET_CATEGORY_ID", "TICKET_LOG_CHANNEL_ID", "TICKET_PRIVATE_LOG_CHANNEL_ID",
+    "HOST_LOG_WEBHOOK_URL", "TICKET_CATEGORY_ID",
 )
 # Slash commands only the home server gets.
 HOME_ONLY_COMMANDS: set[str] = set()
@@ -33324,6 +33339,9 @@ HOME_ONLY_COMMANDS: set[str] = set()
 SERVER_FEATURES = {
     "valor_merit": True, "daily_role_check": True, "vip_auto_carry_over": True, "cross_server_ban_alerts": True,
     "ticket_inactivity_close": True, "ironlegion": False, "share_calendar": False, "booking_limits": False,
+    # A copy of the audit log in the Audit log channel (the website's Audit log page has everything).
+    # The home server keeps its copy; new servers start without one.
+    "audit_discord_mirror": True,
 }
 # The host log webhook (HOST_LOG_WEBHOOK_URL) posts to one fixed channel of the
 # home server — it's only used once the home server has a host log channel.
@@ -33482,6 +33500,7 @@ def _default_guild_settings(name: str = "") -> dict:
         "features": {
             "valor_merit": True, "daily_role_check": True, "vip_auto_carry_over": True,
             "cross_server_ban_alerts": True, "ticket_inactivity_close": True, "ironlegion": False, "share_calendar": False, "booking_limits": False,
+            "audit_discord_mirror": False,
         },
         "addons": {"casino_panel_channel": None},
     }
@@ -33522,8 +33541,7 @@ def _settings_from_constants(name: str = "") -> dict:
             "schedule_panel": _sid(sc["SCHEDULE_CHANNEL_ID"]),
             "host_chatlogs_forum": _sid(sc["HOST_FORUM_CHANNEL_ID"]), "tickets": _sid(sc["TICKET_CHANNEL_ID"]),
             "crash_reports": _sid(sc["CRASH_REPORT_CHANNEL_ID"]),
-            "ticket_category": _sid(sc["TICKET_CATEGORY_ID"]), "ticket_log": _sid(sc["TICKET_LOG_CHANNEL_ID"]),
-            "ticket_private_log": _sid(sc["TICKET_PRIVATE_LOG_CHANNEL_ID"]),
+            "ticket_category": _sid(sc["TICKET_CATEGORY_ID"]),
         }
         s["lobby_voices"] = _sids(LOBBY_VC_IDS)
         s["voice"] = {
@@ -33633,6 +33651,9 @@ def _normalize_guild_settings(raw, name: str = "") -> dict:
     for key in s["features"]:
         if key in features:
             s["features"][key] = bool(features[key])
+    # Saved before the switch existed: a server with an audit channel keeps its copy.
+    if "audit_discord_mirror" not in features:
+        s["features"]["audit_discord_mirror"] = bool(s["channels"].get("host_log"))
     addons = section("addons")
     s["addons"] = {key: _sid(addons.get(key)) for key in s["addons"]}
     return s
@@ -33725,6 +33746,7 @@ def _new_runtime(gid: int) -> GuildRuntime:
     rt.dicts["SERVER_FEATURES"] = {
         "valor_merit": True, "daily_role_check": True, "vip_auto_carry_over": True, "cross_server_ban_alerts": True,
         "ticket_inactivity_close": True, "ironlegion": False, "share_calendar": False, "booking_limits": False,
+        "audit_discord_mirror": False,
     }
     for name in _PER_GUILD_LISTS:
         rt.lists[name] = []
@@ -33816,8 +33838,6 @@ def _apply_settings(rt: GuildRuntime, settings: dict) -> None:
     lists["LOBBY_VC_IDS"][:] = [int(cid) for cid in s["lobby_voices"]]
     sc["LOBBY_VC_ID"] = lists["LOBBY_VC_IDS"][0] if lists["LOBBY_VC_IDS"] else 0
     sc["TICKET_CATEGORY_ID"] = _iid(ch["ticket_category"])
-    sc["TICKET_LOG_CHANNEL_ID"] = _iid(ch["ticket_log"])
-    sc["TICKET_PRIVATE_LOG_CHANNEL_ID"] = _iid(ch["ticket_private_log"])
     for b in SETTINGS_BRANCHES:
         d["GAME_VOICE_ANCHORS"][b] = (_iid(s["voice"][b]["after_category"]), _iid(s["voice"][b]["before_category"]))
     if rt.gid == GUILD_ID and rt.gid in CASINO_GUILD_IDS:
@@ -34364,7 +34384,7 @@ async def _guild_switched_on(guild) -> None:
         print(f"⚠️ Command sync for {guild.id} failed: {e}")
         count = 0
     with guild_scope(guild.id):
-        channel = bot.get_channel(G.HOST_LOG_CHANNEL_ID)
+        channel = _staff_notice_channel()
         if channel is not None:
             embed = discord.Embed(
                 title="✅ GameMaster is on",
@@ -34622,7 +34642,7 @@ async def _alert_cross_server_bans(member) -> None:
     bans = await _run_mysql_io(_cross_server_bans_mysql, member.id, cur_gid(), label="cross-server ban check")
     if not bans:
         return
-    channel = bot.get_channel(G.HOST_MANAGEMENT_CHANNEL_ID) or bot.get_channel(G.HOST_LOG_CHANNEL_ID)
+    channel = _staff_notice_channel()
     if channel is None:
         return
     lines = []
@@ -34773,9 +34793,12 @@ async def _process_web_server_setup(req: dict):
             done = "Sent the setup welcome again (to the owner's DMs, else the system channel)"
         elif op == "test_post":
             with guild_scope(guild.id):
-                channel = bot.get_channel(G.HOST_LOG_CHANNEL_ID)
+                mirror_on = _audit_discord_mirror_on()
+                channel = _audit_channel()
+            if not mirror_on:
+                return False, None, "❌ The audit log isn't copied to Discord. Switch on \"Copy the audit log to Discord\" in Features first."
             if channel is None or getattr(channel, "guild", None) != guild:
-                return False, None, "❌ No host log channel is set — pick one in Channels."
+                return False, None, "❌ No audit log channel is set. Pick one in Channels."
             try:
                 await channel.send(embed=discord.Embed(
                     title="🧪 Test message",
