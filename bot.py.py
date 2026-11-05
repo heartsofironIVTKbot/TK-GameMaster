@@ -2176,16 +2176,19 @@ def _has_vip_role(member) -> bool:
 # IRONLEGION STEAM VERIFICATION (optional, per server or per game)
 # --------------------------------------------------------------------------
 # A server (Features → "Require IronLegion") or one game can require players
-# to be authenticated by IronLegion before they reserve. Authenticated = they hold the
-# authenticated role IronLegion gives on that server, so all of IronLegion's own
-# rules count without GameMaster knowing them. GameMaster reads only which
-# role and which authentication channel that is, from IronLegion's read-only view
-# `gamemaster_servers` (settings IRONLEGION_DB_*; optional). Without that
-# connection, or before IronLegion is set up on the server, nothing is locked.
-# If IronLegion's database can't be reached, the last row read is used and
-# players can still reserve; staff are told (at most once an hour).
+# to be authenticated by IronLegion before they reserve. It applies only in
+# servers IronLegion is in, and there IronLegion has the final say: GameMaster
+# reads IronLegion's own yes / no for the server and member from its database
+# (read-only views `gamemaster_servers` and `gamemaster_members`, settings
+# IRONLEGION_DB_*), never a Discord role, so a role handed out by hand counts
+# for nothing. No row = not authenticated. Without the connection, or while
+# IronLegion isn't in the server, nothing is locked. Only hosts and staff skip
+# it (not VIPs). If IronLegion's database can't be reached, the last answer is
+# used, else players can reserve; staff are told (at most once an hour).
 # ==========================================================================
 _IRONLEGION_TTL_SECONDS = 300.0
+_IRONLEGION_ANSWER_TTL_SECONDS = 60.0
+_ironlegion_answers: dict[tuple[int, int], dict] = {}  # (guild, member) -> {"ok": bool, "ts": float}
 _IRONLEGION_OUTAGE_NOTICE_SECONDS = 3600.0
 _ironlegion_rows: dict[int, dict] = {}        # guild id -> {"row": dict | None, "ts": float}
 _ironlegion_outage_told: dict[int, float] = {}
@@ -2224,6 +2227,58 @@ def _ironlegion_fetch_sync(config: dict, guild_id: int) -> Optional[dict]:
         conn.close()
 
 
+def _ironlegion_answer_sync(config: dict, guild_id: int, discord_id: int) -> bool:
+    conn = mysql.connector.connect(**config)
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT authenticated FROM gamemaster_members WHERE guild_id = %s AND discord_id = %s",
+            (guild_id, discord_id),
+        )
+        row = cursor.fetchone()
+        cursor.close()
+        return bool(row and int(row[0]))
+    finally:
+        conn.close()
+
+
+def _ironlegion_answers_sync(config: dict, guild_id: int) -> set[int]:
+    """Every member IronLegion lets in on this server (the website's member directory)."""
+    conn = mysql.connector.connect(**config)
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT discord_id FROM gamemaster_members WHERE guild_id = %s AND authenticated = 1", (guild_id,))
+        found = {int(r[0]) for r in cursor.fetchall()}
+        cursor.close()
+        return found
+    finally:
+        conn.close()
+
+
+async def _ironlegion_member(guild_id: int, discord_id: int) -> bool:
+    """IronLegion's answer for a member on a server (cached a minute). Unreachable:
+    the last answer, else True (players can reserve; staff are told)."""
+    key = (int(guild_id), int(discord_id))
+    entry = _ironlegion_answers.get(key)
+    if entry and time.time() - entry["ts"] < _IRONLEGION_ANSWER_TTL_SECONDS:
+        return entry["ok"]
+    if _IRONLEGION_DB is None:
+        return True
+    try:
+        ok = await asyncio.to_thread(_ironlegion_answer_sync, _IRONLEGION_DB, key[0], key[1])
+    except Exception as e:
+        _audit_log("WARN", f"IronLegion database unreachable (guild={guild_id}): {type(e).__name__}")
+        await _tell_ironlegion_outage(key[0])
+        return entry["ok"] if entry else True
+    _ironlegion_answers[key] = {"ok": ok, "ts": time.time()}
+    return ok
+
+
+def _ironlegion_member_cached(guild_id: int, discord_id: int) -> Optional[bool]:
+    entry = _ironlegion_answers.get((int(guild_id or 0), int(discord_id or 0)))
+    return entry["ok"] if entry else None
+
+
 async def _ironlegion_server(guild_id: int) -> Optional[dict]:
     """IronLegion's row for this server (cached), or None when there's none to use."""
     if _IRONLEGION_DB is None or not guild_id:
@@ -2243,17 +2298,15 @@ async def _ironlegion_server(guild_id: int) -> Optional[dict]:
     return row
 
 
-def _ironlegion_role_of(row: Optional[dict]) -> int:
-    """The authenticated role to check, or 0 when IronLegion isn't usable on that server."""
-    if not row or not row.get("bot_present"):
-        return 0
-    return int(row.get("verified_role_id") or 0)
+def _ironlegion_on(row: Optional[dict]) -> bool:
+    """IronLegion is in that server, so its answer counts there."""
+    return bool(row and row.get("bot_present"))
 
 
-def _ironlegion_role_cached(guild_id: int) -> int:
+def _ironlegion_on_cached(guild_id: int) -> bool:
     """Same, from the cache only (for code that can't wait on the database)."""
     entry = _ironlegion_rows.get(int(guild_id or 0))
-    return _ironlegion_role_of(entry["row"]) if entry else 0
+    return _ironlegion_on(entry["row"]) if entry else False
 
 
 async def _tell_ironlegion_outage(guild_id: int) -> None:
@@ -2283,15 +2336,15 @@ def _ironlegion_required(thread_id=None) -> bool:
 
 
 def _ironlegion_bypass(member) -> bool:
-    """Admins, hosts, senior management and VIPs are never locked out."""
+    """Admins, hosts and senior management are never locked out (they run the
+    games). VIPs are: IronLegion has the final say in servers it's in (Niko, 5 Nov)."""
     try:
         if member.guild_permissions.administrator:
             return True
     except Exception:
         pass
     role_ids = {role.id for role in getattr(member, "roles", []) or []}
-    return bool(role_ids.intersection(ALLOWED_HOST_ROLES) or role_ids.intersection(SENIOR_MANAGEMENT_ROLES)
-                or role_ids.intersection(_vip_role_ids()))
+    return bool(role_ids.intersection(ALLOWED_HOST_ROLES) or role_ids.intersection(SENIOR_MANAGEMENT_ROLES))
 
 
 async def is_user_authenticated(
@@ -2300,18 +2353,17 @@ async def is_user_authenticated(
     """The IronLegion Steam lock: True when this member may reserve in this game.
 
     True when the game (or the server) doesn't require IronLegion, when the
-    member bypasses (admin, host, senior management, VIP), when IronLegion
-    isn't set up on the server, or when they hold IronLegion's authenticated role
-    there. Fails open for None / non-Member values (no roles to inspect).
+    member bypasses (admin, host, senior management), when IronLegion isn't in
+    the server, or when IronLegion's database says it lets them in there.
+    Fails open for None / non-Member values.
     """
     if not isinstance(member, discord.Member):
         return True
     if not _ironlegion_required(thread_id) or _ironlegion_bypass(member):
         return True
-    role_id = _ironlegion_role_of(await _ironlegion_server(member.guild.id))
-    if not role_id:
+    if not _ironlegion_on(await _ironlegion_server(member.guild.id)):
         return True
-    return role_id in {r.id for r in member.roles}
+    return await _ironlegion_member(member.guild.id, member.id)
 
 
 async def _ironlegion_announcement_line(game_switch) -> str:
@@ -2319,7 +2371,7 @@ async def _ironlegion_announcement_line(game_switch) -> str:
     Empty when it doesn't, or IronLegion isn't set up on the server (nobody is locked out)."""
     required = bool(game_switch) if isinstance(game_switch, bool) else bool(SERVER_FEATURES.get("ironlegion", False))
     row = await _ironlegion_server(cur_gid()) if required else None
-    if not _ironlegion_role_of(row):
+    if not _ironlegion_on(row):
         return ""
     channel_id = int(row.get("verify_channel_id") or 0)
     where = f" in <#{channel_id}>" if channel_id else ""
@@ -19762,7 +19814,8 @@ def _live_role_flags(member) -> dict:
     is_trusted = _has(live["trusted"])
     is_verified = _has(live["verified"])
     # IronLegion's verified role on this server (Steam verified)
-    is_authenticated = _has(_ironlegion_role_cached(getattr(getattr(member, "guild", None), "id", 0)))
+    guild_id = getattr(getattr(member, "guild", None), "id", 0)
+    is_authenticated = bool(_ironlegion_on_cached(guild_id) and _ironlegion_member_cached(guild_id, getattr(member, "id", 0)))
 
     if is_vip:
         role_tier = _ROLE_TIER_NUM["vip"]
@@ -23364,12 +23417,12 @@ async def _process_web_game_access(req: dict):
         server = "requires" if SERVER_FEATURES.get("ironlegion", False) else "doesn't require"
         title = "🛡️ IronLegion authentication"
         summary = (
-            "Players need IronLegion's authenticated role to reserve in this game." if required is True
+            "Players need IronLegion's authentication to reserve in this game." if required is True
             else "This game doesn't require IronLegion authentication." if required is False
             else f"This game follows the server's setting (the server {server} it)."
         )
-        if required is not False and not _ironlegion_role_of(await _ironlegion_server(cur_gid())):
-            notes.append("IronLegion isn't set up on this server (or GameMaster can't read it yet), so nobody is locked out for now.")
+        if required is not False and not _ironlegion_on(await _ironlegion_server(cur_gid())):
+            notes.append("IronLegion isn't in this server (or GameMaster can't read it yet), so nobody is locked out for now.")
     elif op in ("nation_lock", "nation_unlock"):
         nation = str(payload.get("nation") or "").strip()
         locked = [str(n) for n in (game.get("locked_regions") or [])]
@@ -31715,14 +31768,18 @@ WEB_ROSTER_MAX_COOP_SLOTS = 2
 WEB_REQUEST_CONFIRM = "confirm"
 
 
-def _member_role_verified(member) -> bool:
-    """Whether the member passes the IronLegion check when a game requires it
-    (from the cache; the website uses it for reservations on the map)."""
+def _member_role_verified(member, ironlegion_yes: Optional[set] = None) -> bool:
+    """Whether the member passes the IronLegion check when a game requires it, for
+    the website's member directory (its fallback when it can't read IronLegion's
+    database itself). `ironlegion_yes`: the members IronLegion lets in here."""
     if _ironlegion_bypass(member):
         return True
     guild = getattr(member, "guild", None)
-    role_id = _ironlegion_role_cached(getattr(guild, "id", 0))
-    return not role_id or role_id in {role.id for role in getattr(member, "roles", [])}
+    if not _ironlegion_on_cached(getattr(guild, "id", 0)):
+        return True
+    if ironlegion_yes is None:
+        return True  # IronLegion's database unreadable: players can reserve (staff are told)
+    return int(getattr(member, "id", 0)) in ironlegion_yes
 
 
 def _replace_web_member_directory_mysql(rows: list, role_rows: list) -> None:
@@ -31797,10 +31854,17 @@ async def _web_member_directory_loop_for_guild():
             return
         # fresh IronLegion role for `verified`, and for the website when it changed
         il_row = await _ironlegion_server(guild.id)
-        il_role = _ironlegion_role_of(il_row)
-        il_now = (il_role, int((il_row or {}).get("verify_channel_id") or 0) if il_role else 0)
+        il_on = _ironlegion_on(il_row)
+        il_now = (il_on, int((il_row or {}).get("verify_channel_id") or 0) if il_on else 0)
         if _ironlegion_published.get(guild.id) != il_now:
             await _publish_member_role_ids()
+        ironlegion_yes: Optional[set] = None
+        if il_on and _IRONLEGION_DB is not None:
+            try:
+                ironlegion_yes = await asyncio.to_thread(_ironlegion_answers_sync, _IRONLEGION_DB, guild.id)
+            except Exception as e:
+                _audit_log("WARN", f"IronLegion answers unreadable for the directory (guild={guild.id}): {type(e).__name__}")
+                ironlegion_yes = None
         rows = []
         for member in guild.members:
             if member.bot:
@@ -31820,7 +31884,7 @@ async def _web_member_directory_loop_for_guild():
                 (member.name or "")[:64],
                 (member.display_name or "")[:64],
                 avatar,
-                1 if _member_role_verified(member) else 0,
+                1 if _member_role_verified(member, ironlegion_yes) else 0,
                 1 if _member_has_vip(member) else 0,
                 json.dumps(role_ids),
                 1 if member.guild_permissions.administrator or member.id == guild.owner_id else 0,
@@ -34471,9 +34535,9 @@ async def _publish_member_role_ids() -> None:
     """The role ids the website reads (web_member_roles) for the current server."""
     guild = bot.get_guild(cur_gid())
     ironlegion = await _ironlegion_server(cur_gid())
-    il_role = _ironlegion_role_of(ironlegion)
-    il_channel = int((ironlegion or {}).get("verify_channel_id") or 0) if il_role else 0
-    _ironlegion_published[cur_gid()] = (il_role, il_channel)
+    il_on = _ironlegion_on(ironlegion)
+    il_channel = int((ironlegion or {}).get("verify_channel_id") or 0) if il_on else 0
+    _ironlegion_published[cur_gid()] = (il_on, il_channel)
 
     def publish(cfg):
         cfg[_WEB_MEMBER_ROLES_KEY] = {
@@ -34490,9 +34554,9 @@ async def _publish_member_role_ids() -> None:
                 for branch, cfg_b in HOST_BRANCHES.items()
             },
             "guild_name": guild.name if guild else None,
-            # IronLegion's verified role and verify channel here (the map's
-            # Verify prompt); None while IronLegion isn't set up.
-            "ironlegion_role": str(il_role) if il_role else None,
+            # IronLegion is in this server, and its Authenticate channel (the
+            # map's prompt). Its answer per member is read from its database.
+            "ironlegion_on": il_on,
             "ironlegion_verify_channel": str(il_channel) if il_channel else None,
         }
     try:
