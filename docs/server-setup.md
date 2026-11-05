@@ -132,11 +132,16 @@ make the role or channel with a sensible name.
 - **Commends for Trusted** (5) and **warnings for an automatic game ban** (3).
 
 ### 6. Channels
-- **Audit log** (required, was "Host log"): every host and staff action,
-  DMs, game messages, every slash command and every role change. The
-  separate audit log setting was merged into it.
-- **Staff notices**: VIP notices, streak alerts and cross-server ban
-  alerts.
+- **Audit log copy in Discord** (optional, was "Host log"): a copy of the
+  audit log, posted only when **Features → Copy the audit log to Discord** is
+  on. Every host and staff action is always on the website's Audit log page
+  (`audit_trail`). Servers that had the channel set before the switch keep
+  their copy; new servers start without one (2026-11-05, Stage 3 of
+  `docs/audit-and-tickets-on-web-plan.md`).
+- **Staff notices**: VIP notices, Trusted requests, appeals, streak alerts,
+  cross-server ban alerts and anything GameMaster needs staff to fix (an
+  IronLegion outage, a channel refusing the live game posts). Without it
+  these go to the audit log channel, copy switch or not.
 - **Host Panel channel** (was "Scheduling panel"): a host channel.
   GameMaster posts and pins the Host Panel there with buttons to the
   Calendar, Games, Attendance and Database pages. **Post / re-post the panel**

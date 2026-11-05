@@ -543,6 +543,10 @@ Where the viewer data comes from:
 
 ## 6. Stage 3 — Retire the Discord log channels (only after the owner says the pages work)
 
+Done 2026-11-05: `features.audit_discord_mirror` (bot `_audit_discord_mirror_on`,
+`_audit_channel`; alerts and requests use `_staff_notice_channel`), ticket
+transcript channels removed, the dashboard's test button checks the switch.
+
 1. Settings (`web/src/lib/serverSettingsTypes.ts` **and** the bot's
    `_default_guild_settings` / `_normalize_guild_settings` /
    `_apply_settings`):

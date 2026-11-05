@@ -67,8 +67,8 @@ messages don't count. It checks every 30 minutes.
   - **Ticket Support roles** — verification tickets only.
   - **Developer roles** — bug reports and suggestions.
   - **Ticket panel channel**, **Ticket category** (keep it hidden from
-    @everyone), **Ticket transcripts**, **Private ticket transcripts** (host
-    applications and host reports).
+    @everyone). The transcript channels were retired on 2026-11-05: every
+    closed ticket is on the website's Tickets page.
   - The inactivity switch.
 
 On TommyKay's server the bot fills the old ticket bot's category, transcript
@@ -76,8 +76,8 @@ channels and Helper role in once at startup (a history entry says so).
 
 ## Readable transcripts: turn on Message Content
 
-Transcripts are HTML files posted to the transcript channel and DMed to the
-player. To include **what people wrote**, Discord's Message Content intent
+Every closed ticket is saved for the website (/tickets), and the player gets
+the HTML transcript by DM with a link to it. To include **what people wrote**, Discord's Message Content intent
 must be on (the old ticket bot didn't have it either, so its transcripts had
 no text):
 

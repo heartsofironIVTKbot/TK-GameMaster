@@ -161,7 +161,7 @@ export default function TicketsApp() {
         )}
       </section>
       <p className="px-1 text-xs text-ink-500">
-        Only tickets closed since this page went live are here. Older ones are in the Discord transcript channels. If a
+        Only tickets closed since this page went live are here. Older ones are in the Discord transcript channels servers used before. If a
         message shows as &ldquo;text not available&rdquo;, the bot couldn&apos;t read it in Discord.
       </p>
     </TicketsShell>

@@ -166,8 +166,6 @@ function tommyKaySettings(): ServerSettings {
     tickets: "880000000000000019",
     crash_reports: "880000000000000041",
     ticket_category: "880000000000000024",
-    ticket_log: "880000000000000022",
-    ticket_private_log: "880000000000000023",
   };
   s.lobby_voices = ["880000000000000003"];
   s.voice = {

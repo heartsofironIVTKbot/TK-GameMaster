@@ -1,6 +1,6 @@
 "use client";
 
-import { AlarmClock, Briefcase, CalendarDays, Dices, FolderOpen, Medal, Scale, ShieldCheck, Siren, Sofa, Sparkles, Ticket, Tv, Volume2 } from "lucide-react";
+import { AlarmClock, Briefcase, CalendarDays, Dices, FolderOpen, Medal, Scale, ScrollText, ShieldCheck, Siren, Sofa, Sparkles, Ticket, Tv, Volume2 } from "lucide-react";
 import { useState } from "react";
 import {
   BRANCHES,
@@ -643,6 +643,14 @@ export function FeaturesStep({ ctx }: { ctx: StepContext }) {
           <RuleNumber ctx={ctx} rule="hosting_success_avg" />
         </div>
       </Card>
+      <Card icon={ScrollText} title="Audit log">
+        <Toggle
+          checked={draft.features.audit_discord_mirror}
+          onChange={(checked) => ctx.update((s) => void (s.features.audit_discord_mirror = checked))}
+          label="Copy the audit log to Discord"
+          description="Every host and staff action is always on the website's Audit log page. On: GameMaster also posts a copy in the audit log channel you pick in Channels. Alerts and requests for staff go to Staff notices either way."
+        />
+      </Card>
       <Card icon={CalendarDays} title="How far ahead hosts can schedule">
         <Toggle
           checked={draft.features.booking_limits}
@@ -663,7 +671,7 @@ export function FeaturesStep({ ctx }: { ctx: StepContext }) {
           checked={draft.features.cross_server_ban_alerts}
           onChange={(checked) => ctx.update((s) => void (s.features.cross_server_ban_alerts = checked))}
           label="Alerts for players banned on other servers"
-          description="When someone joins who is game-banned on another server that uses GameMaster, staff get a notice in the staff notices channel (or the audit log). Records stay separate: nothing changes here automatically."
+          description="When someone joins who is game-banned on another server that uses GameMaster, staff get a notice in the staff notices channel (or the audit log channel). Records stay separate: nothing changes here automatically."
         />
         <Toggle
           checked={draft.features.share_calendar}

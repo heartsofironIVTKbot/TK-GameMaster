@@ -74,12 +74,18 @@ export interface ModeSettings {
 export const CHANNEL_FIELDS = [
   {
     key: "host_log",
-    label: "Audit log",
+    label: "Audit log copy in Discord",
     kind: "text",
-    required: true,
-    hint: "Everything GameMaster does is logged here: every host and staff action, DMs, game messages, every slash command used and every role it changes. Staff only.",
+    required: false,
+    hint: "Optional: a copy of the audit log in a Discord channel, when \"Copy the audit log to Discord\" is on in Features. The website's Audit log page always has everything. Staff only.",
   },
-  { key: "staff_notices", label: "Staff notices", kind: "text", required: false, hint: "VIP notices with Remove / Approve buttons, hosting streak alerts, and ban alerts from other servers." },
+  {
+    key: "staff_notices",
+    label: "Staff notices",
+    kind: "text",
+    required: false,
+    hint: "VIP notices with Remove / Approve buttons, Trusted requests, appeals, hosting streak alerts, ban alerts from other servers and anything GameMaster needs staff to fix. Without it, these go to the audit log channel.",
+  },
   {
     key: "schedule_panel",
     label: "Host Panel channel",
@@ -92,7 +98,7 @@ export const CHANNEL_FIELDS = [
     label: "Host chat-logs forum",
     kind: "forum_or_text",
     required: false,
-    hint: "When a game ends, GameMaster opens a thread here for it named like 20.05.2026 · Roleplay · #1234: date, game mode and game number with a link to manage the game. Commends, warnings and anything else given for that game, and its feedback, are posted in that thread.",
+    hint: "When a game ends, GameMaster opens a thread here for it named like 20.05.2026 · Roleplay · #1234: date, game mode and game number with a link to manage the game. Commends, warnings and anything else given for that game are posted in that thread.",
   },
   { key: "crash_reports", label: "Crash reports", kind: "text", required: false, hint: "Crash reports players send on the website are delivered here." },
 ] as const;
@@ -101,8 +107,6 @@ export const CHANNEL_FIELDS = [
 export const TICKET_CHANNEL_FIELDS = [
   { key: "tickets", label: "Ticket panel channel", kind: "text", required: false, hint: "Where /spawn posts the ticket panel — the buttons players press to open a ticket. Players are also pointed here for appeals and commends." },
   { key: "ticket_category", label: "Ticket category", kind: "category", required: false, hint: "Every new ticket is a channel in this category. Keep the category hidden from @everyone; GameMaster gives each ticket's own people access." },
-  { key: "ticket_log", label: "Ticket transcripts", kind: "text", required: false, hint: "Closed tickets' transcripts: verification, appeals, player reports, commends, questions, bugs and suggestions. Staff only." },
-  { key: "ticket_private_log", label: "Private ticket transcripts", kind: "text", required: false, hint: "Host applications and host reports. Host Management only." },
 ] as const;
 
 const ALL_CHANNEL_FIELDS = [...CHANNEL_FIELDS, ...TICKET_CHANNEL_FIELDS] as const;
@@ -192,6 +196,8 @@ export interface ServerSettings {
     share_calendar: boolean;
     /** Hosts schedule only rules.book_days_<rank> days ahead, by their rank in the game's branch; staff any time (lib/bookingWindow.ts). */
     booking_limits: boolean;
+    /** Copy the audit log to channels.host_log in Discord (the website's Audit log page always has it all). */
+    audit_discord_mirror: boolean;
   };
   /** TommyKay only (CASINO_GUILD_IDS): the casino panel channel. */
   addons: { casino_panel_channel: string | null };
@@ -400,6 +406,7 @@ export function defaultSettings(name = ""): ServerSettings {
       ironlegion: false,
       share_calendar: false,
       booking_limits: false,
+      audit_discord_mirror: false,
     },
     addons: { casino_panel_channel: null },
   };
@@ -510,9 +517,11 @@ export function normalizeSettings(raw: unknown, name = ""): ServerSettings {
     s.rules[field.key] = Math.min(field.max, Math.max(field.min, rounded));
   }
   const features = obj(source.features);
-  for (const key of ["valor_merit", "daily_role_check", "vip_auto_carry_over", "cross_server_ban_alerts", "ticket_inactivity_close", "ironlegion", "share_calendar", "booking_limits"] as const) {
+  for (const key of ["valor_merit", "daily_role_check", "vip_auto_carry_over", "cross_server_ban_alerts", "ticket_inactivity_close", "ironlegion", "share_calendar", "booking_limits", "audit_discord_mirror"] as const) {
     if (key in features) s.features[key] = Boolean(features[key]);
   }
+  // Saved before the switch existed: a server with an audit channel keeps its copy (the bot does the same).
+  if (!("audit_discord_mirror" in features)) s.features.audit_discord_mirror = Boolean(s.channels.host_log);
   const addons = obj(source.addons);
   s.addons.casino_panel_channel = sid(addons.casino_panel_channel);
   return s;
@@ -688,7 +697,10 @@ export function settingsIssues(s: ServerSettings, snap: GuildSnapshot | null, bo
     }
   }
 
-  for (const field of CHANNEL_FIELDS) channel("channels", `channels.${field.key}`, s.channels[field.key], field.label.toLowerCase(), field.kind, field.required);
+  for (const field of CHANNEL_FIELDS) {
+    const required = field.key === "host_log" ? s.features.audit_discord_mirror : field.required;
+    channel("channels", `channels.${field.key}`, s.channels[field.key], field.label.toLowerCase(), field.kind, required);
+  }
   for (const field of TICKET_CHANNEL_FIELDS) channel("tickets", `channels.${field.key}`, s.channels[field.key], field.label.toLowerCase(), field.kind, field.required);
   if (s.channels.tickets && !s.channels.ticket_category) {
     add("warning", "tickets", "channels.ticket_category", "No ticket category — new tickets would be made at the top of the server. Pick a category staff can see.");

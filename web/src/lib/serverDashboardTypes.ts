@@ -12,7 +12,7 @@ export type FixOp = "refresh" | "sync_commands" | "resend_welcome" | "test_post"
 export const FIX_ACTIONS: readonly { op: FixOp; label: string; icon: string; hint: string }[] = [
   { op: "refresh", label: "Re-check now", icon: "refresh", hint: "GameMaster re-reads this server's roles, channels and its own permissions." },
   { op: "sync_commands", label: "Re-sync commands", icon: "commands", hint: "Re-registers GameMaster's slash commands here (when they're missing or outdated)." },
-  { op: "test_post", label: "Test the audit log", icon: "test", hint: "Posts a short test message in the audit log channel." },
+  { op: "test_post", label: "Test the audit log copy", icon: "test", hint: "Posts a short test message in the audit log channel (when the audit log is copied to Discord)." },
   {
     op: "schedule_panel",
     label: "Re-post Host Panel",
