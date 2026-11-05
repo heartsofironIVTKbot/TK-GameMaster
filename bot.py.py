@@ -2,6 +2,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands, tasks
 from discord.ui import View, Select, Button, UserSelect, Modal, TextInput
+import hashlib
 import json
 import logging
 import os
@@ -5446,6 +5447,7 @@ _STICKY_GAME_FIELDS = (
     "archive_message_id",
     "feedback_merit_awarded",
     "game_action_counts",
+    "archive_layout",
 )
 
 
@@ -5461,7 +5463,48 @@ def _preserve_sticky_game_fields(incoming: dict, existing: dict | None) -> dict:
     _merge_game_moderation_fields(incoming, existing)
     _merge_public_archive_ids(incoming, existing)
     _merge_feedback_refs(incoming, existing)
+    _merge_live_post(incoming, existing)
+    _merge_feedback_ratings(incoming, existing)
     return incoming
+
+
+def _merge_live_post(incoming: dict, existing: dict) -> None:
+    """A stale save must not lose the live post's message (a second post) or un-finish it."""
+    old = existing.get("live_post")
+    if not isinstance(old, dict):
+        return
+    new = incoming.get("live_post")
+    if not isinstance(new, dict):
+        incoming["live_post"] = dict(old)
+        return
+    merged = dict(new)
+    for field in ("message_id", "channel_id"):
+        if not merged.get(field) and old.get(field):
+            merged[field] = old[field]
+    if old.get("final"):
+        merged["final"] = True
+    if int(old.get("sent_at") or 0) > int(new.get("sent_at") or 0):
+        merged["hash"] = old.get("hash")
+        merged["sent_at"] = old.get("sent_at")
+    incoming["live_post"] = merged
+
+
+def _merge_feedback_ratings(incoming: dict, existing: dict) -> None:
+    """Keep every rating: per player, the one given last wins (feedback_rated_at)."""
+    old = existing.get("feedback_ratings")
+    if not isinstance(old, dict) or not old:
+        return
+    new = dict(incoming.get("feedback_ratings") or {})
+    old_at = existing.get("feedback_rated_at") or {}
+    new_at = dict(incoming.get("feedback_rated_at") or {})
+    for uid, stars in old.items():
+        if uid not in new or int(old_at.get(uid) or 0) > int(new_at.get(uid) or 0):
+            new[uid] = stars
+            if uid in old_at:
+                new_at[uid] = old_at[uid]
+    incoming["feedback_ratings"] = new
+    if new_at:
+        incoming["feedback_rated_at"] = new_at
 
 
 def _merge_feedback_refs(incoming: dict, existing: dict) -> None:
@@ -7002,12 +7045,6 @@ def schedule_reservation_update(channel_id):
     if existing and not existing.done():
         existing.cancel()
     _pending_reservation_updates[key] = asyncio.create_task(_debounced_reservation_update(channel_id))
-
-
-def schedule_log_update(channel_id):
-    """Debounced, coalesced Public Archive refresh — never races/duplicates itself."""
-    key = f"publiclog:{channel_id}"
-    _schedule_coalesced_update(key, RESERVATION_DEBOUNCE_SEC, lambda: update_public_log(channel_id))
 
 
 async def _assign_roles_batched(members: list, role: discord.Role):
@@ -16021,463 +16058,692 @@ def _adjust_game_action_count(
 
 
 # ==========================================================================
-# PUBLIC ARCHIVE SPLIT + SAFETY-CAP HELPERS
+# LIVE GAME POST + ARCHIVE LAYOUT (docs/game-archive.md)
 # --------------------------------------------------------------------------
-# The archive renders category blocks (Majors / Europe / Asia / ...) and is
-# packed into multiple Discord messages like the live reservation lists: for
-# Roleplay-family modes the split is FORCED above the Asia / Middle East /
-# Rhovanion category. Only the newest games may post/edit their archive.
+# One small message per game in the mode's public log channel: posted the
+# moment the host presses Start game, edited as players are counted, then
+# its rating, and left alone for good once rating closes. Mode, time, host,
+# status, how many came and the rating; everything else is on the website's
+# archive (/archive/<game>), which reads the database and never Discord.
+#
+# Nothing edits the post but LivePostEngine. Callers only mark a game dirty
+# (mark_live_post_dirty, no I/O); one worker renders the newest state, skips
+# renders that didn't change (hash), and spends edits from two token buckets
+# (per channel and bot-wide), so a burst of events is one edit and a busy
+# evening can't reach Discord's limits.
 # ==========================================================================
 
-# HARD-CAPPED: only the newest N game sessions may post or edit their public
-# archive. Older archives are frozen in place — zero Discord API calls for
-# them, even when /give or /take fires (guards the mass-edit / API-leak
-# incident from the previous Public Archive system).
-PUBLIC_ARCHIVE_EDIT_WINDOW = 7
-PUBLIC_ARCHIVE_MAX_CHARS = 2000
+LIVE_POST_LIVE_GAP_SEC = 10.0       # a running game: at most one edit per 10 s
+LIVE_POST_RATING_GAP_SEC = 60.0     # an ended game being rated: one a minute
+LIVE_POST_STATUS_GAP_SEC = 2.0      # Starting / On-going / Ended / Cancelled
+LIVE_POST_CHANNEL_BURST = 3
+LIVE_POST_CHANNEL_REFILL_SEC = 1.5  # Discord allows ~5 edits / 5 s per channel
+LIVE_POST_GLOBAL_BURST = 10
+LIVE_POST_GLOBAL_REFILL_SEC = 0.1   # 10 / s bot-wide (Discord: 50 / s)
+LIVE_POST_REPOST_COOLDOWN_SEC = 600 # a deleted post comes back at most every 10 min
+LIVE_POST_BLOCKED_RETRY_SEC = 1800  # no permission: try again after 30 min
+LIVE_POST_RECOVERY_SCAN = 50        # messages read to find a post a restart lost
+LIVE_POST_BOOT_STAGGER_SEC = 2.0
+LIVE_POST_MAX_BACKOFF_SEC = 120.0
+FEEDBACK_RATING_WINDOW_SEC = FEEDBACK_EVAL_AFTER_SEC  # rating closes when the hosting is judged
+
+LIVE_POST_PRIORITY = {"rating": 0, "change": 1, "status": 2}
+LIVE_POST_GAP = {0: LIVE_POST_RATING_GAP_SEC, 1: LIVE_POST_LIVE_GAP_SEC, 2: LIVE_POST_STATUS_GAP_SEC}
+
+# The calendar's status colours (website scheduleOptions GameState).
+LIVE_POST_STATUS = {
+    "starting": ("Starting", 0xE8C547),
+    "stopped": ("Start stopped, the host can try again", 0xE8C547),
+    "ongoing": ("On-going", 0x38BDF8),
+    "ended": ("Ended", EmbedColor.NEUTRAL),
+    "cancelled": ("Cancelled", EmbedColor.DANGER),
+}
 
 
-def _is_game_in_archive_window(games_data: dict, storage_key: str, game: dict) -> bool:
-    """True when `game` is among the newest PUBLIC_ARCHIVE_EDIT_WINDOW game
-    sessions. Started sessions always rank above unstarted ones (by their
-    start timestamp, snowflake fallback), so upcoming games can never crowd
-    a live session out of the window."""
-    ranked = []
-    for idx, (key, entry) in enumerate((games_data or {}).items()):
-        if not isinstance(entry, dict):
-            continue
-        started = bool(entry.get("game_started")) or entry.get("status") in ("ended", "cancelled")
-        ranked.append((0 if started else 1, _game_unix_ts(entry, key), idx))
-    if not ranked:
-        return False
-    ranked.sort(key=lambda item: (item[0], -item[1]))
-    top_idx = {item[2] for item in ranked[:PUBLIC_ARCHIVE_EDIT_WINDOW]}
-    for idx, (key, entry) in enumerate((games_data or {}).items()):
-        if entry is game:
-            return idx in top_idx
-    return False
+def _archive_game_url(key) -> str:
+    """The game's page in the website's archive."""
+    return f"{WEB_SITE_URL}/archive/{key}"
 
 
-def _archive_split_category(mode: str):
-    """Category that MUST start a fresh archive chunk (mirrors the live
-    reservation-list split points). None = no forced split (faction modes)."""
-    if not mode:
-        return None
-    if "Millennium Dawn" in mode or "Novum Vexillum" in mode:
-        return "Middle East"
-    if "Kaiserreich" in mode:
-        return "Asia"
-    if "Roleplay" in mode:
-        return "Asia"
+def _archive_layout_snapshot(game: dict) -> list:
+    """The game's nation layout for the website archive, in the reservation
+    list's order: [[category, [[sub or None, [nation, ...]], ...]], ...]."""
+    try:
+        layout = _get_archive_layout(game.get("mode"), game)
+    except Exception as e:
+        print(f"⚠️ Archive layout failed for {game.get('mode')}: {e}")
+        return []
+    return [[str(cat), [[sub, [str(n) for n in nations]] for sub, nations in subs]] for cat, subs in layout or []]
+
+
+def _legacy_public_log(game: dict) -> bool:
+    """A game the old Public Attendance Log already posted: leave it alone."""
+    return bool(game.get("public_log_msg_ids") or game.get("public_log_message_id")) and not game.get("live_post")
+
+
+def _live_post_status(game: dict) -> str | None:
+    status = game.get("status") or "active"
+    if status == "cancelled":
+        lp = game.get("live_post") if isinstance(game.get("live_post"), dict) else {}
+        return "cancelled" if (game.get("game_started") or game.get("game_started_at") or lp.get("message_id")) else None
+    if status == "ended":
+        return "ended"
+    if game.get("game_started"):
+        return "ongoing"
+    initiated = int(game.get("game_start_started_at") or 0)
+    if initiated:
+        return "stopped" if int(game.get("game_start_failed_at") or 0) >= initiated else "starting"
     return None
 
 
-def _build_public_archive_chunks(
-    mode: str,
-    thread_display: str,
-    header_text: str,
-    blocks,
-    footer: str,
-    max_chars: int = PUBLIC_ARCHIVE_MAX_CHARS,
-) -> list[str]:
-    """Pack header + category blocks + footer into Discord-safe messages.
-
-    Splits land on category boundaries like the live reservation lists (for
-    Roleplay-family modes the split is FORCED above the Asia / Middle East /
-    Rhovanion category). A single category that alone exceeds the limit falls
-    back to line-level splits. The header lives in chunk 1, the footer at the
-    very end (never hard-truncated with "…"). Returns ordered chunk strings.
-    """
-    if not blocks:
-        content = f"{header_text}\n{footer}"
-        if len(content) > max_chars:
-            content = content[: max_chars - 1].rstrip() + "…"
-        return [content]
-
-    split_cat = _archive_split_category(mode)
-    cont_template = (
-        "# 📝 Public Attendance Log: {mode} (Part {i}/{t})\n"
-        "**Thread:** {th} — continued"
-    )
-
-    block_texts = [
-        ("\n".join(block) if isinstance(block, list) else str(block))
-        for block in blocks
-    ]
-
-    hard_split_idx = None
-    if split_cat:
-        for idx, block in enumerate(blocks):
-            label = (block[0] if block else "").strip()
-            if split_cat.lower() in label.lower():
-                hard_split_idx = idx
-                break
-    if hard_split_idx in (0, None):
-        hard_split_idx = None
-
-    # Worst-case continuation header keeps the 2000-char budget exact
-    # (real part numbers are never longer than "99/99").
-    cont_placeholder = cont_template.format(mode=mode, i="99", t="99", th=thread_display)
-
-    groups: list[list[str]] = []
-    current: list[str] = []
-    current_len = len(header_text)
-
-    def flush():
-        nonlocal current, current_len
-        if current:
-            groups.append(current)
-        current = []
-        current_len = len(cont_placeholder)
-
-    for idx, text in enumerate(block_texts):
-        if idx == hard_split_idx and current:
-            flush()  # reservation-list style boundary above the split category
-        if current_len + 1 + len(text) <= max_chars:
-            current.append(text)
-            current_len += 1 + len(text)
-            continue
-        # Block doesn't fit the current chunk: flush, then re-add — splitting
-        # at line boundaries when a single block exceeds a fresh chunk.
-        flush()
-        for line in text.split("\n"):
-            if current_len + 1 + len(line) <= max_chars:
-                current.append(line)
-                current_len += 1 + len(line)
-            else:
-                flush()
-                current.append(line)
-                current_len += 1 + len(line)
-
-    # Footer packs as a final piece so it is never hard-truncated.
-    for line in footer.split("\n"):
-        if current_len + 1 + len(line) <= max_chars:
-            current.append(line)
-            current_len += 1 + len(line)
-        else:
-            flush()
-            current.append(line)
-            current_len += 1 + len(line)
-    flush()
-
-    total = len(groups)
-    chunks: list[str] = []
-    for idx, group in enumerate(groups):
-        if idx == 0:
-            chunks.append(header_text + "\n" + "\n".join(group))
-        else:
-            real = cont_template.format(mode=mode, i=idx + 1, t=total, th=thread_display)
-            chunks.append(real + "\n" + "\n".join(group))
-    return chunks
+def _rating_window(game: dict, now: float | None = None) -> tuple[bool, int | None]:
+    """(rating open, when it closes) for an ended game."""
+    if game.get("status") != "ended":
+        return False, None
+    ended = int(game.get("ended_at") or 0)
+    if not ended:
+        return False, None
+    closes = ended + int(FEEDBACK_RATING_WINDOW_SEC)
+    now = time.time() if now is None else now
+    return (not game.get("hosting_evaluated") and now < closes), closes
 
 
-def _render_public_archive_content(game: dict):
-    """Pure render of the Public Attendance Log for one game.
-
-    Returns (header_text, blocks, footer). Blocks are category groups (lists
-    of lines starting with the bold category header) so the chunk packer can
-    split on category boundaries exactly like the live reservation lists.
-    Kept free of Discord I/O so the whole split logic is testable standalone.
-    """
-    current_status = game.get("status", "active")
-    reservations = game.get("reservations", {})
-    present_ids_set = _normalize_uid_set(game.get("present_ids", []))
-    dropped_out_set = _normalize_uid_set(game.get("dropped_out", []))
-    mode = game.get("mode")
-
-    status_label = "🟢 ACTIVE"
-    if current_status == "ended": status_label = "🔴 CLOSED"
-    elif current_status == "cancelled": status_label = "🚫 CANCELLED"
-
-    host_id = game.get("host_id")
-    host_display = f"<@{host_id}>" if host_id else "Unknown"
-    thread_display = game.get("thread_name", "Unknown")
-
-    bot_obj = globals().get("bot")
-    banhammer = "🔨"
-    if bot_obj is not None:
+def _live_post_players(game: dict, status: str) -> str:
+    """"32 reserved", "24 of 32 in game", "28 of 32 played" (one per reserved slot,
+    the archive's count: late joiners played, players who told the host didn't)."""
+    reservations = {str(k): v for k, v in (game.get("reservations") or {}).items() if v}
+    reserved = len(reservations)
+    if status in ("starting", "stopped", "cancelled"):
+        return f"{reserved} reserved"
+    dropped = _normalize_uid_set(game.get("dropped_out") or [])
+    late = {str(n) for n in (game.get("late_join_nations") or [])}
+    if status == "ended":
+        here = _normalize_uid_set(game.get("present_ids") or [])
+    else:
+        samples = game.get("presence_snapshots") or []
+        last = samples[-1] if samples and isinstance(samples[-1], dict) else None
+        if last is None:
+            return f"{reserved} reserved"
+        here = _normalize_uid_set(last.get("present_ids") or [])
+    came = 0
+    for slot, uid in reservations.items():
         try:
-            found = discord.utils.get(bot_obj.emojis, name="banhammer")
-            if found is not None:
-                banhammer = str(found)
+            uid = int(uid)
+        except (TypeError, ValueError):
+            continue
+        if uid in dropped:
+            continue
+        if slot in late or uid in here:
+            came += 1
+    return f"{came} of {reserved} {'played' if status == 'ended' else 'in game'}"
+
+
+def _live_post_rating(game: dict, now: float | None = None) -> str:
+    avg, votes = _feedback_stats(game.get("feedback_ratings") or {})
+    is_open, closes = _rating_window(game, now)
+    if votes:
+        line = f"{_feedback_star_bar(avg)} **{avg:.1f}** from {votes} player{'s' if votes != 1 else ''}"
+    else:
+        line = "No ratings yet" if is_open else "Nobody rated it"
+    if is_open and closes:
+        line += f"\n-# Rating closes <t:{closes}:R>"
+    return line
+
+
+def render_live_post(game: dict, key, now: float | None = None) -> dict | None:
+    """Pure: the post for a game, or None when it has none yet. Returns
+    {"embed", "hash", "final"}; the hash ignores nothing that is shown."""
+    status = _live_post_status(game)
+    if status is None:
+        return None
+    mode = str(game.get("mode") or "Game")
+    name = re.sub(r"\s*Reservations\s*$", "", str(game.get("thread_name") or mode), flags=re.I).strip() or mode
+    label, color = LIVE_POST_STATUS[status]
+    embed = discord.Embed(title=name[:256], url=_archive_game_url(key), color=color)
+    branch = _host_branch_for_mode(mode)
+    embed.set_author(name=f"{'🎭' if branch == 'RP' else '🎖️'} {mode}"[:256])
+    ts = int(game.get("start_timestamp") or game.get("game_started_at") or game.get("game_start_started_at") or 0)
+    if ts:
+        embed.add_field(name="Time", value=f"<t:{ts}:F> (<t:{ts}:R>)", inline=True)
+    host_id = game.get("host_id")
+    embed.add_field(name="Host", value=f"<@{host_id}>" if host_id else "Unknown", inline=True)
+    embed.add_field(name="Status", value=label, inline=True)
+    embed.add_field(name="Players", value=_live_post_players(game, status), inline=False)
+    final = status == "cancelled"
+    if status == "ended":
+        embed.add_field(name="Rating", value=_live_post_rating(game, now), inline=False)
+        final = not _rating_window(game, now)[0]
+    digest = hashlib.sha1(json.dumps(embed.to_dict(), sort_keys=True).encode("utf-8")).hexdigest()
+    return {"embed": embed, "hash": digest, "final": final}
+
+
+def _live_post_channel_id(game: dict) -> int | None:
+    cfg = MODE_CONFIG.get(game.get("mode")) or MODE_CONFIG.get(MODE_NAME_ALIASES.get(str(game.get("mode") or ""), "")) or {}
+    try:
+        return int(cfg.get("public_log_channel_id") or 0) or _public_log_channel_for_base(game.get("mode")) or None
+    except (TypeError, ValueError):
+        return None
+
+
+class _TokenBucket:
+    """`burst` tokens, one back every `refill_sec`; `block` pauses it (a 429)."""
+
+    def __init__(self, burst: int, refill_sec: float):
+        self.capacity = float(burst)
+        self.tokens = float(burst)
+        self.refill_sec = float(refill_sec)
+        self.updated = time.monotonic()
+        self.blocked_until = 0.0
+
+    def _fill(self, now: float) -> None:
+        self.tokens = min(self.capacity, self.tokens + (now - self.updated) / self.refill_sec)
+        self.updated = now
+
+    def wait_time(self) -> float:
+        now = time.monotonic()
+        self._fill(now)
+        if now < self.blocked_until:
+            return self.blocked_until - now
+        return 0.0 if self.tokens >= 1 else (1 - self.tokens) * self.refill_sec
+
+    def take(self) -> None:
+        self._fill(time.monotonic())
+        self.tokens -= 1
+
+    def block(self, seconds: float) -> None:
+        self.blocked_until = max(self.blocked_until, time.monotonic() + max(0.0, float(seconds)))
+
+
+class LivePostEngine:
+    """The only thing that sends or edits live game posts (one worker, every server)."""
+
+    def __init__(self):
+        # (guild id, game key) → {"priority", "since", "not_before"}
+        self._dirty: dict[tuple[int, str], dict] = {}
+        self._last_sent: dict[tuple[int, str], float] = {}
+        self._hashes: dict[tuple[int, str], str] = {}
+        self._failures: dict[tuple[int, str], int] = {}
+        self._channel_buckets: dict[int, _TokenBucket] = {}
+        self._global = _TokenBucket(LIVE_POST_GLOBAL_BURST, LIVE_POST_GLOBAL_REFILL_SEC)
+        self._wake: asyncio.Event | None = None
+        self._task: asyncio.Task | None = None
+        self.calls = 0  # Discord calls made (tests and the log)
+
+    # ---- marking -------------------------------------------------------------
+    def mark(self, gid, key, reason: str = "change", delay: float = 0.0) -> None:
+        k = (int(_as_gid(gid)), str(key))
+        priority = LIVE_POST_PRIORITY.get(reason, 1)
+        now = time.monotonic()
+        entry = self._dirty.get(k)
+        if entry:
+            entry["priority"] = max(entry["priority"], priority)
+            if not delay:
+                entry["not_before"] = min(entry["not_before"], now)
+        else:
+            self._dirty[k] = {"priority": priority, "since": now, "not_before": now + delay}
+        self._ensure_running()
+        if self._wake is not None:
+            self._wake.set()
+
+    def _ensure_running(self) -> None:
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return  # marked outside the event loop (tests, startup): the boot pass picks it up
+        if self._wake is None:
+            self._wake = asyncio.Event()
+        if self._task is None or self._task.done():
+            self._task = loop.create_task(self._run(), name="live_post_engine")
+
+    def _due(self, k, entry) -> float:
+        gap = LIVE_POST_GAP.get(entry["priority"], LIVE_POST_LIVE_GAP_SEC)
+        return max(entry["not_before"], self._last_sent.get(k, 0.0) + gap)
+
+    def _bucket(self, channel_id: int) -> _TokenBucket:
+        bucket = self._channel_buckets.get(channel_id)
+        if bucket is None:
+            bucket = self._channel_buckets[channel_id] = _TokenBucket(LIVE_POST_CHANNEL_BURST, LIVE_POST_CHANNEL_REFILL_SEC)
+        return bucket
+
+    # ---- the worker ----------------------------------------------------------
+    async def _run(self) -> None:
+        try:
+            await bot.wait_until_ready()
         except Exception:
             pass
+        while True:
+            try:
+                await self._step()
+            except asyncio.CancelledError:
+                raise
+            except Exception as e:
+                print(f"⚠️ Live post engine step failed: {e}")
+                await asyncio.sleep(1.0)
 
-    def get_status_emojis(uid):
-        emojis = ""
-        emojis += " ⭐" * _game_action_amount(game, uid, "commend")
-        emojis += " 🎖️" * _game_action_amount(game, uid, "merit")
-        emojis += " ⚠️" * _game_action_amount(game, uid, "warn")
-        if _game_action_amount(game, uid, "dishonored"):
-            emojis += " 🩸"
-        if _game_action_amount(game, uid, "ban"):
-            emojis += f" {banhammer}"
-        return emojis
+    async def _step(self) -> None:
+        if not self._dirty:
+            self._wake.clear()
+            await self._wake.wait()
+            return
+        now = time.monotonic()
+        ready, next_due = [], None
+        for k, entry in self._dirty.items():
+            due = self._due(k, entry)
+            if due <= now:
+                ready.append((entry["since"], k))
+            else:
+                next_due = due if next_due is None else min(next_due, due)
+        if not ready:
+            self._wake.clear()
+            try:
+                await asyncio.wait_for(self._wake.wait(), timeout=max(0.05, (next_due or now + 1) - now))
+            except asyncio.TimeoutError:
+                pass
+            return
+        wait = self._global.wait_time()
+        if wait > 0:
+            await asyncio.sleep(wait)
+            return
+        ready.sort()  # the game that has waited longest goes first
+        k = ready[0][1]
+        entry = self._dirty.pop(k)
+        outcome = await self.flush(k)
+        if isinstance(outcome, tuple) and outcome[0] == "wait":
+            self._requeue(k, entry, outcome[1])
+        elif outcome == "retry":
+            failures = self._failures.get(k, 0) + 1
+            self._failures[k] = failures
+            delay = min(LIVE_POST_MAX_BACKOFF_SEC, 2.0 ** failures) * random.uniform(0.8, 1.2)
+            self._requeue(k, entry, delay)
+        else:
+            self._failures.pop(k, None)
 
-    lines = [
-        f"# 📝 Public Attendance Log: {mode}",
-        f"**Status:** {status_label}",
-        f"**Thread:** {thread_display}",
-        f"**Host:** {host_display}",
-        "\n> **Explanations:**",
-        "> ✅ : Reserved & Present",
-        "> ❌ : Reserved — No-Show",
-        "> 🚪 : Could not make it — Alerted Host",
-        "> 🔑 : Late Join/Hot-Join",
-        "> ⛔ : Open / Unreserved Nation",
-        "> ⭐ : Received Commendation(s)",
-        "> 🎖️ : Received Merit(s)",
-        "> ⚠️ : Received Warning(s)",
-        "> 🩸 : Received Dishonored",
-        f"> {banhammer} : Game Banned",
-        "---"
-    ]
+    def _requeue(self, k, entry, delay: float) -> None:
+        """Back in the queue (merged with anything marked meanwhile), not before `delay`."""
+        current = self._dirty.get(k)
+        not_before = time.monotonic() + max(0.0, delay)
+        if current:
+            current["priority"] = max(current["priority"], entry["priority"])
+            current["since"] = min(current["since"], entry["since"])
+            current["not_before"] = max(current["not_before"], not_before)
+        else:
+            self._dirty[k] = {**entry, "not_before": not_before}
 
-    late_join_nations = set(game.get("late_join_nations") or [])
-
-    def _presence_emoji(uid, reservation_key=None):
-        try:
-            uid_int = int(uid)
-            if uid_int in dropped_out_set:
-                return "🚪"
-            if reservation_key in late_join_nations:
-                return "🔑"
-            return "✅" if uid_int in present_ids_set else "❌"
-        except (TypeError, ValueError):
-            return "❌"
-
-    def _coop_keys_for(nation):
-        """Ordered coop reservation keys for a base nation (nation_coop, nation_coop_2, ...)."""
-        keys = []
-        if f"{nation}_coop" in reservations:
-            keys.append(f"{nation}_coop")
-        i = 2
-        while f"{nation}_coop_{i}" in reservations:
-            keys.append(f"{nation}_coop_{i}")
-            i += 1
-        return keys
-
-    def _render_reservation(nation, key, uid, is_coop=False, coop_slot=""):
-        label = nation
-        if is_coop:
-            label += f" (Co-op {coop_slot})" if coop_slot else " (Co-op)"
-        return f"{_presence_emoji(uid, key)} {label} - <@{uid}>{get_status_emojis(uid)}"
-
-    processed_nations = set()
-    layout = _get_archive_layout(mode, game)
-
-    # Each category becomes its own "block" so message splits land on category
-    # boundaries (e.g. a new message starting at "Asia"), mirroring the live
-    # reservation list instead of cutting a category in half.
-    blocks = []
-
-    # --- FULL NATION LIST (every nation, reserved or not) ---
-    for category, subsections in layout:
-        block = []
-        for subheader, nation_list in subsections:
-            sub_lines = []
-            for nation in nation_list:
-                if nation in processed_nations:
-                    continue
-                processed_nations.add(nation)
-                main_id = reservations.get(nation)
-                coop_keys = _coop_keys_for(nation)
-
-                if main_id:
-                    sub_lines.append(_render_reservation(nation, nation, main_id))
-                else:
-                    # No one holds the main slot → open nation.
-                    sub_lines.append(f"⛔ {nation}")
-
-                for ck in coop_keys:
-                    cid = reservations[ck]
-                    processed_nations.add(ck)
-                    slot = ck[len(nation):].replace("_coop", "").strip("_")
-                    sub_lines.append(_render_reservation(nation, ck, cid, is_coop=True, coop_slot=slot))
-
-            if sub_lines:
-                if subheader:
-                    block.append(f"*{subheader}*")
-                block.extend(sub_lines)
-        if block:
-            blocks.append([f"\n**__{category}__**"] + block)
-
-    # --- OTHER / DYNAMIC NATIONS (custom names, stray coops) ---
-    unmapped_keys = [k for k in reservations.keys() if k not in processed_nations and not k.startswith("_FILL_")]
-    if unmapped_keys:
-        other_block = [f"\n**__Other Nations__**"]
-        for k in unmapped_keys:
-            uid = reservations[k]
-            name = k.replace("_coop_2", " (Co-op 2)").replace("_coop_3", " (Co-op 3)").replace("_coop", " (Co-op)")
-            other_block.append(f"{_presence_emoji(uid, k)} {name} - <@{uid}>{get_status_emojis(uid)}")
-        blocks.append(other_block)
-
-    filler_keys = [k for k in reservations.keys() if k.startswith("_FILL_")]
-    if filler_keys:
-        filler_block = [f"\n**__Fillers__**"]
-        for k in filler_keys:
-            uid = reservations[k]
-            name = k.replace("_FILL_", "").replace("_", " ")
-            filler_block.append(f"{_presence_emoji(uid, k)} {name} - <@{uid}>{get_status_emojis(uid)}")
-        blocks.append(filler_block)
-
-    timestamp = int(datetime.datetime.now().timestamp())
-    reservation_count = len(reservations) if isinstance(reservations, dict) else len(reservations or [])
-    participant_count = len(present_ids_set)
-    footer = (
-        f"\n---\n**Reserved:** {reservation_count}\n"
-        f"**Users Participated:** {participant_count}\n"
-        f"*Last Updated: <t:{timestamp}:f> (<t:{timestamp}:R>)*"
-    )
-
-    return "\n".join(lines), blocks, footer
-
-
-_public_log_update_locks: dict[str, asyncio.Lock] = {}
-
-
-async def update_public_log(thread_id):
-    """Serialize the complete read/render/edit/persist archive refresh per game."""
-    key = str(thread_id)
-    try:
-        games_data = await _load_games_resilient()
-        storage_key, game = _find_game_entry(games_data, key)
-        if game:
-            key = str(
-                game.get("lobby_thread_id")
-                or game.get("original_thread_id")
-                or storage_key
-                or key
+    # ---- one game -----------------------------------------------------------
+    async def flush(self, k):
+        """Bring one game's post up to date. Returns "sent", "skip", "retry" or ("wait", seconds)."""
+        gid, key = k
+        with guild_scope(gid):
+            storage_key, game = _find_game_entry(_games_view(gid=gid), key)
+            if not game:
+                return "skip"
+            lp = dict(game.get("live_post") or {})
+            if lp.get("final") or _legacy_public_log(game):
+                return "skip"
+            if float(lp.get("blocked_until") or 0) > time.time():
+                return "skip"
+            rendered = render_live_post(game, storage_key)
+            if rendered is None:
+                return "skip"
+            channel_id = int(lp.get("channel_id") or 0) or _live_post_channel_id(game)
+            if not channel_id:
+                return "skip"  # the mode has no public log channel
+            msg_id = int(lp.get("message_id") or 0) or None
+            known = self._hashes.get(k) or lp.get("hash")
+            if msg_id and rendered["hash"] == known:
+                if rendered["final"]:
+                    lp["final"] = True  # already showing its last state: just stop
+                    await self._save(storage_key, game, lp)
+                return "skip"
+            wait = max(
+                self._bucket(channel_id).wait_time(),
+                _channel_edit_next_ok.get(channel_id, 0.0) - time.monotonic(),
             )
+            if wait > 0:
+                return ("wait", wait)
+            self._global.take()
+            self._bucket(channel_id).take()
+            _channel_edit_next_ok[channel_id] = max(_channel_edit_next_ok.get(channel_id, 0.0), time.monotonic() + _CHANNEL_EDIT_GAP_SEC)
+            target = bot.get_partial_messageable(channel_id, guild_id=gid)
+            try:
+                if msg_id:
+                    try:
+                        self.calls += 1
+                        await target.get_partial_message(msg_id).edit(embed=rendered["embed"])
+                    except discord.NotFound:
+                        if time.time() - float(lp.get("reposted_at") or 0) < LIVE_POST_REPOST_COOLDOWN_SEC:
+                            return "skip"  # deleted again right away: leave it until the cooldown is over
+                        lp["reposted_at"] = int(time.time())
+                        msg_id = None
+                if not msg_id:
+                    msg_id = await self._post(target, game, storage_key, lp, rendered)
+            except discord.Forbidden:
+                lp["blocked_until"] = int(time.time() + LIVE_POST_BLOCKED_RETRY_SEC)
+                await self._save(storage_key, game, lp)
+                await _live_post_blocked_notice(channel_id)
+                return "skip"
+            except discord.HTTPException as exc:
+                retry_after = float(getattr(exc, "retry_after", 0) or 0)
+                if not retry_after:
+                    try:
+                        retry_after = float((getattr(exc.response, "headers", None) or {}).get("Retry-After") or 0)
+                    except (TypeError, ValueError):
+                        retry_after = 0.0
+                if exc.status == 429:
+                    self._bucket(channel_id).block(retry_after or 2.0)
+                    if "global" in str(getattr(exc, "text", "")).lower():
+                        self._global.block(retry_after or 2.0)
+                    return ("wait", (retry_after or 2.0) + 0.2)
+                print(f"⚠️ Live post for {storage_key} failed ({exc.status}): {exc}")
+                return "retry"
+            except (asyncio.TimeoutError, aiohttp.ClientError, OSError) as e:
+                print(f"⚠️ Live post for {storage_key} hit a network error: {e}")
+                return "retry"
+
+            self._hashes[k] = rendered["hash"]
+            self._last_sent[k] = time.monotonic()
+            changed = (
+                str(lp.get("message_id") or "") != str(msg_id)
+                or int(lp.get("channel_id") or 0) != channel_id
+                or rendered["final"]
+                or lp.get("blocked_until")
+            )
+            lp.update({"message_id": str(msg_id), "channel_id": str(channel_id), "hash": rendered["hash"], "sent_at": int(time.time())})
+            lp.pop("posting_at", None)
+            lp.pop("blocked_until", None)
+            if rendered["final"]:
+                lp["final"] = True
+            if changed:
+                await self._save(storage_key, game, lp)
+            else:
+                game["live_post"] = lp  # in memory: a restart re-checks it once
+            return "sent"
+
+    async def _post(self, target, game: dict, storage_key: str, lp: dict, rendered: dict) -> int:
+        """The first post. Saves "posting_at" first; after a restart that lost the
+        new id, finds the post it already made instead of posting twice."""
+        if lp.get("posting_at"):
+            found = await self._find_existing(target, storage_key)
+            if found:
+                self.calls += 1
+                await target.get_partial_message(found).edit(embed=rendered["embed"])
+                return found
+        lp["posting_at"] = int(time.time())
+        await self._save(storage_key, game, lp)
+        self.calls += 1
+        sent = await target.send(embed=rendered["embed"], nonce=f"gm{str(storage_key)[-20:]}")
+        return int(sent.id)
+
+    async def _find_existing(self, target, storage_key: str) -> int | None:
+        url = _archive_game_url(storage_key)
+        try:
+            self.calls += 1
+            async for message in target.history(limit=LIVE_POST_RECOVERY_SCAN):
+                if message.author.id == getattr(bot.user, "id", None) and any(e.url == url for e in message.embeds):
+                    return int(message.id)
+        except Exception as e:
+            print(f"⚠️ Live post recovery scan failed for {storage_key}: {e}")
+        return None
+
+    async def _save(self, storage_key: str, game: dict, lp: dict) -> None:
+        game["live_post"] = lp
+        try:
+            await save_single_game(storage_key, game, rewrite_reservations=False)
+        except Exception as e:
+            print(f"⚠️ Could not save the live post for {storage_key}: {e}")
+
+    # ---- after a restart -----------------------------------------------------
+    def boot(self, gid) -> int:
+        """Mark every game whose post may be out of date (one every 2 s)."""
+        count = 0
+        now = time.time()
+        for key, game in _games_view(gid=gid).items():
+            if not isinstance(game, dict) or _legacy_public_log(game):
+                continue
+            lp = game.get("live_post") if isinstance(game.get("live_post"), dict) else {}
+            if lp.get("final"):
+                continue
+            status = _live_post_status(game)
+            if status is None:
+                continue
+            if status == "ended" and not lp.get("message_id") and not _rating_window(game, now)[0]:
+                continue  # ended before this system: nothing to post
+            self.mark(gid, key, "rating", delay=count * LIVE_POST_BOOT_STAGGER_SEC)
+            count += 1
+        return count
+
+
+live_posts = LivePostEngine()
+_live_post_blocked_noticed: dict[int, float] = {}
+
+
+async def _live_post_blocked_notice(channel_id: int) -> None:
+    """Tell the host log once an hour that the public log channel refuses the bot."""
+    if time.time() - _live_post_blocked_noticed.get(channel_id, 0) < 3600:
+        return
+    _live_post_blocked_noticed[channel_id] = time.time()
+    try:
+        await send_log_message(
+            f"⚠️ **Live game posts**: GameMaster can't post in <#{channel_id}> (missing permission). "
+            "Give it Send Messages and Embed Links there; it tries again in 30 minutes."
+        )
     except Exception:
         pass
-    lock = _public_log_update_locks.setdefault(key, asyncio.Lock())
-    async with lock:
-        await _update_public_log_unlocked(thread_id)
 
 
-async def _update_public_log_unlocked(thread_id):
+def mark_live_post_dirty(thread_id, reason: str = "change", gid=None) -> None:
+    """Something about a game changed: its live post catches up (no I/O here)."""
+    gid = _as_gid(gid if gid is not None else cur_gid())
+    key = str(thread_id)
     try:
-        games_data = await read_json(GAMES_FILE)
+        storage_key, _game = _find_game_entry(_games_view(gid=gid), key)
+        key = str(storage_key or key)
+    except Exception:
+        pass
+    live_posts.mark(gid, key, reason)
 
-        thread_id_str = str(thread_id)
-        storage_key, game = _find_game_entry(games_data, thread_id_str)
+
+async def _backfill_archive_layouts() -> None:
+    """Older games get the archive layout once (database only, no Discord calls)."""
+    done = 0
+    for key, game in list(get_cached_games_data().items()):
+        if not isinstance(game, dict) or game.get("archive_layout") is not None:
+            continue
+        if not (game.get("status") in ("ended", "cancelled") or game.get("game_started")):
+            continue
+        game["archive_layout"] = _archive_layout_snapshot(game)
+        try:
+            await save_single_game(key, game, rewrite_reservations=False)
+            done += 1
+        except Exception as e:
+            print(f"⚠️ Archive layout backfill failed for {key}: {e}")
+        await asyncio.sleep(0.2)
+    if done:
+        print(f"📚 Archive layouts saved for {done} older game(s) in {cur_gid()}.")
+
+
+async def _start_live_posts_for_guild() -> None:
+    marked = live_posts.boot(cur_gid())
+    if marked:
+        print(f"📮 Live posts: re-checking {marked} game(s) in {cur_gid()}.")
+    asyncio.create_task(_backfill_archive_layouts())
+
+
+# ==========================================================================
+# RATING BY DM (docs/game-archive.md, "Rating the game")
+# --------------------------------------------------------------------------
+# The end-of-game DM every present player gets carries 1-5 star buttons.
+# A click edits that same DM (no extra messages). Same rules as the old
+# public poll: present players only, one rating each (changeable), 1 Merit
+# for the first, and rating closes when the hosting is judged (24 h).
+# ==========================================================================
+
+def _open_game_rating(game: dict, source_id) -> None:
+    """The fields the hosting judgement reads, set when the game ends."""
+    participants = sorted(_feedback_participant_ids(game))
+    game["feedback_source_id"] = str(source_id)
+    game["feedback_participants"] = participants
+    game["feedback_reserved"] = sorted(_feedback_reserved_ids(game))
+    game["feedback_eligible"] = participants
+    game["feedback_ratings"] = dict(game.get("feedback_ratings") or {})
+    game["ended_at"] = int(game.get("ended_at") or time.time())
+    game["hosting_evaluated"] = False
+
+
+class GameRatingButton(discord.ui.DynamicItem[discord.ui.Button],
+                       template=r"gmrate:(?P<gid>\d+):(?P<key>\d+):(?P<stars>[1-5])"):
+    """Restart-proof 1-5 star buttons on the end-of-game DM."""
+
+    def __init__(self, gid: int, key: str, stars: int, chosen: int | None = None, disabled: bool = False):
+        self.gid = int(gid)
+        self.key = str(key)
+        self.stars = int(stars)
+        super().__init__(discord.ui.Button(
+            label=str(stars),
+            emoji="⭐",
+            style=discord.ButtonStyle.success if chosen == stars else discord.ButtonStyle.secondary,
+            custom_id=f"gmrate:{gid}:{key}:{stars}",
+            disabled=disabled,
+            row=0,
+        ))
+
+    @classmethod
+    async def from_custom_id(cls, interaction, item, match, /):
+        return cls(int(match["gid"]), match["key"], int(match["stars"]))
+
+    async def callback(self, interaction: discord.Interaction):
+        await handle_rating_click(interaction, self.gid, self.key, self.stars)
+
+
+def build_rating_dm(game: dict, gid, key, *, chosen: int | None = None, merit: int = 0, note: str | None = None):
+    """The end-of-game DM: thanks, the rating question (or the rating given) and the buttons."""
+    name = re.sub(r"\s*Reservations\s*$", "", str(game.get("thread_name") or game.get("mode") or "The game"), flags=re.I).strip()
+    is_open, closes = _rating_window(game)
+    embed = discord.Embed(title=f"{name} has ended"[:256], url=_archive_game_url(key), color=EmbedColor.BRAND)
+    lines = ["Thanks for playing! Hosts review the game for commends and warnings.", ""]
+    if chosen:
+        lines.append(f"✅ You gave it **{chosen} star{'s' if chosen != 1 else ''}**." + (f" 🎖️ +{merit} Merit." if merit else ""))
+        if is_open and closes:
+            lines.append(f"-# You can change it until <t:{closes}:f>.")
+        elif not is_open:
+            lines.append("-# Rating has closed.")
+    elif is_open:
+        lines.append(f"**How was it?** Rate the game from 1 to 5 stars. Your first rating gives 🎖️ {FEEDBACK_VOTE_MERIT} Merit. Nobody sees who gave what.")
+        if closes:
+            lines.append(f"-# Rating closes <t:{closes}:R>.")
+    else:
+        lines.append("-# Rating for this game has closed.")
+    if note:
+        lines.append(note)
+    embed.description = "\n".join(lines)
+    view = discord.ui.View(timeout=None)
+    for stars in range(1, 6):
+        view.add_item(GameRatingButton(gid, key, stars, chosen=chosen, disabled=not is_open))
+    view.add_item(discord.ui.Button(label="Open in the archive", style=discord.ButtonStyle.link, url=_archive_game_url(key), row=1))
+    return embed, view
+
+
+_rating_locks: dict[str, asyncio.Lock] = {}
+
+
+async def _record_game_rating(key: str, user_id: int, stars: int) -> dict:
+    """Record (or change) a player's rating. Shared by the DM and the website.
+    Returns {"ok", "error", "game", "key", "first", "merit", "stars"}."""
+    lock = _rating_locks.setdefault(f"{cur_gid()}:{key}", asyncio.Lock())
+    async with lock:
+        games = await _load_games_resilient()
+        storage_key, game = _find_game_entry(games, key)
         if not game:
-            return
+            return {"ok": False, "error": "❌ This game no longer exists."}
+        is_open, _closes = _rating_window(game)
+        if not is_open:
+            return {"ok": False, "error": "❌ Rating for this game has closed.", "game": game, "key": storage_key}
+        eligible = game.get("feedback_eligible")
+        allowed = _normalize_uid_set(eligible) if isinstance(eligible, list) else _feedback_eligible_ids(game)
+        if int(user_id) not in allowed:
+            return {"ok": False, "error": "❌ Only players who were counted present can rate this game.", "game": game, "key": storage_key}
+        uid = str(user_id)
+        ratings = dict(game.get("feedback_ratings") or {})
+        ratings[uid] = int(stars)
+        game["feedback_ratings"] = ratings
+        rated_at = dict(game.get("feedback_rated_at") or {})
+        rated_at[uid] = int(time.time())
+        game["feedback_rated_at"] = rated_at
+        awarded = [str(x) for x in (game.get("feedback_merit_awarded") or [])]
+        first = uid not in awarded
+        if first:
+            awarded.append(uid)
+            game["feedback_merit_awarded"] = awarded
+        try:
+            await save_single_game(storage_key, game, rewrite_reservations=False)
+        except Exception as e:
+            print(f"[ERROR] Rating save failed for {user_id}: {e}")
+            return {"ok": False, "error": "❌ Couldn't save your rating right now. Try again in a few seconds.", "game": game, "key": storage_key}
+    merit = 0
+    if first:
+        try:
+            await _apply_merit_change(user_id, FEEDBACK_VOTE_MERIT, reason="Rated a game", guild=bot.get_guild(cur_gid()))
+            merit = int(FEEDBACK_VOTE_MERIT)
+        except Exception as e:
+            print(f"[WARN] Rating Merit failed for {user_id}: {e}")
+    mark_live_post_dirty(storage_key, "rating")
+    return {"ok": True, "error": None, "game": game, "key": storage_key, "first": first, "merit": merit, "stars": int(stars)}
 
-        # ── HARD-CAPPED SAFETY VALVE ─────────────────────────────────────
-        # Only the newest PUBLIC_ARCHIVE_EDIT_WINDOW game sessions may post or
-        # edit their public archive. Anything older is frozen in place — zero
-        # Discord API calls for it, even when /give or /take fires for that
-        # game (guards the mass-edit / API-leak incident from the old system).
-        if not _is_game_in_archive_window(games_data, storage_key or thread_id_str, game):
-            return
 
-        current_status = game.get("status", "active")
-
-        # Only post once the game has started, or when finalizing ended/cancelled sessions.
-        if not game.get("game_started", False) and current_status not in ("ended", "cancelled"):
-            return
-
-        thread_channel = bot.get_channel(int(thread_id)) if _game_has_thread(game) else None
-        if not thread_channel and _game_has_thread(game):
-            try: thread_channel = await bot.fetch_channel(int(thread_id))
-            except: pass
-
-        if thread_channel:
-            game["thread_name"] = thread_channel.name
-
-        mode = game.get("mode")
-        thread_display = game.get("thread_name", f"Thread #{thread_id}")
-
-        # Pure render: header + category blocks + footer, then packed into
-        # Discord-safe chunks (category-boundary splits like the live lists).
-        header_text, blocks, footer = _render_public_archive_content(game)
-        chunks = _build_public_archive_chunks(mode, thread_display, header_text, blocks, footer)
-
-        mode_config = globals().get("MODE_CONFIG", {}).get(mode, {})
-        log_channel_id = mode_config.get("public_log_channel_id")
-
-        if not log_channel_id:
-            return
-
-        channel = bot.get_channel(log_channel_id)
-        if not channel:
-            try:
-                channel = await bot.fetch_channel(log_channel_id)
-            except discord.NotFound:
-                print(f"⚠️ Public Log Channel {log_channel_id} not found.")
-                return
-            except Exception as e:
-                print(f"⚠️ Error fetching log channel: {e}")
-                return
-
-        # ── MULTI-CHUNK MESSAGE MANAGEMENT ──────────────────────────────
-        # Chunk i of this render lives in public_log_msg_ids[i]. Existing
-        # messages are EDITED in place; deleted chunks are re-created once;
-        # leftovers from a previous (longer) render are deleted once. All
-        # chunk IDs are logged per-game so every later edit targets the same
-        # messages of THIS game.
-        stored_ids = _normalize_public_log_ids(game.get("public_log_msg_ids"))
-        final_ids: list[str] = []
-
-        for idx, chunk in enumerate(chunks):
-            existing_id = stored_ids[idx] if idx < len(stored_ids) else ""
-            if existing_id.isdigit():
-                try:
-                    msg = await channel.fetch_message(int(existing_id))
-                    await _safe_message_edit(msg, content=chunk)
-                    final_ids.append(str(msg.id))
-                    continue
-                except discord.NotFound:
-                    pass  # stored message deleted — recreate it below
-                except Exception as e:
-                    # Transient edit failure: keep the ID so a retry edits the
-                    # same message instead of spamming a duplicate.
-                    print(f"[WARN] Public archive edit failed for {existing_id}: {e}")
-                    final_ids.append(existing_id)
-                    continue
-            try:
-                msg = await _safe_channel_send(channel, content=chunk)
-                final_ids.append(str(msg.id))
-            except Exception as e:
-                print(f"[WARN] Public archive chunk post failed: {e}")
-                if existing_id.isdigit():
-                    final_ids.append(existing_id)
-
-        if not final_ids:
-            return
-
-        # Delete leftover chunks from an older (longer) render.
-        for lid in stored_ids[len(chunks):]:
-            try:
-                old = await channel.fetch_message(int(lid))
-                await old.delete()
-            except discord.NotFound:
-                pass
-            except Exception as e:
-                print(f"[WARN] Public archive extra-chunk cleanup for {lid} failed: {e}")
-
-        async with log_update_lock:
-            games_data = await _load_games_resilient()
-            current_key, game = _find_game_entry(games_data, storage_key or thread_id_str)
-            if not game:
-                return
-            ordered = [str(i) for i in final_ids if str(i).isdigit()]
-            game["public_log_msg_ids"] = ordered
-            game["public_log_message_id"] = ordered[0] if ordered else None
-            # Legacy first-chunk alias (sticky-save merge + old consumers).
-            game["archive_message_id"] = ordered[0] if ordered else game.get("archive_message_id")
-            await save_single_game(
-                current_key or storage_key or thread_id_str,
-                game,
-                rewrite_reservations=False,
-            )
-
+async def handle_rating_click(interaction: discord.Interaction, gid: int, key: str, stars: int):
+    """A star on the DM: record it, then redraw this same DM."""
+    try:
+        await interaction.response.defer()
+    except Exception:
+        pass
+    with guild_scope(gid):
+        result = await _record_game_rating(key, interaction.user.id, stars)
+        game = result.get("game") or {}
+        if result["ok"]:
+            embed, view = build_rating_dm(game, gid, result["key"], chosen=stars, merit=result["merit"])
+        else:
+            mine = (game.get("feedback_ratings") or {}).get(str(interaction.user.id))
+            embed, view = build_rating_dm(game, gid, result.get("key") or key, chosen=int(mine) if mine else None, note=result["error"])
+    try:
+        await interaction.edit_original_response(embed=embed, view=view)
     except Exception as e:
-        print(f"⚠️ Critical Error in update_public_log: {e}")
-        import traceback
-        traceback.print_exc()
+        print(f"[WARN] Could not redraw the rating DM for {interaction.user.id}: {e}")
+
+
+async def _send_rating_dms(members: list, game: dict, key) -> tuple[int, int]:
+    """The end-of-game DM with the rating buttons, to every present player. (sent, failed)"""
+    sent = failed = 0
+    gid = cur_gid()
+    for member in members:
+        if not member:
+            continue
+        embed, view = build_rating_dm(game, gid, key)
+        async with _discord_api_sem:
+            try:
+                await member.send(embed=embed, view=view)
+                sent += 1
+            except (discord.Forbidden, discord.HTTPException):
+                failed += 1
+        await asyncio.sleep(0.25)
+    return sent, failed
+
+
+async def _process_web_feedback_rate(req: dict):
+    """A rating from the website's archive page (players whose DM didn't arrive)."""
+    payload = req.get("payload") or {}
+    try:
+        stars = int(payload.get("stars"))
+    except (TypeError, ValueError):
+        return False, None, "❌ Pick 1 to 5 stars."
+    if not 1 <= stars <= 5:
+        return False, None, "❌ Pick 1 to 5 stars."
+    user_id = str(req.get("host_id") or "")
+    if not user_id.isdigit():
+        return False, None, "❌ Log in with Discord first."
+    result = await _record_game_rating(str(payload.get("game_id") or ""), int(user_id), stars)
+    if not result["ok"]:
+        return False, None, result["error"]
+    return True, {"rating": {"stars": stars, "first": result["first"], "merit": result["merit"]}}, None
 
 
 # Multi-sample attendance: take SAMPLE_COUNT VC scans spaced `delay` minutes apart.
@@ -16728,6 +16994,7 @@ async def _take_attendance_sample(thread_key, guild, *, manual_by=None) -> tuple
         _attendance_meta(game, guild)
         await save_single_game(storage_key or str(thread_key), game, rewrite_reservations=False)
 
+    mark_live_post_dirty(storage_key or str(thread_key))
     record_attendance_event(
         stable_id,
         "sample",
@@ -17258,7 +17525,7 @@ async def _finalize_attendance_results_locked(thread_key: str, guild, delay, sam
     )
 
     try:
-        schedule_log_update(int(thread_id))
+        mark_live_post_dirty(int(thread_id))
     except Exception as e:
         print(f"Snapshot public-log refresh failed: {e}")
 
@@ -18825,7 +19092,7 @@ async def _execute_late_join(guild: discord.Guild, thread_id: str, user: discord
     # 4. Refresh the reservation board + public log.
     try:
         schedule_reservation_update(int(thread_id))
-        schedule_log_update(int(thread_id))
+        mark_live_post_dirty(int(thread_id))
         schedule_participation_tracker_update(int(thread_id))
     except Exception as e:
         print(f"[HotJoin] UI update failed: {e}")
@@ -19754,12 +20021,16 @@ async def _game_start_core(guild, actor, thread_id_str: str, *, game_id: str, pa
         if started_at and int(time.time()) - started_at < 600:
             raise GameLifecycleError("ℹ️ This game is already being started.")
         fresh_game["game_start_started_at"] = int(time.time())
+        fresh_game["archive_layout"] = _archive_layout_snapshot(fresh_game)
         scheduled_checksum = str(fresh_game.get("scheduled_checksum") or "").upper()
         checksum_changed = bool(scheduled_checksum and scheduled_checksum != checksum)
         if checksum_changed:
             fresh_game["scheduled_checksum"] = checksum
         await save_single_game(thread_id_str, fresh_game, rewrite_reservations=False)
         games_data, game = fresh_games, fresh_game
+
+    # The live game post goes up the moment the host presses Start game.
+    mark_live_post_dirty(thread_id_str, "status")
 
     if checksum_changed:
         await progress(f"⚠️ The scheduled checksum was `{scheduled_checksum}`. It has been updated to `{checksum}`.")
@@ -19896,9 +20167,9 @@ async def _game_start_core(guild, actor, thread_id_str: str, *, game_id: str, pa
 
     # Hot-join (the map) and crash reports (/crash) are on the website now.
 
-    # Only now expose the started state in the reservation list and Public Archive.
+    # Only now expose the started state in the reservation list and the live post.
     schedule_reservation_update(int(thread_id_str))
-    schedule_log_update(int(thread_id_str))
+    mark_live_post_dirty(thread_id_str, "status")
 
     # Older games still have a reservation thread: point it at the website.
     try:
@@ -21007,7 +21278,7 @@ class AttendanceLogConfirmView(discord.ui.View):
         games_data[self.game_id] = game
         await write_json(GAMES_FILE, games_data)
         try:
-            schedule_log_update(int(self.game_id))
+            mark_live_post_dirty(int(self.game_id))
         except Exception:
             pass
         for child in self.children:
@@ -21605,7 +21876,7 @@ async def _handle_game_feedback_vote_locked(
             game["feedback_merit_awarded"] = merit_awarded
             await save_single_game(tid, game, rewrite_reservations=False)
             try:
-                schedule_log_update(
+                mark_live_post_dirty(
                     int(game.get("lobby_thread_id") or game.get("original_thread_id") or tid)
                 )
             except Exception as e:
@@ -21637,57 +21908,6 @@ async def _handle_game_feedback_vote_locked(
         f"✅ {note}\nLive score: **{avg_txt}** · {votes} vote{'s' if votes != 1 else ''}.{merit_note}",
         ephemeral=True,
     )
-
-
-async def _post_game_feedback(announce_channel: discord.abc.Messageable, game: dict, source_id: str):
-    """Post the feedback embed + buttons and persist message refs on the game."""
-    if game.get("feedback_archived"):
-        return None
-    participants = sorted(_feedback_participant_ids(game))
-    reserved = sorted(_feedback_reserved_ids(game))
-    game["feedback_source_id"] = str(source_id)
-    game["feedback_participants"] = participants
-    game["feedback_reserved"] = reserved
-    game["feedback_eligible"] = participants
-    game["feedback_ratings"] = dict(game.get("feedback_ratings") or {})
-    game["ended_at"] = int(game.get("ended_at") or time.time())
-    game["hosting_evaluated"] = False
-
-    embed = build_feedback_embed(game)
-    view = build_game_feedback_view(int(source_id))
-    existing_channel_id = game.get("feedback_channel_id")
-    existing_message_id = game.get("feedback_message_id")
-    if existing_channel_id and existing_message_id:
-        try:
-            existing_channel = (
-                bot.get_channel(int(existing_channel_id))
-                or await bot.fetch_channel(int(existing_channel_id))
-            )
-            existing_message = await existing_channel.fetch_message(int(existing_message_id))
-            await existing_message.edit(embed=embed, view=view)
-            return existing_message
-        except discord.NotFound:
-            pass
-        except Exception as e:
-            # A lookup glitch must not post a second poll while the first is still up.
-            print(f"[WARN] Existing feedback poll lookup failed; leaving the current message: {e}")
-            return None
-
-    rate_msg = await announce_channel.send(embed=embed, view=view)
-
-    known_ids = [
-        str(item).strip()
-        for item in (game.get("feedback_message_ids") or [])
-        if str(item).strip().isdigit()
-    ]
-    if existing_message_id and str(existing_message_id) not in known_ids:
-        known_ids.append(str(existing_message_id))
-    if str(rate_msg.id) not in known_ids:
-        known_ids.append(str(rate_msg.id))
-    game["feedback_message_ids"] = known_ids
-    game["feedback_channel_id"] = announce_channel.id
-    game["feedback_message_id"] = rate_msg.id
-    return rate_msg
 
 
 def _host_history_entry_label(entry) -> str:
@@ -21790,6 +22010,7 @@ async def _apply_hosting_evaluation(game_key: str, game: dict) -> None:
     game["hosting_eval_votes"] = votes
     game["hosting_evaluated_at"] = int(time.time())
     await save_single_game(game_key, game, rewrite_reservations=False)
+    mark_live_post_dirty(game_key, "status")
 
     host_id = game.get("host_id")
     if not host_id:
@@ -22168,8 +22389,8 @@ def _can_end_assigned_game(member: discord.Member, game: dict) -> bool:
 async def _game_end_core(guild, actor, thread_id_str: str, *, progress) -> dict:
     """End a game (formerly /game_end — now the website's Games page, via a
     "game_end" request): finalize attendance and the public log, remove the
-    voice channels and Gamer Pass, post the rating poll, DM participants and
-    the host, and delete the reservation thread. The game keeps its storage
+    voice channels and Gamer Pass, DM participants (with the 1-5 star rating)
+    and the host, and delete the reservation thread. The game keeps its storage
     key (there is no Host Control Center any more). Safe to repeat: an
     interrupted end resumes."""
     thread_id_str = str(thread_id_str)
@@ -22236,7 +22457,7 @@ async def _game_end_core(guild, actor, thread_id_str: str, *, progress) -> dict:
         # people for a game they never actually joined).
         if game.get("game_started", False):
             await _finalize_game_attendance(guild, thread_id_str)
-        schedule_log_update(int(thread_id_str))
+        mark_live_post_dirty(thread_id_str, "status")
     except Exception as e:
         print(f"[WARN] Could not finalize public archive log: {e}")
 
@@ -22272,41 +22493,27 @@ async def _game_end_core(guild, actor, thread_id_str: str, *, progress) -> dict:
 
     await progress("✅ **Channels cleaned up** — sending conclusion DMs…")
 
-    # Only players recorded present receive the feedback request and may vote.
+    # Only players recorded present get the end-of-game DM, and it carries the
+    # 1-5 star rating (docs/game-archive.md). The result shows on the live
+    # game post and the website's archive; there is no public poll any more.
     participant_ids = sorted(_feedback_participant_ids(game))
-
-    # Feedback is posted first so DMs can include a jump link.
-    rate_msg = None
-    if announce_channel:
-        try:
-            rate_msg = await _post_game_feedback(announce_channel, game, thread_id_str)
-            await save_single_game(
-                refreshed_key or thread_id_str,
-                game,
-                rewrite_reservations=False,
-            )
-        except Exception as e:
-            print(f"Failed to send rating message: {e}")
-
-    jump_url = rate_msg.jump_url if rate_msg else (f"<#{announce_channel_id}>" if announce_channel_id else "the announcement channel")
-    dm_lines = (
-        f"✅ **{game_mode} Game** has been concluded! Thanks for participating!\n"
-        f"📝 Your gameplay shall be reviewed for any commendations/warns.\n"
-        f"⭐ **Please rate this session (1–5):** {jump_url}"
-    )
-    members_to_dm = []
-    for user_id in participant_ids:
-        member = guild.get_member(user_id)
-        if member:
-            members_to_dm.append(member)
+    game_ref = refreshed_key or thread_id_str
+    if not game.get("feedback_source_id"):
+        _open_game_rating(game, game_ref)
+    game["archive_layout"] = _archive_layout_snapshot(game)
+    members_to_dm = [m for m in (guild.get_member(uid) for uid in participant_ids) if m]
     if not game.get("conclusion_dms_sent"):
-        await _send_dms_batched(members_to_dm, dm_lines)
+        # Saved before sending: an interrupted end resumes without a second DM.
         game["conclusion_dms_sent"] = True
-        await save_single_game(
-            refreshed_key or thread_id_str,
-            game,
-            rewrite_reservations=False,
+        await save_single_game(game_ref, game, rewrite_reservations=False)
+        sent, failed = await _send_rating_dms(members_to_dm, game, game_ref)
+        await progress(
+            f"✅ **Rating DMs sent** to {sent} player(s)."
+            + (f" {failed} have DMs closed; they can rate the game on its archive page." if failed else "")
         )
+    else:
+        await save_single_game(game_ref, game, rewrite_reservations=False)
+    mark_live_post_dirty(game_ref, "status")
 
     game_info_channel = bot.get_channel(game_info_channel_id)
     if game_info_channel:
@@ -22375,7 +22582,7 @@ async def _game_end_core(guild, actor, thread_id_str: str, *, progress) -> dict:
             rewrite_reservations=False,
         )
     try:
-        schedule_log_update(int(thread_id_str))
+        mark_live_post_dirty(thread_id_str, "status")
     except Exception as e:
         print(f"[WARN] Could not refresh public archive after game end: {e}")
 
@@ -22513,7 +22720,7 @@ async def _game_cancel_core(guild, actor, thread_id_str: str, *, reason: str, pr
         print(f"[WARN] Could not update schedule board after game cancel: {e}")
 
     try:
-        schedule_log_update(int(thread_id_str))
+        mark_live_post_dirty(thread_id_str, "status")
     except Exception as e:
         print(f"Could not trigger public log: {e}")
 
@@ -22982,6 +23189,19 @@ async def _process_web_game_lifecycle(req: dict):
     return WEB_REQUEST_RUNNING, None, None
 
 
+async def _note_game_start_failed(key: str) -> None:
+    """Record a start that stopped with an error, so the live post stops saying "Starting"."""
+    try:
+        games = await _load_games_resilient()
+        storage_key, game = _find_game_entry(games, key)
+        if game and not game.get("game_started") and game.get("game_start_started_at"):
+            game["game_start_failed_at"] = int(time.time())
+            await save_single_game(storage_key, game, rewrite_reservations=False)
+            mark_live_post_dirty(storage_key, "status")
+    except Exception as e:
+        print(f"[WARN] Could not record the failed start for {key}: {e}")
+
+
 async def _run_web_game_lifecycle(request_id: str, action: str, key: str, actor, state: dict, kwargs: dict):
     guild = bot.get_guild(cur_gid())
 
@@ -23018,6 +23238,8 @@ async def _run_web_game_lifecycle(request_id: str, action: str, key: str, actor,
         state["state"] = "error"
     finally:
         _web_lifecycle_running.discard(key)
+    if action == "game_start" and status == "error":
+        await _note_game_start_failed(key)
     state["finished_at"] = int(time.time())
     try:
         await _run_mysql_io(
@@ -23163,7 +23385,7 @@ async def _process_web_game_access(req: dict):
     try:
         schedule_reservation_update(int(key))
         if op == "clear":
-            schedule_log_update(int(key))
+            mark_live_post_dirty(int(key))
     except Exception as e:
         print(f"[WARN] web access: list refresh failed for {key}: {e}")
     _audit_log("INFO", f"web access {op} game={key} by={actor.id} payload={json.dumps(payload, ensure_ascii=False)[:300]}")
@@ -23967,7 +24189,7 @@ async def apply_attendance_override(*, guild, actor, game_id: str, user_id: int,
     )
     if finalized:
         try:
-            schedule_log_update(int(key or game_id))
+            mark_live_post_dirty(int(key or game_id))
         except Exception:
             pass
         try:
@@ -24685,7 +24907,7 @@ async def apply_moderation_action(
     if game_key:
         await save_single_game(game_key, target_game, rewrite_reservations=False)
         try:
-            await update_public_log(str(game_key))
+            mark_live_post_dirty(game_key)
         except Exception as e:
             print(f"[WARN] moderation public log refresh failed: {e}")
 
@@ -24896,7 +25118,7 @@ async def apply_dishonored_action(
     if game_key:
         await save_single_game(game_key, target_game, rewrite_reservations=False)
         try:
-            await update_public_log(str(game_key))
+            mark_live_post_dirty(game_key)
         except Exception as e:
             print(f"[WARN] dishonored public log refresh failed: {e}")
     await _dm_user_safe(
@@ -31240,7 +31462,8 @@ async def audit_trail_retention_loop():
 # Web requests that write their own audit rows (roster handlers, game
 # lifecycle, and everything that goes through record_moderation_event).
 _AUDIT_SELF_RECORDED = frozenset({
-    "roster_assign", "roster_remove", "moderation", "dishonored", "host_rating", "member_roles",
+    # feedback_rate: who gave which rating stays private, so no audit row.
+    "roster_assign", "roster_remove", "moderation", "dishonored", "host_rating", "member_roles", "feedback_rate",
     *GAME_LIFECYCLE_ACTIONS,
 })
 # Request action → (audit category, audit action, what the actor did).
@@ -31387,6 +31610,8 @@ async def web_schedule_request_loop():
                 ok, result, err = await _process_web_hotjoin(req)
             elif action == "crash_report":
                 ok, result, err = await _process_web_crash_report(req)
+            elif action == "feedback_rate":
+                ok, result, err = await _process_web_feedback_rate(req)
             elif action == "member_roles":
                 ok, result, err = await _process_web_member_roles(req)
             elif action == "role_scan":
@@ -31694,7 +31919,7 @@ def _roster_payload_ids(payload: dict):
 async def _roster_after_change(thread_id: str) -> None:
     schedule_reservation_update(int(thread_id))
     schedule_participation_tracker_update(thread_id)
-    schedule_log_update(int(thread_id))
+    mark_live_post_dirty(int(thread_id))
 
 
 async def _roster_drop_player_state(thread_id: str, user_id: int) -> None:
@@ -33054,6 +33279,7 @@ MODE_CHANNEL_FIELDS = {
     # settings field → MODE_CONFIG key
     "announcement_channel": "announcement_channel_id",
     "game_info_channel": "game_info_channel_id",
+    "live_post_channel": "public_log_channel_id",
     "ping_role": "ping_role_id",
 }
 # The casino add-on exists only on TommyKay (live) and its test server.
@@ -34816,7 +35042,7 @@ async def on_ready():
         print(f"⚠️ Could not register ticket buttons: {e}")
     # Restart-proof post-game 1–5 star feedback buttons.
     try:
-        bot.add_dynamic_items(GameFeedbackButton)
+        bot.add_dynamic_items(GameFeedbackButton, GameRatingButton)
     except Exception as e:
         print(f"⚠️ Could not register game feedback buttons: {e}")
     # Restart-proof Hearts of Valor Trusted pick / host decision buttons and
@@ -34980,6 +35206,8 @@ async def on_ready():
     # Every active server's games (each runs for its own server).
     await _run_for_active_guilds(resume_incomplete_attendance_snapshots, "attendance snapshot resume")
     await _run_for_active_guilds(resume_participation_trackers, "participation tracker resume")
+    # Live game posts: catch up anything that changed while the bot was off.
+    await _run_for_active_guilds(_start_live_posts_for_guild, "live post start")
     # Restart-proof public-archive commend buttons.
     try:
         bot.add_view(CommendCheckerView())
