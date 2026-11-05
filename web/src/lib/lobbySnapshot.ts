@@ -139,7 +139,7 @@ async function snapshotIronLegion(gameSwitch: unknown, guildId: string): Promise
   const server = Boolean((await settingsOf(guildId).catch(() => null))?.features.ironlegion);
   if (!ironLegionRequired(parseRequireIronLegion(gameSwitch), server)) return null;
   const roles = await memberRoleIds(guildId).catch(() => null);
-  if (!roles?.ironlegion_role) return null;
+  if (!roles?.ironlegion_on) return null;
   return { verify_url: ironLegionVerifyUrl(guildId, roles.ironlegion_verify_channel) };
 }
 

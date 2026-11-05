@@ -2,8 +2,9 @@
  * IronLegion Steam authentication (optional). A server can require it for every
  * game (Server settings → Features), and a preset, a calendar slot or a game
  * can override that: true = required, false = not required, null = follow the
- * server. The bot checks players hold the authenticated role IronLegion gives on
- * that server (GameMaster Bot/bot.py.py, "IRONLEGION STEAM VERIFICATION").
+ * server. It applies only in servers IronLegion is in, and there IronLegion's own
+ * yes / no from its database decides, never a Discord role (lib/ironlegionMember.ts,
+ * GameMaster Bot/bot.py.py "IRONLEGION STEAM VERIFICATION").
  */
 
 export type IronLegionRule = "server" | "on" | "off";

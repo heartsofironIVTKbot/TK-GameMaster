@@ -70,8 +70,8 @@ interface UserRow extends RowDataPacket {
 
 /**
  * IronLegion Steam authentication, when the game (or its server) requires it.
- * The bot keeps each member's `verified` flag in web_member_directory: they
- * hold the authenticated role IronLegion gives on that server (or never need it).
+ * IronLegion's own yes / no from its database (lib/ironlegionMember.ts), else
+ * the bot's `verified` flag in web_member_directory, built from the same answers.
  * No row yet, or an older table: let them through, like the bot does when it
  * can't check (and the bot re-checks its own reservation paths).
  */
@@ -80,7 +80,7 @@ async function ironLegionRefusal(connection: PoolConnection, guildId: string, us
   if (!ironLegionRequired(parseRequireIronLegion(game.require_ironlegion), server)) return null;
   if ((await ironLegionMemberVerified(connection, guildId, userId)) === false) {
     const url = ironLegionVerifyUrl(guildId, (await memberRoleIds(guildId).catch(() => null))?.ironlegion_verify_channel);
-    return `This game requires IronLegion Steam authentication. Press Authenticate ${url ? `in ${url}` : "on the server's IronLegion panel in Discord"}; once you're authenticated it can take a few minutes before you can reserve here.`;
+    return `This game requires IronLegion Steam authentication. Press Authenticate ${url ? `in ${url}` : "on the server's IronLegion panel in Discord"}; then try again.`;
   }
   return null;
 }

@@ -39,7 +39,9 @@ export interface RoleIds {
   valor: string | null;
   /** Rank roles per host branch (HIST is null until the bot has created them). */
   host_ranks: Record<HostBranch, Record<HostRank, string | null>>;
-  /** IronLegion's verified role and verify channel here; null while IronLegion isn't set up. */
+  /** IronLegion is in this server (its answer counts here), and its Authenticate channel. */
+  ironlegion_on?: boolean;
+  /** Older bots: IronLegion's role here (now only "IronLegion is set up"). */
   ironlegion_role?: string | null;
   ironlegion_verify_channel?: string | null;
 }
@@ -134,6 +136,7 @@ export async function memberRoleIds(guildId?: string): Promise<RoleIds> {
     hist_trusted: id(raw.hist_trusted) ?? fallbackOf.hist_trusted,
     valor: id(raw.valor) ?? fallbackOf.valor,
     host_ranks: { RP: branchRanks("RP"), HIST: branchRanks("HIST") },
+    ironlegion_on: raw.ironlegion_on === true || Boolean(id(raw.ironlegion_role)),
     ironlegion_role: id(raw.ironlegion_role),
     ironlegion_verify_channel: id(raw.ironlegion_verify_channel),
   };

@@ -195,20 +195,26 @@ mode's. Per mode:
   changes automatically.
 - **Hosting success**: average player feedback rating (out of 5 stars) that
   counts as a successful hosting (3.0).
-- **Require IronLegion** (off by default): every game needs players to hold
-  the authenticated role IronLegion gives on this server before they reserve.
-  Hosts, staff and VIPs never need it. A preset, the calendar's setup form
-  (Access) and the Games page can switch it on or off for one game ("Server
-  setting" follows this switch). The bot reads IronLegion's role through a
-  read-only login (`IRONLEGION_DB_*`); without that login, or before IronLegion
-  is set up on the server, nobody is locked out. Reservations on the map check
-  it too, from the bot's member directory (refreshed every 10 minutes).
+- **Require IronLegion** (off by default): every game needs players to be
+  let in by IronLegion on this server before they reserve. It only applies in
+  servers IronLegion is in, and there IronLegion has the final say: GameMaster
+  reads IronLegion's own yes / no for the member from IronLegion's database
+  (read-only views `gamemaster_servers` and `gamemaster_members`, login
+  `IRONLEGION_DB_*` on the bot and on the website), never a Discord role, so a
+  role handed out by hand counts for nothing (Niko, 2026-11-05). Hosts and
+  staff never need it; VIPs do. A preset, the calendar's setup form (Access)
+  and the Games page can switch it on or off for one game ("Server setting"
+  follows this switch). Without the login, or while IronLegion isn't in the
+  server, nobody is locked out. If IronLegion's database can't be reached, the
+  last answer counts, else players can reserve, and staff are told. The map
+  reads the answer live; without the login on the website it uses the bot's
+  member directory (refreshed every 10 minutes from the same answers).
 
 ### 9. Tickets
 - **Ticket Support roles** (verification tickets only) and **Developer
   roles** (bug reports and suggestions).
-- **Ticket panel channel**, **ticket category**, **ticket transcripts** and
-  **private ticket transcripts** (host applications and host reports).
+- **Ticket panel channel** and **ticket category** (closed tickets are on
+  the website's Tickets page; the transcript channels were retired).
 - **Remind and close inactive tickets**: a ping after 24 hours without
   messages, closed as unresolved after 48.
 - Details in [tickets.md](tickets.md).

@@ -685,7 +685,7 @@ export function FeaturesStep({ ctx }: { ctx: StepContext }) {
           checked={draft.features.ironlegion}
           onChange={(checked) => ctx.update((s) => void (s.features.ironlegion = checked))}
           label="Require IronLegion for every game"
-          description="Players need the authenticated role IronLegion gives on this server before they reserve (hosts, staff and VIPs never need it). Add IronLegion to the server and set it up there first; until then nobody is locked out. A preset, the calendar or the Games page can switch it on or off for one game."
+          description="Players need IronLegion to let them in on this server before they reserve. IronLegion has the final say: GameMaster asks its database, so a role handed out by hand doesn't count. Hosts and staff never need it; VIPs do. It only applies while IronLegion is in this server. A preset, the calendar or the Games page can switch it on or off for one game."
         />
       </Card>
     </div>
