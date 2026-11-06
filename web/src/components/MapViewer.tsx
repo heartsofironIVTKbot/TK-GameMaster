@@ -16,6 +16,7 @@ import { GeoJSON, MapContainer, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { orientGeometryForClockwiseTravel } from "./nationGeometry";
 import {
+  DRAW_PADDING,
   MAJOR_TAGS,
   NationHighlightController,
   type HighlightState,
@@ -142,12 +143,12 @@ const HOVER_DEBOUNCE_MS = 100;
 const RESERVATION_POLL_MS = 8000;
 /** With live updates on (they also reconnect by themselves when they go quiet). */
 const RESERVATION_SAFETY_POLL_MS = 300_000;
-// Custom SVG renderer with a large clipping padding: geometries well outside
-// the visible area stay rendered during fast panning, so no vector pop-in or
-// vertical cutoff appears mid-drag. Created per component instance (never
-// shared across mounts) — a renderer can only belong to one map at a time.
+// SVG renderer drawn one screen past each edge (DRAW_PADDING, shared with the
+// highlight layers). The highlight controller redraws it ahead during a long
+// drag, so the view never runs off the drawn area. Created per component
+// instance (never shared across mounts): a renderer belongs to one map.
 export function createPaddedRenderer(): L.SVG {
-  return L.svg({ padding: 3.0 }) as L.SVG;
+  return L.svg({ padding: DRAW_PADDING }) as L.SVG;
 }
 
 /** Human-readable owner label for the locked/unreserve CTA. */
@@ -467,6 +468,10 @@ export function HighlightsBridge({
     );
     controllerRef.current = controller;
     controller.apply(stateRef.current);
+    // Development only: lets a measuring script drive the map and its highlights.
+    if (process.env.NODE_ENV === "development") {
+      (window as unknown as { __gmMapDebug?: unknown }).__gmMapDebug = { map, controller, state: () => stateRef.current };
+    }
     return () => {
       controller.destroy();
       controllerRef.current = null;

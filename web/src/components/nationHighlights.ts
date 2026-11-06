@@ -275,6 +275,54 @@ class MirrorOverlay {
       this.lastD = d;
     }
   }
+
+  /** Take the layers off the page (the group goes with them). */
+  remove(): void {
+    for (const element of this.elements) element.remove();
+    this.elements.length = 0;
+    this.group.remove();
+  }
+}
+
+/**
+ * One highlight kind ("taken", "self"…) as one small group per nation, so a
+ * nation joining or leaving the set only touches that nation. (A single path
+ * holding every nation's outline made each reservation re-draw all of them:
+ * a busy lobby dropped the map to a few frames a second.)
+ */
+class NationSetOverlay {
+  private readonly nations = new Map<string, MirrorOverlay>();
+
+  constructor(
+    private readonly root: SVGGElement,
+    private readonly recipe: readonly LayerSpec[],
+  ) {}
+
+  /** Add the nations that joined, drop the ones that left; the rest stay untouched. */
+  setTags(tags: readonly string[], pathsOf: (tag: string) => SVGPathElement[]): void {
+    const wanted = new Set(tags);
+    for (const [tag, overlay] of this.nations) {
+      if (!wanted.has(tag)) {
+        overlay.remove();
+        this.nations.delete(tag);
+      }
+    }
+    for (const tag of wanted) {
+      if (this.nations.has(tag)) continue;
+      const group = document.createElementNS(SVG_NS, "g") as SVGGElement;
+      this.root.appendChild(group);
+      const overlay = new MirrorOverlay(group);
+      overlay.setRecipe(this.recipe);
+      overlay.setSources(pathsOf(tag));
+      overlay.sync();
+      this.nations.set(tag, overlay);
+    }
+  }
+
+  /** Re-mirror every nation (after Leaflet refreshed the base geometry). */
+  sync(): void {
+    for (const overlay of this.nations.values()) overlay.sync();
+  }
 }
 
 // --- recipes (bottom → top) ------------------------------------------------
@@ -426,13 +474,39 @@ interface RendererInternals {
  * copies of a nation are mirrored for the persistent states (taken/pending/
  * self/locked/coop); hover mirrors just the copy under the cursor.
  */
+/**
+ * How far past the screen the map is drawn, in screens on each side (the base
+ * map and every highlight layer share it). 1 = a 3x3-screen drawing. It used
+ * to be 3 (7x7 screens, eleven layers of it), which made every repaint heavy;
+ * the map now redraws ahead during a drag instead (see `redrawIfNearEdge`).
+ */
+export const DRAW_PADDING = 1;
+/** Redraw during a drag once the view is this close (in screens) to the drawn edge. */
+const REDRAW_MARGIN = 0.35;
+
+/** Recipe per multi-nation kind (hover has its own, per base colour). */
+const RECIPES: Partial<Record<HighlightKind, readonly LayerSpec[]>> = {
+  excluded: EXCLUDED_RECIPE,
+  taken: TAKEN_RECIPE,
+  group: GROUP_RECIPE,
+  editing: EDITING_RECIPE,
+  locked: LOCKED_RECIPE,
+  self: SELF_RECIPE,
+  coop: COOP_RECIPE,
+  others: OTHERS_RECIPE,
+  pending: PENDING_RECIPE,
+};
+
 export class NationHighlightController {
   private readonly map: L.Map;
   private readonly onMotionChange: ((moving: boolean) => void) | undefined;
   private readonly baseLayers = new Map<string, L.Polygon[]>();
   private readonly baseColors = new Map<string, string>();
   private readonly renderers = new Map<HighlightKind, L.SVG>();
-  private readonly overlays = new Map<HighlightKind, MirrorOverlay>();
+  private readonly sets = new Map<HighlightKind, NationSetOverlay>();
+  private hoverOverlay: MirrorOverlay | null = null;
+  private baseRenderer: L.Renderer | null = null;
+  private redrawQueued = false;
   private readonly signatures = new Map<HighlightKind, string>();
   private hoverSignature = "";
   private settleTimer: number | null = null;
@@ -459,6 +533,7 @@ export class NationHighlightController {
       };
       const tag = polygon.feature?.properties?.tag;
       if (!tag) return;
+      this.baseRenderer ??= (polygon as unknown as { _renderer?: L.Renderer })._renderer ?? null;
       const list = this.baseLayers.get(tag) ?? [];
       list.push(polygon);
       this.baseLayers.set(tag, list);
@@ -473,28 +548,21 @@ export class NationHighlightController {
       pane.style.pointerEvents = "none";
       // Same padding as the base renderer, so the mirrored geometry (clipped
       // to the base renderer's padded bounds) is never cut off while panning.
-      const renderer = L.svg({ pane: name, padding: 3.0 }) as L.SVG;
+      const renderer = L.svg({ pane: name, padding: DRAW_PADDING }) as L.SVG;
       map.addLayer(renderer);
       const group = (renderer as unknown as RendererInternals)._rootGroup;
       if (!group) continue;
       this.renderers.set(kind, renderer);
-      const overlay = new MirrorOverlay(group);
-      this.overlays.set(kind, overlay);
+      const recipe = RECIPES[kind];
+      if (kind === "hover" || !recipe) this.hoverOverlay = new MirrorOverlay(group);
+      else this.sets.set(kind, new NationSetOverlay(group, recipe));
     }
-    this.overlays.get("excluded")?.setRecipe(EXCLUDED_RECIPE);
-    this.overlays.get("taken")?.setRecipe(TAKEN_RECIPE);
-    this.overlays.get("group")?.setRecipe(GROUP_RECIPE);
-    this.overlays.get("editing")?.setRecipe(EDITING_RECIPE);
-    this.overlays.get("locked")?.setRecipe(LOCKED_RECIPE);
-    this.overlays.get("self")?.setRecipe(SELF_RECIPE);
-    this.overlays.get("coop")?.setRecipe(COOP_RECIPE);
-    this.overlays.get("others")?.setRecipe(OTHERS_RECIPE);
-    this.overlays.get("pending")?.setRecipe(PENDING_RECIPE);
 
     // Registered after the base renderer's own listeners, so by the time this
     // runs Leaflet has already refreshed every base path's `d` for the view.
     map.on("movestart zoomstart", this.handleMotionStart);
     map.on("moveend", this.handleMoveEnd);
+    map.on("move", this.handleMove);
   }
 
   /** Reconcile the overlays with the latest nation states. */
@@ -536,6 +604,7 @@ export class NationHighlightController {
     this.destroyed = true;
     this.map.off("movestart zoomstart", this.handleMotionStart);
     this.map.off("moveend", this.handleMoveEnd);
+    this.map.off("move", this.handleMove);
     for (const timer of [this.settleTimer, this.lingerTimer, this.fadeTimer]) {
       if (timer !== null) window.clearTimeout(timer);
     }
@@ -551,9 +620,50 @@ export class NationHighlightController {
   /** Re-mirror a subset of overlays after Leaflet refreshed the base geometry. */
   private syncOverlays(kinds: readonly HighlightKind[]): void {
     for (const kind of kinds) {
-      const overlay = this.overlays.get(kind);
-      if (overlay?.hasSources()) overlay.sync();
+      if (kind === "hover") {
+        if (this.hoverOverlay?.hasSources()) this.hoverOverlay.sync();
+      } else {
+        this.sets.get(kind)?.sync();
+      }
     }
+  }
+
+  /** While the map moves: check once per frame whether to redraw ahead. */
+  private readonly handleMove = (): void => {
+    if (this.redrawQueued) return;
+    this.redrawQueued = true;
+    requestAnimationFrame(() => {
+      this.redrawQueued = false;
+      if (!this.destroyed) this.redrawIfNearEdge();
+    });
+  };
+
+  /**
+   * Leaflet redraws its layers only when a move ends, so a long drag or a hard
+   * flick could run off the drawn area (the map blinked). When the view gets
+   * close to the drawn edge, redraw the base map and every highlight for the
+   * view now, mid-drag.
+   */
+  private redrawIfNearEdge(): void {
+    const base = this.baseRenderer as (L.Renderer & { _bounds?: L.Bounds; _update?: () => void }) | null;
+    const map = this.map as L.Map & { _animatingZoom?: boolean };
+    const drawn = base?._bounds;
+    if (!base?._update || !drawn?.min || !drawn.max || map._animatingZoom) return;
+    const size = map.getSize();
+    const margin = Math.min(size.x, size.y) * REDRAW_MARGIN;
+    const topLeft = map.containerPointToLayerPoint([0, 0]);
+    const bottomRight = map.containerPointToLayerPoint([size.x, size.y]);
+    const near =
+      topLeft.x - drawn.min.x < margin ||
+      topLeft.y - drawn.min.y < margin ||
+      drawn.max.x - bottomRight.x < margin ||
+      drawn.max.y - bottomRight.y < margin;
+    if (!near) return;
+    base._update();
+    for (const renderer of this.renderers.values()) {
+      (renderer as unknown as { _update?: () => void })._update?.();
+    }
+    this.syncImmediate();
   }
 
   /**
@@ -604,17 +714,16 @@ export class NationHighlightController {
   }
 
   private syncTags(kind: HighlightKind, tags: readonly string[]): void {
-    const overlay = this.overlays.get(kind);
+    const overlay = this.sets.get(kind);
     if (!overlay) return;
     const signature = [...tags].sort().join("|");
     if (this.signatures.get(kind) === signature) return;
     this.signatures.set(kind, signature);
-    overlay.setSources(tags.flatMap((tag) => this.pathsOf(tag)));
-    overlay.sync();
+    overlay.setTags(tags, (tag) => this.pathsOf(tag));
   }
 
   private syncHover(hover: HoverTarget | null): void {
-    const overlay = this.overlays.get("hover");
+    const overlay = this.hoverOverlay;
     const pane = this.map.getPane(paneName("hover"));
     if (!overlay) return;
 
