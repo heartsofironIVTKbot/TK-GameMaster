@@ -42,6 +42,11 @@ interface ActiveTour {
   dir: 1 | -1;
   /** Steps actually shown so far (the step counter). */
   seen: number[];
+  /**
+   * The page can't have changed since the last step (it was a plain step, not
+   * a try-it one), so a control that isn't there now won't turn up: skip at once.
+   */
+  settled?: boolean;
 }
 
 interface TutorialActions {
@@ -278,14 +283,14 @@ export default function TutorialProvider({ children }: { children: ReactNode }) 
   );
 
   const go = useCallback(
-    (index: number, dir: 1 | -1) => {
+    (index: number, dir: 1 | -1, settled = false) => {
       if (!activeTour) return;
       if (index < 0) {
-        setActive((current) => (current ? { ...current, index: 0, dir: 1 } : current));
+        setActive((current) => (current ? { ...current, index: 0, dir: 1, settled } : current));
       } else if (index >= activeTour.steps.length) {
         finish("done");
       } else {
-        setActive((current) => (current ? { ...current, index, dir } : current));
+        setActive((current) => (current ? { ...current, index, dir, settled } : current));
       }
     },
     [activeTour, finish],
@@ -321,6 +326,7 @@ export default function TutorialProvider({ children }: { children: ReactNode }) 
             tour={activeTour}
             index={active.index}
             dir={active.dir}
+            settled={active.settled ?? false}
             seenBefore={active.seen.filter((step) => step < active.index).length}
             facts={facts}
             onGo={go}

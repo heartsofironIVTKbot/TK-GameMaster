@@ -15,6 +15,8 @@ const GAP = 14;
 const SHEET_BELOW = 640;
 /** How long to look for a control before treating it as not on the page. */
 const FIND_MS = 1500;
+/** The same when the page can't have changed since the last step. */
+const SETTLED_FIND_MS = 150;
 /** A control that was found and then vanished (a drawer closed). */
 const LOST_MS = 1200;
 
@@ -126,6 +128,7 @@ export default function TutorialOverlay({
   tour,
   index,
   dir,
+  settled,
   seenBefore,
   facts,
   onGo,
@@ -136,18 +139,24 @@ export default function TutorialOverlay({
   tour: Tour;
   index: number;
   dir: 1 | -1;
+  /** Nothing on the page could have changed since the last step: a missing control is skipped at once. */
+  settled: boolean;
   /** How many earlier steps of this run were shown (the step counter). */
   seenBefore: number;
   facts: TutorialFacts;
-  onGo: (index: number, dir: 1 | -1) => void;
+  onGo: (index: number, dir: 1 | -1, settled?: boolean) => void;
   onShown: (index: number) => void;
   onClose: () => void;
   onTurnOff: () => void;
 }) {
   const step = tour.steps[index];
   const shows = step.when ? step.when(facts) : true;
-  const next = () => onGo(index + 1, 1);
-  const back = () => onGo(index - 1, -1);
+  // Leaving a step the page can't have changed on (a plain step, or a try-it
+  // step skipped without doing it), a missing control is skipped at once.
+  // Called on clicks only, after `done` below is set.
+  const unchanged = () => !step.interactive && (!step.waitFor || !done);
+  const next = () => onGo(index + 1, 1, unchanged());
+  const back = () => onGo(index - 1, -1, unchanged());
 
   // Step counter: the steps shown so far, plus the ones still ahead that will
   // show. Re-counted while the step is open, as pages fill in.
@@ -163,8 +172,8 @@ export default function TutorialOverlay({
 
   // Steps that don't apply here are passed in the direction of travel.
   useEffect(() => {
-    if (!shows) onGo(index + dir, dir);
-  }, [shows, index, dir, onGo]);
+    if (!shows) onGo(index + dir, dir, settled);
+  }, [shows, index, dir, settled, onGo]);
 
   // ---- The lit control -------------------------------------------------
   const [box, setBox] = useState<Box | null>(null);
@@ -173,6 +182,7 @@ export default function TutorialOverlay({
   useEffect(() => {
     if (!step.target || !shows) return undefined;
     const name = step.target;
+    const findMs = settled ? SETTLED_FIND_MS : FIND_MS;
     const startedAt = performance.now();
     let lastSeen = startedAt;
     let current: Box | null = null;
@@ -198,7 +208,7 @@ export default function TutorialOverlay({
           gone = false;
           setLost(false);
         }
-      } else if (!gone && now - lastSeen > (seen ? LOST_MS : FIND_MS)) {
+      } else if (!gone && now - lastSeen > (seen ? LOST_MS : findMs)) {
         gone = true;
         current = null;
         setBox(null);
@@ -208,13 +218,13 @@ export default function TutorialOverlay({
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [step.target, shows]);
+  }, [step.target, shows, settled]);
 
   // Never found: skip it, or show it in the middle with its own wording.
   const skipMissing = Boolean(step.target) && lost && !found && step.missing !== "center";
   useEffect(() => {
-    if (skipMissing) onGo(index + dir, dir);
-  }, [skipMissing, index, dir, onGo]);
+    if (skipMissing) onGo(index + dir, dir, settled);
+  }, [skipMissing, index, dir, settled, onGo]);
   const centred = !step.target || lost;
   const body = lost && step.missingBody ? step.missingBody : step.body;
 
@@ -232,8 +242,8 @@ export default function TutorialOverlay({
   );
   const passDone = doneAtStart && dir === 1;
   useEffect(() => {
-    if (passDone) onGo(index + 1, 1);
-  }, [passDone, index, onGo]);
+    if (passDone) onGo(index + 1, 1, settled);
+  }, [passDone, index, settled, onGo]);
   const [doneNow, setDoneNow] = useState(false);
   const done = doneAtStart || doneNow || (factName !== null && factValue);
   const waitState: WaitState = !wait ? "none" : done ? "done" : "waiting";
