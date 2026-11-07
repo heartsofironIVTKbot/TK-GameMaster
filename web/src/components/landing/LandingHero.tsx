@@ -28,7 +28,7 @@ export default function LandingHero({ children, onEvent }: { children: ReactNode
   return (
     <section aria-labelledby="landing-title" className="relative isolate flex min-h-[100svh] flex-col overflow-hidden">
       {/* Always moving, even with "reduce motion" on (Niko's call, 2026-11-06). */}
-      <WarGlobe className="absolute inset-0 [mask-image:linear-gradient(to_bottom,black_calc(100%-180px),transparent)]" map="vanilla" intensity="dramatic" quality="high" motion layout={heroLayout} onEvent={onEvent} />
+      <WarGlobe className="absolute inset-0 [mask-image:linear-gradient(to_bottom,black_calc(100%-180px),transparent)]" map="vanilla" intensity="dramatic" motion layout={heroLayout} onEvent={onEvent} />
       {/* Shade under the words, and a fade into the page below. */}
       <div
         aria-hidden

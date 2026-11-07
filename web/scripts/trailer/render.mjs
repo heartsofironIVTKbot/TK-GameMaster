@@ -7,7 +7,8 @@
 //
 // Needs ffmpeg (winget install Gyan.FFmpeg; or set FFMPEG to its path) and the
 // track at public/landing/trailer/master-your-game.wav (kept out of git).
-// Writes public/landing/trailer/gamemaster-trailer-<format>.mp4 and a poster.
+// Writes public/landing/trailer/gamemaster-trailer-<format>.mp4 and a poster
+// (and gamemaster-trailer-wide-720.mp4, the phone copy).
 import { spawn } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
@@ -123,6 +124,13 @@ async function render(format) {
   const poster = path.join(OUT, `gamemaster-trailer-${format}.jpg`);
   await new Promise((done) => spawn(FFMPEG, ["-y", "-loglevel", "error", "-ss", "7.5", "-i", file, "-frames:v", "1", "-q:v", "3", poster]).on("close", done));
   browser.close();
+  if (format === "wide") {
+    // A 720p copy for phones (SceneTrailer picks it on narrow screens).
+    const small = path.join(OUT, "gamemaster-trailer-wide-720.mp4");
+    await new Promise((done) =>
+      spawn(FFMPEG, ["-y", "-loglevel", "error", "-i", file, "-vf", "scale=1280:720:flags=lanczos", "-c:v", "libx264", "-preset", "slow", "-crf", "26", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", small]).on("close", done),
+    );
+  }
   console.log(`\r  ${format}: ${frames} frames in ${((Date.now() - started) / 1000).toFixed(0)} s -> ${path.relative(WEB, file)} (${(fs.statSync(file).size / 1e6).toFixed(1)} MB)`);
 }
 

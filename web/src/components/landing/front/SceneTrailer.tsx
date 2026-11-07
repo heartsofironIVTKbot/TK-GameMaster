@@ -12,8 +12,15 @@ import { Glitch, useInView } from "./fx";
  */
 const TRAILER = {
   src: "/landing/trailer/gamemaster-trailer-wide.mp4",
+  /** 720p for phones and small windows: a third of the size. */
+  small: "/landing/trailer/gamemaster-trailer-wide-720.mp4",
   poster: "/landing/trailer/gamemaster-trailer-wide.jpg",
 };
+
+/** The viewer asked their browser to save data: no muted preview, just the poster. */
+function savingData(): boolean {
+  return !!(navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData;
+}
 
 export default function SceneTrailer({ number }: { number: number }) {
   const box = useRef<HTMLDivElement>(null);
@@ -25,7 +32,7 @@ export default function SceneTrailer({ number }: { number: number }) {
   useEffect(() => {
     const element = video.current;
     if (!element || sound) return;
-    if (onScreen) void element.play().catch(() => {});
+    if (onScreen && !savingData()) void element.play().catch(() => {});
     else element.pause();
   }, [onScreen, sound]);
 
@@ -56,16 +63,19 @@ export default function SceneTrailer({ number }: { number: number }) {
       <div ref={box} className="fx-hud relative mt-8 aspect-video w-full bg-black">
         <video
           ref={video}
-          src={TRAILER.src}
           poster={TRAILER.poster}
           muted={!sound}
           loop={!sound}
           controls={sound}
           playsInline
-          preload="metadata"
+          // Nothing downloads until it's on screen (or played).
+          preload="none"
           aria-label="The GameMaster trailer"
           className="h-full w-full object-cover"
-        />
+        >
+          <source src={TRAILER.small} media="(max-width: 900px)" type="video/mp4" />
+          <source src={TRAILER.src} type="video/mp4" />
+        </video>
         {sound ? null : (
           <button
             type="button"

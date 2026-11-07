@@ -58,6 +58,8 @@ export interface GlobeOptions {
   layout?: (width: number, height: number) => GlobeLayout;
   /** Every launch, hit and interception. */
   onEvent?: (event: GlobeEvent) => void;
+  /** Once the shaders are built and the first picture with the map is drawn. */
+  onReady?: () => void;
   /** Called about once a second, for the lab's readout and the auto-downgrade. */
   onStats?: (stats: { fps: number; strikes: number; quality: Quality }) => void;
 }
@@ -416,10 +418,18 @@ export class WarGlobe {
   private frames = 0;
   private statsFrom = 0;
   private slowSeconds = 0;
+  /** Still slow on low quality: a coarser picture, drawn every other frame. */
+  private lite = false;
+  private skip = false;
+  /** Nothing is drawn until the shaders are built (see setData). */
+  private warm = false;
+  private disposed = false;
 
   constructor(private readonly canvas: HTMLCanvasElement, options: GlobeOptions) {
     this.options = options;
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: "high-performance" });
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: options.quality === "high", alpha: true, powerPreference: "high-performance" });
+    // Checking every shader for errors makes the page wait for each one to build.
+    this.renderer.debug.checkShaderErrors = process.env.NODE_ENV !== "production";
     // See-through: the site's night sky (SkyBackground) shows round the globe.
     // Black at zero alpha, as a grey clear colour came out wrong through bloom.
     this.renderer.setClearColor(0x000000, 0);
@@ -537,7 +547,21 @@ export class WarGlobe {
     const dots = new THREE.Points(dotGeometry, this.capitalMaterial);
     this.world.add(dots);
     this.mapObjects.push(dots);
-    this.render();
+    if (this.warm) {
+      this.render();
+      return;
+    }
+    // Build the shaders in the background first: built on the first draw, they
+    // froze the page for over a second on phones.
+    const built = this.renderer.compileAsync ? this.renderer.compileAsync(this.scene, this.camera) : Promise.resolve();
+    built
+      .catch(() => {})
+      .then(() => {
+        if (this.disposed) return;
+        this.warm = true;
+        this.render();
+        this.options.onReady?.();
+      });
   }
 
   setOptions(options: Partial<GlobeOptions>): void {
@@ -587,6 +611,7 @@ export class WarGlobe {
   }
 
   dispose(): void {
+    this.disposed = true;
     this.stop();
     this.unbindPointer();
     this.clearStrikes();
@@ -605,7 +630,7 @@ export class WarGlobe {
 
   private applyQuality(): void {
     const high = this.options.quality === "high";
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, high ? 2 : 1.25));
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, high ? 2 : this.lite ? 1 : 1.25));
     this.composer?.dispose();
     this.composer = null;
     this.bloom = null;
@@ -1037,6 +1062,7 @@ export class WarGlobe {
       this.step(step, performance.now());
       left -= step;
     }
+    this.warm = true;
     this.render();
   }
 
@@ -1045,7 +1071,8 @@ export class WarGlobe {
     const dt = Math.min(0.05, (now - this.last) / 1000);
     this.last = now;
     this.step(dt, now);
-    this.render();
+    this.skip = this.lite && !this.skip;
+    if (!this.skip) this.render();
     this.countFrame(now);
     this.frame = requestAnimationFrame(this.tick);
   };
@@ -1072,6 +1099,7 @@ export class WarGlobe {
   }
 
   private render(): void {
+    if (!this.warm) return;
     this.globeMaterial.uniforms.uTime.value = this.time;
     this.capitalMaterial.uniforms.uTime.value = this.time;
     this.capitalMaterial.uniforms.uScale.value = this.renderer.getDrawingBufferSize(this.bufferSize).y / 2;
@@ -1092,6 +1120,10 @@ export class WarGlobe {
     if (this.slowSeconds >= 3 && this.options.quality === "high") {
       this.slowSeconds = 0;
       this.setOptions({ quality: "low" });
+    } else if (this.slowSeconds >= 3 && !this.lite) {
+      // Still slow on low quality: fewer pixels, every other frame.
+      this.lite = true;
+      this.applyQuality();
     }
     this.options.onStats?.({ fps, strikes: this.missiles.length, quality: this.options.quality });
   }

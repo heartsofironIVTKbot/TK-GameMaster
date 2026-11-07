@@ -317,7 +317,11 @@ export default function FeatureShow({ number }: { number: number }) {
             const on = i === slide;
             const steps = TOURS[item.tour] ?? [];
             const slideRun = runs[i];
-            const loaded = near && Math.abs(i - slide) <= 1;
+            // Only the playing slide's screens near the current one are kept in the
+            // page, and the first screen of the slides either side: a whole slide's
+            // screenshots at once (up to 110) took hundreds of MB and crashed phones.
+            const apart = Math.min(Math.abs(i - slide), count - Math.abs(i - slide));
+            const load: Load = !near || apart > 1 ? "none" : on ? "run" : "first";
             return (
               <article key={item.tour} className="fx-show-slide" data-on={on || undefined} aria-hidden={!on} aria-roledescription="slide">
                 <div className="fx-show-body" inert={!on}>
@@ -326,7 +330,7 @@ export default function FeatureShow({ number }: { number: number }) {
                     label={`${item.name} page`}
                     beats={slideRun.beats}
                     play={on ? play : START(i)}
-                    loaded={loaded}
+                    load={load}
                     onOpen={() => {
                       if (!swiped.current) setZoomed(beat);
                       swiped.current = false;
@@ -422,14 +426,14 @@ function Screen({
   label,
   beats,
   play,
-  loaded,
+  load,
   onOpen,
 }: {
   path: string;
   label: string;
   beats: Beat[];
   play: Play;
-  loaded: boolean;
+  load: Load;
   onOpen: () => void;
 }) {
   const { beat, from, arrival, phase } = play;
@@ -466,8 +470,9 @@ function Screen({
         aria-label={`${label}: open this screen full size`}
         className="group relative block aspect-[16/10] w-full cursor-zoom-in overflow-hidden bg-ink-950"
       >
-        {loaded
-          ? beats.map((item, i) => (
+        {load !== "none"
+          ? beats.map((item, i) =>
+              !kept(beats, i, beat, from, load) ? null : (
               <img
                 key={item.frame.src}
                 src={item.frame.src}
@@ -479,7 +484,8 @@ function Screen({
                 className="fx-tour-shot"
                 style={shotStyle(i, beat, from, arrival)}
               />
-            ))
+              ),
+            )
           : null}
         <span
           aria-hidden
@@ -520,6 +526,26 @@ function Screen({
       </button>
     </div>
   );
+}
+
+type Load = "none" | "first" | "run";
+
+/** How far ahead screens load before they're due, so each is decoded in time. */
+const AHEAD_MS = 1500;
+const AHEAD_MAX = 16;
+
+/**
+ * Whether screen i is in the page: the one showing, the one under it, and the
+ * next ones due within AHEAD_MS (at least two). A slide that isn't playing
+ * keeps just its first screen.
+ */
+function kept(beats: Beat[], i: number, beat: number, from: number, load: Load): boolean {
+  if (load === "first") return i === 0;
+  if (i === beat || i === from) return true;
+  if (i < beat || i - beat > AHEAD_MAX) return false;
+  let due = 0;
+  for (let k = beat; k < i; k += 1) due += beats[k].length;
+  return i - beat <= 2 || due - beats[beat].length < AHEAD_MS;
 }
 
 /** Where the cursor last clicked, at or before this screen. */

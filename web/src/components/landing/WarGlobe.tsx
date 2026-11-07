@@ -17,10 +17,25 @@ export interface GlobeStats {
   quality: Quality;
 }
 
+/** High (glow, sharp) only on a desktop that looks able for it; it steps down by itself if it runs slow. */
 function guessQuality(): Quality {
-  const memory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory;
+  const device = navigator as Navigator & { deviceMemory?: number; connection?: { saveData?: boolean } };
   const touch = window.matchMedia("(pointer: coarse)").matches;
-  return touch || (memory !== undefined && memory < 4) ? "low" : "high";
+  const lowMemory = device.deviceMemory !== undefined && device.deviceMemory < 4;
+  const fewCores = (navigator.hardwareConcurrency || 8) <= 4;
+  const small = window.innerWidth < 768;
+  return touch || lowMemory || fewCores || small || device.connection?.saveData ? "low" : "high";
+}
+
+/** Run once the page has painted and the browser has a moment, so the globe never holds up the first screen. */
+function whenIdle(run: () => void): () => void {
+  const idle = window as Window & { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number; cancelIdleCallback?: (id: number) => void };
+  if (idle.requestIdleCallback) {
+    const id = idle.requestIdleCallback(run, { timeout: 1500 });
+    return () => idle.cancelIdleCallback?.(id);
+  }
+  const id = window.setTimeout(run, 300);
+  return () => window.clearTimeout(id);
 }
 
 function prefersReducedMotion(): boolean {
@@ -68,6 +83,7 @@ export default function WarGlobe({
     if (!canvas) return undefined;
     let cancelled = false;
     let cleanup = () => {};
+    const cancelIdle = whenIdle(() =>
     import("./globeEngine")
       .then(({ WarGlobe }) => {
         if (cancelled) return;
@@ -81,6 +97,9 @@ export default function WarGlobe({
             layout: start.layout,
             onStats: (stats) => statsRef.current?.(stats),
             onEvent: (event) => eventRef.current?.(event),
+            onReady: () => {
+              if (!cancelled) setState("ready");
+            },
           });
         } catch {
           setState("failed"); // no WebGL
@@ -107,18 +126,29 @@ export default function WarGlobe({
         });
         seen.observe(canvas);
         document.addEventListener("visibilitychange", sync);
+        // A phone short of graphics memory can take WebGL away: show the quiet
+        // glow instead of a dead canvas.
+        const lost = (event: Event) => {
+          event.preventDefault();
+          engine.stop();
+          setState("failed");
+        };
+        canvas.addEventListener("webglcontextlost", lost);
         sync();
         cleanup = () => {
           resize.disconnect();
           seen.disconnect();
           document.removeEventListener("visibilitychange", sync);
+          canvas.removeEventListener("webglcontextlost", lost);
           engine.dispose();
           engineRef.current = null;
         };
       })
-      .catch(() => setState("failed"));
+      .catch(() => setState("failed")),
+    );
     return () => {
       cancelled = true;
+      cancelIdle();
       cleanup();
     };
   }, []);
@@ -139,8 +169,7 @@ export default function WarGlobe({
             window.setTimeout(wait, 50);
             return;
           }
-          engine.setData(data);
-          setState("ready");
+          engine.setData(data); // ready (onReady) once its shaders are built
         };
         wait();
       })

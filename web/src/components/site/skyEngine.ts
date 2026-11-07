@@ -71,6 +71,10 @@ interface Satellite {
 
 const TINTS = ["255,255,255", "255,255,255", "255,255,255", "214,255,224", "255,236,214", "214,232,255"];
 const FRAME_MS = 1000 / 30;
+/** Phones: fewer frames (the twinkle is slow, so it looks the same). */
+const PHONE_FRAME_MS = 1000 / 20;
+/** No drawing while the page scrolls, and this long after: scrolling comes first. */
+const SCROLL_REST_MS = 160;
 
 export class Sky {
   private readonly context: CanvasRenderingContext2D;
@@ -82,6 +86,10 @@ export class Sky {
   private streaks: Streak[] = [];
   private satellites: Satellite[] = [];
   private hazeLayer: HTMLCanvasElement | null = null;
+  /** The haze and the stars that don't twinkle, drawn once per size. */
+  private stillLayer: HTMLCanvasElement | null = null;
+  private readonly phone = typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
+  private scrolledAt = 0;
   private time = 0;
   private last = 0;
   private lastDraw = 0;
@@ -97,22 +105,25 @@ export class Sky {
     this.context = canvas.getContext("2d")!;
     this.options = { ...SKY_DEFAULTS, ...options };
     document.addEventListener("visibilitychange", this.onVisibility);
+    window.addEventListener("scroll", this.onScroll, { passive: true });
   }
 
   setOptions(options: Partial<SkyOptions>): void {
     const reseed = options.density !== undefined && options.density !== this.options.density;
     this.options = { ...this.options, ...options };
     if (reseed) this.seed();
+    this.stillLayer = null;
   }
 
   resize(width: number, height: number): void {
     this.width = Math.max(1, width);
     this.height = Math.max(1, height);
-    this.ratio = Math.min(window.devicePixelRatio || 1, 2);
+    this.ratio = Math.min(window.devicePixelRatio || 1, this.phone ? 1.5 : 2);
     this.canvas.width = Math.round(this.width * this.ratio);
     this.canvas.height = Math.round(this.height * this.ratio);
     this.seed();
     this.hazeLayer = null;
+    this.stillLayer = null;
   }
 
   start(): void {
@@ -130,12 +141,17 @@ export class Sky {
   destroy(): void {
     this.stop();
     document.removeEventListener("visibilitychange", this.onVisibility);
+    window.removeEventListener("scroll", this.onScroll);
   }
 
   /** Send a shooting star now (the lab's button). */
   shootNow(): void {
     this.spawnStreak();
   }
+
+  private readonly onScroll = () => {
+    this.scrolledAt = performance.now();
+  };
 
   private readonly onVisibility = () => {
     if (document.hidden) this.stop();
@@ -164,7 +180,11 @@ export class Sky {
   private readonly tick = (now: number): void => {
     if (!this.running) return;
     this.frame = requestAnimationFrame(this.tick);
-    if (now - this.lastDraw < FRAME_MS) return;
+    if (now - this.lastDraw < (this.phone ? PHONE_FRAME_MS : FRAME_MS)) return;
+    if (now - this.scrolledAt < SCROLL_REST_MS) {
+      this.last = now; // the sky just waits; no jump afterwards
+      return;
+    }
     const dt = Math.min(0.1, (now - this.last) / 1000);
     this.last = now;
     this.lastDraw = now;
@@ -235,14 +255,47 @@ export class Sky {
     c.clearRect(0, 0, w, h);
     c.globalCompositeOperation = "lighter";
 
-    if (o.haze) c.drawImage(this.haze(), 0, 0, w, h);
+    // Without drift nothing moves but the twinkle: blit the still part, then
+    // draw only the twinklers (a third of the stars) each frame.
+    const still = !o.drift && !o.aurora;
+    if (still) {
+      c.setTransform(1, 0, 0, 1, 0, 0);
+      c.drawImage(this.still(), 0, 0);
+      c.setTransform(this.ratio, 0, 0, this.ratio, 0, 0);
+    } else if (o.haze) c.drawImage(this.haze(), 0, 0, w, h);
     if (o.aurora) this.drawAurora();
-    if (o.grid) this.drawGrid();
+    if (o.grid && !still) this.drawGrid();
 
-    if (o.stars) {
+    if (o.stars) this.drawStars(c, still ? "twinkling" : "all");
+    this.drawMoving(c);
+  }
+
+  /** The part of the sky that doesn't change from frame to frame. */
+  private still(): HTMLCanvasElement {
+    if (this.stillLayer) return this.stillLayer;
+    const layer = document.createElement("canvas");
+    layer.width = this.canvas.width;
+    layer.height = this.canvas.height;
+    const c = layer.getContext("2d")!;
+    c.setTransform(this.ratio, 0, 0, this.ratio, 0, 0);
+    c.globalCompositeOperation = "lighter";
+    if (this.options.haze) c.drawImage(this.haze(), 0, 0, this.width, this.height);
+    if (this.options.grid) this.drawGrid(c);
+    if (this.options.stars) this.drawStars(c, "steady");
+    this.stillLayer = layer;
+    return layer;
+  }
+
+  private drawStars(c: CanvasRenderingContext2D, which: "all" | "steady" | "twinkling"): void {
+    const o = this.options;
+    const w = this.width;
+    const h = this.height;
+    {
       const scroll = o.drift ? window.scrollY : 0;
       const drift = o.drift ? this.time * 3 : 0;
       for (const star of this.stars) {
+        if (which === "steady" && star.twinkle) continue;
+        if (which === "twinkling" && !star.twinkle) continue;
         let x = (star.x * w + drift * star.depth) % w;
         let y = (star.y * h - scroll * 0.06 * star.depth) % h;
         if (x < 0) x += w;
@@ -265,7 +318,11 @@ export class Sky {
         c.fill();
       }
     }
+  }
 
+  /** Shooting stars and satellites. */
+  private drawMoving(c: CanvasRenderingContext2D): void {
+    const o = this.options;
     for (const streak of this.streaks) {
       const k = streak.age / streak.life;
       const x = streak.x + streak.dx * streak.age;
@@ -316,8 +373,7 @@ export class Sky {
     return layer;
   }
 
-  private drawGrid(): void {
-    const c = this.context;
+  private drawGrid(c = this.context): void {
     const w = this.width;
     const h = this.height;
     const step = 96;
