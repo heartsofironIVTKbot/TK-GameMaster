@@ -187,54 +187,35 @@ function glowTexture(): THREE.Texture {
  * The land as one picture wrapped round the globe (equirectangular):
  * red = land, green = coast glow, blue = a per-nation shade.
  */
-function landTexture(data: GlobeData, width: number): THREE.Texture {
-  const height = width / 2;
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  const context = canvas.getContext("2d")!;
-  context.fillStyle = "#000";
-  context.fillRect(0, 0, width, height);
-  const x = (lon: number) => ((lon + 180) / 360) * width;
-  const y = (lat: number) => ((90 - lat) / 180) * height;
-  const trace = (ring: number[], shift: number) => {
-    context.beginPath();
-    for (let i = 0; i < ring.length; i += 2) {
-      const px = x(ring[i]) + shift;
-      const py = y(ring[i + 1]);
-      if (i === 0) context.moveTo(px, py);
-      else context.lineTo(px, py);
-    }
-  };
-  // Each shape is drawn three times (-360, 0, +360), so shapes on the seam wrap.
-  const shifts = [-width, 0, width];
-  data.land.forEach((nation, index) => {
-    const shade = 90 + ((index * 73) % 165);
-    context.fillStyle = `rgb(255,0,${shade})`;
-    for (const ring of nation.rings) {
-      for (const shift of shifts) {
-        trace(ring, shift);
-        context.closePath();
-        context.fill();
-      }
-    }
-  });
-  context.globalCompositeOperation = "lighter";
-  context.strokeStyle = "rgb(0,150,0)";
-  context.shadowColor = "rgb(0,255,0)";
-  context.shadowBlur = width / 512;
-  context.lineWidth = width / 2048;
-  for (const line of data.coast) {
-    for (const shift of shifts) {
-      trace(line, shift);
-      context.stroke();
-    }
+/**
+ * The land picture (red = land, blue = a shade per nation, green = coast glow),
+ * painted ahead of time by scripts/build-globe-land.mjs and stored upside down
+ * (the way WebGL reads it), so no browser has to flip it. Decoded off the main
+ * thread. Painting it live stalled the browser's graphics for 1-4 s on load.
+ */
+async function loadLand(url: string): Promise<THREE.Texture> {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`${url}: ${response.status}`);
+  const blob = await response.blob();
+  let texture: THREE.Texture;
+  if (typeof createImageBitmap === "function") {
+    const bitmap = await createImageBitmap(blob);
+    texture = new THREE.Texture(bitmap);
+    texture.addEventListener("dispose", () => bitmap.close());
+  } else {
+    const image = new Image();
+    const src = URL.createObjectURL(blob);
+    image.src = src;
+    await image.decode();
+    URL.revokeObjectURL(src);
+    texture = new THREE.Texture(image);
   }
-  const texture = new THREE.CanvasTexture(canvas);
+  texture.flipY = false;
   texture.generateMipmaps = false; // no seam line where the picture wraps
   texture.minFilter = THREE.LinearFilter;
   texture.magFilter = THREE.LinearFilter;
   texture.wrapS = THREE.RepeatWrapping;
+  texture.needsUpdate = true;
   return texture;
 }
 
@@ -437,6 +418,8 @@ export class WarGlobe {
   /** Nothing is drawn until the shaders are built (see setData). */
   private warm = false;
   private disposed = false;
+  /** Which setData call is the latest (a slower earlier picture mustn't win). */
+  private dataCall = 0;
   /** Frames in a row that took far too long (see tick). */
   private stalls = 0;
   private gaveUp = false;
@@ -515,7 +498,11 @@ export class WarGlobe {
 
   // ---- Setup ---------------------------------------------------------------
 
-  setData(data: GlobeData): void {
+  /**
+   * The map: lines and capitals from `data`, the land picture from
+   * `<land>-<4096|2048>.webp`. Resolves once it's drawn (onReady fires too).
+   */
+  setData(data: GlobeData, land: string): Promise<void> {
     for (const object of this.mapObjects) {
       this.world.remove(object);
       object.traverse((child) => {
@@ -525,9 +512,8 @@ export class WarGlobe {
       });
     }
     this.mapObjects = [];
-    const old = this.globeMaterial.uniforms.uLand.value as THREE.Texture | null;
-    old?.dispose();
-    this.globeMaterial.uniforms.uLand.value = landTexture(data, this.options.quality === "high" ? 4096 : 2048);
+    const call = ++this.dataCall;
+    const picture = loadLand(`${land}-${this.options.quality === "high" ? 4096 : 2048}.webp`);
 
     const lines = (source: number[][], radius: number, color: number, opacity: number) => {
       const positions: number[] = [];
@@ -577,21 +563,21 @@ export class WarGlobe {
     const dots = new THREE.Points(dotGeometry, this.capitalMaterial);
     this.world.add(dots);
     this.mapObjects.push(dots);
-    if (this.warm) {
+    // Build the shaders in the background while the picture loads: built on
+    // the first draw, they froze the page for over a second on phones.
+    const built = this.warm || !this.renderer.compileAsync ? Promise.resolve() : this.renderer.compileAsync(this.scene, this.camera).catch(() => {});
+    return Promise.all([picture, built]).then(([texture]) => {
+      if (this.disposed || call !== this.dataCall) {
+        texture.dispose();
+        return;
+      }
+      (this.globeMaterial.uniforms.uLand.value as THREE.Texture | null)?.dispose();
+      this.globeMaterial.uniforms.uLand.value = texture;
+      const first = !this.warm;
+      this.warm = true;
       this.render();
-      return;
-    }
-    // Build the shaders in the background first: built on the first draw, they
-    // froze the page for over a second on phones.
-    const built = this.renderer.compileAsync ? this.renderer.compileAsync(this.scene, this.camera) : Promise.resolve();
-    built
-      .catch(() => {})
-      .then(() => {
-        if (this.disposed) return;
-        this.warm = true;
-        this.render();
-        this.options.onReady?.();
-      });
+      if (first) this.options.onReady?.();
+    });
   }
 
   setOptions(options: Partial<GlobeOptions>): void {

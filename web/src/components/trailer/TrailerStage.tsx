@@ -82,10 +82,12 @@ export default function TrailerStage() {
     Promise.all([import("../landing/globeEngine"), fetch("/landing/globe-vanilla.json").then((r) => r.json())]).then(([module, data]) => {
       if (cancelled) return;
       made = new module.WarGlobe(element, { intensity: "dramatic", quality: "high", motion: true, layout: (w, h) => layoutRef.current(w, h) });
-      made.setData(data);
-      made.resize(W, H);
-      engine.current = made;
-      setReady((r) => ({ ...r, globe: true }));
+      const globe = made;
+      globe.resize(W, H);
+      engine.current = globe;
+      void globe.setData(data, "/landing/globe-vanilla-land").then(() => {
+        if (!cancelled) setReady((r) => ({ ...r, globe: true }));
+      });
     });
     return () => {
       cancelled = true;

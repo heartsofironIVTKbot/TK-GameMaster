@@ -172,7 +172,10 @@ export default function WarGlobe({
             window.setTimeout(wait, 50);
             return;
           }
-          engine.setData(data); // ready (onReady) once its shaders are built
+          // Ready (onReady) once its shaders are built and the land picture is in.
+          engine.setData(data, `/landing/globe-${map}-land`).catch(() => {
+            if (!cancelled) setState("failed");
+          });
         };
         wait();
       })
