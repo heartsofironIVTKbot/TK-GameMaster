@@ -104,50 +104,6 @@
     border-bottom: 2px solid;
   }
 
-  /* ---- Trailer: a CRT screen until the video exists ------------------------ */
-
-  .fx-crt {
-    position: relative;
-    overflow: hidden;
-    border-radius: 28px;
-    background:
-      radial-gradient(120% 90% at 50% 45%, color-mix(in oklab, var(--color-brand-900) 70%, black) 0%, #020503 70%),
-      #020503;
-    box-shadow:
-      inset 0 0 0 2px color-mix(in oklab, var(--color-brand-400) 18%, transparent),
-      inset 0 0 90px rgb(0 0 0 / 0.9),
-      0 0 0 10px #0b0f0c,
-      0 0 0 11px var(--color-ink-800),
-      0 40px 120px -30px color-mix(in oklab, var(--color-brand-500) 35%, transparent);
-    color: var(--color-brand-300);
-    font-family: var(--font-mono);
-    text-shadow: 0 0 6px color-mix(in oklab, var(--color-brand-400) 70%, transparent);
-  }
-  .fx-crt::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background: repeating-linear-gradient(180deg, rgb(0 0 0 / 0.28) 0 1px, transparent 1px 3px);
-    z-index: 2;
-  }
-  .fx-crt::after {
-    content: "";
-    position: absolute;
-    inset-inline: 0;
-    top: -30%;
-    height: 30%;
-    pointer-events: none;
-    background: linear-gradient(180deg, transparent, color-mix(in oklab, var(--color-brand-300) 9%, transparent), transparent);
-    animation: fx-crt-roll 5.5s linear infinite;
-    z-index: 2;
-  }
-  @keyframes fx-crt-roll {
-    to {
-      top: 130%;
-    }
-  }
-
   /* A Discord channel, as the app draws it (dark theme): the Discord lab page. */
   .fx-discord {
     --dc-bg: #313338;
