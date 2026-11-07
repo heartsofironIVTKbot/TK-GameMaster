@@ -204,7 +204,7 @@ export default function SharedCalendarApp({ host }: { host: HostProfile }) {
   const serverName = host.servers.find((server) => server.id === host.guild_id)?.name;
 
   return (
-    <div className="min-h-screen w-full bg-ink-950 text-ink-100">
+    <div className="min-h-screen w-full text-ink-100">
       <SiteHeader page="calendar" title="Calendar" subtitle={serverName}>
         <CalendarTabs current="shared" />
         <LiveTag syncAge={syncAge} />

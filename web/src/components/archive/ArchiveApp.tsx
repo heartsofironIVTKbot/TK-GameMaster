@@ -110,7 +110,7 @@ export default function ArchiveApp() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-ink-950 text-ink-100">
+    <div className="min-h-screen w-full text-ink-100">
       <SiteHeader page="archive" title="Archive" subtitle="Every game, on every server" />
 
       <main className="mx-auto max-w-[1240px] space-y-3 px-4 py-5 sm:px-6">

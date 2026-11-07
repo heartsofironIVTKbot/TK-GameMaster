@@ -168,7 +168,7 @@ export default function PresetsApp({ host }: { host: HostProfile }) {
   const modeName = modeFilter ? (modeOption(modeFilter)?.label ?? modeFilter) : null;
 
   return (
-    <div className="min-h-screen w-full bg-ink-950 text-ink-100">
+    <div className="min-h-screen w-full text-ink-100">
       <SiteHeader page="presets" title="Presets" subtitle={serverName}>
         {host.demo && <span className="gm-tag bg-fuchsia-500/15 text-fuchsia-200">Preview: sample data</span>}
         <ServerSwitcher host={host} />

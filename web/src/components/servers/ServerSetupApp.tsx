@@ -502,7 +502,7 @@ function Shell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen w-full bg-ink-950 text-ink-100">
+    <div className="min-h-screen w-full text-ink-100">
       <SiteHeader page="servers" title={server?.name ?? "Server setup"} subtitle="Server settings" wide>
         <Link href="/servers" className="gm-btn gm-btn-quiet h-8 px-2.5 text-xs [--cut:6px]">
           <ArrowLeft aria-hidden strokeWidth={1.75} /> Your servers

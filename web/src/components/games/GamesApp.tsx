@@ -89,7 +89,7 @@ export default function GamesApp({ host }: { host: HostProfile }) {
   const serverName = host.servers.find((server) => server.id === host.guild_id)?.name;
 
   return (
-    <div className="min-h-screen w-full bg-ink-950 text-ink-100">
+    <div className="min-h-screen w-full text-ink-100">
       <SiteHeader page="games" title="Games" subtitle={serverName}>
         {host.demo && <span className="gm-tag bg-fuchsia-500/15 text-fuchsia-200">Preview: sample data</span>}
         <ServerSwitcher host={host} />

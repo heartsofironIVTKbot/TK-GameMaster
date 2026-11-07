@@ -99,7 +99,7 @@ export default function ProfileApp() {
   const flagged = portfolio.game_bans.length > 0 || portfolio.dishonored.length > 0;
 
   return (
-    <div className="min-h-screen w-full bg-ink-950 text-ink-100">
+    <div className="min-h-screen w-full text-ink-100">
       <SiteHeader page="profile" title="My profile" subtitle={server.name ? `Your record on ${server.name}` : "Your record"} />
 
       <main className="mx-auto max-w-[1300px] space-y-4 px-4 py-5 sm:px-6">

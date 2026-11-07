@@ -210,8 +210,18 @@ the globe's curve so they never break up; blasts and their shockwave rings
 stay whole right up to the globe's edge. Try other looks at `/lab/globe` (dev only).
 
 **Green means "do this" or "you are here"** (main button, current page).
-No gradient washes, glows, glass blur or decorative motion (the front
-page's globe aside).
+No gradient washes, glows, glass blur or decorative motion, with two
+exceptions: the front page's globe, and the night sky behind every page.
+
+**The background** (`web/src/components/site/SkyBackground.tsx`, drawn by
+`skyEngine.ts`): a night sky on one canvas behind every page, Niko's pick
+(2026-11-07): still stars with a few twinkling, a faint brand-green haze in
+two corners, and a shooting star about every 40 seconds. Pages leave their
+own background clear (the body is ink-950) and panels stay solid, so it
+only shows in the margins and gaps. It doesn't run on the full-screen map
+or the two map editors. Like the globe it keeps moving with reduced motion
+on; it pauses while the tab is hidden. The other layers (drift, satellites,
+grid, aurora) can be compared at `/lab/background` (dev only).
 
 **Logo:** `BrandMark` in `SiteMenu.tsx`, "GM" in stencil on a green cut
 plate, a stand-in until the real logo.

@@ -260,7 +260,7 @@ export default function CalendarApp({ host }: { host: HostProfile }) {
   const lastDay = lastBookableDay(host.booking_days, today, nowMs, timeZone);
 
   return (
-    <div className="min-h-screen w-full bg-ink-950 text-ink-100">
+    <div className="min-h-screen w-full text-ink-100">
       <SiteHeader page="calendar" title="Calendar" subtitle={serverName}>
         <CalendarTabs current="ours" />
         <LiveTag syncAge={syncAge} />

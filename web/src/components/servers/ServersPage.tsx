@@ -74,7 +74,7 @@ function ServersIndex({ cancelled }: { cancelled: boolean }) {
   }
 
   return (
-    <div className="min-h-screen w-full bg-ink-950 text-ink-100">
+    <div className="min-h-screen w-full text-ink-100">
       <SiteHeader page="servers" title="Your servers" subtitle="Set up GameMaster and change its settings" />
       <div className="px-4 py-6 sm:px-6">
       {cancelled && (

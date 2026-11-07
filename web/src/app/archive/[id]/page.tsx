@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function Page() {
   return (
-    <Suspense fallback={<div className="min-h-screen w-full bg-ink-950" />}>
+    <Suspense fallback={<div className="min-h-screen w-full" />}>
       <ArchiveGame />
     </Suspense>
   );

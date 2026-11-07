@@ -59,7 +59,7 @@ export default function ArchiveGame() {
   const reload = useCallback(() => setTick((value) => value + 1), []);
 
   return (
-    <div className="min-h-screen w-full bg-ink-950 text-ink-100">
+    <div className="min-h-screen w-full text-ink-100">
       <SiteHeader page="archive" title="Archive" subtitle={game?.card.name ?? "One game"} />
       <main className="mx-auto max-w-[1000px] space-y-3 px-4 py-5 sm:px-6">
         <Link href="/archive" className="gm-btn gm-btn-quiet -ml-2 h-[30px] px-2.5 text-[12.5px] [--cut:7px]">

@@ -131,7 +131,7 @@ export default function HostGate({
 /** A full page with the site header and one thing in the middle. */
 export function GateScreen({ page, title, children }: { page: SitePage; title: string; children: ReactNode }) {
   return (
-    <div className="min-h-screen w-full bg-ink-950 text-ink-100">
+    <div className="min-h-screen w-full text-ink-100">
       <SiteHeader page={page} title={title} />
       <main className="flex min-h-[calc(100vh-57px)] items-center justify-center p-4">{children}</main>
     </div>
@@ -175,7 +175,7 @@ export function LoginScreen({
     </ul>
   );
   return (
-    <div className="min-h-screen w-full bg-ink-950 text-ink-100">
+    <div className="min-h-screen w-full text-ink-100">
       <SiteHeader page={page} title={title} />
       <main className="grid min-h-[calc(100vh-57px)] lg:grid-cols-[minmax(0,1fr)_460px]">
         <section className="flex flex-col justify-center px-5 pb-2 pt-8 sm:px-10 lg:border-r lg:border-ink-800 lg:px-16 lg:py-16">

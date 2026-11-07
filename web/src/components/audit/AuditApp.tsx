@@ -72,7 +72,7 @@ export default function AuditApp({ host }: { host: HostProfile }) {
   const filtered = Boolean(filters.category || filters.q || filters.player || filters.game || filters.from || filters.to);
 
   return (
-    <div className="min-h-screen w-full bg-ink-950 text-ink-100">
+    <div className="min-h-screen w-full text-ink-100">
       <SiteHeader page="audit" title="Audit log" subtitle="Who did what, and when">
           {host.demo && (
             <span className="gm-tag bg-violet-950 text-violet-300">Preview: sample data</span>

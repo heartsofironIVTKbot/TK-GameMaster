@@ -156,7 +156,7 @@ export default function CrashReportApp() {
   const phaseTone = game?.finished ? "bg-ink-800 text-ink-300" : game?.started ? "bg-sky-950 text-sky-300" : "bg-yellow-950 text-yellow-300";
 
   return (
-    <div className="min-h-screen w-full bg-ink-950 text-ink-100">
+    <div className="min-h-screen w-full text-ink-100">
       <SiteHeader page="crash" title="Report a crash" subtitle={game?.name ?? "Send your crash logs to the mod developers"} />
 
       <main className="mx-auto max-w-[860px] space-y-3 px-4 py-5 sm:px-6">

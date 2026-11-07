@@ -62,7 +62,7 @@ export default function RoleplayGame() {
   const game = state?.id === id ? state.game : null;
 
   return (
-    <div className="min-h-screen w-full bg-ink-950 text-ink-100">
+    <div className="min-h-screen w-full text-ink-100">
       <RpHeader>
         <Link href={`/archive/${id}`} className="gm-btn gm-btn-quiet h-[30px] px-2.5 text-[12.5px] [--cut:7px]">
           <ArrowLeft aria-hidden strokeWidth={1.75} />

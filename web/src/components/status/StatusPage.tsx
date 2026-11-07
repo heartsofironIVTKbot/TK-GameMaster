@@ -45,7 +45,7 @@ export default function StatusPage() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-ink-950 text-ink-100">
+    <div className="min-h-screen w-full text-ink-100">
       <SiteHeader page="status" title="Status" subtitle="Is GameMaster online" />
 
       <main className="mx-auto max-w-3xl space-y-4 px-4 py-6 sm:px-6">

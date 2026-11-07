@@ -10,7 +10,7 @@ import { detectTimeZone, formatInZone } from "@/lib/timeEngine";
 
 export function TicketsShell({ children, subtitle }: { children: ReactNode; subtitle: string }) {
   return (
-    <div className="min-h-screen w-full bg-ink-950 text-ink-100">
+    <div className="min-h-screen w-full text-ink-100">
       <SiteHeader page="tickets" title="Tickets" subtitle={subtitle} />
       <main className="mx-auto max-w-[1100px] space-y-4 px-4 py-5 sm:px-6">{children}</main>
     </div>

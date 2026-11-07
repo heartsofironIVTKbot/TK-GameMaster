@@ -22,7 +22,7 @@ export default function FrontPage() {
   useTutorialFacts({ helpHidden: true });
   return (
     <FxProvider>
-      <div className="min-h-screen w-full bg-ink-950 text-ink-100">
+      <div className="min-h-screen w-full text-ink-100">
         <FrontHero />
         <main id="story">
           <SceneTrailer number={1} />
