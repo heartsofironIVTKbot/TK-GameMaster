@@ -84,6 +84,17 @@ pins += [
     (1359.75, 2.35, -47.29, 167.6),  # Stewart Island
     (798.3, 502.95, 71.13, 27.65),  # Nordkinn
     (109.9, 494.65, 71.39, -156.5),  # Point Barrow
+    # The north-west coast: with no capitals there, HOI4's Pacific Northwest,
+    # British Columbia and southern Alaska drifted 8-10 degrees north.
+    (211.9, 422.45, 48.17, -124.73),  # Cape Alava, the mainland's westmost point
+    (219.35, 426.95, 49.0, -123.0),  # where the coast meets the 49th parallel
+    (197.4, 436.35, 50.78, -128.43),  # Cape Scott, Vancouver Island
+    (179.2, 452.65, 53.6, -133.0),  # Haida Gwaii, west coast
+    (187.65, 458.75, 54.67, -132.68),  # Dixon Entrance, the panhandle's south end
+    # HOI4 squeezes Alaska's 17 degrees into ~36 px: pin its south side too.
+    (63.65, 458.6, 54.6, -163.5),  # the Alaska Peninsula's south-west end
+    (97.8, 468.55, 56.9, -154.0),  # Kodiak, south tip
+    (149.65, 485.95, 60.3, -146.3),  # the Gulf of Alaska coast near Cordova
 ]
 
 # Longitude: fixed slope so the seam at x=0 / x=1400 meets exactly; fit the offset.

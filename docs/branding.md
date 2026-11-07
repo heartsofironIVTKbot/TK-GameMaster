@@ -148,9 +148,16 @@ players or nations.
 pieces in `web/src/components/landing/front/`). Headline "Master your
 game." (the logo above finishes the pun). Then, in order:
 
-1. **Trailer** (`SceneTrailer.tsx`): a CRT "Trailer incoming" screen until
-   the video exists; drop it in `web/public/landing/` and set `TRAILER`.
-   It took the place of the announcement scene (Niko, 2026-11-07).
+1. **Trailer** (`SceneTrailer.tsx`): a 32-second phonk trailer, 16:9 on
+   the site and 9:16 for TikTok / Shorts / Reels (Niko, 2026-11-07: action,
+   TikTok style, informative, epic wording but only true claims). Music:
+   "Master Your Game", Niko's Suno track (made on a paid plan; the WAV stays
+   out of git). Plays muted on a loop while on screen; "Play with sound"
+   restarts it with the music. Made in `web/src/components/trailer/`
+   (`script.ts` is the edit, shot by shot, on the track's beat map from
+   `web/scripts/trailer/analyze.mjs`); preview it with the music at
+   `/lab/trailer` (dev only), render with `web/scripts/trailer/render.mjs`
+   (headless Edge frame by frame + ffmpeg).
 2. **The live map** playing itself (a cursor reserves the United Kingdom,
    then the lobby fills region by region; it starts when it's on screen,
    pauses off screen, loops, and always fills its frame).
@@ -205,7 +212,9 @@ by `web/scripts/build-globe-data.py` (HOI4's flat layout pinned to real
 capitals). North of 66 N it's the real Arctic instead (Natural Earth, in
 `web/scripts/data/arctic.json` from `build-arctic-data.py`): HOI4's maps
 stop at about 73.7 N and squeezed land up to a hard ring round the pole
-(Niko, 2026-11-07). Capitals are steady red glowing dots; borders follow
+(Niko, 2026-11-07). The fit is also pinned along North America's
+north-west coast and round Alaska, which HOI4 squeezes north; without
+those pins the 66 N cut lost Alaska's middle and left sea before Yukon. Capitals are steady red glowing dots; borders follow
 the globe's curve so they never break up; blasts and their shockwave rings
 stay whole right up to the globe's edge. Try other looks at `/lab/globe` (dev only).
 
@@ -216,9 +225,12 @@ exceptions: the front page's globe, and the night sky behind every page.
 **The background** (`web/src/components/site/SkyBackground.tsx`, drawn by
 `skyEngine.ts`): a night sky on one canvas behind every page, Niko's pick
 (2026-11-07): still stars with a few twinkling, a faint brand-green haze in
-two corners, and a shooting star about every 40 seconds. Pages leave their
+two corners, and a shooting star about every 40 seconds. About a third of
+the stars twinkle, dipping almost out and back, so the sky reads as alive. Pages leave their
 own background clear (the body is ink-950) and panels stay solid, so it
-only shows in the margins and gaps. It doesn't run on the full-screen map
+only shows in the margins and gaps. The front page's globe renders on a
+see-through canvas over it (no stars of its own), and the hero fades out
+at its foot, so the sky runs unbroken from the top. It doesn't run on the full-screen map
 or the two map editors. Like the globe it keeps moving with reduced motion
 on; it pauses while the tab is hidden. The other layers (drift, satellites,
 grid, aurora) can be compared at `/lab/background` (dev only).

@@ -154,7 +154,7 @@ export class Sky {
         r: bright ? 1 + Math.random() * 0.8 : 0.35 + depth * 0.8,
         alpha: bright ? 0.75 + Math.random() * 0.25 : 0.18 + Math.random() * 0.5,
         depth: 0.15 + depth * 0.85,
-        twinkle: Math.random() < 0.18 ? 0.6 + Math.random() * 1.6 : 0,
+        twinkle: Math.random() < (bright ? 0.6 : 0.35) ? 1.2 + Math.random() * 2.4 : 0,
         phase: Math.random() * Math.PI * 2,
         tint: TINTS[Math.floor(Math.random() * TINTS.length)],
       };
@@ -248,7 +248,8 @@ export class Sky {
         if (x < 0) x += w;
         if (y < 0) y += h;
         let alpha = star.alpha * o.brightness;
-        if (star.twinkle) alpha *= 0.55 + 0.45 * Math.sin(this.time * star.twinkle + star.phase);
+        // Twinklers dip to almost nothing and back, each at its own pace.
+        if (star.twinkle) alpha *= 0.12 + 0.88 * (0.5 + 0.5 * Math.sin(this.time * star.twinkle + star.phase)) ** 2;
         if (alpha <= 0.02) continue;
         c.fillStyle = `rgba(${star.tint},${Math.min(1, alpha)})`;
         if (star.r > 1) {

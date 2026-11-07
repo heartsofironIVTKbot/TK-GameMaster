@@ -163,7 +163,7 @@ export default function WarGlobe({
   }, [motion]);
 
   return (
-    <div className={`overflow-hidden bg-black ${className}`}>
+    <div className={`overflow-hidden ${className}`}>
       <div
         aria-hidden
         className={`pointer-events-none absolute inset-0 transition-opacity duration-1000 ${state === "ready" ? "opacity-0" : "opacity-100"}`}

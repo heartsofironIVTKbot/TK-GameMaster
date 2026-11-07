@@ -26,15 +26,14 @@ function heroLayout(width: number, height: number): GlobeLayout {
 
 export default function LandingHero({ children, onEvent }: { children: ReactNode; onEvent?: (event: GlobeEvent) => void }) {
   return (
-    <section aria-labelledby="landing-title" className="relative isolate flex min-h-[100svh] flex-col overflow-hidden bg-black">
+    <section aria-labelledby="landing-title" className="relative isolate flex min-h-[100svh] flex-col overflow-hidden">
       {/* Always moving, even with "reduce motion" on (Niko's call, 2026-11-06). */}
-      <WarGlobe className="absolute inset-0" map="vanilla" intensity="dramatic" quality="high" motion layout={heroLayout} onEvent={onEvent} />
+      <WarGlobe className="absolute inset-0 [mask-image:linear-gradient(to_bottom,black_calc(100%-180px),transparent)]" map="vanilla" intensity="dramatic" quality="high" motion layout={heroLayout} onEvent={onEvent} />
       {/* Shade under the words, and a fade into the page below. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgb(0_0_0/0.92)_0%,rgb(0_0_0/0.7)_38%,transparent_62%)] lg:bg-[linear-gradient(90deg,rgb(0_0_0/0.9)_0%,rgb(0_0_0/0.65)_34%,transparent_58%)]"
+        className="pointer-events-none absolute inset-0 [mask-image:linear-gradient(to_bottom,black_calc(100%-180px),transparent)] bg-[linear-gradient(180deg,rgb(0_0_0/0.92)_0%,rgb(0_0_0/0.7)_38%,transparent_62%)] lg:bg-[linear-gradient(90deg,rgb(0_0_0/0.9)_0%,rgb(0_0_0/0.65)_34%,transparent_58%)]"
       />
-      <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-ink-950" />
       {/* The words let drags through to the globe, except on their links. */}
       <div className="pointer-events-none relative z-10 flex flex-1 flex-col [&_a]:pointer-events-auto [&_button]:pointer-events-auto">
         {children}

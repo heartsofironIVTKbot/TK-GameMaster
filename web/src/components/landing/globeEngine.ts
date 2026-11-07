@@ -2,6 +2,8 @@ import * as THREE from "three";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
+import { SavePass } from "three/examples/jsm/postprocessing/SavePass.js";
+import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 
 /**
@@ -103,6 +105,32 @@ const CAPITAL_FRAGMENT = /* glsl */ `
     #include <colorspace_fragment>
   }
 `;
+
+/**
+ * The last pass, for a see-through canvas: the scene's own opacity (saved
+ * before the glow, whose blur marks every pixel solid), raised to at least the
+ * light's strength so glow over empty space still shows over the sky.
+ */
+const GLOW_ALPHA = {
+  uniforms: { tDiffuse: { value: null }, tScene: { value: null } },
+  vertexShader: /* glsl */ `
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: /* glsl */ `
+    uniform sampler2D tDiffuse;
+    uniform sampler2D tScene;
+    varying vec2 vUv;
+    void main() {
+      vec3 light = clamp(texture2D(tDiffuse, vUv).rgb, 0.0, 1.0);
+      float solid = clamp(texture2D(tScene, vUv).a, 0.0, 1.0);
+      gl_FragColor = vec4(light, max(solid, max(light.r, max(light.g, light.b))));
+    }
+  `,
+};
 
 /** How far apart a line's points may be (degrees), so it stays on the curved surface. */
 const LINE_STEP = 0.4;
@@ -391,10 +419,10 @@ export class WarGlobe {
 
   constructor(private readonly canvas: HTMLCanvasElement, options: GlobeOptions) {
     this.options = options;
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
-    // Pure black: the bloom path converts a dark grey clear colour wrongly
-    // (ink-950 came out as #222b22); black is black either way.
-    this.renderer.setClearColor(0x000000, 1);
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: "high-performance" });
+    // See-through: the site's night sky (SkyBackground) shows round the globe.
+    // Black at zero alpha, as a grey clear colour came out wrong through bloom.
+    this.renderer.setClearColor(0x000000, 0);
     this.camera.position.set(0, 0, 4.1);
 
     this.scene.add(this.tilt);
@@ -426,14 +454,20 @@ export class WarGlobe {
         fragmentShader: ATMOSPHERE_FRAGMENT,
         uniforms: { uColor: { value: new THREE.Color(COLORS.brand400) } },
         side: THREE.BackSide,
-        blending: THREE.AdditiveBlending,
+        // Adds light only: it leaves the canvas's opacity alone, so the sky
+        // behind shows through the halo (as additive, it made a dark ring).
+        blending: THREE.CustomBlending,
+        blendEquation: THREE.AddEquation,
+        blendSrc: THREE.SrcAlphaFactor,
+        blendDst: THREE.OneFactor,
+        blendSrcAlpha: THREE.ZeroFactor,
+        blendDstAlpha: THREE.OneFactor,
         transparent: true,
         depthWrite: false,
       }),
     );
     this.tilt.add(atmosphere);
 
-    this.addStars();
     this.addOrbits();
     this.applyQuality();
     this.bindPointer();
@@ -575,32 +609,25 @@ export class WarGlobe {
     this.composer?.dispose();
     this.composer = null;
     this.bloom = null;
+    const composer = new EffectComposer(this.renderer);
+    composer.addPass(new RenderPass(this.scene, this.camera));
+    const scene = new SavePass();
+    composer.addPass(scene);
     if (high) {
-      const composer = new EffectComposer(this.renderer);
-      composer.addPass(new RenderPass(this.scene, this.camera));
       this.bloom = new UnrealBloomPass(new THREE.Vector2(this.width, this.height), 0.75, 0.25, 0.6);
       composer.addPass(this.bloom);
-      composer.addPass(new OutputPass());
-      composer.setSize(this.width, this.height);
-      this.composer = composer;
     }
+    composer.addPass(new OutputPass());
+    // Glow drawn over empty space has light but no opacity; give it some, so it
+    // shows over the sky behind the canvas instead of vanishing.
+    const alpha = new ShaderPass(GLOW_ALPHA);
+    alpha.uniforms.tScene.value = scene.renderTarget.texture;
+    composer.addPass(alpha);
+    composer.setSize(this.width, this.height);
+    this.composer = composer;
   }
 
-  private addStars(): void {
-    const positions: number[] = [];
-    for (let i = 0; i < 1400; i++) {
-      const direction = new THREE.Vector3(random(-1, 1), random(-1, 1), random(-1, 1)).normalize();
-      const point = direction.multiplyScalar(random(18, 40));
-      positions.push(point.x, point.y, point.z);
-    }
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
-    const stars = new THREE.Points(
-      geometry,
-      new THREE.PointsMaterial({ color: 0x9fb8a4, size: 0.06, transparent: true, opacity: 0.55, depthWrite: false }),
-    );
-    this.scene.add(stars);
-  }
+
 
   /** Two thin orbit rings with a satellite on each: a quiet sci-fi touch. */
   private addOrbits(): void {
@@ -998,10 +1025,32 @@ export class WarGlobe {
 
   // ---- Frame loop ----------------------------------------------------------
 
+  /**
+   * For recordings (the trailer renders frame by frame): stop the globe's own
+   * clock and move it on by exactly `dt` seconds, then draw.
+   */
+  advance(dt: number): void {
+    this.stop();
+    let left = dt;
+    while (left > 1e-6) {
+      const step = Math.min(left, 1 / 60);
+      this.step(step, performance.now());
+      left -= step;
+    }
+    this.render();
+  }
+
   private readonly tick = (now: number): void => {
     if (!this.running) return;
     const dt = Math.min(0.05, (now - this.last) / 1000);
     this.last = now;
+    this.step(dt, now);
+    this.render();
+    this.countFrame(now);
+    this.frame = requestAnimationFrame(this.tick);
+  };
+
+  private step(dt: number, now: number): void {
     if (this.options.motion) {
       this.time += dt;
       if (!this.dragging) {
@@ -1020,10 +1069,7 @@ export class WarGlobe {
         }
       }
     }
-    this.render();
-    this.countFrame(now);
-    this.frame = requestAnimationFrame(this.tick);
-  };
+  }
 
   private render(): void {
     this.globeMaterial.uniforms.uTime.value = this.time;
