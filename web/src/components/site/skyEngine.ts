@@ -170,7 +170,7 @@ export class Sky {
         r: bright ? 1 + Math.random() * 0.8 : 0.35 + depth * 0.8,
         alpha: bright ? 0.75 + Math.random() * 0.25 : 0.18 + Math.random() * 0.5,
         depth: 0.15 + depth * 0.85,
-        twinkle: Math.random() < (bright ? 0.6 : 0.35) ? 1.2 + Math.random() * 2.4 : 0,
+        twinkle: Math.random() < (bright ? 0.8 : 0.55) ? 1.5 + Math.random() * 3 : 0,
         phase: Math.random() * Math.PI * 2,
         tint: TINTS[Math.floor(Math.random() * TINTS.length)],
       };
@@ -256,7 +256,7 @@ export class Sky {
     c.globalCompositeOperation = "lighter";
 
     // Without drift nothing moves but the twinkle: blit the still part, then
-    // draw only the twinklers (a third of the stars) each frame.
+    // draw only the twinklers (about half the stars) each frame.
     const still = !o.drift && !o.aurora;
     if (still) {
       c.setTransform(1, 0, 0, 1, 0, 0);
@@ -301,20 +301,28 @@ export class Sky {
         if (x < 0) x += w;
         if (y < 0) y += h;
         let alpha = star.alpha * o.brightness;
-        // Twinklers dip to almost nothing and back, each at its own pace.
-        if (star.twinkle) alpha *= 0.12 + 0.88 * (0.5 + 0.5 * Math.sin(this.time * star.twinkle + star.phase)) ** 2;
+        let r = star.r;
+        let halo = r > 1 ? 0.18 : 0;
+        if (star.twinkle) {
+          // Twinklers fade to almost nothing, then flare: brighter than they
+          // rest, a little bigger, with a halo at the peak (Niko: the old,
+          // gentle twinkle was nearly impossible to see).
+          const peak = (0.5 + 0.5 * Math.sin(this.time * star.twinkle + star.phase)) ** 3;
+          alpha *= 0.08 + 1.9 * peak;
+          r *= 1 + 0.9 * peak;
+          halo = Math.max(halo, 0.3 * peak);
+        }
         if (alpha <= 0.02) continue;
         c.fillStyle = `rgba(${star.tint},${Math.min(1, alpha)})`;
-        if (star.r > 1) {
-          // The bright few get a soft halo.
-          c.globalAlpha = 0.18;
+        if (halo > 0.02) {
+          c.globalAlpha = halo;
           c.beginPath();
-          c.arc(x, y, star.r * 3, 0, Math.PI * 2);
+          c.arc(x, y, Math.max(r, 0.8) * 3.2, 0, Math.PI * 2);
           c.fill();
           c.globalAlpha = 1;
         }
         c.beginPath();
-        c.arc(x, y, star.r, 0, Math.PI * 2);
+        c.arc(x, y, r, 0, Math.PI * 2);
         c.fill();
       }
     }
@@ -366,9 +374,10 @@ export class Sky {
       c.fillRect(0, 0, w, h);
     };
     const size = Math.max(w, h);
-    glow(w * 0.05, h * 1.0, size * 0.65, "rgba(40,150,70,0.10)");
-    glow(w * 0.95, h * 0.05, size * 0.5, "rgba(30,110,60,0.08)");
-    glow(w * 0.6, h * 0.55, size * 0.35, "rgba(20,80,40,0.04)");
+    // Half as strong as at first: Niko wanted the background darker.
+    glow(w * 0.05, h * 1.0, size * 0.65, "rgba(40,150,70,0.05)");
+    glow(w * 0.95, h * 0.05, size * 0.5, "rgba(30,110,60,0.04)");
+    glow(w * 0.6, h * 0.55, size * 0.35, "rgba(20,80,40,0.02)");
     this.hazeLayer = layer;
     return layer;
   }

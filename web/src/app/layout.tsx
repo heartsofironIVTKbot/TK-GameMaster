@@ -40,7 +40,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${publicSans.variable} ${bigShoulders.variable} ${bigShouldersStencil.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-ink-950">
+      <body className="min-h-full flex flex-col bg-night">
         {/* It reads the page's address, so it streams in after prerendering (a build error otherwise). */}
         <Suspense fallback={null}>
           <SkyBackground />

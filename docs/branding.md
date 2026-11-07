@@ -13,6 +13,7 @@ place the look is decided is in one spot. Samples of the direction are in
 | --- | --- | --- |
 | `brand-50` … `brand-950` | The identity colour: buttons, highlights, the tour's lit ring | Field green (hue 146), GameMaster's answer to IronLegion's red |
 | `ink-50` … `ink-950` | Backgrounds, panels, borders and text | Near-black with a faint green cast (hue 152) |
+| `night` | The page itself, behind the sky | Darker than ink-950, so panels stand out |
 
 Components only use `brand-*` and `ink-*` (`bg-brand-400`, `text-ink-300`…),
 never `amber-*` or `slate-*`, and the hand-written colours in `globals.css`
@@ -203,7 +204,8 @@ letters corrupting into 0/1 (`fx.tsx`); nothing shakes, which read as lag.
 Niko turned down a radar roll call, a paper dossier and a teleprinter
 report (2026-11-06). The globe and these effects are the one exception
 to the rule below:
-the vanilla HOI4 map on a dark globe with glowing green coasts, spinning,
+the vanilla HOI4 map on a dark globe with glowing green coasts and borders
+and no land fill (Niko, 2026-11-07: the dotted fill was too gritty), spinning,
 with missiles, interceptions and explosions (Niko, 2026-11-06: vanilla,
 "Dramatic", high glow, always moving even with reduce motion on). It loads
 three.js only on that page and steps down to no glow on slow devices. Its
@@ -216,7 +218,9 @@ stop at about 73.7 N and squeezed land up to a hard ring round the pole
 north-west coast and round Alaska, which HOI4 squeezes north; without
 those pins the 66 N cut lost Alaska's middle and left sea before Yukon. Capitals are steady red glowing dots; borders follow
 the globe's curve so they never break up; blasts and their shockwave rings
-stay whole right up to the globe's edge. Try other looks at `/lab/globe` (dev only).
+stay whole right up to the globe's edge. It never runs where the browser
+draws WebGL in software (hardware acceleration off): there it froze the
+page, so the hero keeps its quiet glow instead. Try other looks at `/lab/globe` (dev only).
 
 **Green means "do this" or "you are here"** (main button, current page).
 No gradient washes, glows, glass blur or decorative motion, with two
@@ -224,10 +228,12 @@ exceptions: the front page's globe, and the night sky behind every page.
 
 **The background** (`web/src/components/site/SkyBackground.tsx`, drawn by
 `skyEngine.ts`): a night sky on one canvas behind every page, Niko's pick
-(2026-11-07): still stars with a few twinkling, a faint brand-green haze in
-two corners, and a shooting star about every 40 seconds. About a third of
-the stars twinkle, dipping almost out and back, so the sky reads as alive. Pages leave their
-own background clear (the body is ink-950) and panels stay solid, so it
+(2026-11-07): stars on near-black, a very faint brand-green haze in two
+corners, and a shooting star about every 40 seconds. About half the stars
+twinkle: they fade almost out, then flare brighter and a little bigger with
+a halo, so the sky reads as alive (a gentler twinkle was nearly invisible).
+Pages leave their own background clear (the body is `night`, darker than
+ink-950, in light and dark system modes alike) and panels stay solid, so it
 only shows in the margins and gaps. The front page's globe renders on a
 see-through canvas over it (no stars of its own), and the hero fades out
 at its foot, so the sky runs unbroken from the top. It doesn't run on the full-screen map

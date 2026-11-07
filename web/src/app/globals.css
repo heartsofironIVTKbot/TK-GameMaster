@@ -1,8 +1,11 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* GameMaster is always dark, whatever the visitor's system is set to (in
+     light mode these were white and near black: the whole site went white). */
+  color-scheme: dark;
+  --background: var(--color-night);
+  --foreground: var(--color-ink-100);
 }
 
 @theme inline {
@@ -403,6 +406,8 @@
   --color-ink-800: oklch(26.6% 0.012 152);
   --color-ink-900: oklch(19.2% 0.011 152);
   --color-ink-950: oklch(11.8% 0.009 152);
+  /* The night sky behind every page: darker than any panel (Niko, 2026-11-07). */
+  --color-night: oklch(7.5% 0.006 152);
   /* Status "good" (emerald-*): a cooler mint-jade, so OK / OPEN stays green
      but never reads as the leaf-green brand. */
   --color-emerald-50: oklch(97.8% 0.024 174);
@@ -416,13 +421,6 @@
   --color-emerald-800: oklch(41.2% 0.068 174);
   --color-emerald-900: oklch(34.2% 0.054 174);
   --color-emerald-950: oklch(23.4% 0.038 174);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {

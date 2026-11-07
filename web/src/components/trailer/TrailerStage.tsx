@@ -124,10 +124,13 @@ export default function TrailerStage() {
     const globe = engine.current;
     if (!globe) return;
     const want = shot.globe ?? globeShot.current ?? "close";
-    if (want !== globeShot.current) {
+    // The pull-out moves the globe's own camera back (shrinking the canvas
+    // instead showed its edge as a faint box round the glow).
+    const zoom = shot.globe === "pullout" ? 1 - 0.35 * ease(((t - shot.start) / (shot.end - shot.start)) * 1.2) : null;
+    if (want !== globeShot.current || zoom !== null) {
+      if (want !== globeShot.current) globe.setOptions({ intensity: want === "pullout" || want === "end" ? "war" : "dramatic" });
       globeShot.current = want;
-      layoutRef.current = globeLayout(want, format);
-      globe.setOptions({ intensity: want === "pullout" || want === "end" ? "war" : "dramatic" });
+      layoutRef.current = globeLayout(want, format, zoom ?? 1);
       globe.resize(W, H);
     }
     const dt = t - globeTime.current;
@@ -255,16 +258,17 @@ export default function TrailerStage() {
 
 // ---- The globe's framing per shot. -----------------------------------------------------
 
-function globeLayout(shot: GlobeShot, format: Format): (w: number, h: number) => GlobeLayout {
+function globeLayout(shot: GlobeShot, format: Format, zoom = 1): (w: number, h: number) => GlobeLayout {
   const tall = format === "tall";
   const layouts: Record<GlobeShot, GlobeLayout> = {
     close: tall ? { x: 0, y: 0.2, radius: 0.36 } : { x: 0.16, y: 0.16, radius: 0.66 },
     punch: tall ? { x: 0, y: 0.06, radius: 0.3 } : { x: 0, y: 0.04, radius: 0.46 },
     slam: tall ? { x: 0, y: 0, radius: 0.26 } : { x: 0, y: 0, radius: 0.4 },
-    pullout: tall ? { x: 0, y: 0.08, radius: 0.5 } : { x: 0, y: 0.06, radius: 0.9 },
+    // The whole globe from the first frame (it used to start bigger than the screen, cut top and bottom).
+    pullout: tall ? { x: 0, y: 0.02, radius: 0.24 } : { x: 0, y: 0.02, radius: 0.43 },
     end: tall ? { x: 0, y: 0.42, radius: 0.36 } : { x: 0, y: 0.62, radius: 0.62 },
   };
-  const layout = layouts[shot];
+  const layout = { ...layouts[shot], radius: layouts[shot].radius * zoom };
   return () => layout;
 }
 
@@ -277,12 +281,9 @@ function globeStyle(shot: Shot, t: number): CSSProperties {
   if (shot.globe === "close") scale = 1.08 - 0.08 * ease(p);
   if (shot.globe === "punch") scale = 1 + 0.06 * Math.floor(u / BEAT) + 0.04 * Math.exp(-((u % BEAT) / BEAT) * 6);
   if (shot.globe === "slam") scale = 1.25 - 0.25 * ease(u / 0.35);
-  if (shot.globe === "pullout") scale = 1 - 0.5 * ease(p * 1.2);
   if (shot.globe === "end") scale = 1 + 0.03 * Math.sin(u * 1.5);
   const dim = shot.kind === "logo" ? 0.55 : shot.kind === "end" ? 0.7 : 1;
-  // Shrunk, the canvas's faint glow would show its edges: fade them out round the globe.
-  const mask = shot.globe === "pullout" ? "radial-gradient(circle at 50% 53%, black 34%, transparent 62%)" : undefined;
-  return { opacity: visible ? dim : 0, transform: `scale(${scale})`, transformOrigin: "50% 50%", maskImage: mask, WebkitMaskImage: mask };
+  return { opacity: visible ? dim : 0, transform: `scale(${scale})`, transformOrigin: "50% 50%" };
 }
 
 // ---- Layers. -------------------------------------------------------------------------------
