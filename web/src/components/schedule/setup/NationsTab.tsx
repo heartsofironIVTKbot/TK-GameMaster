@@ -11,7 +11,8 @@ import {
   majorTagsFor,
   nationMatchKeys,
 } from "@/data/nationCategories";
-import { getCountryData, placeholderFlag, type ScenarioId } from "@/data/scenarioData";
+import { placeholderFlag, type ScenarioId } from "@/data/scenarioData";
+import { getCountryData, useScenarioNations, type ScenarioNations } from "@/data/scenarioNations";
 import {
   HOURS_BEFORE_PRESETS,
   MAX_LOCK_GROUPS,
@@ -62,6 +63,8 @@ export default function NationsTab({
   notPlayable?: string[];
   presetName?: string | null;
 }) {
+  // The mode's own flags, loaded on demand.
+  const nationData = useScenarioNations(scenarioId);
   const [query, setQuery] = useState("");
   const [manualName, setManualName] = useState("");
   const active =
@@ -368,6 +371,7 @@ export default function NationsTab({
                       <NationRow
                         nation={nation}
                         scenarioId={scenarioId}
+                        nationData={nationData}
                         owner={owner ?? null}
                         activeId={active.id}
                         onToggle={() => onToggleNations([slot])}
@@ -461,6 +465,7 @@ export default function NationsTab({
 function NationRow({
   nation,
   scenarioId,
+  nationData,
   owner,
   activeId,
   onToggle,
@@ -468,12 +473,13 @@ function NationRow({
 }: {
   nation: RosterNation;
   scenarioId: ScenarioId;
+  nationData: ScenarioNations | null;
   owner: LockGroupForm | null;
   activeId: string;
   onToggle: () => void;
   onFocus: () => void;
 }) {
-  const data = getCountryData(nation.tag, nation.name, scenarioId);
+  const data = getCountryData(nation.tag, nation.name, scenarioId, nationData);
   const inActive = owner?.id === activeId;
   return (
     <div className="gm-cut flex items-center gap-2 bg-ink-950 py-1 pl-2 pr-1 [--cut:6px]">

@@ -1,8 +1,13 @@
 /**
  * HOI4 scenario data: country metadata for the map dashboard.
  *
+ * This module is the light metadata only (labels, map URLs, tag aliases,
+ * option lists, placeholders) and must never import the nation JSON: those
+ * files total about 17 MB and are loaded per scenario on demand by
+ * ``scenarioNations.ts`` (``useScenarioNations`` / ``getCountryData``).
+ *
  * Nation entries are scraped from the real game files by
- * ``scripts/hoi4_scraper.py`` and bundled here as ``scenarios/*.json``
+ * ``scripts/hoi4_scraper.py`` into ``scenarios/*.json``
  * (keyed by 3-letter country tag). The Road to 56 set is scraped with
  * ``--mod-path <Rt56 mod dir>``; its images live under ``/assets_rt56`` and
  * its map under ``/maps/road_to_56.geojson``. Kaiserreich, the three
@@ -15,20 +20,11 @@
  * "Void" features for deliberately ownerless states (never regenerate any
  * of the JSONs by hand).
  * Any tag missing from the selected scraped set is served by
- * ``getCountryData`` through a deterministic fallback, so the country
- * inspector always has something to render without crashing.
+ * ``getCountryData`` (in ``scenarioNations.ts``) through a deterministic
+ * fallback, so the country inspector always has something to render without
+ * crashing.
  */
 
-import scrapedVanilla1936 from "./scenarios/vanilla_1936.json";
-import scrapedRoadTo56 from "./scenarios/road_to_56.json";
-import scrapedKaiserreich from "./scenarios/kaiserreich.json";
-import scrapedModernMD from "./scenarios/modern_md.json";
-import scrapedModernNV from "./scenarios/modern_nv.json";
-import scrapedModernTFR from "./scenarios/modern_tfr.json";
-import scrapedTFB from "./scenarios/tfb.json";
-import scrapedOAK from "./scenarios/oak.json";
-import scrapedHORST from "./scenarios/horst.json";
-import scrapedBFFU from "./scenarios/bffu.json";
 import { modeOption } from "@/lib/scheduleOptions";
 
 /** Party share map keyed by the game's own party keys — the four vanilla
@@ -167,8 +163,8 @@ export type ScenarioId =
 export type ScenarioGroup = "classic" | "modern" | "historical";
 
 /**
- * Scenarios selectable on the dashboard. Each entry bundles the scraped
- * country metadata, the generated nation map (``scripts/svg_to_geojson.py``)
+ * Scenarios selectable on the dashboard. Each entry names the generated
+ * nation map (``scripts/svg_to_geojson.py``)
  * and a display label. Both datasets come from ``scripts/hoi4_scraper.py`` —
  * The Road to 56 set is scraped with ``--mod-path <rt56 dir>`` and its assets
  * live under ``/assets_rt56`` (never regenerate either JSON by hand).
@@ -303,11 +299,6 @@ export interface ScenarioDefinition {
   id: ScenarioId;
   label: string;
   mapUrl: string;
-  nations: Record<string, CountryScenarioData>;
-  /** Ruling-party registry (scraped ``common/ideologies``): names + colours
-      for the ideology wheel. Absent on legacy datasets — the drawer falls
-      back to the four vanilla families. */
-  ideologies?: Record<string, IdeologyInfo>;
   /** Display group: variants of one group appear as a single TopBar entry
       with a small sub-toggle (modern: MD/NV/TFR share one map; historical:
       TFB/OAK/HORST/BFFU each ship their own map). */
@@ -323,27 +314,16 @@ export const SCENARIOS: Record<ScenarioId, ScenarioDefinition> = {
     id: "vanilla_1936",
     label: VANILLA_1936_LABEL,
     mapUrl: "/maps/vanilla.geojson",
-    nations: scrapedVanilla1936 as unknown as Record<string, CountryScenarioData>,
   },
   road_to_56: {
     id: "road_to_56",
     label: ROAD_TO_56_LABEL,
     mapUrl: "/maps/road_to_56.geojson",
-    nations: scrapedRoadTo56 as unknown as Record<string, CountryScenarioData>,
   },
   kaiserreich: {
     id: "kaiserreich",
     label: KAISERREICH_LABEL,
     mapUrl: "/maps/kaiserreich.geojson",
-    // The scraper writes ``{ nations, ideologies }``; older datasets are
-    // flat tag maps (no registry — the drawer falls back to the vanilla
-    // families).
-    nations: (
-      (scrapedKaiserreich as { nations?: Record<string, CountryScenarioData> })
-        .nations ?? scrapedKaiserreich
-    ) as unknown as Record<string, CountryScenarioData>,
-    ideologies: (scrapedKaiserreich as { ideologies?: Record<string, IdeologyInfo> })
-      .ideologies,
   },
   // The three modern-day scenarios share ONE canonical map (Millennium
   // Dawn's — the 2-of-3 consensus winner and the only one whose world
@@ -356,24 +336,12 @@ export const SCENARIOS: Record<ScenarioId, ScenarioDefinition> = {
     label: MODERN_MD_LABEL,
     group: "modern",
     mapUrl: "/maps/modern.geojson",
-    nations: (
-      (scrapedModernMD as { nations?: Record<string, CountryScenarioData> })
-        .nations ?? scrapedModernMD
-    ) as unknown as Record<string, CountryScenarioData>,
-    ideologies: (scrapedModernMD as { ideologies?: Record<string, IdeologyInfo> })
-      .ideologies,
   },
   modern_nv: {
     id: "modern_nv",
     label: MODERN_NV_LABEL,
     group: "modern",
     mapUrl: "/maps/modern.geojson",
-    nations: (
-      (scrapedModernNV as { nations?: Record<string, CountryScenarioData> })
-        .nations ?? scrapedModernNV
-    ) as unknown as Record<string, CountryScenarioData>,
-    ideologies: (scrapedModernNV as { ideologies?: Record<string, IdeologyInfo> })
-      .ideologies,
     tagAliases: NV_TAG_ALIASES,
   },
   modern_tfr: {
@@ -381,12 +349,6 @@ export const SCENARIOS: Record<ScenarioId, ScenarioDefinition> = {
     label: MODERN_TFR_LABEL,
     group: "modern",
     mapUrl: "/maps/modern.geojson",
-    nations: (
-      (scrapedModernTFR as { nations?: Record<string, CountryScenarioData> })
-        .nations ?? scrapedModernTFR
-    ) as unknown as Record<string, CountryScenarioData>,
-    ideologies: (scrapedModernTFR as { ideologies?: Record<string, IdeologyInfo> })
-      .ideologies,
     tagAliases: TFR_TAG_ALIASES,
   },
   // The historical group: four vanilla-based multiplayer mods, each with its
@@ -397,48 +359,24 @@ export const SCENARIOS: Record<ScenarioId, ScenarioDefinition> = {
     label: TFB_LABEL,
     group: "historical",
     mapUrl: "/maps/tfb.geojson",
-    nations: (
-      (scrapedTFB as { nations?: Record<string, CountryScenarioData> })
-        .nations ?? scrapedTFB
-    ) as unknown as Record<string, CountryScenarioData>,
-    ideologies: (scrapedTFB as { ideologies?: Record<string, IdeologyInfo> })
-      .ideologies,
   },
   oak: {
     id: "oak",
     label: OAK_LABEL,
     group: "historical",
     mapUrl: "/maps/oak.geojson",
-    nations: (
-      (scrapedOAK as { nations?: Record<string, CountryScenarioData> })
-        .nations ?? scrapedOAK
-    ) as unknown as Record<string, CountryScenarioData>,
-    ideologies: (scrapedOAK as { ideologies?: Record<string, IdeologyInfo> })
-      .ideologies,
   },
   horst: {
     id: "horst",
     label: HORST_LABEL,
     group: "historical",
     mapUrl: "/maps/horst.geojson",
-    nations: (
-      (scrapedHORST as { nations?: Record<string, CountryScenarioData> })
-        .nations ?? scrapedHORST
-    ) as unknown as Record<string, CountryScenarioData>,
-    ideologies: (scrapedHORST as { ideologies?: Record<string, IdeologyInfo> })
-      .ideologies,
   },
   bffu: {
     id: "bffu",
     label: BFFU_LABEL,
     group: "historical",
     mapUrl: "/maps/bffu.geojson",
-    nations: (
-      (scrapedBFFU as { nations?: Record<string, CountryScenarioData> })
-        .nations ?? scrapedBFFU
-    ) as unknown as Record<string, CountryScenarioData>,
-    ideologies: (scrapedBFFU as { ideologies?: Record<string, IdeologyInfo> })
-      .ideologies,
   },
 };
 
@@ -570,14 +508,11 @@ function placeholderPortrait(name: string, seed: string): string {
   return svgDataUri(svg);
 }
 
-// --- Scraped dataset -------------------------------------------------------
-
-// Scenario data lives in the SCENARIOS registry above; getCountryData looks
-// nations up per selected scenario.
-
 // --- Fallback generator for unlisted tags ----------------------------------
 
-function buildFallback(tag: string, name: string): CountryScenarioData {
+/** Deterministic placeholder nation, used for unlisted tags and while a
+ * scenario's nations are still loading (see ``scenarioNations.ts``). */
+export function buildFallback(tag: string, name: string): CountryScenarioData {
   return {
     name,
     tag,
@@ -598,24 +533,4 @@ function buildFallback(tag: string, name: string): CountryScenarioData {
     resources: { oil: 0, aluminum: 0, rubber: 0, tungsten: 0, steel: 1, chromium: 0, coal: 0 },
     armedForces: { divisions: 5, fieldManpower: 60_000, totalWarships: 0, totalAircraft: 10 },
   };
-}
-
-/** Resolve the scenario data for a tag: scraped entry first, then defaults.
- *
- * ``tag`` is the MAP feature tag (always the canonical map's). Scenarios
- * whose country tags differ (the modern variants) remap it through
- * ``tagAliases`` before the lookup, so clicking mainland China shows PRC
- * data instead of NV/TFR's Taiwan (CHI) entry.
- */
-export function getCountryData(
-  tag: string,
-  name?: string,
-  scenario: ScenarioId = DEFAULT_SCENARIO,
-): CountryScenarioData {
-  const definition = SCENARIOS[scenario];
-  if (!definition) return buildFallback(tag, (name ?? tag).trim() || tag);
-  const key = definition.tagAliases?.[tag] ?? tag;
-  const scraped = definition.nations[key];
-  if (scraped) return scraped;
-  return buildFallback(tag, (name ?? key).trim() || tag);
 }

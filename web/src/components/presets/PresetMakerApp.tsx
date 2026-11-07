@@ -9,7 +9,7 @@ import ModeIcon from "@/components/schedule/ModeIcon";
 import { HostAvatar, Spinner } from "@/components/schedule/ui";
 import { useTutorialFacts } from "@/components/tutorial/TutorialProvider";
 import { canonicalName, nationMatchKeys } from "@/data/nationCategories";
-import { getCountryData } from "@/data/scenarioData";
+import { getCountryData, useScenarioNations } from "@/data/scenarioNations";
 import { PRESET_LIMITS, notPlayableNations, type GamePreset } from "@/lib/presetTypes";
 import { validateLayout, validatePresetInput, validateResourceList } from "@/lib/presetValidation";
 import { SCHEDULE_MODE_VALUES, modeOption } from "@/lib/scheduleOptions";
@@ -162,6 +162,7 @@ export default function PresetMakerApp({
 
   const mode = modeOption(state.mode);
   const scenarioId = mode?.scenarioId ?? null;
+  const nationData = useScenarioNations(scenarioId);
 
   // Map nations ↔ the bot's names (the map sometimes says "Spanish Republic"
   // where the bot says "Spain") — the same matching the reservation map uses.
@@ -198,10 +199,10 @@ export default function PresetMakerApp({
     const out = new Map<string, string>();
     if (!scenarioId) return out;
     for (const [nation, tags] of tagsByBot) {
-      out.set(nation, getCountryData(tags[0], nation, scenarioId).flagUrl || `/assets/flags/${tags[0]}.png`);
+      out.set(nation, getCountryData(tags[0], nation, scenarioId, nationData).flagUrl || `/assets/flags/${tags[0]}.png`);
     }
     return out;
-  }, [tagsByBot, scenarioId]);
+  }, [tagsByBot, scenarioId, nationData]);
   const flagOf = useCallback((nation: string) => flags.get(nation) ?? null, [flags]);
 
   // Map highlights: purple = what you're editing, thin blue = the other

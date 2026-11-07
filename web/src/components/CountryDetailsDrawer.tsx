@@ -9,14 +9,13 @@ import { ChevronDown, PanelRightClose, PanelRightOpen, X } from "lucide-react";
 import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import {
   DEFAULT_SCENARIO,
-  SCENARIOS,
-  getCountryData,
   placeholderFlag,
   type CountryScenarioData,
   type NationalSpirit,
   type NationalSpiritEffect,
   type ScenarioId,
 } from "@/data/scenarioData";
+import { getCountryData, useScenarioNations } from "@/data/scenarioNations";
 import type {
   AuthUser,
   GameLobby,
@@ -391,9 +390,13 @@ export default function CountryDetailsDrawer({
   onToggleMinimized,
   onClose,
 }: CountryDetailsDrawerProps) {
+  // The scenario's nations load on demand; until then the panel shows the
+  // name and a short loading line instead of placeholder numbers.
+  const nations = useScenarioNations(scenarioId);
+  const loading = nations === null;
   const scenario: CountryScenarioData = useMemo(
-    () => getCountryData(selected.tag, selected.name, scenarioId),
-    [selected, scenarioId],
+    () => getCountryData(selected.tag, selected.name, scenarioId, nations),
+    [selected, scenarioId, nations],
   );
 
   const [hoveredSpiritId, setHoveredSpiritId] = useState<string | null>(null);
@@ -405,7 +408,7 @@ export default function CountryDetailsDrawer({
   // Ideology wheel: total-conversion scenarios (Kaiserreich) ship a registry
   // of their own parties with names + colours; legacy datasets fall back to
   // the four vanilla families.
-  const ideologyRegistry = SCENARIOS[scenarioId]?.ideologies;
+  const ideologyRegistry = nations?.ideologies;
   const ideologySegments: Segment[] = ideologyRegistry
     ? Object.entries(ideologyRegistry)
         .map(([key, info]) => ({
@@ -511,6 +514,10 @@ export default function CountryDetailsDrawer({
 
       {/* Body */}
       <div className={`${expanded ? "block" : "hidden"} min-h-0 flex-1 space-y-[18px] overflow-y-auto p-4 sm:block`}>
+        {loading ? (
+          <p className="text-xs text-ink-500">Loading nation details…</p>
+        ) : (
+        <>
         {/* Leader & ideology */}
         <section className="gm-plate p-3">
           <div className="flex items-center gap-3">
@@ -612,6 +619,8 @@ export default function CountryDetailsDrawer({
             <NumberBox value={scenario.armedForces.totalAircraft} label="Aircraft" note="air force" tone="red" />
           </div>
         </section>
+        </>
+        )}
 
         {/* Locked / Co-Op notices */}
         {selectionKind === "locked" && (

@@ -24,11 +24,8 @@ import {
   majorTagsFor,
   nationMatchKeys,
 } from "@/data/nationCategories";
-import {
-  getCountryData,
-  placeholderFlag,
-  type ScenarioId,
-} from "@/data/scenarioData";
+import { placeholderFlag, type ScenarioId } from "@/data/scenarioData";
+import { getCountryData, useScenarioNations } from "@/data/scenarioNations";
 import { reservationLookup } from "@/lib/reservationMatch";
 import type {
   AuthUser,
@@ -161,6 +158,8 @@ export default function ReservationDrawer({
   draftPanel = null,
   onHostLockedChange,
 }: ReservationDrawerProps) {
+  // Flags come from the scenario's own nation data, loaded on demand.
+  const nationData = useScenarioNations(scenarioId);
   // Whose profile popover is open: "self", a reservation's Discord id, or
   // "coop:<id>" for a co-op chip under its major.
   const [popoverKey, setPopoverKey] = useState<string | null>(null);
@@ -534,7 +533,7 @@ export default function ReservationDrawer({
     const isFiller = Boolean(row.fillerSlot);
     const data = isFiller
       ? null
-      : getCountryData(nation.tag, nation.name, scenarioId);
+      : getCountryData(nation.tag, nation.name, scenarioId, nationData);
     const isSelf =
       authUser &&
       reservation &&
