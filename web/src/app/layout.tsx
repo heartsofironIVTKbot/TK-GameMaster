@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Big_Shoulders, Big_Shoulders_Stencil, Geist_Mono, Public_Sans } from "next/font/google";
+import { Suspense } from "react";
 import SkyBackground from "@/components/site/SkyBackground";
 import TutorialProvider from "@/components/tutorial/TutorialProvider";
 import "./globals.css";
@@ -40,7 +41,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${publicSans.variable} ${bigShoulders.variable} ${bigShouldersStencil.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-ink-950">
-        <SkyBackground />
+        {/* It reads the page's address, so it streams in after prerendering (a build error otherwise). */}
+        <Suspense fallback={null}>
+          <SkyBackground />
+        </Suspense>
         <TutorialProvider>{children}</TutorialProvider>
       </body>
     </html>
