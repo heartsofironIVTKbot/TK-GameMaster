@@ -5,7 +5,7 @@ import type { RequestState, ScheduleRequestStatus } from "@/lib/scheduleTypes";
 
 /**
  * Preview mode (SCHEDULER_DEMO=1) for the Attendance page: a live Roleplay
- * game two samples in, and a finalized Historical game from yesterday, plus
+ * game one sample in (so the front page's tour can take samples 2 to 5), and a finalized Historical game from yesterday, plus
  * a simulated bot for att_check / att_sample / att_override / att_finalize
  * that follows the same rules as bot.py.py.
  */
@@ -57,8 +57,8 @@ function build(): DemoEntry[] {
     id: eventId++, kind, user_id: null, actor_id: null, details: {}, created_at, ...extra,
   });
 
-  // --- Live Roleplay game: started 50 min ago, 20-min interval, 2 samples in.
-  const liveStart = now - 50 * min;
+  // --- Live Roleplay game: started 25 min ago, 20-min interval, 1 sample in.
+  const liveStart = now - 25 * min;
   const liveSlots: Record<string, string> = {
     Germany: id(4), "Soviet Union": id(2), "United Kingdom": id(7), Italy: id(1), Japan: id(6),
     Poland: id(5), Romania: id(3), Spain: id(9), "Germany_coop": id(11), _FILL_Filler: id(12), France: id(13),
@@ -67,8 +67,7 @@ function build(): DemoEntry[] {
     [id(4)]: "present", [id(2)]: "present", [id(7)]: "present", [id(1)]: "lobby", [id(6)]: "present",
     [id(5)]: "present", [id(3)]: "no_voice", [id(9)]: "present", [id(11)]: "present", [id(12)]: "no_pass", [id(13)]: "no_voice",
   };
-  const s2: Record<string, State> = { ...s1, [id(1)]: "present", [id(12)]: "present", [id(3)]: "no_voice", [id(13)]: "no_voice" };
-  const liveSamples = [sampleOf(1, liveStart + 20 * min, s1), sampleOf(2, liveStart + 40 * min, s2)];
+  const liveSamples = [sampleOf(1, liveStart + 20 * min, s1)];
   const live: RawAttendanceGame = {
     storage_key: "910000000000000001",
     mode: "Roleplay",
@@ -87,7 +86,7 @@ function build(): DemoEntry[] {
       dropped_out: [],
       drop_reasons: { [id(13)]: "Power cut at home, sorry!" },
       presence_snapshots: liveSamples,
-      snapshot_samples_done: 2,
+      snapshot_samples_done: 1,
       snapshot_done: false,
       present_ids: [],
       attendance_penalties: Object.fromEntries(Object.keys(liveSlots).map((slot) => [slot, penaltyOf(slot, "Strict")])),
@@ -101,9 +100,8 @@ function build(): DemoEntry[] {
     ...[4, 2, 7, 6, 5, 9, 11, 1].map((index, n) => ev("participation_yes", liveStart + 60 + n * 40, { user_id: id(index), details: {} })),
     ev("participation_no", liveStart + 9 * min, { user_id: id(13), details: { nation: "France", reason: "Power cut at home, sorry!", major: true, outcome: "declined" } }),
     ev("sample", liveStart + 20 * min, { details: { index: 1, count: liveSamples[0].count, manual: false } }),
-    ev("late_join", liveStart + 31 * min, { user_id: id(12), details: { nation: "_FILL_Filler", kind: "Hot Join" } }),
-    ev("participation_yes", liveStart + 32 * min, { user_id: id(12), details: {} }),
-    ev("sample", liveStart + 40 * min, { details: { index: 2, count: liveSamples[1].count, manual: false } }),
+    ev("late_join", liveStart + 21 * min, { user_id: id(12), details: { nation: "_FILL_Filler", kind: "Hot Join" } }),
+    ev("participation_yes", liveStart + 22 * min, { user_id: id(12), details: {} }),
   ].reverse();
 
   // --- Finalized Historical game from yesterday.
@@ -164,9 +162,9 @@ function build(): DemoEntry[] {
 }
 
 function store(): DemoEntry[] {
-  const holder = globalThis as { __gmAttendanceDemoV4?: DemoEntry[] };
-  if (!holder.__gmAttendanceDemoV4) holder.__gmAttendanceDemoV4 = build();
-  return holder.__gmAttendanceDemoV4;
+  const holder = globalThis as { __gmAttendanceDemoV5?: DemoEntry[] };
+  if (!holder.__gmAttendanceDemoV5) holder.__gmAttendanceDemoV5 = build();
+  return holder.__gmAttendanceDemoV5;
 }
 
 export function demoAttendanceRaw(): DemoEntry[] {

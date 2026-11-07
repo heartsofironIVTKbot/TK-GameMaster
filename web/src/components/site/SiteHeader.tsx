@@ -34,7 +34,7 @@ export default function SiteHeader({
     <header className="sticky top-0 z-[1100] border-b border-ink-800 bg-ink-950">
       <div className={`mx-auto flex min-h-14 flex-wrap items-center gap-x-4 px-4 sm:px-6 ${wide ? "" : "max-w-[1700px]"}`}>
         <div className="flex min-w-0 items-center gap-3 py-2.5">
-          <Link href="/" aria-label="GameMaster: the map">
+          <Link href="/" aria-label="GameMaster: home">
             <BrandMark size={30} />
           </Link>
           <PageIcon aria-hidden className="h-5 w-5 shrink-0 text-brand-400 2xl:hidden" strokeWidth={1.75} />

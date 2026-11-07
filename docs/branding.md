@@ -143,8 +143,70 @@ that turns on "Share our calendar with other servers" (server setup,
 Features); only those servers' hosts see it, and it never shows hosts,
 players or nations.
 
+**The front page** (`/`, `web/src/app/page.tsx`; the live map moved to
+`/map`, and old `/?game=…` links redirect there in `next.config.ts`;
+pieces in `web/src/components/landing/front/`). Headline "Master your
+game." (the logo above finishes the pun). Then, in order:
+
+1. **Trailer** (`SceneTrailer.tsx`): a CRT "Trailer incoming" screen until
+   the video exists; drop it in `web/public/landing/` and set `TRAILER`.
+   It took the place of the announcement scene (Niko, 2026-11-07).
+2. **The live map** playing itself (a cursor reserves the United Kingdom,
+   then the lobby fills region by region; it starts when it's on screen,
+   pauses off screen, loops, and always fills its frame).
+3. **"The rest of the job, handled."** (`FeatureShow.tsx`): a slideshow,
+   IronLegion's "What it keeps out" pattern (Niko, 2026-11-07, over the
+   six rows): wide slides gliding sideways with the neighbours dimmed,
+   labelled feature tabs on top whose line fills as the slide plays,
+   previous / pause / next, swipe and arrow keys. Eight slides: Calendar,
+   Player records, Presets, Archive, Live attendance, Tickets, Audit log,
+   Server settings ("Each server is in charge"). Each plays the real page:
+   the site's own screenshots in its sample-data preview, a cursor
+   clicking through (a click cuts, a new page fades), no zoom. A scroll or
+   typing is a quick run of small in-between screens, like a recording:
+   moving whole screenshots doubled the sticky headers and panels, and a
+   screen still decoding showed as a blink, so the one before always stays
+   under the one on. A few short steps per slide, listed beside the screen;
+   the one playing opens with its caption and a progress line. Tab rows
+   (game setup, preset editor, server settings) run as one quick step.
+   The calendar's Announce step ends in a Discord channel
+   (`/lab/discord`, dev only) with the bot's real post, and Tickets opens
+   in Discord (the panel, ticket #0114's channel, the closing DM with the
+   website link) before the website's saved copy. The archive's running
+   game fills with 4, 10, 18, then 25 commends, Merit and warnings; its AI
+   write-up is tagged "TommyKay only" (a paid extra, off elsewhere).
+   Calendar runs Schedule (month, shared calendar, a day) → Set up →
+   Announce; the archive's AI step shows the chat log uploaded on the
+   Games page and the analysis run; attendance samples arrive by
+   themselves under a spinning clock (no button presses: the tour takes
+   them behind the scenes and wipes the "taken early" marks). Every
+   screen gets 0.4 s and every step 1 s on top of its shot time, for
+   reading. The slides' steps and captions live in
+   `web/scripts/tour-assets/slides.mjs`.
+   It never pauses on hover; the screen opens full size on click. The
+   screens come from `web/scripts/capture-tours.mjs` (restart the dev
+   server first); re-run it when those pages change.
+4. **"Built for the community, not for profit."** (`ScenePromise.tsx`): no
+   monetization (AI analysis named as the one paid extra), ad-free, your
+   data stays yours. IronLegion's promise section, in GameMaster's look.
+5. A feature ticker and Add to Discord.
+
+Glitches are binary only: rows of flickering 0s and 1s over a strip, or
+letters corrupting into 0/1 (`fx.tsx`); nothing shakes, which read as lag.
+Niko turned down a radar roll call, a paper dossier and a teleprinter
+report (2026-11-06). The globe and these effects are the one exception
+to the rule below:
+the vanilla HOI4 map on a dark globe with glowing green coasts, spinning,
+with missiles, interceptions and explosions (Niko, 2026-11-06: vanilla,
+"Dramatic", high glow, always moving even with reduce motion on). It loads
+three.js only on that page and steps down to no glow on slow devices. Its
+map data is `web/public/landing/globe-*.json`, built from the site's maps
+by `web/scripts/build-globe-data.py` (HOI4's flat layout pinned to real
+capitals). Try other looks at `/lab/globe` (dev only).
+
 **Green means "do this" or "you are here"** (main button, current page).
-No gradient washes, glows, glass blur or decorative motion.
+No gradient washes, glows, glass blur or decorative motion (the front
+page's globe aside).
 
 **Logo:** `BrandMark` in `SiteMenu.tsx`, "GM" in stencil on a green cut
 plate, a stand-in until the real logo.

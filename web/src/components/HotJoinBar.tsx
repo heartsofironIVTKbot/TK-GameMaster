@@ -98,7 +98,7 @@ export default function HotJoinBar({ threadId, selected, selectionKind, ownerLab
         {request.busy ? "Sending…" : `🔥 Ask to hot-join as ${selected.name}`}
       </button>
     ) : (
-      <a href={`/api/auth/login?next=${encodeURIComponent(`/?game=${threadId}`)}`} className={`${CTA} bg-orange-400 text-ink-950`}>
+      <a href={`/api/auth/login?next=${encodeURIComponent(`/map?game=${threadId}`)}`} className={`${CTA} bg-orange-400 text-ink-950`}>
         Log in &amp; hot-join
       </a>
     );

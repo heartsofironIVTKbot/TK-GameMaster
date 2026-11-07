@@ -235,7 +235,7 @@ export function GateMessage({
 
 function BackToMap({ className = "" }: { className?: string }) {
   return (
-    <Link href="/" className={`gm-btn gm-btn-quiet h-[30px] px-2.5 text-[12.5px] [--cut:7px] ${className}`}>
+    <Link href="/map" className={`gm-btn gm-btn-quiet h-[30px] px-2.5 text-[12.5px] [--cut:7px] ${className}`}>
       <ArrowLeft aria-hidden strokeWidth={1.75} />
       Back to the map
     </Link>

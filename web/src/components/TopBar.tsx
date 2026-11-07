@@ -60,7 +60,7 @@ export default function TopBar({
       <div className="grid h-14 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-2 sm:px-3 lg:grid-cols-[1fr_auto_1fr]">
         {/* Left: the mark, the site menu, the game's Rules / Mods and the Host Tool. */}
         <div className="flex min-w-0 items-center gap-1.5 justify-self-start">
-          <Link href="/" aria-label="GameMaster: the map" className="mr-0.5">
+          <Link href="/" aria-label="GameMaster: home" className="mr-0.5">
             <BrandMark size={30} />
           </Link>
           <MenuButton current="map" className="hidden sm:inline-flex" />

@@ -1,0 +1,576 @@
+/* ==========================================================================
+   The front page (components/landing/front): the transmission terminal, the
+   live map demo, the ticker, and the binary glitch that ties them together
+   (fx.tsx). Nothing here shakes: glitches are rows of 0s and 1s.
+   ========================================================================== */
+
+/* In the components layer, so Tailwind utilities on the same element win. */
+@layer components {
+  .fx-root {
+    --fx-red: rgb(255 52 94);
+    --fx-cyan: rgb(56 255 214);
+    position: relative;
+    isolation: isolate;
+  }
+
+  /* ---- Binary glitch ------------------------------------------------- */
+
+  .fx-tear {
+    position: absolute;
+    inset: 0;
+    z-index: 39;
+    pointer-events: none;
+  }
+  .fx-bits {
+    position: absolute;
+    inset: 0;
+    z-index: 40;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .fx-bits-row {
+    position: absolute;
+    height: 1.25em;
+    overflow: hidden;
+    white-space: nowrap;
+    padding: 0 0.3em;
+    font: 600 11px/1.25em var(--font-mono);
+    letter-spacing: 0.06em;
+    color: var(--color-brand-300);
+    background: rgb(0 0 0 / 0.82);
+    text-shadow: 0 0 6px color-mix(in oklab, var(--color-brand-400) 80%, transparent);
+    animation: fx-bits-blink 0.11s steps(1, end) infinite;
+  }
+  .fx-bits-row[data-tone="red"] {
+    color: var(--fx-red);
+    text-shadow: 0 0 6px var(--fx-red);
+  }
+  .fx-bits-row[data-tone="cyan"] {
+    color: var(--fx-cyan);
+    text-shadow: 0 0 6px var(--fx-cyan);
+  }
+  @keyframes fx-bits-blink {
+    50% {
+      opacity: 0.55;
+    }
+  }
+
+  /* ---- Shared bits ----------------------------------------------------- */
+
+  .fx-caret {
+    display: inline-block;
+    width: 0.55em;
+    height: 1em;
+    margin-left: 2px;
+    vertical-align: -0.12em;
+    background: currentColor;
+    animation: fx-blink 1s steps(1, end) infinite;
+  }
+  @keyframes fx-blink {
+    50% {
+      opacity: 0;
+    }
+  }
+
+  .fx-kicker {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-brand-400);
+  }
+
+  /* HUD corner brackets around a box (the box needs its own position). */
+  .fx-hud::before,
+  .fx-hud::after {
+    content: "";
+    position: absolute;
+    z-index: 30;
+    width: 18px;
+    height: 18px;
+    border-color: var(--color-brand-400);
+    pointer-events: none;
+  }
+  .fx-hud::before {
+    top: -1px;
+    left: -1px;
+    border-top: 2px solid;
+    border-left: 2px solid;
+  }
+  .fx-hud::after {
+    right: -1px;
+    bottom: -1px;
+    border-right: 2px solid;
+    border-bottom: 2px solid;
+  }
+
+  /* ---- Trailer: a CRT screen until the video exists ------------------------ */
+
+  .fx-crt {
+    position: relative;
+    overflow: hidden;
+    border-radius: 28px;
+    background:
+      radial-gradient(120% 90% at 50% 45%, color-mix(in oklab, var(--color-brand-900) 70%, black) 0%, #020503 70%),
+      #020503;
+    box-shadow:
+      inset 0 0 0 2px color-mix(in oklab, var(--color-brand-400) 18%, transparent),
+      inset 0 0 90px rgb(0 0 0 / 0.9),
+      0 0 0 10px #0b0f0c,
+      0 0 0 11px var(--color-ink-800),
+      0 40px 120px -30px color-mix(in oklab, var(--color-brand-500) 35%, transparent);
+    color: var(--color-brand-300);
+    font-family: var(--font-mono);
+    text-shadow: 0 0 6px color-mix(in oklab, var(--color-brand-400) 70%, transparent);
+  }
+  .fx-crt::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(180deg, rgb(0 0 0 / 0.28) 0 1px, transparent 1px 3px);
+    z-index: 2;
+  }
+  .fx-crt::after {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    top: -30%;
+    height: 30%;
+    pointer-events: none;
+    background: linear-gradient(180deg, transparent, color-mix(in oklab, var(--color-brand-300) 9%, transparent), transparent);
+    animation: fx-crt-roll 5.5s linear infinite;
+    z-index: 2;
+  }
+  @keyframes fx-crt-roll {
+    to {
+      top: 130%;
+    }
+  }
+
+  /* A Discord channel, as the app draws it (dark theme): the Discord lab page. */
+  .fx-discord {
+    --dc-bg: #313338;
+    --dc-text: #dbdee1;
+    --dc-muted: #949ba4;
+    --dc-link: #00a8fc;
+    background: var(--dc-bg);
+    color: var(--dc-text);
+    font-family: "gg sans", "Noto Sans", var(--font-sans), sans-serif;
+    text-shadow: none;
+  }
+  .fx-mention {
+    border-radius: 3px;
+    padding: 0 2px;
+    font-weight: 500;
+    color: #c9cdfb;
+    background: rgb(88 101 242 / 0.3);
+  }
+  .fx-spoiler {
+    border-radius: 3px;
+    padding: 0 2px;
+    background: #1e1f22;
+    color: transparent;
+    transition:
+      background 0.4s,
+      color 0.4s;
+  }
+  .fx-spoiler[data-open] {
+    background: rgb(255 255 255 / 0.1);
+    color: inherit;
+  }
+  .fx-spoiler[data-open] .fx-mention {
+    color: #c9cdfb;
+  }
+  .fx-spoiler:not([data-open]) .fx-mention {
+    background: transparent;
+    color: transparent;
+  }
+
+  /* ---- The live map ------------------------------------------------------ */
+
+  /* Borders 0.8 screen px at any zoom (--fx-sw is set from the zoom). */
+  .fx-map-nation {
+    stroke: #101827;
+    stroke-width: var(--fx-sw, 0.8px);
+    stroke-linejoin: round;
+    fill-opacity: 0.8;
+  }
+  .fx-map-pin {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: fx-pin 0.55s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+  }
+  @keyframes fx-pin {
+    from {
+      transform: scale(0);
+      opacity: 0;
+    }
+  }
+  .fx-map-ripple {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: fx-ripple 0.9s ease-out both;
+  }
+  @keyframes fx-ripple {
+    from {
+      transform: scale(0.2);
+      opacity: 1;
+    }
+    to {
+      transform: scale(3);
+      opacity: 0;
+    }
+  }
+  .fx-row-new {
+    animation: fx-row 0.8s ease-out both;
+  }
+  @keyframes fx-row {
+    from {
+      background: color-mix(in oklab, rgb(244 63 94) 30%, transparent);
+    }
+  }
+  .fx-tag-in {
+    animation: fx-tag-in 0.45s ease-out both;
+  }
+  /* ---- Feature slideshow (FeatureShow.tsx) ---------------------------------- */
+
+  .fx-show {
+    --kw: min(1240px, calc(100vw - 96px));
+    overflow: hidden;
+  }
+  .fx-show-head,
+  .fx-show-tabs {
+    width: var(--kw);
+    margin-inline: auto;
+  }
+  .fx-show-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 20px;
+  }
+  /* Previous, pause / play, next: cut plates. */
+  .fx-show-btn {
+    display: flex;
+    height: 44px;
+    width: 44px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--color-ink-700);
+    background: var(--color-ink-900);
+    color: var(--color-ink-100);
+    clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+    transition: background-color 150ms, border-color 150ms, color 150ms, transform 150ms;
+  }
+  .fx-show-btn:hover,
+  .fx-show-btn:focus-visible {
+    border-color: var(--color-brand-400);
+    color: var(--color-brand-300);
+  }
+  .fx-show-btn:active {
+    transform: scale(0.94);
+  }
+  .fx-show-btn[data-on] {
+    border-color: var(--color-brand-400);
+    background: var(--color-brand-400);
+    color: var(--color-ink-950);
+  }
+  /* The feature tabs: a line on top that fills while that feature plays. */
+  .fx-show-tabs {
+    display: flex;
+    gap: 6px;
+    margin-top: 36px;
+    margin-bottom: 22px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .fx-show-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .fx-show-tab {
+    flex: 1 0 auto;
+    white-space: nowrap;
+    padding: 0 2px 6px;
+    text-align: left;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-ink-400);
+    transition: color 150ms;
+  }
+  .fx-show-tab:hover,
+  .fx-show-tab:focus-visible {
+    color: var(--color-ink-100);
+  }
+  .fx-show-tab[data-on] {
+    color: var(--color-brand-300);
+  }
+  .fx-show-line {
+    position: relative;
+    display: block;
+    height: 3px;
+    margin-bottom: 10px;
+    overflow: hidden;
+    background: var(--color-ink-800);
+  }
+  .fx-show-tab:hover .fx-show-line {
+    background: var(--color-ink-600);
+  }
+  .fx-show-line i,
+  .fx-show-steptrack i {
+    position: absolute;
+    inset: 0 auto 0 0;
+    background: var(--color-brand-400);
+  }
+  @keyframes fx-span {
+    from {
+      width: var(--a);
+    }
+    to {
+      width: var(--b);
+    }
+  }
+  /* The slides: a track that glides, the neighbours dimmed either side. */
+  .fx-show-view {
+    outline: none;
+    touch-action: pan-y;
+  }
+  .fx-show-track {
+    display: flex;
+    gap: 24px;
+    padding-left: calc((100% - var(--kw)) / 2);
+    transform: translateX(calc(var(--idx) * (var(--kw) + 24px) * -1));
+    transition: transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .fx-show-slide {
+    position: relative;
+    flex: 0 0 var(--kw);
+    border: 1px solid var(--color-ink-800);
+    background: linear-gradient(160deg, var(--color-ink-900), var(--color-ink-950) 70%);
+    clip-path: polygon(16px 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%, 0 16px);
+    opacity: 0.35;
+    transform: scale(0.96);
+    transition: opacity 0.6s, transform 0.8s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.6s;
+  }
+  .fx-show-slide[data-on] {
+    opacity: 1;
+    transform: none;
+    border-color: color-mix(in oklab, var(--color-brand-400) 30%, var(--color-ink-800));
+  }
+  .fx-show-body {
+    display: grid;
+    grid-template-columns: minmax(0, 2.15fr) minmax(0, 1fr);
+    align-items: start;
+  }
+  .fx-show-screen {
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--color-ink-800);
+  }
+  .fx-show-copy {
+    padding: 26px 26px 24px;
+  }
+  .fx-show-slide[data-on] .fx-show-copy > * {
+    animation: fx-fade-in 0.5s ease-out both;
+  }
+  .fx-show-slide[data-on] .fx-show-copy > :nth-child(2) {
+    animation-delay: 0.06s;
+  }
+  .fx-show-slide[data-on] .fx-show-copy > :nth-child(3) {
+    animation-delay: 0.12s;
+  }
+  .fx-show-slide[data-on] .fx-show-copy > :nth-child(4) {
+    animation-delay: 0.18s;
+  }
+  /* A slide's steps: the one playing opens with its caption and a progress line. */
+  .fx-show-step {
+    position: relative;
+    display: flex;
+    width: 100%;
+    gap: 12px;
+    padding: 10px 12px 12px;
+    text-align: left;
+    font-size: 14px;
+    color: var(--color-ink-400);
+    background: transparent;
+    border: 1px solid transparent;
+    clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+    transition: background-color 200ms, border-color 200ms, color 200ms;
+  }
+  .fx-show-step:hover {
+    color: var(--color-ink-100);
+    background: color-mix(in oklab, var(--color-ink-800) 50%, transparent);
+  }
+  .fx-show-step[data-seen] {
+    color: var(--color-ink-300);
+  }
+  .fx-show-step[data-on] {
+    color: var(--color-ink-50);
+    background: var(--color-ink-900);
+    border-color: var(--color-ink-700);
+  }
+  .fx-show-steptrack {
+    position: absolute;
+    inset: auto 12px 0;
+    height: 2px;
+    overflow: hidden;
+  }
+  .fx-show-step[data-on] .fx-show-steptrack {
+    background: var(--color-ink-800);
+  }
+  .fx-show-badge {
+    padding: 1px 7px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-violet-200);
+    background: color-mix(in oklab, var(--color-violet-500) 22%, transparent);
+    clip-path: polygon(4px 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%, 0 4px);
+  }
+  @media (max-width: 1023px) {
+    .fx-show {
+      --kw: calc(100vw - 32px);
+    }
+    .fx-show-body {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .fx-show-screen {
+      border-right: 0;
+      border-bottom: 1px solid var(--color-ink-800);
+    }
+    .fx-show-copy {
+      padding: 20px 16px 18px;
+    }
+  }
+
+  /* ---- The screens inside a slide -------------------------------------------- */
+
+  .fx-tour-shot {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top;
+    user-select: none;
+  }
+  .fx-tour-cursor {
+    position: absolute;
+    z-index: 5;
+    margin: -2px 0 0 -3px;
+    opacity: 0;
+    pointer-events: none;
+    filter: drop-shadow(0 2px 4px rgb(0 0 0 / 0.6));
+    transition-property: left, top, opacity;
+    transition-timing-function: cubic-bezier(0.45, 0, 0.2, 1);
+  }
+  .fx-tour-cursor[data-shown] {
+    opacity: 1;
+  }
+  /* Time passing over the attendance roster: the voice checks come on their own. */
+  .fx-clock {
+    position: absolute;
+    right: 3%;
+    bottom: 5%;
+    z-index: 6;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 14px 8px 10px;
+    color: var(--color-brand-300);
+    background: color-mix(in oklab, var(--color-ink-950) 92%, transparent);
+    border: 1px solid color-mix(in oklab, var(--color-brand-400) 45%, transparent);
+    clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+    box-shadow: 0 10px 30px rgb(0 0 0 / 0.5);
+    animation: fx-fade-in 0.35s ease-out both;
+  }
+  .fx-clock-minute,
+  .fx-clock-hour {
+    transform-origin: 20px 20px;
+    animation: fx-spin 0.7s linear infinite;
+  }
+  .fx-clock-hour {
+    animation-duration: 8.4s;
+  }
+  @keyframes fx-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  .fx-tour-click {
+    position: absolute;
+    left: 3px;
+    top: 2px;
+    width: 30px;
+    height: 30px;
+    margin: -15px 0 0 -15px;
+    border: 2px solid var(--color-brand-300);
+    border-radius: 9999px;
+    background: color-mix(in oklab, var(--color-brand-400) 30%, transparent);
+    animation: fx-tour-click 520ms ease-out both;
+  }
+  @keyframes fx-tour-click {
+    from {
+      transform: scale(0.3);
+      opacity: 1;
+    }
+    to {
+      transform: scale(1.4);
+      opacity: 0;
+    }
+  }
+
+  .fx-fade-in {
+    animation: fx-fade-in 0.35s ease-out both;
+  }
+  /* Your nation and the co-op breathe, like the real map's panes: the
+     whole layer fades, so the GPU does it without repainting the map. */
+  .fx-breathe-layer {
+    will-change: opacity;
+    animation: fx-breathe 3.4s ease-in-out infinite;
+  }
+  @keyframes fx-breathe {
+    50% {
+      opacity: 0.6;
+    }
+  }
+  @keyframes fx-fade-in {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes fx-tag-in {
+    from {
+      opacity: 0;
+      translate: 0 6px;
+    }
+  }
+
+  /* ---- Close: the feature ticker ----------------------------------------- */
+
+  .fx-marquee {
+    display: flex;
+    width: max-content;
+    animation: fx-marquee var(--speed, 38s) linear infinite;
+  }
+  .fx-marquee[data-reverse] {
+    animation-direction: reverse;
+  }
+  @keyframes fx-marquee {
+    to {
+      transform: translateX(-50%);
+    }
+  }
+  .fx-outline {
+    color: transparent;
+    -webkit-text-stroke: 1px color-mix(in oklab, var(--color-brand-400) 70%, transparent);
+  }
+
+  /* ---- Hero readout -------------------------------------------------------- */
+
+  .fx-feed-line {
+    animation: fx-tag-in 0.4s ease-out both;
+  }
+}

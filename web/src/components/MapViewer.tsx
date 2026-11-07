@@ -1590,7 +1590,7 @@ export default function MapViewer({
                 </ReserveGlow>
               ) : (
                 <ReserveGlow>
-                  <a href={`/api/auth/login?next=${encodeURIComponent(selectedThread ? `/?game=${selectedThread}` : "/")}`} className={RESERVE_BUTTON}>
+                  <a href={`/api/auth/login?next=${encodeURIComponent(selectedThread ? `/map?game=${selectedThread}` : "/map")}`} className={RESERVE_BUTTON}>
                     Log in and reserve
                   </a>
                 </ReserveGlow>

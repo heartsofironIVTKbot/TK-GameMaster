@@ -76,7 +76,7 @@ export interface SiteLink {
 }
 
 const PLAYER_LINKS: SiteLink[] = [
-  { page: "map", href: "/", label: "Map", hint: "Reserve your nation" },
+  { page: "map", href: "/map", label: "Map", hint: "Reserve your nation" },
   { page: "archive", href: "/archive", label: "Archive", hint: "Every game, its players and its roleplay" },
   { page: "profile", href: "/profile", label: "My profile", hint: "Your games, commends and roles" },
   { page: "tickets", href: "/tickets", label: "My tickets", hint: "Closed tickets you can read" },

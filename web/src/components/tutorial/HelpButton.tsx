@@ -13,7 +13,8 @@ import { useTutorialActions, useTutorialState } from "./TutorialProvider";
  * `helpLeft` (left side), `helpTop` (just under the map's 56px top bar; the
  * menu opens downwards), `helpBesideLeftPanel` (right of the map's 340px
  * reservations list) and `helpInBar` (inside a 56px top bar, left of its
- * menu button: the preset editor, whose panel fills phones).
+ * menu button: the preset editor, whose panel fills phones), or hide it
+ * with `helpHidden` (the front page: no tours, and it covers the scenes).
  * The map uses the top: its bottom edge is for reserving.
  */
 export default function HelpButton() {
@@ -41,7 +42,7 @@ export default function HelpButton() {
     };
   }, [open]);
 
-  if (!state || !actions || !state.progress) return null;
+  if (!state || !actions || !state.progress || state.facts.helpHidden) return null;
   const { progress, activeTourId, facts } = state;
   const pageTours = state.pageTours.filter((tour) => shownIds.includes(tour.id));
   const besidePanel = Boolean(facts.helpBesideLeftPanel);

@@ -55,7 +55,7 @@ export default function DraftCard({ game, now, onChanged }: { game: GameControl;
           )}
         </div>
         <Link
-          href={`/?game=${game.id}`}
+          href={`/map?game=${game.id}`}
           className="shrink-0 gm-cut [--cut:9px] border border-ink-800 bg-ink-800 px-3 py-2 text-xs font-bold text-ink-200 hover:border-brand-300/40 hover:text-ink-100"
         >
           Open the draft on the map

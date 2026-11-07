@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
   const returnPath =
     nextPath && nextPath.startsWith("/") && !nextPath.startsWith("//") && !nextPath.includes("\\")
       ? nextPath
-      : "/";
+      : "/map";
 
   if (!code || !state || !expectedState || state !== expectedState) {
     // Cancelled on Discord's "Add to server" screen: back to the servers page.

@@ -28,8 +28,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "GameMaster · HOI4 Map",
-  description: "Interactive Hearts of Iron IV state map with owner highlighting",
+  title: "GameMaster",
+  description: "Hearts of Iron IV multiplayer, run on Discord: calendar, live reservation map, attendance, player records and a game archive.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

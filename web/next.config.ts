@@ -18,6 +18,17 @@ const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_MAP_VERSION: mapVersion(),
   },
+  // The map moved from / to /map (the front page took /). Links already
+  // posted in Discord (/?game=…) still land on the right game: the query
+  // is passed through.
+  async redirects() {
+    return ["game", "gameId", "token", "offline"].map((key) => ({
+      source: "/",
+      has: [{ type: "query" as const, key }],
+      destination: "/map",
+      permanent: false,
+    }));
+  },
   async headers() {
     return [
       {
