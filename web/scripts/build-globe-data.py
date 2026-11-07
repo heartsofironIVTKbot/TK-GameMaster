@@ -14,6 +14,11 @@ Output per map (public/landing/globe-<map>.json), coordinates as
   land:     simplified nation outlines (for the land fill)
   capitals: {tag: [lon, lat]}
 
+North of ARCTIC_SEAM the globe uses real geography from scripts/data/arctic.json
+(Natural Earth, made by build-arctic-data.py): HOI4's maps stop at about 73.7 N
+and squeeze everything up to that edge, which left a hard ring of land round
+the pole and no Arctic Ocean.
+
 Run from web/:  python scripts/build-globe-data.py
 """
 
@@ -225,6 +230,85 @@ def ring_area(ring):
     return abs(sum(ring[i][0] * ring[i - 1][1] - ring[i - 1][0] * ring[i][1] for i in range(len(ring)))) / 2
 
 
+# ---- The real Arctic, stitched on at ARCTIC_SEAM ------------------------------
+
+ARCTIC_SEAM = 66.0
+# Natural Earth country -> the HOI4 tag that holds it (on both maps).
+ARCTIC_TAGS = {"RUS": "SOV", "CAN": "CAN", "USA": "USA", "GRL": "DEN", "NOR": "NOR", "SWE": "SWE", "FIN": "FIN", "ISL": "ICE"}
+arctic = json.load(open(os.path.join(ROOT, "scripts", "data", "arctic.json"), encoding="utf-8"))
+
+
+def pairs(flat_list):
+    return [(flat_list[i], flat_list[i + 1]) for i in range(0, len(flat_list) - 1, 2)]
+
+
+def unpair(points):
+    return [round(v, 1) for p in points for v in p]
+
+
+def crossing(a, b):
+    t = (ARCTIC_SEAM - a[1]) / (b[1] - a[1])
+    return (a[0] + (b[0] - a[0]) * t, ARCTIC_SEAM)
+
+
+def clip_ring(flat_ring, north):
+    """The part of a closed outline on one side of the seam (Sutherland-Hodgman)."""
+    inside = (lambda p: p[1] >= ARCTIC_SEAM) if north else (lambda p: p[1] <= ARCTIC_SEAM)
+    points = pairs(flat_ring)
+    out = []
+    for i, current in enumerate(points):
+        previous = points[i - 1]
+        if inside(current):
+            if not inside(previous):
+                out.append(crossing(previous, current))
+            out.append(current)
+        elif inside(previous):
+            out.append(crossing(previous, current))
+    return unpair(out) if len(out) >= 3 else None
+
+
+def clip_line(flat_line, north):
+    """The runs of a line on one side of the seam."""
+    inside = (lambda p: p[1] >= ARCTIC_SEAM) if north else (lambda p: p[1] <= ARCTIC_SEAM)
+    points = pairs(flat_line)
+    runs, current = [], []
+    for i, point in enumerate(points):
+        if inside(point):
+            if not current and i > 0:
+                current.append(crossing(points[i - 1], point))
+            current.append(point)
+        elif current:
+            current.append(crossing(points[i - 1], point))
+            runs.append(current)
+            current = []
+    if current:
+        runs.append(current)
+    return [unpair(r) for r in runs if len(r) >= 2]
+
+
+def stitch_arctic(result):
+    """HOI4's map south of the seam, the real Arctic north of it."""
+    for nation in result["land"]:
+        nation["rings"] = [r for r in (clip_ring(ring, False) for ring in nation["rings"]) if r]
+    result["coast"] = [part for line in result["coast"] for part in clip_line(line, False)]
+    result["border"] = [part for line in result["border"] for part in clip_line(line, False)]
+    by_tag = {nation["tag"]: nation for nation in result["land"]}
+    for country in arctic["land"]:
+        tag = ARCTIC_TAGS.get(country["iso"])
+        if not tag:
+            continue
+        rings = [r for r in (clip_ring(ring, True) for ring in country["rings"]) if r]
+        if not rings:
+            continue
+        if tag not in by_tag:
+            by_tag[tag] = {"tag": tag, "rings": []}
+            result["land"].append(by_tag[tag])
+        by_tag[tag]["rings"] += rings
+    result["land"] = [nation for nation in result["land"] if nation["rings"]]
+    result["coast"] += [part for line in arctic["coast"] for part in clip_line(line, True)]
+    result["border"] += [part for line in arctic["border"] for part in clip_line(line, True)]
+
+
 out_dir = os.path.join(ROOT, "public", "landing")
 os.makedirs(out_dir, exist_ok=True)
 for name in MAPS:
@@ -255,6 +339,7 @@ for name in MAPS:
         "land": land,
         "capitals": caps,
     }
+    stitch_arctic(result)
     path = os.path.join(out_dir, f"globe-{name}.json")
     with open(path, "w", encoding="utf-8") as handle:
         json.dump(result, handle, separators=(",", ":"))

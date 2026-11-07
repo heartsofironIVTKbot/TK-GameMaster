@@ -75,6 +75,38 @@ const COLORS = {
   ember: 0xff5a1f,
 };
 
+/** Capitals: steady red beacons that breathe, fading out round the back of the globe. */
+const CAPITAL_VERTEX = /* glsl */ `
+  uniform float uSize;
+  uniform float uScale;
+  uniform float uTime;
+  attribute float aSeed;
+  varying float vLight;
+  void main() {
+    vec4 world = modelMatrix * vec4(position, 1.0);
+    float facing = dot(normalize(world.xyz), normalize(cameraPosition - world.xyz));
+    vLight = smoothstep(0.02, 0.3, facing) * (0.78 + 0.22 * sin(uTime * 2.2 + aSeed * 6.2831));
+    vec4 view = viewMatrix * world;
+    gl_Position = projectionMatrix * view;
+    gl_PointSize = uSize * uScale / -view.z;
+  }
+`;
+
+const CAPITAL_FRAGMENT = /* glsl */ `
+  uniform sampler2D uMap;
+  varying float vLight;
+  void main() {
+    float glow = texture2D(uMap, gl_PointCoord).a;
+    // A hot core, red all round it.
+    vec3 colour = mix(vec3(1.0, 0.12, 0.08), vec3(1.0, 0.78, 0.7), smoothstep(0.55, 0.95, glow));
+    gl_FragColor = vec4(colour, glow * vLight);
+    #include <colorspace_fragment>
+  }
+`;
+
+/** How far apart a line's points may be (degrees), so it stays on the curved surface. */
+const LINE_STEP = 0.4;
+
 /** How often a strike starts (seconds between launches), and how many at once. */
 const INTENSITY: Record<Intensity, { every: number; salvo: [number, number]; intercept: number; max: number }> = {
   calm: { every: 2.6, salvo: [1, 1], intercept: 0, max: 4 },
@@ -319,6 +351,17 @@ export class WarGlobe {
   private readonly world = new THREE.Group();
   private readonly effects = new THREE.Group();
   private readonly glow = glowTexture();
+  private readonly bufferSize = new THREE.Vector2();
+  private readonly capitalMaterial = new THREE.ShaderMaterial({
+    uniforms: { uMap: { value: this.glow }, uSize: { value: 0.1 }, uScale: { value: 400 }, uTime: { value: 0 } },
+    vertexShader: CAPITAL_VERTEX,
+    fragmentShader: CAPITAL_FRAGMENT,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    // Drawn over the globe's edge rather than cut by it; the back side fades out in the shader.
+    depthTest: false,
+  });
   private readonly globeMaterial: THREE.ShaderMaterial;
   private composer: EffectComposer | null = null;
   private bloom: UnrealBloomPass | null = null;
@@ -414,11 +457,23 @@ export class WarGlobe {
 
     const lines = (source: number[][], radius: number, color: number, opacity: number) => {
       const positions: number[] = [];
+      // A straight piece between two far points cuts under the curved surface
+      // and vanishes in places (borders looked broken): follow the curve instead.
+      const step = THREE.MathUtils.degToRad(LINE_STEP);
+      const a = new THREE.Vector3();
+      const b = new THREE.Vector3();
+      const p = new THREE.Vector3();
+      const q = new THREE.Vector3();
       for (const line of source) {
         for (let i = 2; i < line.length; i += 2) {
-          const a = toVector(line[i - 2], line[i - 1], radius);
-          const b = toVector(line[i], line[i + 1], radius);
-          positions.push(a.x, a.y, a.z, b.x, b.y, b.z);
+          a.copy(toVector(line[i - 2], line[i - 1]));
+          b.copy(toVector(line[i], line[i + 1]));
+          const pieces = Math.max(1, Math.ceil(a.angleTo(b) / step));
+          for (let k = 0; k < pieces; k++) {
+            p.lerpVectors(a, b, k / pieces).setLength(radius);
+            q.lerpVectors(a, b, (k + 1) / pieces).setLength(radius);
+            positions.push(p.x, p.y, p.z, q.x, q.y, q.z);
+          }
         }
       }
       const geometry = new THREE.BufferGeometry();
@@ -434,7 +489,7 @@ export class WarGlobe {
       this.world.add(object);
       this.mapObjects.push(object);
     };
-    lines(data.border, 1.0015, COLORS.brand500, 0.3);
+    lines(data.border, 1.0015, COLORS.brand400, 0.5);
     lines(data.coast, 1.002, COLORS.brand400, 0.6);
 
     this.capitalTags.clear();
@@ -443,17 +498,9 @@ export class WarGlobe {
       this.capitalTags.set(point, tag);
       return point;
     });
-    const dots = new THREE.Points(
-      new THREE.BufferGeometry().setFromPoints(this.capitals.map((point) => point.clone().multiplyScalar(1.003))),
-      new THREE.PointsMaterial({
-        color: COLORS.brand200,
-        size: 0.022,
-        map: this.glow,
-        transparent: true,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false,
-      }),
-    );
+    const dotGeometry = new THREE.BufferGeometry().setFromPoints(this.capitals.map((point) => point.clone().multiplyScalar(1.003)));
+    dotGeometry.setAttribute("aSeed", new THREE.Float32BufferAttribute(this.capitals.map(() => Math.random()), 1));
+    const dots = new THREE.Points(dotGeometry, this.capitalMaterial);
     this.world.add(dots);
     this.mapObjects.push(dots);
     this.render();
@@ -712,9 +759,21 @@ export class WarGlobe {
     }, startAfter * 1000);
   }
 
+  /** How much a point on the globe faces the camera: 1 straight on, 0 at the edge, below 0 behind. */
+  private facing(local: THREE.Vector3): number {
+    const world = local.clone().applyMatrix4(this.world.matrixWorld);
+    return world.clone().normalize().dot(this.camera.position.clone().sub(world).normalize());
+  }
+
+  /** 1 on the side facing you and right up to the globe's edge, fading to 0 just past it. */
+  private inView(local: THREE.Vector3): number {
+    return THREE.MathUtils.smoothstep(this.facing(local), -0.18, 0.02);
+  }
+
   private flash(at: THREE.Vector3, size: number, life: number, color: number): void {
+    // Not depth-tested: near the globe's edge the curve would cut the glow in half.
     const sprite = new THREE.Sprite(
-      new THREE.SpriteMaterial({ map: this.glow, color, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }),
+      new THREE.SpriteMaterial({ map: this.glow, color, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false, transparent: true }),
     );
     sprite.position.copy(at);
     this.effects.add(sprite);
@@ -724,7 +783,7 @@ export class WarGlobe {
       life,
       update: (_, k) => {
         sprite.scale.setScalar(size * (0.4 + 1.2 * Math.sqrt(k)));
-        sprite.material.opacity = 1 - k;
+        sprite.material.opacity = (1 - k) * this.inView(at);
       },
     });
   }
@@ -764,6 +823,7 @@ export class WarGlobe {
         transparent: true,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
+        depthTest: false,
       }),
     );
     this.effects.add(sparks);
@@ -784,16 +844,24 @@ export class WarGlobe {
           );
         }
         attribute.needsUpdate = true;
-        sparks.material.opacity = 1 - k;
+        sparks.material.opacity = (1 - k) * this.inView(at);
         sparks.material.color.lerpColors(new THREE.Color(COLORS.flash), new THREE.Color(COLORS.ember), Math.min(1, k * 1.6));
       },
     });
 
     if (!ground) return;
 
-    // Shockwave ring flat on the ground.
+    // Shockwave ring on the ground, bent round the globe so it's a full circle
+    // anywhere (a flat ring sank into the surface away from the middle).
+    const segments = 72;
+    const ringPositions = new Float32Array((segments + 1) * 2 * 3);
+    const ringGeometry = new THREE.BufferGeometry();
+    ringGeometry.setAttribute("position", new THREE.BufferAttribute(ringPositions, 3));
+    const order: number[] = [];
+    for (let i = 0; i < segments; i++) order.push(i * 2, i * 2 + 1, i * 2 + 2, i * 2 + 1, i * 2 + 3, i * 2 + 2);
+    ringGeometry.setIndex(order);
     const ring = new THREE.Mesh(
-      new THREE.RingGeometry(0.9, 1, 64),
+      ringGeometry,
       new THREE.MeshBasicMaterial({
         color: COLORS.brand300,
         transparent: true,
@@ -802,22 +870,42 @@ export class WarGlobe {
         depthWrite: false,
       }),
     );
-    ring.position.copy(normal.clone().multiplyScalar(1.003));
-    ring.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal);
     this.effects.add(ring);
+    const spot = new THREE.Vector3();
+    /** A point `angle` radians from the blast across the globe, `turn` round it. */
+    const place = (angle: number, turn: number, index: number) => {
+      spot
+        .copy(tangent)
+        .multiplyScalar(Math.cos(turn))
+        .addScaledVector(bitangent, Math.sin(turn))
+        .multiplyScalar(Math.sin(angle))
+        .addScaledVector(normal, Math.cos(angle))
+        .multiplyScalar(1.004);
+      ringPositions[index] = spot.x;
+      ringPositions[index + 1] = spot.y;
+      ringPositions[index + 2] = spot.z;
+    };
     this.blasts.push({
       object: ring,
       age: 0,
       life: 1.4,
       update: (_, k) => {
-        ring.scale.setScalar(0.005 + 0.1 * (1 - Math.pow(1 - k, 3)));
+        // Angular radius on the globe (radians), easing out; the band is its outer tenth.
+        const outer = 0.005 + 0.1 * (1 - Math.pow(1 - k, 3));
+        for (let i = 0; i <= segments; i++) {
+          const turn = (i / segments) * Math.PI * 2;
+          place(outer * 0.9, turn, i * 6);
+          place(outer, turn, i * 6 + 3);
+        }
+        ringGeometry.attributes.position.needsUpdate = true;
+        ringGeometry.computeBoundingSphere();
         ring.material.opacity = 0.9 * (1 - k);
       },
     });
 
     // A fire left burning for a while.
     const fire = new THREE.Sprite(
-      new THREE.SpriteMaterial({ map: this.glow, color: COLORS.ember, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }),
+      new THREE.SpriteMaterial({ map: this.glow, color: COLORS.ember, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false, transparent: true }),
     );
     fire.position.copy(normal.clone().multiplyScalar(1.004));
     this.effects.add(fire);
@@ -829,7 +917,8 @@ export class WarGlobe {
       update: (blast, k) => {
         const flicker = 0.75 + 0.25 * Math.sin(blast.age * 13 + seed) * Math.sin(blast.age * 7.3 + seed);
         fire.scale.setScalar(0.045 * flicker * (k < 0.08 ? k / 0.08 : 1));
-        fire.material.opacity = (1 - k) * flicker;
+        // Drawn over the globe's edge, so it fades itself out as the spin carries it round the back.
+        fire.material.opacity = (1 - k) * flicker * THREE.MathUtils.smoothstep(this.facing(fire.position), 0.02, 0.3);
       },
     });
     const maxFires = this.options.intensity === "war" ? 60 : 24;
@@ -938,6 +1027,8 @@ export class WarGlobe {
 
   private render(): void {
     this.globeMaterial.uniforms.uTime.value = this.time;
+    this.capitalMaterial.uniforms.uTime.value = this.time;
+    this.capitalMaterial.uniforms.uScale.value = this.renderer.getDrawingBufferSize(this.bufferSize).y / 2;
     this.tilt.updateMatrixWorld();
     if (this.composer) this.composer.render();
     else this.renderer.render(this.scene, this.camera);

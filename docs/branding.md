@@ -202,7 +202,12 @@ with missiles, interceptions and explosions (Niko, 2026-11-06: vanilla,
 three.js only on that page and steps down to no glow on slow devices. Its
 map data is `web/public/landing/globe-*.json`, built from the site's maps
 by `web/scripts/build-globe-data.py` (HOI4's flat layout pinned to real
-capitals). Try other looks at `/lab/globe` (dev only).
+capitals). North of 66 N it's the real Arctic instead (Natural Earth, in
+`web/scripts/data/arctic.json` from `build-arctic-data.py`): HOI4's maps
+stop at about 73.7 N and squeezed land up to a hard ring round the pole
+(Niko, 2026-11-07). Capitals are steady red glowing dots; borders follow
+the globe's curve so they never break up; blasts and their shockwave rings
+stay whole right up to the globe's edge. Try other looks at `/lab/globe` (dev only).
 
 **Green means "do this" or "you are here"** (main button, current page).
 No gradient washes, glows, glass blur or decorative motion (the front
