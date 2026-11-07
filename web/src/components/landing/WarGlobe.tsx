@@ -100,6 +100,9 @@ export default function WarGlobe({
             onReady: () => {
               if (!cancelled) setState("ready");
             },
+            onGiveUp: () => {
+              if (!cancelled) setState("failed");
+            },
           });
         } catch {
           setState("failed"); // no WebGL

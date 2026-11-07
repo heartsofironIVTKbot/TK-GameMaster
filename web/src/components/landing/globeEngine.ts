@@ -60,6 +60,8 @@ export interface GlobeOptions {
   onEvent?: (event: GlobeEvent) => void;
   /** Once the shaders are built and the first picture with the map is drawn. */
   onReady?: () => void;
+  /** The device can't draw it (frames take far too long): the globe has stopped for good. */
+  onGiveUp?: () => void;
   /** Called about once a second, for the lab's readout and the auto-downgrade. */
   onStats?: (stats: { fps: number; strikes: number; quality: Quality }) => void;
 }
@@ -373,6 +375,17 @@ interface Blast {
   update: (blast: Blast, k: number) => void;
 }
 
+/** WebGL drawn on the processor rather than a graphics card. */
+function softwareRenderer(gl: WebGLRenderingContext | WebGL2RenderingContext): boolean {
+  try {
+    const info = gl.getExtension("WEBGL_debug_renderer_info");
+    const name = String(info ? gl.getParameter(info.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
+    return /swiftshader|llvmpipe|softpipe|software|basic render driver|microsoft basic/i.test(name);
+  } catch {
+    return false;
+  }
+}
+
 export class WarGlobe {
   private readonly renderer: THREE.WebGLRenderer;
   private readonly scene = new THREE.Scene();
@@ -424,10 +437,27 @@ export class WarGlobe {
   /** Nothing is drawn until the shaders are built (see setData). */
   private warm = false;
   private disposed = false;
+  /** Frames in a row that took far too long (see tick). */
+  private stalls = 0;
+  private gaveUp = false;
 
   constructor(private readonly canvas: HTMLCanvasElement, options: GlobeOptions) {
     this.options = options;
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: options.quality === "high", alpha: true, powerPreference: "high-performance" });
+    // No software-drawn WebGL (hardware acceleration off, or a blocked driver):
+    // there the globe froze the whole page and the browser's memory ran away.
+    // Creating the renderer throws instead, and the hero keeps its quiet glow.
+    this.renderer = new THREE.WebGLRenderer({
+      canvas,
+      antialias: options.quality === "high",
+      alpha: true,
+      powerPreference: "high-performance",
+      failIfMajorPerformanceCaveat: true,
+    });
+    if (softwareRenderer(this.renderer.getContext())) {
+      this.renderer.dispose();
+      this.renderer.forceContextLoss();
+      throw new Error("WebGL is drawn in software here");
+    }
     // Checking every shader for errors makes the page wait for each one to build.
     this.renderer.debug.checkShaderErrors = process.env.NODE_ENV !== "production";
     // See-through: the site's night sky (SkyBackground) shows round the globe.
@@ -597,7 +627,7 @@ export class WarGlobe {
   }
 
   start(): void {
-    if (this.running) return;
+    if (this.running || this.gaveUp) return;
     this.running = true;
     this.last = performance.now();
     this.statsFrom = this.last;
@@ -1068,6 +1098,17 @@ export class WarGlobe {
 
   private readonly tick = (now: number): void => {
     if (!this.running) return;
+    // A frame gap of half a second or more, three times running, while the
+    // tab is open: this device can't draw the globe. Stop for good rather than
+    // keep the page frozen (the tab being hidden stops the loop, so that's not it).
+    if (this.warm && now - this.last > 500) this.stalls += 1;
+    else this.stalls = 0;
+    if (this.stalls >= 3) {
+      this.gaveUp = true;
+      this.stop();
+      this.options.onGiveUp?.();
+      return;
+    }
     const dt = Math.min(0.05, (now - this.last) / 1000);
     this.last = now;
     this.step(dt, now);

@@ -69,8 +69,8 @@ export default function FrontHero() {
         </div>
       </div>
 
-      {/* The intercepted wire (wide screens) */}
-      <div aria-hidden className="fx-hud absolute bottom-10 right-8 hidden w-[300px] border border-ink-800/80 bg-black/55 p-3 font-mono text-[11px] backdrop-blur-[2px] lg:block">
+      {/* The intercepted wire (wide screens); it comes in with the first strike, so it never shows empty where the globe can't run. */}
+      <div aria-hidden className={`fx-hud absolute bottom-10 right-8 hidden w-[300px] border border-ink-800/80 bg-black/55 p-3 font-mono text-[11px] backdrop-blur-[2px] transition-opacity duration-700 lg:block ${feed.length ? "opacity-100" : "opacity-0"}`}>
         <p className="flex items-center justify-between text-ink-500">
           <span>SIGNAL · INTERCEPTED</span>
           <span className="flex items-center gap-1.5 text-rose-300">
