@@ -11,7 +11,6 @@ Output per map (public/landing/globe-<map>.json), coordinates as
 [lon, lat, lon, lat, ...] rounded to 0.1 degrees (half a pixel on the globe):
   coast:    lines where land meets sea
   border:   lines between two nations
-  land:     simplified nation outlines (for the land fill)
   capitals: {tag: [lon, lat]}
 
 North of ARCTIC_SEAM the globe uses real geography from scripts/data/arctic.json
@@ -244,8 +243,6 @@ def ring_area(ring):
 # ---- The real Arctic, stitched on at ARCTIC_SEAM ------------------------------
 
 ARCTIC_SEAM = 66.0
-# Natural Earth country -> the HOI4 tag that holds it (on both maps).
-ARCTIC_TAGS = {"RUS": "SOV", "CAN": "CAN", "USA": "USA", "GRL": "DEN", "NOR": "NOR", "SWE": "SWE", "FIN": "FIN", "ISL": "ICE"}
 arctic = json.load(open(os.path.join(ROOT, "scripts", "data", "arctic.json"), encoding="utf-8"))
 
 
@@ -260,22 +257,6 @@ def unpair(points):
 def crossing(a, b):
     t = (ARCTIC_SEAM - a[1]) / (b[1] - a[1])
     return (a[0] + (b[0] - a[0]) * t, ARCTIC_SEAM)
-
-
-def clip_ring(flat_ring, north):
-    """The part of a closed outline on one side of the seam (Sutherland-Hodgman)."""
-    inside = (lambda p: p[1] >= ARCTIC_SEAM) if north else (lambda p: p[1] <= ARCTIC_SEAM)
-    points = pairs(flat_ring)
-    out = []
-    for i, current in enumerate(points):
-        previous = points[i - 1]
-        if inside(current):
-            if not inside(previous):
-                out.append(crossing(previous, current))
-            out.append(current)
-        elif inside(previous):
-            out.append(crossing(previous, current))
-    return unpair(out) if len(out) >= 3 else None
 
 
 def clip_line(flat_line, north):
@@ -299,23 +280,8 @@ def clip_line(flat_line, north):
 
 def stitch_arctic(result):
     """HOI4's map south of the seam, the real Arctic north of it."""
-    for nation in result["land"]:
-        nation["rings"] = [r for r in (clip_ring(ring, False) for ring in nation["rings"]) if r]
     result["coast"] = [part for line in result["coast"] for part in clip_line(line, False)]
     result["border"] = [part for line in result["border"] for part in clip_line(line, False)]
-    by_tag = {nation["tag"]: nation for nation in result["land"]}
-    for country in arctic["land"]:
-        tag = ARCTIC_TAGS.get(country["iso"])
-        if not tag:
-            continue
-        rings = [r for r in (clip_ring(ring, True) for ring in country["rings"]) if r]
-        if not rings:
-            continue
-        if tag not in by_tag:
-            by_tag[tag] = {"tag": tag, "rings": []}
-            result["land"].append(by_tag[tag])
-        by_tag[tag]["rings"] += rings
-    result["land"] = [nation for nation in result["land"] if nation["rings"]]
     result["coast"] += [part for line in arctic["coast"] for part in clip_line(line, True)]
     result["border"] += [part for line in arctic["border"] for part in clip_line(line, True)]
 
@@ -336,18 +302,10 @@ for name in MAPS:
     coast = chains([e for e, c in counts.items() if c == 1])
     border = chains([e for e, c in counts.items() if c > 1])
 
-    land = []
-    for feature in data["features"]:
-        rings = [flat(ring, 0.9) for ring in rings_of(feature["geometry"]) if ring_area(ring) > 0.4]
-        rings = [r for r in rings if len(r) >= 6]
-        if rings:
-            land.append({"tag": feature["properties"]["tag"], "rings": rings})
-
     caps = {tag: [round(v, 2) for v in to_lon_lat(*xy)] for tag, xy in capitals_by_map[name].items()}
     result = {
         "coast": [line for line in (flat(c, 0.35) for c in coast) if len(line) >= 4],
         "border": [line for line in (flat(c, 0.45) for c in border) if len(line) >= 4],
-        "land": land,
         "capitals": caps,
     }
     stitch_arctic(result)
@@ -355,7 +313,7 @@ for name in MAPS:
     with open(path, "w", encoding="utf-8") as handle:
         json.dump(result, handle, separators=(",", ":"))
     points = sum(len(line) for line in result["coast"] + result["border"]) // 2
-    print(f"{name}: {os.path.getsize(path) // 1024} KB, {len(result['coast'])} coast + {len(result['border'])} border lines, {points} line points, {len(land)} nations")
+    print(f"{name}: {os.path.getsize(path) // 1024} KB, {len(result['coast'])} coast + {len(result['border'])} border lines, {points} line points")
 
 check = [(t, to_lon_lat(*vanilla_caps[t]), REAL[t]) for t in ("USA", "CAN", "GER", "SAF", "AST", "BRA")]
 for tag, (lon, lat), (real_lat, real_lon) in check:

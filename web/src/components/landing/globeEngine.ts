@@ -187,37 +187,6 @@ function glowTexture(): THREE.Texture {
  * The land as one picture wrapped round the globe (equirectangular):
  * red = land, green = coast glow, blue = a per-nation shade.
  */
-/**
- * The land picture (red = land, blue = a shade per nation, green = coast glow),
- * painted ahead of time by scripts/build-globe-land.mjs and stored upside down
- * (the way WebGL reads it), so no browser has to flip it. Decoded off the main
- * thread. Painting it live stalled the browser's graphics for 1-4 s on load.
- */
-async function loadLand(url: string): Promise<THREE.Texture> {
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(`${url}: ${response.status}`);
-  const blob = await response.blob();
-  let texture: THREE.Texture;
-  if (typeof createImageBitmap === "function") {
-    const bitmap = await createImageBitmap(blob);
-    texture = new THREE.Texture(bitmap);
-    texture.addEventListener("dispose", () => bitmap.close());
-  } else {
-    const image = new Image();
-    const src = URL.createObjectURL(blob);
-    image.src = src;
-    await image.decode();
-    URL.revokeObjectURL(src);
-    texture = new THREE.Texture(image);
-  }
-  texture.flipY = false;
-  texture.generateMipmaps = false; // no seam line where the picture wraps
-  texture.minFilter = THREE.LinearFilter;
-  texture.magFilter = THREE.LinearFilter;
-  texture.wrapS = THREE.RepeatWrapping;
-  texture.needsUpdate = true;
-  return texture;
-}
 
 const GLOBE_VERTEX = /* glsl */ `
   varying vec3 vLocal;
@@ -232,11 +201,8 @@ const GLOBE_VERTEX = /* glsl */ `
 `;
 
 const GLOBE_FRAGMENT = /* glsl */ `
-  uniform sampler2D uLand;
   uniform float uTime;
   uniform vec3 uOcean;
-  uniform vec3 uLandDeep;
-  uniform vec3 uLandLit;
   uniform vec3 uGrid;
   uniform vec3 uGlow;
   varying vec3 vLocal;
@@ -247,8 +213,6 @@ const GLOBE_FRAGMENT = /* glsl */ `
   void main() {
     float lat = asin(clamp(vLocal.y, -1.0, 1.0));
     float lon = atan(vLocal.x, vLocal.z);
-    vec2 uv = vec2(lon / (2.0 * PI) + 0.5, lat / PI + 0.5);
-    vec4 land = texture2D(uLand, uv);
 
     // Light from the upper left, so the globe has a lit side.
     float light = 0.45 + 0.55 * max(dot(vWorldNormal, normalize(vec3(-0.55, 0.5, 0.7))), 0.0);
@@ -261,26 +225,15 @@ const GLOBE_FRAGMENT = /* glsl */ `
     float grid = max(smoothstep(0.5 - width.x, 0.5, cell.x), smoothstep(0.5 - width.y, 0.5, cell.y));
     vec3 color = uOcean + uGrid * grid * 0.07;
 
-    // Land: a dot screen in green, each nation a slightly different shade.
-    float rows = 260.0;
-    float row = floor((lat / PI + 0.5) * rows);
-    float rowLat = ((row + 0.5) / rows - 0.5) * PI;
-    float cols = max(8.0, floor(rows * 2.0 * cos(rowLat)));
-    vec2 local = vec2(fract((lon / (2.0 * PI) + 0.5) * cols), fract((lat / PI + 0.5) * rows)) - 0.5;
-    local.x *= (2.0 * PI * cos(rowLat) / cols) / (PI / rows);
-    float dotSize = 0.34;
-    float aa = fwidth(length(local)) * 1.2;
-    float dots = 1.0 - smoothstep(dotSize - aa, dotSize + aa, length(local));
-    vec3 landColor = mix(uLandDeep, uLandLit, land.b) * (0.35 + 0.9 * dots);
-    color = mix(color, landColor, land.r);
+    // No land fill: the land shows by its glowing coasts and borders (the
+    // map lines), Niko's pick (2026-11-07; the dotted fill was "too gritty").
 
     // A scan band sweeping round the globe.
     float sweep = fract(lon / (2.0 * PI) + 0.5 - uTime * 0.035);
     float band = smoothstep(0.0, 0.035, sweep) * (1.0 - smoothstep(0.035, 0.11, sweep));
-    color += uGlow * band * (0.08 + 0.35 * land.r * dots);
+    color += uGlow * band * 0.08;
 
     color *= light;
-    color += uGlow * land.g * 0.7;
     color += uGlow * rim * 0.3;
     gl_FragColor = vec4(color, 1.0);
     #include <colorspace_fragment>
@@ -458,11 +411,8 @@ export class WarGlobe {
       vertexShader: GLOBE_VERTEX,
       fragmentShader: GLOBE_FRAGMENT,
       uniforms: {
-        uLand: { value: null },
         uTime: { value: 0 },
         uOcean: { value: new THREE.Color(0x020403) },
-        uLandDeep: { value: new THREE.Color(COLORS.brand950) },
-        uLandLit: { value: new THREE.Color(COLORS.brand700) },
         uGrid: { value: new THREE.Color(COLORS.brand500) },
         uGlow: { value: new THREE.Color(COLORS.brand400) },
       },
@@ -498,11 +448,8 @@ export class WarGlobe {
 
   // ---- Setup ---------------------------------------------------------------
 
-  /**
-   * The map: lines and capitals from `data`, the land picture from
-   * `<land>-<4096|2048>.webp`. Resolves once it's drawn (onReady fires too).
-   */
-  setData(data: GlobeData, land: string): Promise<void> {
+  /** The map: coasts, borders and capitals. Resolves once it's drawn (onReady fires too). */
+  setData(data: GlobeData): Promise<void> {
     for (const object of this.mapObjects) {
       this.world.remove(object);
       object.traverse((child) => {
@@ -513,7 +460,6 @@ export class WarGlobe {
     }
     this.mapObjects = [];
     const call = ++this.dataCall;
-    const picture = loadLand(`${land}-${this.options.quality === "high" ? 4096 : 2048}.webp`);
 
     const lines = (source: number[][], radius: number, color: number, opacity: number) => {
       const positions: number[] = [];
@@ -563,16 +509,11 @@ export class WarGlobe {
     const dots = new THREE.Points(dotGeometry, this.capitalMaterial);
     this.world.add(dots);
     this.mapObjects.push(dots);
-    // Build the shaders in the background while the picture loads: built on
-    // the first draw, they froze the page for over a second on phones.
+    // Build the shaders in the background first: built on the first draw, they
+    // froze the page for over a second on phones.
     const built = this.warm || !this.renderer.compileAsync ? Promise.resolve() : this.renderer.compileAsync(this.scene, this.camera).catch(() => {});
-    return Promise.all([picture, built]).then(([texture]) => {
-      if (this.disposed || call !== this.dataCall) {
-        texture.dispose();
-        return;
-      }
-      (this.globeMaterial.uniforms.uLand.value as THREE.Texture | null)?.dispose();
-      this.globeMaterial.uniforms.uLand.value = texture;
+    return built.then(() => {
+      if (this.disposed || call !== this.dataCall) return;
       const first = !this.warm;
       this.warm = true;
       this.render();
@@ -638,7 +579,6 @@ export class WarGlobe {
       if (Array.isArray(material)) material.forEach((m) => m.dispose());
       else material?.dispose();
     });
-    (this.globeMaterial.uniforms.uLand.value as THREE.Texture | null)?.dispose();
     this.glow.dispose();
     this.composer?.dispose();
     this.renderer.dispose();

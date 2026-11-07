@@ -85,7 +85,7 @@ export default function TrailerStage() {
       const globe = made;
       globe.resize(W, H);
       engine.current = globe;
-      void globe.setData(data, "/landing/globe-vanilla-land").then(() => {
+      void globe.setData(data).then(() => {
         if (!cancelled) setReady((r) => ({ ...r, globe: true }));
       });
     });
