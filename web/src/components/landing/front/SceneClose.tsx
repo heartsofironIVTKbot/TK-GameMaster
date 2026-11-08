@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Fragment } from "react";
 import { inviteUrl } from "@/lib/serverSettingsTypes";
 import { Glitch, TypeLines } from "./fx";
+import ScenePairing from "./ScenePairing";
 
 /** The close: everything else GameMaster does on a ticker, then the call to add it. */
 
@@ -34,6 +35,8 @@ export default function SceneClose() {
         <Row items={ROW_ONE} />
         <Row items={ROW_TWO} reverse outline />
       </div>
+
+      <ScenePairing />
 
       <div className="mx-auto max-w-[1400px] px-4 py-24 sm:px-8 sm:py-36">
         <TypeLines

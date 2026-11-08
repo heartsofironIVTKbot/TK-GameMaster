@@ -23,6 +23,12 @@ export default function LandingFooter() {
           <Link href="/invite" className="hover:text-ink-100">
             Add GameMaster
           </Link>
+          <Link href="/privacy" className="hover:text-ink-100">
+            Privacy Policy
+          </Link>
+          <Link href="/terms" className="hover:text-ink-100">
+            Terms of Service
+          </Link>
         </nav>
         <p className="text-xs text-ink-500 sm:ml-auto">Not affiliated with Paradox Interactive or Discord.</p>
       </div>

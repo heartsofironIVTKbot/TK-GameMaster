@@ -228,7 +228,7 @@ exceptions: the front page's globe, and the night sky behind every page.
 
 **The background** (`web/src/components/site/SkyBackground.tsx`, drawn by
 `skyEngine.ts`): a night sky on one canvas behind every page, Niko's pick
-(2026-11-07): stars on near-black, a very faint brand-green haze in two
+(2026-11-07): stars on near-black (about one in five brand green, 2026-11-08), a very faint brand-green haze in two
 corners, and a shooting star about every 40 seconds. About half the stars
 twinkle: they fade almost out, then flare brighter and a little bigger with
 a halo, so the sky reads as alive (a gentler twinkle was nearly invisible).

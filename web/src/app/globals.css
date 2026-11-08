@@ -885,3 +885,14 @@ body {
     animation: none;
   }
 }
+
+/* The Privacy Policy and Terms (components/legal): bulleted lists in their sections. */
+.legal-body ul {
+  display: grid;
+  gap: 0.4rem;
+  list-style: disc;
+  padding-left: 1.25rem;
+}
+.legal-body li::marker {
+  color: var(--color-brand-400);
+}

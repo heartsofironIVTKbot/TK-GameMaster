@@ -18,6 +18,8 @@ import {
   Swords,
   Ticket,
   TriangleAlert,
+  ShieldCheck,
+  FileText,
   UserRound,
   X,
   type LucideIcon,
@@ -47,7 +49,9 @@ export type SitePage =
   | "audit"
   | "status"
   | "invite"
-  | "crash";
+  | "crash"
+  | "privacy"
+  | "terms";
 
 /** Every page's icon: one line-icon set, one colour (green on the page you're on). */
 export const PAGE_ICONS: Record<SitePage, LucideIcon> = {
@@ -66,6 +70,8 @@ export const PAGE_ICONS: Record<SitePage, LucideIcon> = {
   status: Activity,
   invite: Plus,
   crash: TriangleAlert,
+  privacy: ShieldCheck,
+  terms: FileText,
 };
 
 export interface SiteLink {
@@ -96,6 +102,8 @@ const SERVER_LINKS: SiteLink[] = [
   { page: "servers", href: "/servers", label: "Your servers", hint: "Set up GameMaster" },
   { page: "invite", href: "/invite", label: "Add GameMaster", hint: "To another Discord server" },
   { page: "status", href: "/status", label: "Status", hint: "Is GameMaster up?" },
+  { page: "privacy", href: "/privacy", label: "Privacy Policy", hint: "What GameMaster keeps, and why" },
+  { page: "terms", href: "/terms", label: "Terms of Service", hint: "The rules for using GameMaster" },
 ];
 
 /** The menu's groups for this viewer. */

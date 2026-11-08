@@ -42,9 +42,10 @@ const FADE_MS = 280;
 /** A screen inside a step, and a step's last screen, unless the tour says otherwise. */
 const HOLD_MS = 1100;
 const STEP_END_MS = 2400;
-/** Extra time on every screen and at the end of each step, so the captions can be read. */
-const READ_MS = 400;
-const STEP_READ_MS = 1000;
+/** Extra time on every screen and at the end of each step, so the captions can be read
+ * (Niko, 2026-11-08: half of the second added before; it dragged). */
+const READ_MS = 200;
+const STEP_READ_MS = 500;
 
 interface Slide {
   tour: string;

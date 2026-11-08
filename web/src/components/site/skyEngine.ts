@@ -70,6 +70,9 @@ interface Satellite {
 }
 
 const TINTS = ["255,255,255", "255,255,255", "255,255,255", "214,255,224", "255,236,214", "214,232,255"];
+/** Brand greens (brand-200/300/400): about one star in five (Niko, 2026-11-08). */
+const GREENS = ["172,241,176", "126,227,135", "83,208,100"];
+const GREEN_SHARE = 0.2;
 const FRAME_MS = 1000 / 30;
 /** Phones: fewer frames (the twinkle is slow, so it looks the same). */
 const PHONE_FRAME_MS = 1000 / 20;
@@ -172,7 +175,7 @@ export class Sky {
         depth: 0.15 + depth * 0.85,
         twinkle: Math.random() < (bright ? 0.8 : 0.55) ? 1.5 + Math.random() * 3 : 0,
         phase: Math.random() * Math.PI * 2,
-        tint: TINTS[Math.floor(Math.random() * TINTS.length)],
+        tint: Math.random() < GREEN_SHARE ? GREENS[Math.floor(Math.random() * GREENS.length)] : TINTS[Math.floor(Math.random() * TINTS.length)],
       };
     });
   }
