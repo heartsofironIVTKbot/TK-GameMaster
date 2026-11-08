@@ -1,67 +1,106 @@
 # Casino integration rework
 
 *Started 2026-11-08.* Brings the Casino and Fortunes of War add-ons back for
-TommyKay's server. Replaces Phase 6 of `infrastructure-plan.md`.
+TommyKay's server. Replaces Phase 6 of `infrastructure-plan.md`. The design
+is Niko's (2026-11-08); the earlier "hosts work on the Casino site" plan was
+dropped in its favour.
 
-## Niko's decisions (2026-11-08)
+## Decisions
 
-- **tkcasino.online stays its own site** (its own repo, `hoi4-casino`, on
-  Vercel), linked to GameMaster.
-- **Both add-ons:** Casino and Fortunes of War.
-- **The Casino keeps its own casino style** (gold, roulette, slots).
-- **TommyKay only** (`HOME_ONLY_ADDONS` stays).
-- **Fortunes of War becomes a room on the Casino site.**
-- **The Casino's Vercel project still points at the old database**, so it
-  moves to the current (Aiven) one in step 2.
+- **tkcasino.online stays its own site** (repo `hoi4-casino`, on Vercel) in
+  its own casino style. Everything a host does happens in GameMaster.
+- **Both add-ons:** Casino and Fortunes of War. Fortunes becomes a room on
+  the Casino site.
+- **TommyKay only:** the home server, guild 341585283881631744
+  (`HOME_ONLY_ADDONS` stays).
+- **The way in goes through GameMaster** (option A): the announcement's link
+  opens `hoi4gamemaster.online/casino/<game>`, which signs the player in with
+  Discord (if needed) and sends them on to tkcasino.online with a one-time
+  link. No second login on the Casino.
+- **Co-hosts are for Casino games only.** Starting, ending and cancelling a
+  game stay with the game's host and Host Management (already so on the
+  website and in the bot).
+- The Casino's Vercel project still points at the old database; it moves to
+  the current (Aiven) one.
+
+## How it works
+
+**1. Setting up.** In GameMaster's game setup (Calendar), ticking the Casino
+add-on shows every Casino setting under everything else: which rooms are on
+(nation, ideology, path, doctrine, build, achievements), re-rolls per room for
+majors and minors (build: land and navy/air separately), who may roll majors
+and minors, when nations unlock (automated unlock steps), the achievements'
+tiers, and the game's **co-hosts**. They're saved in the format the Casino
+already reads (`host_settings`, see the Casino's `lib/gate.ts`) and can be
+changed later. This replaces the Casino's own Host panel.
+
+**2. Announcing.** The announcement's link goes to the Casino via GameMaster
+(see Decisions). GameMaster runs the checks the old Discord panel ran (bans,
+IronLegion, the player's tier against the game's current lock level) before
+handing out the link. A player who already started or finished gets their
+resume or receipt link the same way.
+
+**3. Rolling.** Nation selection and every room happen on tkcasino.online, as
+built. Each pick appears on GameMaster's map at once, without a reload. The
+receipt page gets a **View reservations** button that opens the game's map.
+
+**4. Host tools on Casino games** (the game's host, its co-hosts, Host
+Management). Never a swap or a move: that would break the path, build and the
+rest that belong to one nation. Instead:
+- **Add** a player to a free nation. They get the game's default re-rolls for
+  the rooms that are on (e.g. ideology and build on, path off; majors 2,
+  minors 1) and a DM: "You've been added to <nation>; here's your link to
+  roll."
+- **Give another roll** (an override) without a nation, when the nation
+  randomizer is on: search the player, run the override; they get a DM with
+  a fresh link.
+- **Extra rolls** for one room or for all of them (the Casino's existing
+  override grants, as /gamble_for's host override panel did).
+- **Remove** a player: the nation is freed, their receipt is deleted, and
+  they get a DM that the host removed them.
+- **Receipts:** clicking a player, on the reservation board or their round
+  avatar on the map, shows a **View receipt** link to the host and co-hosts.
+
+**5. Unreserving (Emergency Unreserve).** On a Casino game, a player's
+Unreserve opens a red warning in the middle of the screen: if they unreserve,
+they won't get a second chance. It asks for a reason (required), which the
+host sees. The host can still bring them back with Add, after a warning that
+this player unreserved (and why).
+
+**6. Fortunes of War** becomes a card room on the Casino site in the
+Casino's style, ported from the bot's old `/draw` (cards, effects, casual /
+competitive redraws).
 
 ## Where things stand
 
-The Casino site and the bot share one MySQL database, and that already is the
-hand-off between them:
+The Casino and the bot share the database, and that is the hand-off:
 
 | Piece | Today |
 | --- | --- |
-| Way in | **Broken.** Players got a one-time link from the Casino panel in the game's Discord thread (`CasinoPanelView`): the bot wrote a `web_access_tokens` row (60 s, single use) and the Casino's `/api/access` checks and burns it. Games no longer have threads or panels, so nothing mints links. |
-| Game identity | Works. The Casino looks games up by `thread_id`; thread-less games still have a key in that column. |
-| Host settings | Mostly there. Creating a Casino game on the Calendar mints a `host_access_tokens` link for the Casino's `/host` page (re-roll budgets, locks, which rooms are on). |
-| Results back | There. The Casino writes `game_reservations` and `reservation_sync_queue`; the bot's sync loop and receipt DM loop (`receipt_dm_queue`) pick them up. Not tried with thread-less games yet. |
-| Fortunes of War | Gone. It was a Discord card game (`/draw`, card buttons in the thread). The plan since October: it moves to the Casino site. |
-| Switched off | `_UNAVAILABLE_ADDONS = {"randomizer", "fortunes"}` (bot) makes the Calendar refuse them. |
+| Way in | **Broken.** The old Discord panel (`CasinoPanelView`) wrote a one-time `web_access_tokens` row that the Casino's `/api/access` checks and burns; games have no threads or panels now. |
+| Game identity | Works: the Casino looks games up by `thread_id`, and thread-less games still have a key there. |
+| Host settings | In the Casino's `/host` page (host token from the Calendar); moves into GameMaster's setup. |
+| Results back | The Casino writes `game_reservations` + `reservation_sync_queue`; the bot syncs them and DMs receipts (`receipt_dm_queue`). Untried with thread-less games. |
+| Overrides | The Casino has them (`host_override_requests`, grant tokens with per-room budgets); the bot DMs the link. |
+| Switched off | `_UNAVAILABLE_ADDONS = {"randomizer", "fortunes"}` in the bot. |
 
-## Plan
+## Steps
 
-1. **The way in, from GameMaster.** On a Casino game, the map's Reserve
-   button (and the announcement's "Reserve Here" link) go to
-   `/casino/<game>` on GameMaster. Signed in with Discord, GameMaster runs the
-   checks the panel ran (bans, IronLegion, the game's lock level and the
-   player's tier), writes the `web_access_tokens` row the bot used to write,
-   and sends the player to tkcasino.online with it. A player who already
-   started or finished gets their resume or receipt link the same way. The
-   token logic is ported from the bot's `_generate_web_access_token` and
-   `CasinoPanelView._issue_link`.
-2. **The Casino site follows.** Its texts point to GameMaster instead of the
-   Discord panel ("open the game on GameMaster's map"); denied and expired
-   screens link back to the map. Move it to the current (Aiven) database:
-   its database connection gets TLS with Aiven's certificate (code), and Niko
-   puts the same database settings the bot uses into the Casino's Vercel
-   project (dashboard; never in git).
-3. **Hosts.** The Games page gets "Casino settings", "Inspect" and
-   "Override" links for Casino games (the host token links the Discord
-   panel used to give).
-4. **Results back.** Run a Casino game end to end on a test game: the pick
-   lands on the map, in attendance and in the player's history; the receipt
-   DM arrives. Fix what breaks for thread-less games.
-5. **Fortunes of War on the Casino site.** A card-draw room in the Casino's
-   style, ported from the bot's `/draw` (cards, effects, casual / competitive
-   redraws), for Fortunes games. The card list comes over from the bot's
-   data.
-6. **Switch on.** Take both add-ons out of `_UNAVAILABLE_ADDONS` (bot) and the
-   Calendar's "currently unavailable" labels; keep them TommyKay only and
-   still blocked for draft games. If tkcasino.online is down, the map says so
-   and the host can turn the game into a normal reservation game.
-7. **Polish.** The front page and docs mention the Casino again; swap the
-   Casino's music for the paid-Suno orchestral track.
-
-**Done when:** a Casino game and a Fortunes game scheduled on GameMaster's
-Calendar can be played through tkcasino.online from the map, and the results
-show in GameMaster's roster, attendance and records.
+1. **Casino settings in game setup**, including co-hosts, saved as
+   `host_settings`.
+2. **The way in:** `/casino/<game>` on GameMaster and the announcement link.
+3. **The Casino site:** View reservations button, texts that point to
+   GameMaster, denied/expired screens that link back, TLS for Aiven. Niko puts
+   the bot's database settings into the Casino's Vercel project (dashboard,
+   never in git).
+4. **Picks on the map at once**, and **View receipt** on players for the host
+   and co-hosts.
+5. **Host tools:** add, give a roll, extra rolls, remove, with the DMs; no
+   swaps or moves on Casino games.
+6. **Emergency Unreserve:** the red warning with a reason; the host's Add
+   warning.
+7. **Fortunes of War** room on the Casino site.
+8. **Switch on and test:** take both add-ons out of `_UNAVAILABLE_ADDONS`,
+   play a Casino and a Fortunes game end to end, and a fallback if the Casino
+   is down. Then the front page and docs mention the Casino again, and the
+   Casino's music is swapped for the paid-Suno orchestral track.
