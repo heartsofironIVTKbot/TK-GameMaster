@@ -6,7 +6,7 @@ import { getPool } from "@/lib/db";
 import { isSchedulerDemo } from "@/lib/scheduleStore";
 
 /**
- * A player's AI chat-log results (their own profile): the bot's
+ * A player's AI chat-log results (their own profile — /info): the bot's
  * verdict for their recent analyzed games on one server, and whether a host
  * has given it yet. No staff names.
  */

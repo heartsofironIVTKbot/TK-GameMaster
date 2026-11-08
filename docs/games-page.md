@@ -280,4 +280,4 @@ the HOI4 chat log (.txt), run the AI analysis, then click **Give** for the
 rewards you agree with — nothing is given automatically. The grading is
 strict (in-character words + creativity; see
 [ai-log-analysis.md](ai-log-analysis.md)). Players see their result on their
-profile (My Profile).
+profile (My Profile, `/info`).

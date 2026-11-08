@@ -23540,7 +23540,7 @@ async def _send_game_reminder(guild, actor, key: str, game: dict, kind: str) -> 
                 + (f"🔢 **Checksum:** `{checksum}`\n" if checksum else "")
                 + f"\n⚠️ **Requirement:** You must show up for the game. {penalty_text}\n"
                 f"🚪 **Can't make it?** Unreserve on the website as soon as possible: {_map_game_url(key)}\n\n"
-                f"🆘 **Need Help?** Use `/help` in any {_community_name()} Discord channel for rules & mods."
+                f"🆘 **Need help?** The rules and mods are on the game's page (📜 Rules / 🧩 Mods)."
             )
             if await _dm_user_safe(member, content=content, label="early reminder"):
                 sent += 1
@@ -26626,106 +26626,26 @@ def get_category_name_for_nation(nation: str, game_mode: str):
 
     return "⚠️ UNMAPPED NATIONS"
 
-# (/info was removed on 2026-11-08: My Profile on the website does the same.)
+@tree.command(name="info", description="Open your player profile: stats, standing, history and roles.", guild=discord.Object(id=GUILD_ID))
+async def info(interaction: discord.Interaction):
+    """Sends the player to their own profile on the website (the same record
+    hosts see on the Database page, without staff-only tools or names)."""
+    url = f"{WEB_SITE_URL}/profile?guild={interaction.guild_id or cur_gid()}"
+    embed = discord.Embed(
+        title=f"👤 {interaction.user.display_name}",
+        description=(
+            "Your full profile is on the website: games and attendance, commends and warnings, "
+            "Merit and Hearts of Valor, bans, Dishonored, your recent games and your roles.\n\n"
+            "*Log in with Discord on the page if it asks — it only shows your own record.*"
+        ),
+        color=EmbedColor.INFO,
+    )
+    embed.set_thumbnail(url=interaction.user.display_avatar.url)
+    view = discord.ui.View()
+    view.add_item(discord.ui.Button(label="Open my profile", style=discord.ButtonStyle.link, url=url, emoji="👤"))
+    await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
-# HELP SYSTEM UI & COMMAND
-class HelpSelect(discord.ui.Select):
-    def __init__(self):
-        options = [
-            discord.SelectOption(label="How to actually play?", value="how_to_play", description="Learn how reservations and lobbies work.", emoji="🎮"),
-            discord.SelectOption(label="Wrong Checksum", value="wrong_checksum", description="Fix checksum and mod issues.", emoji="😭"),
-            discord.SelectOption(label="Connection Timed Out", value="connection_timed_out", description="Fix connection issues when checksum is correct.", emoji="😓")
-        ]
-        super().__init__(placeholder="Select an issue...", min_values=1, max_values=1, options=options)
-
-    async def callback(self, interaction: discord.Interaction):
-        await interaction.response.defer(ephemeral=True)
-        user = interaction.user
-        choice = self.values[0]
-
-        try:
-            if choice == "how_to_play":
-                msg = (
-                    "- First, make sure that you are on reservation list before game start date. Reserve through the map link in the game's announcement.\n\n"
-                    "- When the host opens the multiplayer lobby, you will get DM from me (the Gamemaster bot).\n\n"
-                    "- After you get the DM, you'll gain access to secret game Information channel, where ID, Password and game Checksum is posted. You'll also get **Roleplay Pass** discord role, which also grants you access to more voice channels. Every nation gets their unique voice channel.\n\n"
-                    "❓ *Don't have the right checksum? Request help from the bot!*\n\n"
-                    "❗ Make sure to use same (or similar) username in game as in discord. This helps host(s) to manage games.\n\n"
-                    "https://giphy.com/gifs/id-password-smTtOG3raHuhx23HTY"
-                )
-                await user.send(msg)
-
-            elif choice == "wrong_checksum":
-                msg1 = (
-                    "__Getting bunch of connection timed outs or wrong checksum errors?__\n\n"
-                    "- First, double check that you have correct mods installed.\n\n"
-                    "https://giphy.com/gifs/download-mods-6GtQ7SxzO9dqreWJMB"
-                )
-                msg2 = (
-                    "- Then make sure that you have them turned on, and that you have correct playlist selected.\n\n"
-                    "https://giphy.com/gifs/check-correct-playlist-Sh6dvzJUHITHygntol"
-                )
-                msg3 = (
-                    "- Check in-game checksum again. Does it match the one mentioned in Info channel?\n\n"
-                    "❓ Don't know what checksum is and where to find it? Look at the gif down below for visual guide! Its that 4 digit number in (brackets).\n\n"
-                    "https://giphy.com/gifs/checksum-l1YRb5ioBh7WHKWds3"
-                )
-                msg4 = (
-                    "💢 Have correct checksum but still can't connect? Type /help again in any discord channel and open following guide: \"Connection Timed Out 😓\".\n\n"
-                    "(Link will be added later)"
-                )
-                await user.send(msg1)
-                await user.send(msg2)
-                await user.send(msg3)
-                await user.send(msg4)
-
-            elif choice == "connection_timed_out":
-                msg1 = (
-                    "__Have Correct Checksum but still can't connect?__\n\n"
-                    "- First Triple Check that you have correct checksum. The Checksum is always provided in game-Information channel (which is hidden until lobby opens).\n\n"
-                    "❓ Don't have correct checksum? Go to discord and type /help again, then open following guide: \"Wrong Checksum 😭\"\n\n"
-                    "https://giphy.com/gifs/checksum-l1YRb5ioBh7WHKWds3"
-                )
-                msg2 = (
-                    "__If you have correct Checksum but still can't connect, Here is 2 step fix.__\n\n"
-                    "- First, close your game. Launch the game. Go to \"Game Settings\", scroll down to __Game__ category and click **CLEAR USER DIRECTORY.** \n\n"
-                    "- Then go back to \"Playsets\", Disable and then Re-Enable mods again. Double check that you are using correct Playset in \"Home\" tab and click Play.\n\n"
-                    "https://giphy.com/gifs/mWpsiSzmTSGLR8ifDo"
-                )
-                msg3 = (
-                    "- After you have restarted your game, make sure to Rename yourself in \"Multiplayer\" tab as something else.\n\n"
-                    "https://giphy.com/gifs/uqjPHJYEsa3IXQqXGG"
-                )
-                msg4 = (
-                    "__Still can't connect?__\n\n"
-                    "- If you still can't connect after completing first 2 steps, please ping the game host and say: \"Lobby is most likely bugged, can't connect\".\n\n"
-                    "❗ Lobby Bug is a famous Hoi4 bug that prevents any new players joining in the lobby. Lobby Bug usually occurs when Lobby has been open for a long time. The only fix is for the host to close the current lobby and open a new one with new ID and Password."
-                )
-                await user.send(msg1)
-                await user.send(msg2)
-                await user.send(msg3)
-                await user.send(msg4)
-
-            # Let the user know the DMs were sent
-            await interaction.followup.send("✅ I've sent you a DM with the instructions!", ephemeral=True)
-
-        except discord.Forbidden:
-            # Catch users who have their server DMs turned off
-            await interaction.followup.send("❌ I cannot send you a DM. Please check your privacy settings and allow direct messages from server members.", ephemeral=True)
-
-
-class HelpView(discord.ui.View):
-    def __init__(self):
-        super().__init__(timeout=None)
-        self.add_item(HelpSelect())
-
-
-@tree.command(name="help", description="Get help with the game or connection issues.", guild=discord.Object(id=GUILD_ID))
-async def help_command(interaction: discord.Interaction):
-    view = HelpView()
-    # Sends an ephemeral message with the dropdown menu so only the user can see it
-    await interaction.response.send_message("What do you need help with? Please select an option below:", view=view, ephemeral=True)
-
+# (/help was removed on 2026-11-08, Niko's pick.)
 
 
 SCHEDULE_CHANNEL_ID = 0
@@ -31078,64 +30998,18 @@ async def _post_ticket_panel(guild) -> str:
     return f"Posted the ticket panel in #{channel.name}.{note}"
 
 
-# (/close was removed on 2026-11-08: tickets close with their own buttons.)
+@tree.command(name="close", description="Close this ticket if its buttons don't work.", guild=discord.Object(id=GUILD_ID))
+@app_commands.describe(resolution="Resolved (gives the role a verification / host application ticket is for) or Unresolved")
+@app_commands.choices(resolution=[
+    app_commands.Choice(name="Resolved", value="Resolved"),
+    app_commands.Choice(name="Unresolved", value="Unresolved"),
+])
+async def close_ticket_command(interaction: discord.Interaction, resolution: str = "Unresolved"):
+    await _ticket_close_from_interaction(interaction, resolution)
 
 
-# ————— /botprofile: the bot's own avatar and banner (bot owner only) —————
-# The Developer Portal won't take animated GIFs, but the API does, so the
-# owner uploads them here. Home server only (HOME_ONLY_COMMANDS).
-
-BOT_PROFILE_MAX_BYTES = 10 * 1024 * 1024
-BOT_PROFILE_TYPES = {"image/gif", "image/png", "image/jpeg", "image/webp"}
-
-
-def _bot_profile_problem(attachment: discord.Attachment, label: str) -> str | None:
-    """Why this file can't be the bot's avatar or banner, or None if it can."""
-    kind = (attachment.content_type or "").split(";")[0].strip().lower()
-    if kind not in BOT_PROFILE_TYPES:
-        return f"❌ The {label} must be a GIF, PNG, JPG or WebP image."
-    if attachment.size > BOT_PROFILE_MAX_BYTES:
-        return f"❌ The {label} is {attachment.size / 1_000_000:.1f} MB; Discord takes up to 10 MB."
-    return None
-
-
-@tree.command(name="botprofile", description="[Bot owner] Change GameMaster's avatar and banner (animated GIFs work).", guild=discord.Object(id=GUILD_ID))
-@app_commands.default_permissions(administrator=True)
-@app_commands.describe(
-    avatar="New avatar: GIF, PNG, JPG or WebP, up to 10 MB",
-    banner="New profile banner: GIF, PNG, JPG or WebP, up to 10 MB (680×240 or bigger)",
-)
-async def bot_profile_command(
-    interaction: discord.Interaction,
-    avatar: Optional[discord.Attachment] = None,
-    banner: Optional[discord.Attachment] = None,
-):
-    if not await bot.is_owner(interaction.user):
-        return await _ticket_reply(interaction, "❌ Only the bot's owner can change its avatar and banner.")
-    if avatar is None and banner is None:
-        return await _ticket_reply(interaction, "❌ Attach an avatar, a banner, or both.")
-    for attachment, label in ((avatar, "avatar"), (banner, "banner")):
-        if attachment is not None and (problem := _bot_profile_problem(attachment, label)):
-            return await _ticket_reply(interaction, problem)
-    await _defer_ephemeral(interaction)
-    changes = {}
-    try:
-        if avatar is not None:
-            changes["avatar"] = await avatar.read()
-        if banner is not None:
-            changes["banner"] = await banner.read()
-        await bot.user.edit(**changes)
-    except ValueError:
-        return await _ticket_reply(interaction, "❌ Discord didn't recognise that file as an image. Try exporting it again.")
-    except discord.HTTPException as e:
-        return await _ticket_reply(
-            interaction,
-            f"❌ Discord refused the change: {e.text or e}\n"
-            "The avatar can only change a few times an hour; if it says too fast, wait and try again.",
-        )
-    done = " and ".join(name for name in ("avatar", "banner") if name in changes)
-    _audit_log("INFO", f"bot profile {done} changed by={interaction.user.id}")
-    await _ticket_reply(interaction, f"✅ Updated the bot's {done}. It can take a minute to show everywhere.")
+# (/botprofile was removed on 2026-11-08, Niko's pick: set the bot's avatar
+# and banner in the Discord Developer Portal.)
 
 
 # ————— Inactive tickets: a ping after 24 h, closed after 48 h —————
@@ -33450,7 +33324,7 @@ _PER_GUILD_SCALARS = (
     "HOST_LOG_WEBHOOK_URL", "TICKET_CATEGORY_ID",
 )
 # Slash commands only the home server gets.
-HOME_ONLY_COMMANDS: set[str] = {"botprofile"}
+HOME_ONLY_COMMANDS: set[str] = set()  # none since /botprofile went (2026-11-08)
 # Features a server can switch off (server settings → Features).
 SERVER_FEATURES = {
     "valor_merit": True, "daily_role_check": True, "vip_auto_carry_over": True, "cross_server_ban_alerts": True,

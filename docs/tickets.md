@@ -53,11 +53,13 @@ messages don't count. It checks every 30 minutes.
 
 ## Posting the panel
 
-The ticket panel is posted from the website (2026-11-08; /spawn and /close
-were removed): server settings → Tickets → Ticket channels → **Post or
-re-post the ticket panel**, or the dashboard's **Re-post ticket panel**. It
-goes in the Ticket panel channel and replaces the previous panel. Tickets
-close with their own buttons.
+The ticket panel is posted from the website (2026-11-08; /spawn was
+removed): server settings → Tickets → Ticket channels → **Post or re-post the
+ticket panel**, or the dashboard's **Re-post ticket panel**. It goes in the
+Ticket panel channel and replaces the previous panel.
+
+- **/close** — close a ticket if its buttons ever fail (same people as the
+  buttons).
 
 ## Setup (website → server settings)
 
@@ -95,6 +97,7 @@ it, transcripts still list who wrote when, plus attachments.
 2. Check the **Tickets** step on the website.
 3. Stop the TicketMaster bot. The panel it posted and its open tickets keep
    working: GameMaster answers their Game Support, Verification, General
-   Question and Close buttons (same button ids).
+   Question and Close buttons (same button ids). Old moderation and Stellaris
+   tickets can be closed with /close by Host Management or admins.
 4. Post the new panel from the website once (it adds the Bug / Suggestion
    button), then delete the old panel.

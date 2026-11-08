@@ -32,7 +32,7 @@ const SAMPLES: [number, string, string, Who | null, Who | null, string | null, s
   [63, "roles", "verify", "kurt", "zoe", null, "Kurt (Senior Host) verified Zoe (RP)", "web"],
   [70, "message", "host_message", "anna", "ben", null, "Anna (Host) sent a direct message to Ben", "web"],
   [78, "settings", "settings_saved", "kurt", null, null, "Kurt (Senior Host) saved the server settings: Changed 2 settings (Roles)", "web"],
-  [85, "system", "command_used", "mira", null, null, "Mira used /help in #general", "discord"],
+  [85, "system", "command_used", "mira", null, null, "Mira used /info in #general", "discord"],
   [92, "reservation", "nickname_set", "ivan", null, null, "Ivan set their in-game nickname to IvanTheGreat", "web"],
   [101, "roster", "hotjoin_request", "zoe", null, GAME_B, "Zoe asked to hot-join in Saturday RP", "web"],
   [109, "roster", "hotjoin_decided", "anna", null, GAME_B, "Anna (Host) answered a hot-join request in Saturday RP — Approved", "web"],
