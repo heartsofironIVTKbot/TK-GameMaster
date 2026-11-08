@@ -655,6 +655,7 @@ export default function GameSetupApp({
               update={update}
               modeDefaults={modeDefaults}
               homeServer={host.home_server}
+              isStaff={host.is_staff}
               hosts={hosts}
               hostId={editing ? (form.handoverTo ?? editing.hostId) : host.discord_id}
               gameSec={derived.gameSec}

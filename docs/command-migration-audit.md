@@ -25,8 +25,8 @@ website.
 > member's Database record and /dm_participants became "Message players" on
 > the Games page. In late October 2026 /gamble, /gamble_for, /draw,
 > /draw_for, /achievement, /backfill_portfolios and /search_logs were removed
-> too (Casino and Fortunes of War show as "currently unavailable" on the
-> Calendar until the Casino website is integrated, TommyKay only), and /info
+> too (Casino and Fortunes of War came back on the website with the Casino
+> integration, TommyKay only: docs/casino-integration.md), and /info
 > now opens the player's own profile page on the website. Then /bot_status
 > (the public Status page), /sync_commands (the dashboard's "Re-sync
 > commands" button + sync on every start), /forward_log (the website's chat-log
@@ -127,7 +127,7 @@ and /game_start, /game_end, /game_cancel and /announce_game (Games page).
 | ✅ /remind | Host | Send the early (1 h before) or late ("we're starting, where are you?") reminder | "Message players → Reminder" (the Calendar's automatic reminder already covers the usual case) |
 | ✅ /dm_participants | Host | DM everyone in the game | Games page → Message players (everyone or ticked players; the game's host or senior staff) |
 | ✅ /late_join | Host | Add a late player: reservation + Gamer Pass + voice channel | "Late join" on the Games page / live map (calls the existing late-join routine) |
-| ❌ /spawn_panel | Host | Re-post the crash, hot-join, emergency-unreserve, casino or host-config panel | Removed: hot-join is on the map + Games page, crash reports on /crash (the casino panels come back with the Casino integration) |
+| ❌ /spawn_panel | Host | Re-post the crash, hot-join, emergency-unreserve, casino or host-config panel | Removed: hot-join is on the map + Games page, crash reports on /crash; Casino games are set up in the game setup and entered through `/casino/<game>` |
 | ✅ /post_mods | Host | Open the game's mods post manager | Games page → Rules & mods (presets set them up front) |
 | ✅ /post_rules | Host | Open the game's rules post manager | Same card |
 | ✅ /unlock_host_panel | Host | Fix a Host Control Center whose buttons stayed grey | "Repair → Unlock Host Control Center" (ended games) |
@@ -136,9 +136,9 @@ and /game_start, /game_end, /game_cancel and /announce_game (Games page).
 | ✅ /hacker | Host | Mark a recent game as hacked and compare players who were in other hacked games | "Report as hacked" on ended games, with the comparison as a table |
 | ✅ /start_draft | Host | Start / resume a draft game's draft | "Draft" card on draft games (and the map's drawer) |
 | ✅ /empty_draft_pool | Host | Clear leftover pool players and finish the draft | Same card: "Finish the draft" |
-| ❌ /draw_for | Host | Draw (or redraw) a Fortunes of War card for a player | Removed; comes back with the Casino integration |
-| ❌ /gamble_for | Host / Senior | Get a link to the web casino override panel for a player | Removed; comes back with the Casino integration |
-| ❌ /list_code | Host | Rebuild the Fortunes submod sync messages | Removed; comes back with the Fortunes of War → Casino merge |
+| ❌ /draw_for | Host | Draw (or redraw) a Fortunes of War card for a player | Map Host Tool on Fortunes games: **Give a redraw** / **Reset card** (the player is DM'd) |
+| ❌ /gamble_for | Host / Senior | Get a link to the web casino override panel for a player | Map Host Tool on Casino games: **Add**, **Give a roll**, **Extra rolls**, **Remove** (the player is DM'd the link) |
+| ❌ /list_code | Host | Rebuild the Fortunes submod sync messages | Games page → Fortunes of War card → **Copy script** |
 
 ### Move to the Database page (member and role admin)
 
@@ -170,9 +170,9 @@ and /game_start, /game_end, /game_cancel and /announce_game (Games page).
 | ✅ /unreserve | Players | Same (the map can unreserve too) |
 | ✅ /reserve_filler | Players | Same |
 | ✅ /reserve_coop | Players | Same |
-| ❌ /draw | Players | Fortunes of War card draw in the thread (removed until the Casino integration) |
+| ❌ /draw | Players | Fortunes of War card draw: now the map's **Draw your Fortunes card** → the Casino's Fortunes room |
 | ❌ /chaos | Players | Removed (October 2026) with the All Add-ons add-on. Tommy's Lootboxes and Star Wars were removed too. |
-| ❌ /gamble | Players | Hands the player a casino web link (removed until the Casino integration) |
+| ❌ /gamble | Players | Hands the player a casino web link: now the announcement's **Roll at the Casino** → `/casino/<game>` |
 | ❌ /achievement | Players | Fun achievement roll (removed) |
 | ✅ /info | Players | Opens the player's own profile on the website (`/profile`): the Database record layout, read-only, without staff names |
 | ❌ /help | Players | Help menu for connection / game issues |

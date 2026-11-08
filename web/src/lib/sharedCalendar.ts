@@ -86,7 +86,7 @@ export async function listSharedCalendar(
         status: row.status ?? (typeof data.status === "string" ? data.status : null),
         announced: Boolean(row.announced) || Boolean(data.announced),
         started: false,
-        add_on: currentAddOn(typeof data.add_on === "string" ? data.add_on : null),
+        add_on: currentAddOn(typeof data.add_on === "string" ? data.add_on : null, data.addon_test === true),
         thread_id: /^\d{5,25}$/.test(thread) ? thread : null,
       };
     }),

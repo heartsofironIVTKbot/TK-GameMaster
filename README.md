@@ -104,4 +104,4 @@ When the bot starts, the console should end with `Logged in as …`. A database 
 
 The website was built and tried with sample data. It has not yet been signed off against the real Discord API and the real database. That check is Phase 1 in [docs/infrastructure-plan.md](docs/infrastructure-plan.md). Until that checklist passes on a test server, do not send players to a new address.
 
-Casino and Fortunes of War stay switched off. They are TommyKay-only and wait on Phase 6 of that same plan.
+Casino and Fortunes of War (TommyKay only) are built: see [docs/casino-integration.md](docs/casino-integration.md). They stay switched off for hosts until a test game passes; until then only Host Management can schedule them. Switching them on is `CASINO_ADDONS_LIVE` in the bot and in `web/src/lib/scheduleOptions.ts`.

@@ -13,15 +13,15 @@ announcement post stays and links to the map.
 | Draft Pool board, "your turn" posts | The map's draft panel; captains still get a DM on their turn |
 | **Hot-Join panel** | The map: in a running game, click a free nation → **Ask to hot-join**. The host gets a DM and decides on the Games page (**Hot-join requests** card) |
 | **Crash Report panel** (+ the DM upload) | The website's **/crash** page: describe what happened, pick the zipped logs folder, send. Linked from the map and from the "game is starting" DM |
-| Emergency Unreserve panel | Only Casino / Fortunes games had it — those are unavailable until the Casino integration |
+| Emergency Unreserve panel | Casino games: "Can't play? Emergency Unreserve" on the player's nation on the map, a red pop-up with a reason (docs/casino-integration.md, step 6) |
 | "Game Has Started" / "Game End Initialized" posts | Players already get DMs at the start and the end |
 | Late reminder list ("Waiting for players…") | The late reminder DMs each missing player; the host sees who on the Games page |
 | Scheduled nation unlock notices | The map shows the unlock; the host gets a DM |
 
 Removed commands: **/spawn_panel** (no panels to re-post) and
 **/run_ai_analysis** (the Games page's chat-log card does it). Discord now
-has two commands: `/help` and `/info` (`/list_code` was removed later; it
-comes back with the Fortunes of War → Casino merge).
+has two commands: `/help` and `/info` (`/list_code` was removed later; the
+Fortunes of War script is now on the Games page's Fortunes of War card).
 
 ## The announcement post
 

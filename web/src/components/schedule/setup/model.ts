@@ -252,7 +252,8 @@ export function formFromSettings(settings: SlotSettings, timeZone: string): Setu
   form.mode = settings.mode;
   form.time = timeInZone(gameSec * 1000, timeZone);
   form.loggingMode = settings.logging_mode === "Casual" ? "Casual" : "Strict";
-  form.addOn = settings.add_on && ADD_ON_VALUES.has(settings.add_on) && !addOnOption(settings.add_on).unavailable ? settings.add_on : null;
+  // (A switched-off add-on only arrives here on Host Management's test game: currentAddOn.)
+  form.addOn = settings.add_on && ADD_ON_VALUES.has(settings.add_on) ? settings.add_on : null;
   form.fortunesMode = settings.fortunes_mode === "competitive" ? "competitive" : "casual";
   form.majorLevel = isLockLevel(settings.major_lock_level) ? settings.major_lock_level : "Trusted";
   form.minorLevel = isLockLevel(settings.minor_lock_level) ? settings.minor_lock_level : "All Users";

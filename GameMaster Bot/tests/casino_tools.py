@@ -145,6 +145,7 @@ gm._audit_log = lambda *args, **kwargs: None
 gm._audit_who = lambda uid: MEMBERS.get(int(uid)).display_name if MEMBERS.get(int(uid)) else None
 gm._member_is_host = lambda member: member is not None
 gm._member_is_staff = lambda member: bool(getattr(member, "staff", False))
+gm._member_is_senior_team = lambda member: bool(getattr(member, "staff", False))
 gm._member_identity_flags = lambda member: (member.name, False)
 gm._live_role_flags = lambda member: {"can_roll_majors": True, "role_tier": 1, "is_vip": False, "is_trusted": True, "is_verified": True, "is_authenticated": False}
 gm._roster_valid_nations = lambda mode: ["Germany", "France", "Belgium", "Italy"]
@@ -338,6 +339,44 @@ async def main():
     reset()
     ok, _, err = await fortunes_tool("fortunes_redraw", HOST, BOB)
     check("Fortunes: refused on a Casino game", ok is False and "isn't a Fortunes" in (err or ""), err)
+
+    # The Casino is down: the host switches the game to normal reserving (step 8).
+    class FakeMessage:
+        def __init__(self, content):
+            self.content = content
+
+        async def edit(self, content=None, **kwargs):
+            self.content = content
+
+    announcement = FakeMessage(
+        "# Game Announcement\n" f"**:pencil: Roll at the Casino - {gm._casino_game_url(GAME)}**"
+    )
+
+    class FakeChannel:
+        async def fetch_message(self, message_id):
+            return announcement
+
+    gm.bot.get_channel = lambda channel_id: FakeChannel()
+
+    def fallback(actor):
+        return gm._process_web_casino_fallback({"action": "casino_fallback", "host_id": actor, "payload": {"thread_id": GAME}})
+
+    reset()
+    store[GAME].update(announcement_message_id=777, announcement_channel_id=888)
+    ok, _, err = await fallback(COHOST)
+    check("Fallback: a co-host can't switch the game", ok is False and store[GAME]["randomizer_only"] is True, err)
+    ok, result, err = await fallback(HOST)
+    check("Fallback: the host switches it", ok is True and store[GAME]["randomizer_only"] is False and store[GAME].get("add_on") is None, err)
+    check("Fallback: remembered what it was", store[GAME].get("casino_fallback", {}).get("add_on") == "randomizer")
+    check("Fallback: reservations kept", store[GAME]["reservations"].get("Germany") == BOB)
+    check("Fallback: the announcement now links the map", gm._map_game_url(GAME) in announcement.content and "Reserve Here" in announcement.content and gm._casino_game_url(GAME) not in announcement.content, announcement.content)
+    check("Fallback: the result says so", "normal reserving" in result["access"]["title"])
+    ok, _, err = await fallback(HOST)
+    check("Fallback: a normal game can't be switched again", ok is False and "doesn't use the Casino" in (err or ""), err)
+    reset()
+    store[GAME]["game_started"] = True
+    ok, _, err = await fallback(HOST)
+    check("Fallback: not once the game has started", ok is False and store[GAME]["randomizer_only"] is True, err)
 
     # Normal games are untouched.
     reset()

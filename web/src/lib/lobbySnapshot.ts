@@ -86,6 +86,7 @@ interface VersionRow extends RowDataPacket {
   draft: string | null;
   require_ironlegion: string | null;
   co_hosts: string | null;
+  add_on: string | null;
 }
 
 function fingerprint(parts: unknown[]): string {
@@ -106,7 +107,8 @@ export function lobbyVersion(threadId: string): Promise<string> {
               CAST(JSON_EXTRACT(game_data, '$.locked_regions') AS CHAR) AS locked_regions,
               CAST(JSON_EXTRACT(game_data, '$.draft') AS CHAR) AS draft,
               CAST(JSON_EXTRACT(game_data, '$.require_ironlegion') AS CHAR) AS require_ironlegion,
-              CAST(JSON_EXTRACT(game_data, '$.co_hosts') AS CHAR) AS co_hosts
+              CAST(JSON_EXTRACT(game_data, '$.co_hosts') AS CHAR) AS co_hosts,
+              CAST(JSON_EXTRACT(game_data, '$.add_on') AS CHAR) AS add_on
        FROM games WHERE thread_id = ?`,
       [threadId],
     );
@@ -114,7 +116,7 @@ export function lobbyVersion(threadId: string): Promise<string> {
     const bucket = Math.floor(Date.now() / REFRESH_BUCKET_MS);
     return fingerprint(
       row
-        ? [row.reservations_rev, row.status, row.game_started, row.mode, row.host_id, row.thread_name, row.lockdown, row.locked_regions, row.draft, row.require_ironlegion, row.co_hosts, bucket]
+        ? [row.reservations_rev, row.status, row.game_started, row.mode, row.host_id, row.thread_name, row.lockdown, row.locked_regions, row.draft, row.require_ironlegion, row.co_hosts, row.add_on, bucket]
         : ["missing", bucket],
     );
   });

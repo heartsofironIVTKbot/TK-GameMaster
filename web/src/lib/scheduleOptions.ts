@@ -105,11 +105,13 @@ export interface AddOnOption {
 }
 
 /**
- * Casino and Fortunes of War come back with the Casino integration
- * (docs/casino-integration.md, switched on in its last step). Until then only
- * the local dev server can pick them, to build and test it.
+ * The Casino and Fortunes of War (TommyKay only; docs/casino-integration.md).
+ * Switch on for every host here and with CASINO_ADDONS_LIVE in the bot. Until
+ * then Host Management can still schedule them (a test game; ExtrasTab), and
+ * the local dev server can always pick them.
  */
-const CASINO_READY = process.env.NODE_ENV === "development";
+export const CASINO_ADDONS_LIVE = false;
+const CASINO_READY = CASINO_ADDONS_LIVE || process.env.NODE_ENV === "development";
 
 /** Add-ons only TommyKay's server (the home server) can use. */
 export const HOME_ONLY_ADD_ONS = new Set(["randomizer", "fortunes"]);
@@ -144,13 +146,19 @@ const RETIRED_ADD_ONS: Record<string, string | null> = { all: "randomizer", loot
 
 /**
  * A saved slot's add-on, with a removed one swapped for what replaced it.
- * Unavailable add-ons (Casino, Fortunes of War) read as none: the bot
- * announces those games as normal map games.
+ * Unavailable add-ons (Casino, Fortunes of War) read as none, as the bot
+ * announces those games as normal map games, unless the slot is Host
+ * Management's test game (`addon_test`).
  */
-export function currentAddOn(value: string | null | undefined): string | null {
+export function currentAddOn(value: string | null | undefined, test = false): string | null {
   if (!value) return null;
   const next = value in RETIRED_ADD_ONS ? RETIRED_ADD_ONS[value] : value;
-  return next && addOnOption(next).unavailable ? null : next;
+  return next && addOnOption(next).unavailable && !test ? null : next;
+}
+
+/** Host Management can schedule the not-yet-live Casino add-ons (a test game). */
+export function addOnLocked(value: string | null | undefined, isStaff: boolean): boolean {
+  return Boolean(value) && addOnOption(value).unavailable === true && !isStaff;
 }
 
 export const ADD_ON_VALUES = new Set(

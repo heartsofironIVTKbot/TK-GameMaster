@@ -193,9 +193,8 @@ export function validateSchedulePayload(raw: unknown, nowSec: number): Validatio
   const addOn = input.add_on ?? null;
   if (addOn !== null && (typeof addOn !== "string" || !ADD_ON_VALUES.has(addOn))) {
     issue("extras", "Unknown add-on.");
-  } else if (typeof addOn === "string" && addOnOption(addOn).unavailable) {
-    issue("extras", "Casino and Fortunes of War are currently unavailable.");
   }
+  // Not-yet-live add-ons: the route refuses them for anyone but Host Management (addOnLocked).
   const casino = typeof addOn === "string" && Boolean(addOnOption(addOn).casino);
 
   let fortunesMode: SchedulePayload["fortunes_mode"] = null;

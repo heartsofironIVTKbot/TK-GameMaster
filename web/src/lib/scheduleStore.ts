@@ -141,7 +141,7 @@ function settingsFromSlotData(data: Record<string, unknown>, fallbackTs: number)
     game_timestamp: toInt(data.game_timestamp) ?? fallbackTs,
     announce_timestamp: toInt(data.announce_timestamp),
     logging_mode: str(data.logging_mode) ?? "Strict",
-    add_on: currentAddOn(str(data.add_on)),
+    add_on: currentAddOn(str(data.add_on), data.addon_test === true),
     fortunes_mode: str(data.fortunes_mode),
     major_lock_level: str(data.major_lock_level) ?? "Trusted",
     minor_lock_level: str(data.minor_lock_level) ?? "All Users",
@@ -292,7 +292,7 @@ function slotFromRow(row: SlotRow, viewerId: string): CalendarSlot {
     announced: Boolean(row.announced) || Boolean(data.announced),
     status: row.status ?? str(data.status),
     started: false,
-    add_on: currentAddOn(str(data.add_on)),
+    add_on: currentAddOn(str(data.add_on), data.addon_test === true),
     day: row.day,
     week: row.week ? row.week.slice(0, 10) : null,
     locked_nations: lockedRegions.length,
@@ -320,6 +320,7 @@ function requestFromRow(row: RequestRow): ScheduleRequestStatus {
       "casino_emergency_unreserve",
       "fortunes_redraw",
       "fortunes_reset",
+      "casino_fallback",
       "moderation",
       "dishonored",
       "host_rating",
@@ -810,6 +811,16 @@ function processDemoRequests(): void {
       // Preview: there's no bot to DM the link; say it went out.
       request.status = "done";
       request.result = { dm_sent: true };
+      request.error = null;
+      continue;
+    }
+
+    if (request.action === "casino_fallback") {
+      // Preview: there's no Casino or announcement to switch; say it went through.
+      request.status = "done";
+      request.result = {
+        access: { title: "Switched to normal reserving", summary: "Players reserve on the map now; nations already picked stay.", notes: [], stats: {}, log_url: null },
+      };
       request.error = null;
       continue;
     }

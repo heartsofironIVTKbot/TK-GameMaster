@@ -73,9 +73,10 @@ competitive redraws).
 
 ## Where things stand
 
-The Casino and the bot share the database, and that is the hand-off:
+*Before the rework (2026-11-08).* The Casino and the bot share the database,
+and that is the hand-off:
 
-| Piece | Today |
+| Piece | Then |
 | --- | --- |
 | Way in | **Broken.** The old Discord panel (`CasinoPanelView`) wrote a one-time `web_access_tokens` row that the Casino's `/api/access` checks and burns; games have no threads or panels now. |
 | Game identity | Works: the Casino looks games up by `thread_id`, and thread-less games still have a key there. |
@@ -83,6 +84,9 @@ The Casino and the bot share the database, and that is the hand-off:
 | Results back | The Casino writes `game_reservations` + `reservation_sync_queue`; the bot syncs them and DMs receipts (`receipt_dm_queue`). Untried with thread-less games. |
 | Overrides | The Casino has them (`host_override_requests`, grant tokens with per-room budgets); the bot DMs the link. |
 | Switched off | `_UNAVAILABLE_ADDONS = {"randomizer", "fortunes"}` in the bot. |
+
+**Now (2026-11-09):** steps 1–7 are built and step 8's code is in; what's
+left is the end-to-end test game and switching on (step 8).
 
 ## Steps
 
@@ -190,7 +194,33 @@ The Casino and the bot share the database, and that is the hand-off:
    - `k=preview` shows the room without a database. Not yet tried against the
      real database (step 8). The old Discord `/draw` code is still in the bot,
      unused.
-8. **Switch on and test:** take both add-ons out of `_UNAVAILABLE_ADDONS`,
-   play a Casino and a Fortunes game end to end, and a fallback if the Casino
-   is down. Then the front page and docs mention the Casino again, and the
-   Casino's music is swapped for the paid-Suno orchestral track.
+8. **Switch on and test** (2026-11-09; code done, test and switch-on to go).
+   - **The switch:** `CASINO_ADDONS_LIVE` in the bot and in
+     `web/src/lib/scheduleOptions.ts`, both `False` for now. Until it's on,
+     Host Management can still schedule Casino and Fortunes games on
+     TommyKay's server (the slot gets `addon_test`, so it's announced with
+     the add-on); other hosts see "Currently unavailable". That's how the
+     test game runs on the live site.
+   - **Fallback (Niko's pick: message + host switch):** the Casino has
+     `/api/health` (is it up and can it reach its database). GameMaster's
+     `/casino/<game>` asks first (`lib/casinoStatus.ts`, cached 20 s) and,
+     if it's down, says so instead of sending players to a dead page. The
+     Games page's **Casino card** (Overview, before the start) shows whether
+     tkcasino.online is up, and the game's host or Host Management can
+     **Switch to normal reserving** (request `casino_fallback`, bot
+     `_process_web_casino_fallback`): the game becomes a normal map game for
+     good, nations already picked stay, and the announcement's "Roll at the
+     Casino" link becomes the map's "Reserve Here".
+   - **Docs:** README, games-page, command-migration-audit and
+     games-without-threads say the Casino is back. The front page stays as
+     it is (Niko: TommyKay-only, so docs only).
+   - **Music:** the free-tier Suno tracks are gone; Niko's three tunes
+     (`hoi4-casino` `public/audio/casino_tune_1..3.mp3`) play, one picked at
+     random per visit, decoded only when played (`lib/audio.ts`), with a
+     compact 1 / 2 / 3 switcher on phones.
+   - **To go (Niko, then us):** set the Casino's Vercel database settings to
+     the bot's database (with the certificate), restart the bot on Apollo,
+     then a test Casino game and a test Fortunes game scheduled by Host
+     Management: the way in, a roll and a card, the picks on the map, the
+     receipts, the host tools, Emergency Unreserve, and the fallback switch.
+     If it all works, set `CASINO_ADDONS_LIVE` to true on both sides.

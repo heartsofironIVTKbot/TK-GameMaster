@@ -158,6 +158,7 @@ export type RequestAction =
   | "casino_emergency_unreserve"
   | "fortunes_redraw"
   | "fortunes_reset"
+  | "casino_fallback"
   | "moderation"
   | "dishonored"
   | "host_rating"

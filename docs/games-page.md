@@ -205,9 +205,18 @@ reserve and unreserve on the website map. The announcement post now says
 the map on that game (`/?game=<game id>`); reminder DMs link there too.
 There's no reservation thread under the post any more — see
 [games-without-threads.md](games-without-threads.md).
-Casino and Fortunes of War are currently unavailable (they come back with
-the Casino website, TommyKay only); games scheduled with them before are
-announced as normal map games.
+Casino and Fortunes of War games (TommyKay only) link to `/casino/<game>`
+instead: GameMaster signs the player in and sends them to tkcasino.online
+([casino-integration.md](casino-integration.md)). Until they're switched on
+only Host Management can schedule them; older slots that still carry them
+are announced as normal map games.
+
+**Casino card** (Overview, Casino and Fortunes games before they start):
+whether tkcasino.online is answering, and for the game's host or Host
+Management **Switch to normal reserving**: if the Casino stays down, the game
+becomes a normal map game for good (nations already picked stay, the
+announcement's link changes to the map). **Fortunes of War card** (Players):
+everyone's card and the submod's on_startup script with **Copy script**.
 
 **Draft games:** players don't reserve a nation. The map link opens a pop-up
 to join the draft pool as a Major, a Minor, a Major Co-op or a Filler (with a

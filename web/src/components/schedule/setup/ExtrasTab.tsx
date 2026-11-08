@@ -4,7 +4,7 @@ import { BellRing, CircleOff, ClipboardCheck, Construction, Dices, Shuffle, Skul
 import { useEffect, useState } from "react";
 import ResourceListEditor from "@/components/presets/ResourceListEditor";
 import { PRESET_LIMITS, type ModeDefaults } from "@/lib/presetTypes";
-import { ADD_ONS, HOME_ONLY_ADD_ONS, LOGGING_MODES, addOnOption } from "@/lib/scheduleOptions";
+import { ADD_ONS, HOME_ONLY_ADD_ONS, LOGGING_MODES, addOnLocked, addOnOption } from "@/lib/scheduleOptions";
 import type { HostOption } from "@/lib/scheduleTypes";
 import { DRAFT_BLOCKED_ADDONS } from "@/lib/scheduleValidation";
 import { Segmented, SectionCard, Toggle } from "../ui";
@@ -26,6 +26,7 @@ export default function ExtrasTab({
   update,
   modeDefaults,
   homeServer,
+  isStaff = false,
   hosts,
   hostId,
   gameSec,
@@ -36,6 +37,8 @@ export default function ExtrasTab({
   modeDefaults?: ModeDefaults;
   /** TommyKay's server: the only one with the Casino and Fortunes of War. */
   homeServer: boolean;
+  /** Host Management: can pick the Casino add-ons before they're switched on (a test game). */
+  isStaff?: boolean;
   /** The server's hosts (co-hosts are picked from them). */
   hosts: HostOption[];
   /** The game's host. */
@@ -67,20 +70,23 @@ export default function ExtrasTab({
         <div className="grid gap-1">
           {ADD_ONS.filter((addOn) => homeServer || !addOn.value || !HOME_ONLY_ADD_ONS.has(addOn.value)).map((addOn) => {
             const active = form.addOn === addOn.value;
+            const locked = addOnLocked(addOn.value, isStaff);
+            // Host Management before the switch-on: a test game.
+            const testOnly = Boolean(addOn.unavailable) && !locked;
             const Icon = ADD_ON_ICON[addOn.value ?? "none"] ?? Sparkles;
             return (
               <button
                 key={addOn.value ?? "none"}
                 type="button"
-                onClick={() => (addOn.unavailable ? setUnavailable(addOn.label) : update({ addOn: addOn.value }))}
-                aria-disabled={addOn.unavailable || undefined}
+                onClick={() => (locked ? setUnavailable(addOn.label) : update({ addOn: addOn.value }))}
+                aria-disabled={locked || undefined}
                 aria-pressed={active}
                 className={`gm-cut grid grid-cols-[30px_minmax(0,1fr)] items-center gap-2.5 bg-ink-950 px-2.5 py-2 text-left [--cut:8px] ${
                   active
                     ? addOn.value
                       ? "shadow-[inset_0_0_0_1px_oklch(66%_0.2_312)]"
                       : "shadow-[inset_0_0_0_1px_var(--color-brand-400)]"
-                    : addOn.unavailable
+                    : locked
                       ? "opacity-45 hover:opacity-65"
                       : "hover:bg-ink-800/60"
                 }`}
@@ -94,7 +100,9 @@ export default function ExtrasTab({
                 </span>
                 <span className="min-w-0">
                   <span className="block truncate text-[13px] font-semibold text-ink-100">{addOn.label}</span>
-                  <span className="block text-xs text-ink-400">{addOn.description}</span>
+                  <span className="block text-xs text-ink-400">
+                    {testOnly ? "Not switched on yet: Host Management can schedule a test game." : addOn.description}
+                  </span>
                 </span>
               </button>
             );

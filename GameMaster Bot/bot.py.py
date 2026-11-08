@@ -27067,10 +27067,13 @@ SCHEDULE_ADDON_CHOICES = [
 _RETIRED_ADDONS = {"all": "randomizer", "lootbox": None, "starwars": None}
 
 
-# Listed on the website but switched off until the Casino integration
-# (TommyKay only): /gamble and /draw are gone, so nobody could join. Slots
-# scheduled with them before are announced as normal map games.
-_UNAVAILABLE_ADDONS = {"randomizer", "fortunes"}
+# The Casino and Fortunes of War (TommyKay only; docs/casino-integration.md).
+# Until CASINO_ADDONS_LIVE is True only Host Management can schedule them (a
+# test game: the slot gets `addon_test`); other hosts see them as unavailable,
+# and older slots that still carry them are announced as normal map games.
+# Switch on together with CASINO_ADDONS_LIVE in web/src/lib/scheduleOptions.ts.
+CASINO_ADDONS_LIVE = False
+_UNAVAILABLE_ADDONS = set() if CASINO_ADDONS_LIVE else {"randomizer", "fortunes"}
 
 
 def _current_addon(value):
@@ -27270,7 +27273,7 @@ async def _check_scheduled_announcements_for_guild():
 
             # --- Resolve the scheduled add-on into per-game flags (mirrors /announce_game) ---
             addon_value = _current_addon(item.get("add_on")) or "none"
-            if addon_value in _UNAVAILABLE_ADDONS:
+            if addon_value in _UNAVAILABLE_ADDONS and not item.get("addon_test"):
                 addon_value = "none"
             randomizer_only = (addon_value == "randomizer")
             fortunes_only = (addon_value == "fortunes")
@@ -29768,7 +29771,7 @@ async def _save_casino_settings(slot_id: str, fields: dict) -> None:
         print(f"[WARN] casino settings for slot {slot_id} not saved: {e}")
 
 
-async def _build_web_schedule_fields(payload: dict, keep_day: tuple | None = None):
+async def _build_web_schedule_fields(payload: dict, keep_day: tuple | None = None, *, staff: bool = False):
     """Validate a web calendar payload with the /schedule rules and return
     (slot_fields, error). slot_fields holds every schedule-slot field the web
     form controls — not slot_id / host / host_key. `keep_day` = (week, day)
@@ -29791,7 +29794,7 @@ async def _build_web_schedule_fields(payload: dict, keep_day: tuple | None = Non
     add_on = payload.get("add_on") or None
     if add_on is not None and add_on not in _WEB_SCHEDULE_ADDON_VALUES:
         return None, f"❌ Unknown add-on: {add_on}."
-    if add_on in _UNAVAILABLE_ADDONS:
+    if add_on in _UNAVAILABLE_ADDONS and not staff:
         return None, "❌ Casino and Fortunes of War are currently unavailable."
     if add_on in HOME_ONLY_ADDONS and cur_gid() != GUILD_ID:
         return None, "❌ The Casino and Fortunes of War add-ons are only available on TommyKay's server."
@@ -29902,6 +29905,8 @@ async def _build_web_schedule_fields(payload: dict, keep_day: tuple | None = Non
         "automated_unlock": automated_unlock,
         "automated_unlocks": automated_unlocks,
         "add_on": add_on,
+        # Host Management's test game while the Casino add-ons are switched off.
+        "addon_test": add_on in _UNAVAILABLE_ADDONS,
         "category": _schedule_category(mode),
         "major_lock_level": major_level,
         "minor_lock_level": minor_level,
@@ -29985,7 +29990,7 @@ async def _process_web_schedule_create(req: dict) -> tuple[bool, dict | None, st
     if not _member_is_host(member):
         return False, None, "❌ Only members with a Host role can schedule games."
 
-    fields, err = await _build_web_schedule_fields(payload)
+    fields, err = await _build_web_schedule_fields(payload, staff=_member_is_staff(member))
     if err:
         return False, None, err
     if not _mode_enabled(fields["mode"]):
@@ -30181,7 +30186,9 @@ async def _process_web_schedule_update(req: dict) -> tuple[bool, dict | None, st
             return False, None, _host_branch_refusal(new_host, slot.get("mode"), who=new_host.display_name)
         return await _web_edit_announced_slot(slot, payload, requester, new_host)
 
-    fields, err = await _build_web_schedule_fields(payload, keep_day=(_item_week(slot), slot.get("day")))
+    fields, err = await _build_web_schedule_fields(
+        payload, keep_day=(_item_week(slot), slot.get("day")), staff=_member_is_staff(requester),
+    )
     if err:
         return False, None, err
     game_host = new_host or requester
@@ -31601,7 +31608,7 @@ async def audit_trail_retention_loop():
 _AUDIT_SELF_RECORDED = frozenset({
     # feedback_rate: who gave which rating stays private, so no audit row.
     "roster_assign", "roster_remove", "moderation", "dishonored", "host_rating", "member_roles", "feedback_rate",
-    "casino_emergency_unreserve", "fortunes_redraw", "fortunes_reset",
+    "casino_emergency_unreserve", "fortunes_redraw", "fortunes_reset", "casino_fallback",
     *GAME_LIFECYCLE_ACTIONS,
 })
 # Request action → (audit category, audit action, what the actor did).
@@ -31734,6 +31741,8 @@ async def web_schedule_request_loop():
                 ok, result, err = await _process_web_casino_emergency_unreserve(req)
             elif action in ("fortunes_redraw", "fortunes_reset"):
                 ok, result, err = await _process_web_fortunes_tool(req)
+            elif action == "casino_fallback":
+                ok, result, err = await _process_web_casino_fallback(req)
             elif action in ("moderation", "dishonored"):
                 ok, result, err = await _process_web_moderation(req)
             elif action == "host_rating":
@@ -32396,6 +32405,79 @@ async def _web_casino_remove(payload: dict, actor, game: dict, thread_id: str, u
         details={"slots": keys}, source="web",
     )
     return True, {"removed": keys[0]}, None
+
+
+# ————— Casino down: switch to normal reserving (docs/casino-integration.md, step 8) —————
+# When tkcasino.online stays down, the game's host (or Host Management) can
+# turn a Casino / Fortunes game into a normal map game from the Games page.
+# Nations already picked stay; everyone else reserves on the map. Can't be undone.
+
+
+async def _switch_announcement_to_map(game: dict, key: str) -> bool:
+    """The announcement's "Roll at the Casino" link becomes the map's "Reserve Here"."""
+    message_id = game.get("announcement_message_id")
+    channel_id = game.get("announcement_channel_id") or (MODE_CONFIG.get(game.get("mode")) or {}).get("announcement_channel_id")
+    if not message_id or not channel_id:
+        return False
+    try:
+        channel = bot.get_channel(int(channel_id)) or await bot.fetch_channel(int(channel_id))
+        message = await channel.fetch_message(int(message_id))
+        content = message.content.replace(_casino_game_url(key), _map_game_url(key)).replace("Roll at the Casino", "Reserve Here")
+        note = "\n⚠️ *The Casino is down: reserve on the map instead.*"
+        if note.strip() not in content:
+            content += note
+        if content != message.content:
+            await message.edit(content=content)
+        return True
+    except Exception as e:
+        print(f"[WARN] casino fallback: announcement for {key} not updated: {e}")
+        return False
+
+
+async def _process_web_casino_fallback(req: dict):
+    payload = req.get("payload") or {}
+    actor = await _web_fetch_member(int(req.get("host_id") or 0))
+    if actor is None:
+        return False, None, "❌ You need to be in the server to do that."
+    thread_id = str(payload.get("thread_id") or "").strip()
+    if not thread_id.isdigit():
+        return False, None, "❌ Invalid game."
+    games_data = await _read_games_fresh()
+    storage_key, game = _find_game_entry(games_data, thread_id)
+    if not isinstance(game, dict):
+        return False, None, "❌ This game no longer exists."
+    key = str(storage_key or thread_id)
+    fortunes = _is_fortunes_game_dict(game)
+    if not fortunes and not _is_casino_game_dict(game):
+        return False, None, "❌ This game doesn't use the Casino."
+    if not _can_end_assigned_game(actor, game):
+        return False, None, "❌ Only the game's host or Host Management can switch it."
+    if game.get("game_started") or game.get("status") in ("ended", "cancelled"):
+        return False, None, "❌ This game has started or ended."
+    was = "Fortunes of War" if fortunes else "Casino"
+    game["casino_fallback"] = {
+        "add_on": "fortunes" if fortunes else "randomizer",
+        "by": str(actor.id),
+        "at": int(time.time()),
+    }
+    game["randomizer_only"] = False
+    game["fortunes_only"] = False
+    game["add_on"] = None
+    await save_single_game(key, game, rewrite_reservations=False)
+    await _roster_after_change(key)
+    announced = await _switch_announcement_to_map(game, key)
+    _audit_log("INFO", f"web casino fallback thread={key} by={actor.id} was={was} announcement={announced}")
+    audit_event(
+        "game", "casino_fallback",
+        f"{actor.display_name} switched a {was} game to normal reserving"
+        + (f" ({game['thread_name']})" if game.get("thread_name") else ""),
+        actor_id=actor.id, actor_name=actor.display_name, game_id=key,
+        details={"was": was, "announcement_updated": announced}, source="web",
+    )
+    summary = "Players reserve on the map now; nations already picked stay."
+    if not announced:
+        summary += " The announcement couldn't be updated: its link still points to the Casino."
+    return True, {"access": {"title": f"Switched to normal reserving (was {was})", "summary": summary, "notes": [], "stats": {}, "log_url": None}}, None
 
 
 # ————— Fortunes of War (docs/casino-integration.md, step 7) —————

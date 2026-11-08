@@ -48,12 +48,14 @@ import {
   validateGameResources,
 } from "@/lib/gameControlValidation";
 import { notePresetUsed } from "@/lib/presetStore";
-import { HOME_ONLY_ADD_ONS } from "@/lib/scheduleOptions";
+import { HOME_ONLY_ADD_ONS, addOnLocked } from "@/lib/scheduleOptions";
 
 /** The Casino and Fortunes of War are TommyKay's server's only (the bot checks too). */
 function homeOnlyRefusal(host: HostProfile, addOn: string | null | undefined): string | null {
   if (!addOn || !HOME_ONLY_ADD_ONS.has(addOn)) return null;
-  return host.home_server ? null : "The Casino and Fortunes of War add-ons are only available on TommyKay's server.";
+  if (!host.home_server) return "The Casino and Fortunes of War add-ons are only available on TommyKay's server.";
+  // Not switched on yet: Host Management only (a test game).
+  return addOnLocked(addOn, host.is_staff) ? "Casino and Fortunes of War are currently unavailable." : null;
 }
 
 /**
@@ -72,6 +74,9 @@ function homeOnlyRefusal(host: HostProfile, addOn: string | null | undefined): s
  *                                              — Casino games' Host Tool rolls
  *   {action: "fortunes_redraw" | "fortunes_reset", payload: {thread_id, user_id}}
  *                                              — Fortunes games: an extra redraw / a fresh deck
+ *   {action: "casino_fallback", payload: {thread_id}}
+ *                                              — the Casino is down: a Casino / Fortunes
+ *                                                game becomes a normal map game
  *                                              — live map host tools
  *                                                (formerly /add, /add_coop,
  *                                                /add_filler, /remove)
@@ -403,6 +408,19 @@ export async function POST(request: Request) {
         hostId: host.discord_id,
         payload: { ...validation.value, thread_id: game.storage_key },
       });
+      return Response.json({ request_id: requestId, slot_id: null }, { status: 202 });
+    }
+
+    if (body.action === "casino_fallback") {
+      const raw = (typeof body.payload === "object" && body.payload !== null ? body.payload : {}) as Record<string, unknown>;
+      const threadId = typeof raw.thread_id === "string" && /^\d{5,25}$/.test(raw.thread_id) ? raw.thread_id : null;
+      if (!threadId) return jsonError("Invalid game.", 400);
+      const game = await getGameControl(threadId, host);
+      if (!game) return jsonError("That game no longer exists.", 404);
+      if (!game.can_manage) return jsonError("Only the game's host or Host Management can switch it.", 403);
+      if (game.add_on !== "randomizer" && game.add_on !== "fortunes") return jsonError("This game doesn't use the Casino.", 409);
+      if (game.phase !== "announced") return jsonError("This game has started or ended.", 409);
+      await insertRequest({ requestId, action: "casino_fallback", slotId: null, hostId: host.discord_id, payload: { thread_id: game.storage_key } });
       return Response.json({ request_id: requestId, slot_id: null }, { status: 202 });
     }
 

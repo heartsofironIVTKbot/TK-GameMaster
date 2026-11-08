@@ -1,4 +1,5 @@
 import { isCasinoGame, isFortunesGame } from "@/lib/casinoSettings";
+import { CASINO_DOWN_MESSAGE, CASINO_URL, casinoUp } from "@/lib/casinoStatus";
 import crypto from "node:crypto";
 import type { RowDataPacket } from "mysql2";
 import { HOME_GUILD_ID, isHomeGuild, playerRecords } from "@/lib/currentGuild";
@@ -20,8 +21,7 @@ import { settingsOf } from "@/lib/serverSettings";
  * _generate_web_access_token, _live_role_flags and the old /gamble checks.
  */
 
-/** tkcasino.online (CASINO_URL to point it elsewhere, e.g. a local copy). */
-export const CASINO_URL = (process.env.CASINO_URL || "https://tkcasino.online").replace(/\/+$/, "");
+export { CASINO_URL };
 /** A fresh link works once, for a minute (the bot's WEB_ACCESS_TOKEN_TTL_SEC). */
 const NEW_LINK_SEC = 60;
 /** Resume / receipt links can be opened again for a day (RECEIPT_VIEW_TOKEN_TTL_SEC). */
@@ -132,6 +132,9 @@ export async function casinoEntry(gameKey: string, userId: string, username: str
     };
   }
 
+  // Down: say so rather than send them to a dead page (the host can switch the game to normal reserving).
+  if (!(await casinoUp())) return { status: "denied", title: "The Casino is down", message: CASINO_DOWN_MESSAGE, map_url: map };
+
   let kind: "new" | "resume" | "receipt" = "new";
   if (nation) kind = (await runOf(db, gameKey, userId)).finished ? "receipt" : "resume";
   const token = await writeToken(db, gameKey, userId, username, player, kind);
@@ -195,6 +198,7 @@ async function fortunesEntry(db: Pool, game: GameRow, gameKey: string, userId: s
       action: { label: "Try again", url: `/casino/${encodeURIComponent(gameKey)}` },
     };
   }
+  if (!(await casinoUp())) return { status: "denied", title: "The Casino is down", message: CASINO_DOWN_MESSAGE, map_url: map };
   const key = crypto.randomBytes(16).toString("hex");
   await db.query("UPDATE fortunes_draws SET access_key = ?, key_expires_at = ? WHERE game_id = ? AND user_id = ?", [
     key,
