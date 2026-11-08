@@ -6,6 +6,7 @@ import {
   Check,
   ChevronDown,
   ChevronUp,
+  Dices,
   Gamepad2,
   GripVertical,
   Hand,
@@ -49,6 +50,8 @@ export default function HostToolsPanel({
   onDismiss,
   onClose,
   slotLabel,
+  casino = null,
+  onCasinoGrant,
 }: {
   lobbyName: string;
   /** Lobbies the host can manage (open + in progress). */
@@ -70,6 +73,10 @@ export default function HostToolsPanel({
   onClose: () => void;
   /** Board name for a reservation slot key. */
   slotLabel: (slot: string) => string;
+  /** A Casino game: its rooms that are on, and whether the nation wheel is (null = a normal game). */
+  casino?: { rooms: string[]; nationRoll: boolean } | null;
+  /** Casino games: give the player a roll, or extra rolls for some rooms (the bot DMs them the link). */
+  onCasinoGrant?: (player: HostPlayer, action: "casino_roll" | "casino_extra", rooms: string[], count: number) => void;
 }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<DirectoryMember[]>([]);
@@ -254,6 +261,18 @@ export default function HostToolsPanel({
               </button>
             </div>
           )}
+          {heldPlayer && casino && onCasinoGrant && (
+            <CasinoGrantCard
+              key={heldPlayer.user_id}
+              player={heldPlayer}
+              casino={casino}
+              slotLabel={slotLabel}
+              onGrant={(action, rooms, count) => {
+                onCasinoGrant(heldPlayer, action, rooms, count);
+                onPickUp(null);
+              }}
+            />
+          )}
 
           <div data-tour="hosttool.search">
             <label className="gm-field">
@@ -265,7 +284,11 @@ export default function HostToolsPanel({
                 aria-label="Find a player"
               />
             </label>
-            <p className="mt-1.5 px-0.5 text-xs text-ink-400">Drag a player onto a nation, or click them and then the nation.</p>
+            <p className="mt-1.5 px-0.5 text-xs text-ink-400">
+              {casino
+                ? "Casino game: drag a player onto a free nation to add them (they get a link to roll the rest), or click them for rolls. No moves or swaps."
+                : "Drag a player onto a nation, or click them and then the nation."}
+            </p>
           </div>
 
           {searchable && searching && <p className="text-xs text-ink-400">Searching…</p>}
@@ -322,15 +345,17 @@ export default function HostToolsPanel({
             </ul>
           )}
 
-          <div data-tour="hosttool.zones" className="grid grid-cols-2 gap-2">
-            <DropZone
-              icon={Puzzle}
-              label="Add as filler"
-              tone="sky"
-              heldPlayer={heldPlayer}
-              onPlayer={(player, point) => onFiller(player, point)}
-              pointOf={pointOf}
-            />
+          <div data-tour="hosttool.zones" className={`grid gap-2 ${casino ? "grid-cols-1" : "grid-cols-2"}`}>
+            {!casino && (
+              <DropZone
+                icon={Puzzle}
+                label="Add as filler"
+                tone="sky"
+                heldPlayer={heldPlayer}
+                onPlayer={(player, point) => onFiller(player, point)}
+                pointOf={pointOf}
+              />
+            )}
             <DropZone
               icon={UserMinus}
               label="Remove from game"
@@ -533,5 +558,107 @@ export function Avatar({ url, name, size = 26 }: { url: string | null; name: str
     >
       {name.charAt(0).toUpperCase()}
     </span>
+  );
+}
+
+const CASINO_ROOM_LABELS: Record<string, string> = {
+  ideology: "Ideology",
+  path: "Path",
+  doctrine: "Doctrine",
+  build: "Build",
+  achievements: "Achievements",
+};
+
+/**
+ * Casino games: rolls for the picked-up player. Without a nation, a whole new
+ * roll (the wheel picks it); with one, extra rolls for the chosen rooms. The
+ * bot DMs them a single-use Casino link either way.
+ */
+function CasinoGrantCard({
+  player,
+  casino,
+  slotLabel,
+  onGrant,
+}: {
+  player: HostPlayer;
+  casino: { rooms: string[]; nationRoll: boolean };
+  slotLabel: (slot: string) => string;
+  onGrant: (action: "casino_roll" | "casino_extra", rooms: string[], count: number) => void;
+}) {
+  const [rooms, setRooms] = useState<string[]>(casino.rooms);
+  const [count, setCount] = useState(1);
+  const all = rooms.length === casino.rooms.length;
+  return (
+    <div className="gm-cut space-y-2.5 bg-ink-900 p-2.5 text-[12.5px] [--cut:8px]">
+      <p className="text-xs font-semibold text-ink-300">
+        <Dices aria-hidden className="mr-1.5 inline h-3.5 w-3.5 text-yellow-300" />
+        Casino rolls for {player.name}
+      </p>
+      {!player.from_slot ? (
+        casino.nationRoll ? (
+          <>
+            <p className="text-[11.5px] text-ink-400">No nation yet: give them a roll and the wheel picks one. They get the link by DM.</p>
+            <button type="button" onClick={() => onGrant("casino_roll", [], 1)} className="gm-btn gm-btn-primary h-8 w-full text-xs [--cut:6px]">
+              Give a roll
+            </button>
+          </>
+        ) : (
+          <p className="text-[11.5px] text-ink-400">This game doesn&apos;t roll nations: drop them on a free nation to add them.</p>
+        )
+      ) : casino.rooms.length === 0 ? (
+        <p className="text-[11.5px] text-ink-400">On {slotLabel(player.from_slot)}. No rooms are on in this game, so there&apos;s nothing to re-roll.</p>
+      ) : (
+        <>
+          <p className="text-[11.5px] text-ink-400">On {slotLabel(player.from_slot)}. Extra rolls for:</p>
+          <div className="flex flex-wrap gap-1">
+            <button
+              type="button"
+              aria-pressed={all}
+              onClick={() => setRooms(all ? [] : casino.rooms)}
+              className={`gm-cut h-7 px-2 text-[11.5px] font-semibold [--cut:5px] ${all ? "bg-yellow-300 text-ink-950" : "bg-ink-800 text-ink-300"}`}
+            >
+              All
+            </button>
+            {casino.rooms.map((room) => {
+              const on = rooms.includes(room);
+              return (
+                <button
+                  key={room}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => setRooms(on ? rooms.filter((other) => other !== room) : [...rooms, room])}
+                  className={`gm-cut h-7 px-2 text-[11.5px] font-semibold [--cut:5px] ${on ? "bg-yellow-300 text-ink-950" : "bg-ink-800 text-ink-300"}`}
+                >
+                  {CASINO_ROOM_LABELS[room] ?? room}
+                </button>
+              );
+            })}
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[11.5px] text-ink-400">Rolls each</span>
+            <select
+              value={count}
+              onChange={(event) => setCount(Number(event.target.value))}
+              className="gm-input h-7 w-16 text-xs [color-scheme:dark]"
+              aria-label="Extra rolls per room"
+            >
+              {Array.from({ length: 10 }, (_, index) => index + 1).map((value) => (
+                <option key={value} value={value}>
+                  {value}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              disabled={rooms.length === 0}
+              onClick={() => onGrant("casino_extra", rooms, count)}
+              className="gm-btn gm-btn-primary ml-auto h-8 px-3 text-xs [--cut:6px] disabled:opacity-50"
+            >
+              Give extra rolls
+            </button>
+          </div>
+        </>
+      )}
+    </div>
   );
 }

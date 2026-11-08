@@ -415,7 +415,7 @@ export default function Home() {
       if (!toolsActive) return;
       const occupant = reservations.find((reservation) => reservation.slot_key === slot);
       if (occupant && String(occupant.user_id) === player.user_id) return;
-      if (!occupant) {
+      if (!occupant || gameLock?.casino) {
         sendAssign(
           player,
           { kind: "nation", nation: slot, filler_name: null, occupied: null },
@@ -433,7 +433,20 @@ export default function Home() {
         allowCoop: majorTagsFor(scenarioId).has(nation.tag),
       });
     },
-    [reservations, scenarioId, selectedThread, sendAssign, isPoolPlayer, handleDraftDrop, toolsActive, draftBotName, failDraft],
+    [reservations, scenarioId, selectedThread, sendAssign, isPoolPlayer, handleDraftDrop, toolsActive, draftBotName, failDraft, gameLock?.casino],
+  );
+
+  // Casino games: a roll, or extra rolls, for a player (the bot DMs them the Casino link).
+  const sendCasinoGrant = useCallback(
+    (player: HostPlayer, action: "casino_roll" | "casino_extra", rooms: string[], count: number) => {
+      if (!selectedThread) return;
+      void host.send(
+        { action, payload: { thread_id: selectedThread, user_id: player.user_id, rooms, count, force: false } },
+        action === "casino_roll" ? `${player.name}: a Casino roll` : `${player.name}: ${count} extra roll${count === 1 ? "" : "s"}`,
+        player.from_slot ?? null,
+      );
+    },
+    [host, selectedThread],
   );
 
   const handlePlaceHeld = useCallback(
@@ -704,6 +717,8 @@ export default function Home() {
           onConfirm={host.confirm}
           onDismiss={host.dismiss}
           slotLabel={slotLabel}
+          casino={gameLock?.casino ? { rooms: gameLock.casino_rooms ?? [], nationRoll: gameLock.casino_nation_roll !== false } : null}
+          onCasinoGrant={sendCasinoGrant}
           onClose={() => {
             host.setEnabled(false);
             setHeldPlayer(null);

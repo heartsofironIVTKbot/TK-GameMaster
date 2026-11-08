@@ -691,6 +691,8 @@ function parseLobby(raw: unknown): LobbyReply | null {
       ironlegion?: LobbyGameLock["ironlegion"];
       casino?: boolean;
       co_hosts?: string[];
+      casino_rooms?: string[];
+      casino_nation_roll?: boolean;
     } | null;
   };
   if (result.unchanged && result.version) return { unchanged: true, version: result.version };
@@ -713,6 +715,8 @@ function parseLobby(raw: unknown): LobbyReply | null {
           ironlegion: game.ironlegion ?? null,
           casino: Boolean(game.casino),
           co_hosts: Array.isArray(game.co_hosts) ? game.co_hosts.map(String) : [],
+          casino_rooms: Array.isArray(game.casino_rooms) ? game.casino_rooms.map(String) : [],
+          casino_nation_roll: game.casino_nation_roll !== false,
         }
       : null,
   };

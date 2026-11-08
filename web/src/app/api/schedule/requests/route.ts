@@ -16,6 +16,7 @@ import {
   validateDayLock,
   validateRosterAssign,
   validateRosterRemove,
+  validateCasinoGrant,
   validateSchedulePayload,
   validateTimeEdit,
 } from "@/lib/scheduleValidation";
@@ -67,6 +68,8 @@ function homeOnlyRefusal(host: HostProfile, addOn: string | null | undefined): s
  *                                              — staff day locks
  *   {action: "roster_assign", payload: RosterAssignPayload}
  *   {action: "roster_remove", payload: {thread_id, user_id}}
+ *   {action: "casino_roll" | "casino_extra", payload: CasinoGrantPayload}
+ *                                              — Casino games' Host Tool rolls
  *                                              — live map host tools
  *                                                (formerly /add, /add_coop,
  *                                                /add_filler, /remove)
@@ -264,9 +267,14 @@ export async function POST(request: Request) {
       return Response.json({ request_id: requestId, slot_id: slotId }, { status: 202 });
     }
 
-    if (body.action === "roster_assign" || body.action === "roster_remove") {
+    if (body.action === "roster_assign" || body.action === "roster_remove" || body.action === "casino_roll" || body.action === "casino_extra") {
+      // casino_*: Casino games' Host Tool rolls (the bot checks the game's host / co-hosts / staff).
       const payload =
-        body.action === "roster_assign" ? validateRosterAssign(body.payload) : validateRosterRemove(body.payload);
+        body.action === "roster_assign"
+          ? validateRosterAssign(body.payload)
+          : body.action === "roster_remove"
+            ? validateRosterRemove(body.payload)
+            : validateCasinoGrant(body.payload, body.action);
       if (!payload) return jsonError("Invalid player action", 400);
       // The live map can show a game from another of the host's servers (an
       // announcement link): send it to that game's server, if they host there.

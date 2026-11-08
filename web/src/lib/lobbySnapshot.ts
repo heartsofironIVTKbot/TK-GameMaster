@@ -51,6 +51,10 @@ export interface LobbyGame {
   casino: boolean;
   /** Casino / Fortunes games: the co-hosts (Discord ids; they see receipts and use the host tools). */
   co_hosts: string[];
+  /** Casino games: the rooms that are on (ideology, path, doctrine, build, achievements; nation separately). */
+  casino_rooms: string[];
+  /** Casino games: the nation wheel is on (a host can "give a roll" without a nation). */
+  casino_nation_roll: boolean;
 }
 
 export interface LobbySnapshot {
@@ -168,6 +172,8 @@ function parseGameData(raw: unknown): {
   add_on?: unknown;
   randomizer_only?: unknown;
   co_hosts?: unknown;
+  host_settings?: unknown;
+  casino_settings?: unknown;
 } {
   if (typeof raw === "string") {
     try {
@@ -285,6 +291,7 @@ async function buildSnapshot(threadId: string): Promise<LobbySnapshot> {
           ironlegion,
           casino: isCasinoGame(gameData),
           co_hosts: Array.isArray(gameData.co_hosts) ? gameData.co_hosts.map(String) : [],
+          ...casinoRoomsOf(gameData),
         }
       : null,
     reservations,
@@ -322,4 +329,20 @@ async function snapshotDraft(
       ? { majors: lists.majors.filter((name) => !hidden.has(name)), minors: lists.minors.filter((name) => !hidden.has(name)) }
       : null,
   );
+}
+
+const CASINO_ROOM_KEYS = ["ideology", "path", "doctrine", "build", "achievements"];
+
+/** A Casino game's rooms that are on (the bot's synced host_settings, else the setup's casino_settings). */
+function casinoRoomsOf(gameData: { host_settings?: unknown; casino_settings?: unknown }): { casino_rooms: string[]; casino_nation_roll: boolean } {
+  const boxesOf = (source: unknown) => {
+    const boxes = source && typeof source === "object" ? (source as Record<string, unknown>).randomizers : null;
+    return boxes && typeof boxes === "object" && Object.keys(boxes).length > 0 ? (boxes as Record<string, unknown>) : null;
+  };
+  const boxes = boxesOf(gameData.host_settings) ?? boxesOf(gameData.casino_settings) ?? {};
+  const on = (room: string) => {
+    const box = boxes[room];
+    return !(box && typeof box === "object" && (box as Record<string, unknown>).enabled === false);
+  };
+  return { casino_rooms: CASINO_ROOM_KEYS.filter(on), casino_nation_roll: on("nation") };
 }

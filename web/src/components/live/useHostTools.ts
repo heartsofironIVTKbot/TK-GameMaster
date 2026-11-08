@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type {
   HostStatusResponse,
+  CasinoGrantPayload,
   RosterAssignPayload,
   RosterRemovePayload,
   ScheduleRequestStatus,
@@ -25,7 +26,10 @@ export interface HostAction {
   message: string | null;
   warnings: string[];
   /** Re-sent with force=true when the host accepts the warnings. */
-  payload: { action: "roster_assign"; payload: RosterAssignPayload } | { action: "roster_remove"; payload: RosterRemovePayload };
+  payload:
+    | { action: "roster_assign"; payload: RosterAssignPayload }
+    | { action: "roster_remove"; payload: RosterRemovePayload }
+    | { action: "casino_roll" | "casino_extra"; payload: CasinoGrantPayload };
 }
 
 const STORAGE_KEY = "gm_host_tools";
@@ -170,12 +174,11 @@ export function useHostTools(onRosterChanged: () => void) {
   const confirm = useCallback(
     (action: HostAction) => {
       dismiss(action.id);
-      if (action.payload.action !== "roster_assign") return;
-      void send(
-        { action: "roster_assign", payload: { ...action.payload.payload, force: true } },
-        action.label,
-        action.targetSlot,
-      );
+      if (action.payload.action === "roster_assign") {
+        void send({ action: "roster_assign", payload: { ...action.payload.payload, force: true } }, action.label, action.targetSlot);
+      } else if (action.payload.action === "casino_roll") {
+        void send({ action: "casino_roll", payload: { ...action.payload.payload, force: true } }, action.label, action.targetSlot);
+      }
     },
     [dismiss, send],
   );

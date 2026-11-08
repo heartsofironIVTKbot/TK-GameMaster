@@ -128,10 +128,27 @@ The Casino and the bot share the database, and that is the hand-off:
    on announced games; the website spots Casino games by `randomizer_only`
    or `add_on` (`isCasinoGame`), as the bot's records only had the former.
    The first real Casino game runs in step 8, once the Casino is on Aiven.
-5. **Host tools:** add, give a roll, extra rolls, remove, with the DMs; no
-   swaps or moves on Casino games.
-6. **Emergency Unreserve:** the red warning with a reason; the host's Add
-   warning.
+5. ✅ **Host tools** on Casino games (2026-11-08), for the game's host, its
+   co-hosts and Host Management only. On the map's Host Tool:
+   - **Add:** drop a player on a free nation. It's reserved for them and
+     they're DM'd a 24-hour Casino link to roll the rest, with the game's
+     re-rolls for a major or a minor. A taken nation, or a player who
+     already has one, is refused: no swaps or moves, and no fillers.
+   - **Give a roll:** a player without a nation (when the nation wheel is
+     on) gets a link for a whole run; the wheel picks the nation.
+   - **Extra rolls:** for a player with a nation, 1–10 rolls each for the
+     chosen rooms (or All), as a link that continues their run.
+   - **Remove:** frees the nation, deletes their run (the receipt goes) and
+     DMs them; they can't roll again until a host adds them back.
+   - Adding or rolling for someone Emergency-Unreserved or removed asks the
+     host first (with the Emergency Unreserve reason); "Add anyway" lifts it.
+   The links are the Casino's own grant links (`host_override_requests`,
+   `is_grant` tokens). Bot: `_web_casino_add`, `_web_casino_remove`,
+   `_process_web_casino_grant` (requests `casino_roll`, `casino_extra`);
+   tests in `GameMaster Bot/tests/casino_tools.py`. Not yet tried against
+   the real Casino (step 8).
+6. **Emergency Unreserve:** the red warning with a reason. (The host's Add
+   warning is done in step 5.)
 7. **Fortunes of War** room on the Casino site.
 8. **Switch on and test:** take both add-ons out of `_UNAVAILABLE_ADDONS`,
    play a Casino and a Fortunes game end to end, and a fallback if the Casino

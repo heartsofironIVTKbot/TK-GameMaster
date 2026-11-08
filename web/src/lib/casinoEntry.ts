@@ -100,6 +100,16 @@ export async function casinoEntry(gameKey: string, userId: string, username: str
       map_url: map,
     };
   }
+  // Removed by a host (the Host Tool): only a host can bring them back.
+  const hostRemoved = Array.isArray(data.casino_host_removed) ? data.casino_host_removed.map(String) : [];
+  if (!nation && hostRemoved.includes(userId)) {
+    return {
+      status: "denied",
+      title: "The host removed you",
+      message: "A host took you off this game, so you can't roll again yourself. If they want you back, they can add you.",
+      map_url: map,
+    };
+  }
 
   const player = await playerFlags(db, guildId, userId);
   if (!player.member) {

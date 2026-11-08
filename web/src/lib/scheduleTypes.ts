@@ -153,6 +153,8 @@ export type RequestAction =
   | "unlock_day"
   | "roster_assign"
   | "roster_remove"
+  | "casino_roll"
+  | "casino_extra"
   | "moderation"
   | "dishonored"
   | "host_rating"
@@ -192,6 +194,8 @@ export interface ScheduleRequestStatus {
   result: {
     slot_id?: string;
     notified?: number;
+    /** Casino host tools: the player got their Casino link by DM. */
+    dm_sent?: boolean;
     /** Roster actions: why the bot wants the host to confirm. */
     warnings?: string[];
     slot_key?: string;
@@ -397,6 +401,23 @@ export interface RosterRemovePayload {
   thread_id: string;
   user_id: string;
   /** DM the removed player. Missing = on. */
+  notify?: boolean;
+}
+
+/**
+ * Casino games' Host Tool (docs/casino-integration.md, step 5): "casino_roll"
+ * gives a player without a nation a whole new roll; "casino_extra" gives a
+ * player with one more rolls for some rooms. The bot DMs them a Casino link.
+ */
+export interface CasinoGrantPayload {
+  thread_id: string;
+  user_id: string;
+  /** casino_extra: the rooms (ideology, path, doctrine, build, achievements). */
+  rooms: string[];
+  /** casino_extra: rolls per room, 1–10. */
+  count: number;
+  /** Accept the warnings the bot answered with ("confirm"). */
+  force: boolean;
   notify?: boolean;
 }
 

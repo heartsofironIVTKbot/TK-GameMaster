@@ -103,6 +103,9 @@ export interface LobbyGameLock {
   casino?: boolean;
   /** Casino / Fortunes games: co-hosts' Discord ids. */
   co_hosts?: string[];
+  /** Casino games: the rooms that are on, and whether the nation wheel is. */
+  casino_rooms?: string[];
+  casino_nation_roll?: boolean;
 }
 
 /** Roster row state: how a nation relates to the active lobby. */

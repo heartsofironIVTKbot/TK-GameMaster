@@ -315,6 +315,8 @@ function requestFromRow(row: RequestRow): ScheduleRequestStatus {
       "unlock_day",
       "roster_assign",
       "roster_remove",
+      "casino_roll",
+      "casino_extra",
       "moderation",
       "dishonored",
       "host_rating",
@@ -798,6 +800,14 @@ function processDemoRequests(): void {
       request.status = outcome.status;
       request.result = outcome.result;
       request.error = outcome.error;
+      continue;
+    }
+
+    if (request.action === "casino_roll" || request.action === "casino_extra") {
+      // Preview: there's no bot to DM the link; say it went out.
+      request.status = "done";
+      request.result = { dm_sent: true };
+      request.error = null;
       continue;
     }
 

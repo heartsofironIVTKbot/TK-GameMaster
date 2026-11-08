@@ -63,6 +63,8 @@ const REQUEST_LABELS: Record<RequestAction, string> = {
   unlock_day: "Day unlock",
   roster_assign: "Player move",
   roster_remove: "Player removal",
+  casino_roll: "Casino roll",
+  casino_extra: "Casino extra rolls",
   moderation: "Moderation",
   dishonored: "Dishonored",
   host_rating: "Host rating",

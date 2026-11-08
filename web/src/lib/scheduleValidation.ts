@@ -18,6 +18,7 @@ import type {
   NationLockGroupPayload,
   RosterAssignPayload,
   RosterRemovePayload,
+  CasinoGrantPayload,
   SchedulePayload,
   TimeEditPayload,
 } from "@/lib/scheduleTypes";
@@ -147,6 +148,20 @@ export function validateRosterRemove(raw: unknown): RosterRemovePayload | null {
   const userId = typeof input.user_id === "string" ? input.user_id : "";
   if (!THREAD_ID_RE.test(threadId) || !SNOWFLAKE_RE.test(userId)) return null;
   return { thread_id: threadId, user_id: userId, notify: input.notify !== false };
+}
+
+const CASINO_ROOMS = new Set(["ideology", "path", "doctrine", "build", "achievements"]);
+
+/** A Casino host tool grant (casino_roll / casino_extra) request body. */
+export function validateCasinoGrant(raw: unknown, action: "casino_roll" | "casino_extra"): CasinoGrantPayload | null {
+  const input = asRecord(raw);
+  const threadId = typeof input.thread_id === "string" ? input.thread_id : "";
+  const userId = typeof input.user_id === "string" ? input.user_id : "";
+  if (!THREAD_ID_RE.test(threadId) || !SNOWFLAKE_RE.test(userId)) return null;
+  const rooms = Array.isArray(input.rooms) ? [...new Set(input.rooms.map(String).filter((room) => CASINO_ROOMS.has(room)))] : [];
+  const count = Math.max(1, Math.min(10, Math.trunc(Number(input.count) || 1)));
+  if (action === "casino_extra" && rooms.length === 0) return null;
+  return { thread_id: threadId, user_id: userId, rooms, count, force: input.force === true, notify: input.notify !== false };
 }
 
 /** Staff day lock / unlock request body. */
