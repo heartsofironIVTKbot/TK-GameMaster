@@ -91,6 +91,8 @@ interface MapViewerProps {
   reservationsNonce?: number;
   /** The viewer is a host: avatar profile cards offer "View portfolio". */
   viewerIsHost?: boolean;
+  /** Casino game, viewed by its host / a co-host / staff: avatar cards offer "View receipt" (the game's key). */
+  receiptGame?: string | null;
   /** Draft games: open the "join the draft" pop-up (nations aren't reserved directly). */
   onJoinDraft?: () => void;
   /** Nations the host locked (the roster's "Locked Nations"): greyed out like taken ones. */
@@ -688,6 +690,7 @@ function parseLobby(raw: unknown): LobbyReply | null {
       draft?: LobbyGameLock["draft"];
       ironlegion?: LobbyGameLock["ironlegion"];
       casino?: boolean;
+      co_hosts?: string[];
     } | null;
   };
   if (result.unchanged && result.version) return { unchanged: true, version: result.version };
@@ -709,6 +712,7 @@ function parseLobby(raw: unknown): LobbyReply | null {
           draft: game.draft ?? null,
           ironlegion: game.ironlegion ?? null,
           casino: Boolean(game.casino),
+          co_hosts: Array.isArray(game.co_hosts) ? game.co_hosts.map(String) : [],
         }
       : null,
   };
@@ -792,6 +796,7 @@ export default function MapViewer({
   hostTools = null,
   reservationsNonce = 0,
   viewerIsHost = false,
+  receiptGame = null,
   onJoinDraft,
   hostLockedTags,
 }: MapViewerProps) {
@@ -1510,6 +1515,7 @@ export default function MapViewer({
             badges={reservationBadges(avatarProfile.reservation, activeHostId)}
             onClose={() => setAvatarProfile(null)}
             canViewPortfolio={viewerIsHost}
+            receiptGame={receiptGame}
             anchorRect={avatarProfile.rect}
           />
         )}

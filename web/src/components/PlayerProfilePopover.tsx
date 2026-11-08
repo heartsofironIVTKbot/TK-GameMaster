@@ -56,6 +56,8 @@ interface PlayerProfilePopoverProps {
   onClose: () => void;
   /** Hosts: show the "View portfolio" button. */
   canViewPortfolio?: boolean;
+  /** A Casino game whose host / co-host / staff is looking: the "View receipt" button (that game's key). */
+  receiptGame?: string | null;
   /** Open beside this screen box (a map avatar) instead of the parent row. */
   anchorRect?: { left: number; top: number; right: number; bottom: number } | null;
 }
@@ -107,6 +109,7 @@ export default function PlayerProfilePopover({
   badges,
   onClose,
   canViewPortfolio = false,
+  receiptGame = null,
   anchorRect = null,
 }: PlayerProfilePopoverProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -302,6 +305,7 @@ export default function PlayerProfilePopover({
             📊 View portfolio
           </button>
         )}
+        {receiptGame && <CasinoReceiptButton game={receiptGame} userId={userId} />}
         <div className="flex items-center gap-2">
           <a
             href={`discord://-/users/${userId}`}
@@ -336,5 +340,49 @@ export default function PlayerProfilePopover({
       <span ref={anchorRef} className="hidden" aria-hidden />
       {typeof document !== "undefined" && createPortal(card, document.body)}
     </>
+  );
+}
+
+/**
+ * Casino games: the player's receipt for the host, co-hosts and staff
+ * (api/casino/[game]/receipt/[user]). The tab opens on the click itself (no
+ * popup block), then goes to the link once GameMaster has made it.
+ */
+function CasinoReceiptButton({ game, userId }: { game: string; userId: string }) {
+  const [state, setState] = useState<{ busy: boolean; note: string | null }>({ busy: false, note: null });
+  const open = async () => {
+    const tab = window.open("", "_blank");
+    setState({ busy: true, note: null });
+    try {
+      const response = await fetch(`/api/casino/${encodeURIComponent(game)}/receipt/${encodeURIComponent(userId)}`, { cache: "no-store" });
+      const body = (await response.json().catch(() => null)) as
+        | { status: "ok"; url: string; finished: boolean; preview?: boolean }
+        | { status: "denied"; message: string }
+        | null;
+      if (body?.status === "ok") {
+        if (tab) tab.location.href = body.url;
+        else window.location.href = body.url;
+        setState({ busy: false, note: body.finished ? null : "Still rolling: this shows what they have so far." });
+        return;
+      }
+      tab?.close();
+      setState({ busy: false, note: body?.status === "denied" ? body.message : "Couldn't get the receipt. Try again." });
+    } catch {
+      tab?.close();
+      setState({ busy: false, note: "Network error. Try again." });
+    }
+  };
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => void open()}
+        disabled={state.busy}
+        className="w-full rounded-lg border border-amber-400/50 bg-amber-400/10 px-3 py-2 text-xs font-black text-amber-200 transition-colors hover:bg-amber-400/20 disabled:opacity-60"
+      >
+        🧾 {state.busy ? "Opening…" : "View receipt"}
+      </button>
+      {state.note && <p className="mt-1 text-[11px] text-ink-400">{state.note}</p>}
+    </div>
   );
 }

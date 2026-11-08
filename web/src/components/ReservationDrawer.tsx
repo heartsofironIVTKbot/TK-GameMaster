@@ -78,6 +78,8 @@ interface ReservationDrawerProps {
   hostTools?: DrawerHostTools | null;
   /** The viewer is a host: profile cards offer "View portfolio". */
   viewerIsHost?: boolean;
+  /** Casino game, viewed by its host / a co-host / staff: profile cards offer "View receipt" (the game's key). */
+  receiptGame?: string | null;
   /** Draft games: the pool / teams panel shown above the nations. */
   draftPanel?: ReactNode;
   /** Reports the host-locked nations' tags (the map greys them like taken ones). */
@@ -155,6 +157,7 @@ export default function ReservationDrawer({
   onFocusNation,
   hostTools = null,
   viewerIsHost = false,
+  receiptGame = null,
   draftPanel = null,
   onHostLockedChange,
 }: ReservationDrawerProps) {
@@ -690,6 +693,7 @@ export default function ReservationDrawer({
               badges={popoverInfo.badges}
               onClose={() => setPopoverKey(null)}
               canViewPortfolio={canViewPortfolio}
+              receiptGame={receiptGame}
             />
           )}
         </div>
@@ -735,6 +739,7 @@ export default function ReservationDrawer({
                   badges={popoverInfo.badges}
                   onClose={() => setPopoverKey(null)}
                   canViewPortfolio={canViewPortfolio}
+                  receiptGame={receiptGame}
                 />
               )}
           </div>

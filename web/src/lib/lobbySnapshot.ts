@@ -1,3 +1,4 @@
+import { isCasinoGame } from "@/lib/casinoSettings";
 import crypto from "node:crypto";
 import type { RowDataPacket } from "mysql2";
 import { HOME_GUILD_ID, isHomeGuild } from "@/lib/currentGuild";
@@ -48,6 +49,8 @@ export interface LobbyGame {
   ironlegion: { verify_url: string | null } | null;
   /** A Casino game: players roll their nation on tkcasino.online (via /casino/<game>), not on the map. */
   casino: boolean;
+  /** Casino / Fortunes games: the co-hosts (Discord ids; they see receipts and use the host tools). */
+  co_hosts: string[];
 }
 
 export interface LobbySnapshot {
@@ -76,6 +79,7 @@ interface VersionRow extends RowDataPacket {
   locked_regions: string | null;
   draft: string | null;
   require_ironlegion: string | null;
+  co_hosts: string | null;
 }
 
 function fingerprint(parts: unknown[]): string {
@@ -95,7 +99,8 @@ export function lobbyVersion(threadId: string): Promise<string> {
               CAST(JSON_EXTRACT(game_data, '$.lockdown') AS CHAR) AS lockdown,
               CAST(JSON_EXTRACT(game_data, '$.locked_regions') AS CHAR) AS locked_regions,
               CAST(JSON_EXTRACT(game_data, '$.draft') AS CHAR) AS draft,
-              CAST(JSON_EXTRACT(game_data, '$.require_ironlegion') AS CHAR) AS require_ironlegion
+              CAST(JSON_EXTRACT(game_data, '$.require_ironlegion') AS CHAR) AS require_ironlegion,
+              CAST(JSON_EXTRACT(game_data, '$.co_hosts') AS CHAR) AS co_hosts
        FROM games WHERE thread_id = ?`,
       [threadId],
     );
@@ -103,7 +108,7 @@ export function lobbyVersion(threadId: string): Promise<string> {
     const bucket = Math.floor(Date.now() / REFRESH_BUCKET_MS);
     return fingerprint(
       row
-        ? [row.reservations_rev, row.status, row.game_started, row.mode, row.host_id, row.thread_name, row.lockdown, row.locked_regions, row.draft, row.require_ironlegion, bucket]
+        ? [row.reservations_rev, row.status, row.game_started, row.mode, row.host_id, row.thread_name, row.lockdown, row.locked_regions, row.draft, row.require_ironlegion, row.co_hosts, bucket]
         : ["missing", bucket],
     );
   });
@@ -161,6 +166,8 @@ function parseGameData(raw: unknown): {
   draft?: unknown;
   require_ironlegion?: unknown;
   add_on?: unknown;
+  randomizer_only?: unknown;
+  co_hosts?: unknown;
 } {
   if (typeof raw === "string") {
     try {
@@ -276,7 +283,8 @@ async function buildSnapshot(threadId: string): Promise<LobbySnapshot> {
             : [],
           draft,
           ironlegion,
-          casino: gameData.add_on === "randomizer",
+          casino: isCasinoGame(gameData),
+          co_hosts: Array.isArray(gameData.co_hosts) ? gameData.co_hosts.map(String) : [],
         }
       : null,
     reservations,

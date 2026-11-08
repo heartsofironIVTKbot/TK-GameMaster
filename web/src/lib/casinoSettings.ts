@@ -149,3 +149,11 @@ export function stepDownHours(config: CasinoConfig, gameSec: number): number {
 
 /** Most co-hosts a Casino game can have. */
 export const MAX_CO_HOSTS = 5;
+
+/**
+ * A game record (the bot's games.game_data) is a Casino game. The bot marks
+ * them `randomizer_only: true` (and `add_on: "randomizer"` since 2026-11-08).
+ */
+export function isCasinoGame(data: { randomizer_only?: unknown; add_on?: unknown } | null | undefined): boolean {
+  return Boolean(data) && (data?.randomizer_only === true || data?.add_on === "randomizer");
+}

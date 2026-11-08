@@ -544,6 +544,14 @@ export default function Home() {
 
   const activeGame =
     games.find((game) => game.thread_id === selectedThread) ?? null;
+  // Casino games: the host, its co-hosts and Host Management can open players' receipts.
+  const receiptGame =
+    gameLock?.casino &&
+    selectedThread &&
+    authUser &&
+    (String(activeGame?.host_id ?? "") === authUser.discord_id || gameLock.co_hosts?.includes(authUser.discord_id) || host.isStaff)
+      ? selectedThread
+      : null;
   const lobbyName = activeGame?.thread_name?.trim() || "GameMaster · HOI4";
   const sessionTime = formatSessionTime(activeGame?.start_timestamp) || "Start time to be announced";
 
@@ -594,6 +602,7 @@ export default function Home() {
         hostTools={mapHostTools}
         reservationsNonce={reservationsNonce}
         viewerIsHost={host.isHost}
+        receiptGame={receiptGame}
         onJoinDraft={openJoin}
         hostLockedTags={hostLockedTags}
       />
@@ -614,6 +623,7 @@ export default function Home() {
         onFocusNation={handleFocusNation}
         hostTools={drawerHostTools}
         viewerIsHost={host.isHost}
+        receiptGame={receiptGame}
         onHostLockedChange={setHostLockedTags}
         draftPanel={
           draft ? (

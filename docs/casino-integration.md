@@ -117,8 +117,17 @@ The Casino and the bot share the database, and that is the hand-off:
    same values the bot uses (incl. the certificate), never in git. The
    Casino's host Inspect / Override pages still mention Discord commands;
    step 5 replaces them.
-4. **Picks on the map at once**, and **View receipt** on players for the host
-   and co-hosts.
+4. ✅ **Picks on the map at once**, and **View receipt** on players for the host
+   and co-hosts (2026-11-08). The Casino bumps `games.reservations_rev` after
+   a spin (`hoi4-casino` `app/api/spin/nation`), so GameMaster's live map
+   shows it within a second. The map's player cards (board and map avatars)
+   have **View receipt** for the game's host, its co-hosts and Host
+   Management (`api/casino/[game]/receipt/[user]`): a finished run opens
+   the full receipt (a receipt-only link), one still rolling the static
+   receipt so far. The bot now stores `add_on` and `co_hosts` (as strings)
+   on announced games; the website spots Casino games by `randomizer_only`
+   or `add_on` (`isCasinoGame`), as the bot's records only had the former.
+   The first real Casino game runs in step 8, once the Casino is on Aiven.
 5. **Host tools:** add, give a roll, extra rolls, remove, with the DMs; no
    swaps or moves on Casino games.
 6. **Emergency Unreserve:** the red warning with a reason; the host's Add

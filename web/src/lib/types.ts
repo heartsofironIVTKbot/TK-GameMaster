@@ -101,6 +101,8 @@ export interface LobbyGameLock {
   ironlegion?: { verify_url: string | null } | null;
   /** A Casino game: nations are rolled on the Casino (/casino/<game>), not reserved here. */
   casino?: boolean;
+  /** Casino / Fortunes games: co-hosts' Discord ids. */
+  co_hosts?: string[];
 }
 
 /** Roster row state: how a nation relates to the active lobby. */
