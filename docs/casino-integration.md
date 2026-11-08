@@ -147,8 +147,19 @@ The Casino and the bot share the database, and that is the hand-off:
    `_process_web_casino_grant` (requests `casino_roll`, `casino_extra`);
    tests in `GameMaster Bot/tests/casino_tools.py`. Not yet tried against
    the real Casino (step 8).
-6. **Emergency Unreserve:** the red warning with a reason. (The host's Add
-   warning is done in step 5.)
+6. ✅ **Emergency Unreserve** (2026-11-08). On a Casino game a player's own
+   nation on the map has "Can't play? Emergency Unreserve" under the receipt
+   link. It opens a red pop-up in the middle of the screen: no second
+   chance (the nation and the Casino receipt go, no more rolls, only a host
+   can add them back) and a reason is required (5–300 characters). The
+   website queues it (`api/casino/[game]/unreserve`, request
+   `casino_emergency_unreserve`); the bot
+   (`_process_web_casino_emergency_unreserve`) frees the nation, purges the
+   run, blocks them (`randomizer_unreserved`), keeps the reason
+   (`randomizer_unreserve_reasons`) and DMs it to the game's host and
+   co-hosts. Closed once the game starts. A host adding them back gets the
+   warning with that reason (step 5). This replaces the old Discord
+   Emergency Unreserve button. Plain unreserving stays off on Casino games.
 7. **Fortunes of War** room on the Casino site.
 8. **Switch on and test:** take both add-ons out of `_UNAVAILABLE_ADDONS`,
    play a Casino and a Fortunes game end to end, and a fallback if the Casino

@@ -157,3 +157,7 @@ export const MAX_CO_HOSTS = 5;
 export function isCasinoGame(data: { randomizer_only?: unknown; add_on?: unknown } | null | undefined): boolean {
   return Boolean(data) && (data?.randomizer_only === true || data?.add_on === "randomizer");
 }
+
+/** Emergency Unreserve: how long the reason must be (the bot checks the same). */
+export const UNRESERVE_REASON_MIN = 5;
+export const UNRESERVE_REASON_MAX = 300;

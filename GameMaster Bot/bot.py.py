@@ -31570,6 +31570,7 @@ async def audit_trail_retention_loop():
 _AUDIT_SELF_RECORDED = frozenset({
     # feedback_rate: who gave which rating stays private, so no audit row.
     "roster_assign", "roster_remove", "moderation", "dishonored", "host_rating", "member_roles", "feedback_rate",
+    "casino_emergency_unreserve",
     *GAME_LIFECYCLE_ACTIONS,
 })
 # Request action → (audit category, audit action, what the actor did).
@@ -31698,6 +31699,8 @@ async def web_schedule_request_loop():
                 ok, result, err = await _process_web_roster_remove(req)
             elif action in ("casino_roll", "casino_extra"):
                 ok, result, err = await _process_web_casino_grant(req)
+            elif action == "casino_emergency_unreserve":
+                ok, result, err = await _process_web_casino_emergency_unreserve(req)
             elif action in ("moderation", "dishonored"):
                 ok, result, err = await _process_web_moderation(req)
             elif action == "host_rating":
@@ -32360,6 +32363,108 @@ async def _web_casino_remove(payload: dict, actor, game: dict, thread_id: str, u
         details={"slots": keys}, source="web",
     )
     return True, {"removed": keys[0]}, None
+
+
+# ————— Casino games: Emergency Unreserve (docs/casino-integration.md, step 6) —————
+# A player who can't play leaves a Casino game from the map, with a reason.
+# It's final: their nation and Casino run are deleted and they can't roll
+# again. Only a host can bring them back (Host Tool → Add, with a warning
+# that shows this reason). The game's host and co-hosts get a DM.
+
+CASINO_UNRESERVE_REASON_MIN = 5
+CASINO_UNRESERVE_REASON_MAX = 300
+
+
+async def _process_web_casino_emergency_unreserve(req: dict):
+    payload = req.get("payload") or {}
+    thread_id = str(payload.get("thread_id") or "").strip()
+    reason = " ".join(str(payload.get("reason") or "").split())[:CASINO_UNRESERVE_REASON_MAX]
+    if not thread_id.isdigit():
+        return False, None, "❌ Invalid game."
+    if len(reason) < CASINO_UNRESERVE_REASON_MIN:
+        return False, None, "❌ Tell the host why you're leaving (a few words at least)."
+    try:
+        user_id = int(req.get("host_id") or 0)
+    except (TypeError, ValueError):
+        user_id = 0
+    if user_id <= 0:
+        return False, None, "❌ Log in with Discord first."
+    games_data = await _read_games_fresh()
+    storage_key, game = _find_game_entry(games_data, thread_id)
+    if not isinstance(game, dict):
+        return False, None, "❌ This game no longer exists."
+    key = str(storage_key or thread_id)
+    if not _is_casino_game_dict(game):
+        return False, None, "❌ Emergency Unreserve is only for Casino games."
+    if game.get("game_started") or game.get("status") in ("ended", "cancelled"):
+        return False, None, "❌ This game has started or ended, so you can't unreserve any more. Tell the host instead."
+    if _is_emergency_unreserved_blocked(game, user_id):
+        return False, None, "❌ You already used Emergency Unreserve in this game."
+    res = game.get("reservations") or {}
+    keys = [k for k, v in res.items() if str(v) == str(user_id)]
+    if not keys:
+        return False, None, "❌ You don't have a nation in this game."
+
+    for k in keys:
+        del res[k]
+    game["reservations"] = res
+    blocked = list(game.get("randomizer_unreserved") or [])
+    if str(user_id) not in {str(x) for x in blocked}:
+        blocked.append(user_id)
+    game["randomizer_unreserved"] = blocked
+    reasons = game.get("randomizer_unreserve_reasons")
+    reasons = dict(reasons) if isinstance(reasons, dict) else {}
+    reasons[str(user_id)] = reason
+    game["randomizer_unreserve_reasons"] = reasons
+    for field in ("randomizer_last_roll", "web_override_rolls"):
+        if isinstance(game.get(field), dict):
+            game[field].pop(str(user_id), None)
+    if game.get("fortunes_only"):
+        _clear_fortunes_player_state(game, user_id)
+    await save_single_game(key, game, rewrite_reservations=True)
+    await _roster_after_change(key)
+    # Purges their web run (the receipt disappears) and flips the receipt log.
+    await _roster_drop_player_state(key, user_id)
+
+    label = _pretty_reservation_name(keys[0])
+    player = await _web_fetch_member(user_id)
+    name = getattr(player, "display_name", None) or _audit_who(user_id) or str(user_id)
+    mode = str(game.get("mode") or "Game")
+    ts = int(game.get("start_timestamp") or 0)
+    hosts = []
+    for hid in [game.get("host_id"), *(game.get("co_hosts") or [])]:
+        hid = str(hid or "")
+        if hid.isdigit() and hid != str(user_id) and hid not in hosts:
+            hosts.append(hid)
+    notified = 0
+    for hid in hosts:
+        member = await _web_fetch_member(int(hid))
+        if member is None:
+            continue
+        embed = discord.Embed(
+            title="🚨 Emergency Unreserve",
+            description=f"**{name}** left **{label}** in your Casino game.",
+            color=EmbedColor.DANGER,
+        )
+        embed.add_field(name="Their reason", value=reason, inline=False)
+        embed.add_field(
+            name="Game",
+            value=f"{MODE_THREAD_LABELS.get(mode, mode)}" + (f" · <t:{ts}:F>" if ts > 0 else ""),
+            inline=False,
+        )
+        embed.set_footer(text="They can't roll again. To bring them back, add them with the Host Tool on the map.")
+        if await _dm_user_safe(member, embed=embed, label="emergency unreserve"):
+            notified += 1
+    _audit_log("INFO", f"web emergency unreserve thread={key} user={user_id} slots={keys} hosts_dmed={notified}")
+    audit_event(
+        "roster", "emergency_unreserve",
+        f"{name} used Emergency Unreserve on {label} in a Casino game"
+        + (f" ({game['thread_name']})" if game.get("thread_name") else ""),
+        actor_id=user_id, actor_name=name if name != str(user_id) else None,
+        target_id=user_id, target_name=name, game_id=key,
+        details={"slots": keys, "reason": reason, "hosts_dmed": notified}, source="web",
+    )
+    return True, {"unreserved": label}, None
 
 
 async def _process_web_casino_grant(req: dict):

@@ -480,10 +480,10 @@ export async function DELETE(request: NextRequest) {
       return jsonError("Reservations are locked — this game has started or ended", 409);
     }
     // Casino games: a plain unreserve would hand out a free re-roll; only
-    // Emergency Unreserve (docs/casino-integration.md, step 6) or the host can.
+    // Emergency Unreserve (api/casino/<game>/unreserve) or the host can.
     if (isCasinoGame(parseGameData(game.game_data))) {
       await connection.rollback();
-      return jsonError("This is a Casino game: you can't unreserve here. Ask the host if you can't play.", 409);
+      return jsonError("This is a Casino game: if you can't play, use Emergency Unreserve under your nation.", 409);
     }
 
     const [heldRows] = await connection.query<SlotRow[]>(

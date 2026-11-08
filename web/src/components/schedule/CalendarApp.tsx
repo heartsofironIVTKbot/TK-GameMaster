@@ -65,6 +65,7 @@ const REQUEST_LABELS: Record<RequestAction, string> = {
   roster_remove: "Player removal",
   casino_roll: "Casino roll",
   casino_extra: "Casino extra rolls",
+  casino_emergency_unreserve: "Emergency Unreserve",
   moderation: "Moderation",
   dishonored: "Dishonored",
   host_rating: "Host rating",

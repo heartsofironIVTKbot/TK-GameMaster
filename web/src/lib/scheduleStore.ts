@@ -317,6 +317,7 @@ function requestFromRow(row: RequestRow): ScheduleRequestStatus {
       "roster_remove",
       "casino_roll",
       "casino_extra",
+      "casino_emergency_unreserve",
       "moderation",
       "dishonored",
       "host_rating",
@@ -808,6 +809,16 @@ function processDemoRequests(): void {
       request.status = "done";
       request.result = { dm_sent: true };
       request.error = null;
+      continue;
+    }
+
+    if (request.action === "casino_emergency_unreserve") {
+      // Preview: the viewer leaves the lobby (the bot also blocks them and DMs the host).
+      const outcome = applyDemoRoster("roster_remove", { thread_id: payload.thread_id, user_id: request.host_id });
+      const removed = outcome.result?.removed ?? null;
+      request.status = removed ? "done" : "error";
+      request.result = removed ? { unreserved: removed } : null;
+      request.error = removed ? null : "❌ You don't have a nation in this game.";
       continue;
     }
 

@@ -155,6 +155,7 @@ export type RequestAction =
   | "roster_remove"
   | "casino_roll"
   | "casino_extra"
+  | "casino_emergency_unreserve"
   | "moderation"
   | "dishonored"
   | "host_rating"
@@ -202,6 +203,8 @@ export interface ScheduleRequestStatus {
     moved_from?: string | null;
     displaced?: string | null;
     removed?: string | null;
+    /** Casino Emergency Unreserve: the nation the player left. */
+    unreserved?: string;
     /** Database page: what the moderation engine did. */
     moderation?: ModerationOutcome;
     /** Attendance page: what the bot did (voice check / sample / override / finalize). */

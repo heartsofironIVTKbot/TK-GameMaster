@@ -24,6 +24,7 @@ import {
 } from "./nationHighlights";
 import CountryDetailsDrawer from "./CountryDetailsDrawer";
 import HotJoinBar from "./HotJoinBar";
+import EmergencyUnreserveDialog from "./casino/EmergencyUnreserve";
 import CapitalAvatars, { type CapitalAvatarEntry } from "./CapitalAvatars";
 import PlayerProfilePopover, { reservationBadges } from "./PlayerProfilePopover";
 import {
@@ -821,6 +822,8 @@ export default function MapViewer({
   // the authenticated user is too, so /api/auth/me is fetched once in the
   // page and shared with the roster drawer).
   const [reserving, setReserving] = useState(false);
+  /** Casino games: the Emergency Unreserve pop-up (kept open after the board changes). */
+  const [emergency, setEmergency] = useState<{ threadId: string; nation: string } | null>(null);
   const [reserveMessage, setReserveMessage] = useState<{
     kind: "success" | "error";
     text: string;
@@ -1591,6 +1594,14 @@ export default function MapViewer({
             )}
           </div>
         )}
+        {emergency && (
+          <EmergencyUnreserveDialog
+            threadId={emergency.threadId}
+            nationName={emergency.nation}
+            onChanged={() => void refreshLobbyReservations()}
+            onClose={() => setEmergency(null)}
+          />
+        )}
         {/* Casino games: nations are rolled on the Casino (via GameMaster), never reserved here. */}
         {selected && selectionKind && lobbyLock?.casino && !lobbyLock?.draft && !gameRunning && (
           <div data-tour="map.casino" className="absolute inset-x-4 bottom-5 z-[1010] flex flex-col items-center gap-2 sm:inset-x-auto sm:bottom-7 sm:left-1/2 sm:-translate-x-1/2">
@@ -1598,9 +1609,20 @@ export default function MapViewer({
               Casino game: players roll their nation at the Casino.
             </p>
             {selectionKind === "self" ? (
-              <a href={`/casino/${encodeURIComponent(selectedThread ?? "")}`} className="gm-btn gm-btn-secondary h-12 w-full bg-ink-950 px-6 sm:w-auto">
-                Open my Casino receipt
-              </a>
+              <>
+                <a href={`/casino/${encodeURIComponent(selectedThread ?? "")}`} className="gm-btn gm-btn-secondary h-12 w-full bg-ink-950 px-6 sm:w-auto">
+                  Open my Casino receipt
+                </a>
+                {selectedThread && (
+                  <button
+                    type="button"
+                    onClick={() => setEmergency({ threadId: selectedThread, nation: selected.name })}
+                    className="rounded-lg border border-rose-400/50 bg-ink-950/85 px-3 py-1.5 text-xs font-bold text-rose-200 shadow-xl hover:border-rose-300 hover:text-white"
+                  >
+                    🚨 Can&apos;t play? Emergency Unreserve
+                  </button>
+                )}
+              </>
             ) : (
               <ReserveGlow>
                 <a href={`/casino/${encodeURIComponent(selectedThread ?? "")}`} className={RESERVE_BUTTON}>

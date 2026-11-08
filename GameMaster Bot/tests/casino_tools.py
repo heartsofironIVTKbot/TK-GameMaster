@@ -257,6 +257,35 @@ async def main():
     ok, _, err = await gm._process_web_casino_grant(request("casino_roll", HOST, {"user_id": str(ALICE)}))
     check("a started game: no more rolls", ok is False and "closed" in (err or ""), err)
 
+    # Emergency Unreserve (step 6): the player leaves for good, with a reason.
+    def leave(uid, reason="Family emergency, can't make it"):
+        return gm._process_web_casino_emergency_unreserve({"action": "casino_emergency_unreserve", "host_id": uid, "payload": {"thread_id": GAME, "reason": reason}})
+
+    reset()
+    ok, _, err = await leave(BOB, "no")
+    check("EU: a reason is required", ok is False and "why you're leaving" in (err or "") and store[GAME]["reservations"].get("Germany") == BOB, err)
+    ok, _, err = await leave(ALICE)
+    check("EU: refused without a nation", ok is False and "don't have a nation" in (err or ""), err)
+    ok, result, err = await leave(BOB, "  Family   emergency,\n can't make it  ")
+    check("EU: done", ok is True and result == {"unreserved": "Germany"}, err)
+    check("EU: nation freed", "Germany" not in store[GAME]["reservations"])
+    check("EU: blocked from rolling again", gm._is_emergency_unreserved_blocked(store[GAME], BOB))
+    check("EU: reason kept (tidied) for the host's warning", store[GAME]["randomizer_unreserve_reasons"].get(str(BOB)) == "Family emergency, can't make it", store[GAME].get("randomizer_unreserve_reasons"))
+    check("EU: web run purged (receipt gone)", dropped == [BOB], dropped)
+    check("EU: host and co-host DM'd", sorted(d["to"] for d in dms) == [HOST, COHOST] and all(d["title"] == "🚨 Emergency Unreserve" for d in dms), dms)
+    ok, _, err = await leave(BOB)
+    check("EU: no second time", ok is False and "already used" in (err or ""), err)
+    ok, result, _ = await gm._process_web_roster_assign(request("roster_assign", HOST, {"user_id": str(BOB), "kind": "nation", "nation": "France"}))
+    check("EU: the host's Add warns with their reason", ok == gm.WEB_REQUEST_CONFIRM and "Family emergency, can't make it" in " ".join(result.get("warnings", [])), result)
+    reset()
+    store[GAME]["game_started"] = True
+    ok, _, err = await leave(BOB)
+    check("EU: closed once the game starts", ok is False and "started or ended" in (err or ""), err)
+    reset()
+    store[GAME]["randomizer_only"] = False
+    ok, _, err = await leave(BOB)
+    check("EU: only on Casino games", ok is False and "only for Casino games" in (err or "") and store[GAME]["reservations"].get("Germany") == BOB, err)
+
     # Normal games are untouched.
     reset()
     store[GAME]["randomizer_only"] = False
