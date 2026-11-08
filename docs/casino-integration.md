@@ -94,7 +94,19 @@ The Casino and the bot share the database, and that is the hand-off:
    keeps it on the slot and writes `host_settings`; it no longer DMs the
    Casino Host Panel link. Until step 8 only the local dev server can pick
    the add-ons, and only on the home server.
-2. **The way in:** `/casino/<game>` on GameMaster and the announcement link.
+2. ✅ **The way in:** `/casino/<game>` on GameMaster and the announcement link
+   (2026-11-08). `web/src/lib/casinoEntry.ts` runs the old panel's checks
+   (Casino game on the home server, still open, not Emergency-Unreserved,
+   in the server, not banned, IronLegion when required) and writes the
+   `web_access_tokens` row (tier and flags from `web_member_directory` and
+   the server's role ids); a player who already holds a nation gets the
+   24-hour resume or receipt link instead. `api/casino/[game]` answers, the
+   `/casino/[game]` page signs them in and sends them on (a preview card on
+   the dev demo). The announcement says "Roll at the Casino" with that link;
+   the map shows "Roll at the Casino" / "Open my Casino receipt" on Casino
+   games, and `/api/reserve` refuses picking and unreserving there.
+   `CASINO_URL` (default https://tkcasino.online) can point it elsewhere.
+   Not yet tried against the real database (step 4's end-to-end test).
 3. **The Casino site:** View reservations button, texts that point to
    GameMaster, denied/expired screens that link back, TLS for Aiven. Niko puts
    the bot's database settings into the Casino's Vercel project (dashboard,

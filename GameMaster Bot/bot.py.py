@@ -16857,6 +16857,12 @@ def _map_game_url(thread_id) -> str:
     return f"{WEB_SITE_URL}/?game={thread_id}"
 
 
+def _casino_game_url(game_key) -> str:
+    """A Casino game's way in: GameMaster signs the player in, checks them and
+    sends them to tkcasino.online with a one-time link (docs/casino-integration.md)."""
+    return f"{WEB_SITE_URL}/casino/{game_key}"
+
+
 def _crash_report_url(game_id) -> str:
     """The website's crash report form for one game."""
     return f"{WEB_SITE_URL}/crash?game={game_id}"
@@ -27286,7 +27292,11 @@ async def _check_scheduled_announcements_for_guild():
             # Short on purpose: the bell header, the time (Discord shows it in
             # each reader's own time zone), the host and the map link. Rules and
             # mods live behind the map's 📜 Rules / 🧩 Mods buttons.
-            reserve_label = "Join the Draft Here" if draft_config else "Reserve Here"
+            reserve_label = (
+                "Join the Draft Here" if draft_config
+                else "Roll at the Casino" if randomizer_only
+                else "Reserve Here"
+            )
             announcement_content = (
                 f"# {ANNOUNCE_BELL_EMOJI} Game Announcement {ANNOUNCE_BELL_EMOJI}\n"
                 f"||{ping_mention}||{addon_line}\n"
@@ -27302,7 +27312,9 @@ async def _check_scheduled_announcements_for_guild():
             )
             game_key = str(anno_message.id)
             thread_name = f"{mode} Game - {day} - {date_str}"
-            await anno_message.edit(content=announcement_content.replace("__MAP_LINK__", _map_game_url(game_key)))
+            # Casino games: players roll on tkcasino.online, through GameMaster.
+            reserve_url = _casino_game_url(game_key) if randomizer_only else _map_game_url(game_key)
+            await anno_message.edit(content=announcement_content.replace("__MAP_LINK__", reserve_url))
 
             # Save to GAMES_FILE just like standard /announce_game
             games_data = await read_json(GAMES_FILE)

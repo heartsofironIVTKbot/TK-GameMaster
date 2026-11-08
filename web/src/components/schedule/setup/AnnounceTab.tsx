@@ -199,9 +199,12 @@ function DiscordPreview({
             🎮 Host - <span className="rounded bg-[#5865F2]/30 px-1 text-[#c9cdfb]">@{host.display_name || host.username}</span>
           </p>
           <p className="font-bold">
-            📝 {form.draft ? "Join the Draft Here" : "Reserve Here"} -{" "}
-            <span className="text-[#00a8fc] underline decoration-[#00a8fc]/40" title="The game's map link, made when the bot posts">
-              map link
+            📝 {form.draft ? "Join the Draft Here" : form.addOn === "randomizer" ? "Roll at the Casino" : "Reserve Here"} -{" "}
+            <span
+              className="text-[#00a8fc] underline decoration-[#00a8fc]/40"
+              title={form.addOn === "randomizer" ? "The game's Casino link (through GameMaster), made when the bot posts" : "The game's map link, made when the bot posts"}
+            >
+              {form.addOn === "randomizer" ? "casino link" : "map link"}
             </span>
           </p>
           {!mode && <p className="mt-1 text-[#949ba4]">Pick a game mode</p>}

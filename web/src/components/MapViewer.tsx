@@ -687,6 +687,7 @@ function parseLobby(raw: unknown): LobbyReply | null {
       layout_disabled_nations?: string[];
       draft?: LobbyGameLock["draft"];
       ironlegion?: LobbyGameLock["ironlegion"];
+      casino?: boolean;
     } | null;
   };
   if (result.unchanged && result.version) return { unchanged: true, version: result.version };
@@ -707,6 +708,7 @@ function parseLobby(raw: unknown): LobbyReply | null {
             : [],
           draft: game.draft ?? null,
           ironlegion: game.ironlegion ?? null,
+          casino: Boolean(game.casino),
         }
       : null,
   };
@@ -1579,7 +1581,26 @@ export default function MapViewer({
             )}
           </div>
         )}
-        {selected && selectionKind && !lobbyLock?.draft && !gameRunning && (
+        {/* Casino games: nations are rolled on the Casino (via GameMaster), never reserved here. */}
+        {selected && selectionKind && lobbyLock?.casino && !lobbyLock?.draft && !gameRunning && (
+          <div data-tour="map.casino" className="absolute inset-x-4 bottom-5 z-[1010] flex flex-col items-center gap-2 sm:inset-x-auto sm:bottom-7 sm:left-1/2 sm:-translate-x-1/2">
+            <p className="gm-plate bg-ink-950 px-4 py-2 text-center text-xs font-semibold text-ink-200">
+              Casino game: players roll their nation at the Casino.
+            </p>
+            {selectionKind === "self" ? (
+              <a href={`/casino/${encodeURIComponent(selectedThread ?? "")}`} className="gm-btn gm-btn-secondary h-12 w-full bg-ink-950 px-6 sm:w-auto">
+                Open my Casino receipt
+              </a>
+            ) : (
+              <ReserveGlow>
+                <a href={`/casino/${encodeURIComponent(selectedThread ?? "")}`} className={RESERVE_BUTTON}>
+                  Roll at the Casino
+                </a>
+              </ReserveGlow>
+            )}
+          </div>
+        )}
+        {selected && selectionKind && !lobbyLock?.draft && !lobbyLock?.casino && !gameRunning && (
           <div data-tour="map.reserve" className="absolute inset-x-4 bottom-5 z-[1010] flex flex-col items-center gap-2 sm:inset-x-auto sm:bottom-7 sm:left-1/2 sm:-translate-x-1/2">
             {selectionKind === "pending" &&
               (authUser ? (

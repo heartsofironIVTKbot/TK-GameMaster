@@ -46,6 +46,8 @@ export interface LobbyGame {
   draft: LobbyDraft | null;
   /** The game requires IronLegion (and IronLegion is set up there): where to verify. Null otherwise. */
   ironlegion: { verify_url: string | null } | null;
+  /** A Casino game: players roll their nation on tkcasino.online (via /casino/<game>), not on the map. */
+  casino: boolean;
 }
 
 export interface LobbySnapshot {
@@ -158,6 +160,7 @@ function parseGameData(raw: unknown): {
   is_draft?: unknown;
   draft?: unknown;
   require_ironlegion?: unknown;
+  add_on?: unknown;
 } {
   if (typeof raw === "string") {
     try {
@@ -273,6 +276,7 @@ async function buildSnapshot(threadId: string): Promise<LobbySnapshot> {
             : [],
           draft,
           ironlegion,
+          casino: gameData.add_on === "randomizer",
         }
       : null,
     reservations,

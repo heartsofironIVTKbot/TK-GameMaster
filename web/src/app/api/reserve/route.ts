@@ -94,6 +94,7 @@ interface GameDataDocument {
   lockdown?: unknown;
   /** The game's own IronLegion switch (lib/ironlegion.ts). */
   require_ironlegion?: unknown;
+  add_on?: unknown;
   capacity?: unknown;
   locked_regions?: unknown;
   layout_disabled_nations?: unknown;
@@ -267,6 +268,11 @@ export async function POST(request: NextRequest) {
     }
     // Draft games are filled through the draft pool (POST /api/draft), not by
     // picking a nation: the captains (or the host) place players.
+    // Casino games: nations are rolled on the Casino (GET /casino/<game>), never picked here.
+    if (gameData.add_on === "randomizer") {
+      await connection.rollback();
+      return jsonError("This is a Casino game: roll your nation at the Casino", 409);
+    }
     if (gameData.is_draft) {
       await connection.rollback();
       return jsonError("This is a draft game — use Join the draft; the team captains place players on nations", 409);
@@ -470,6 +476,12 @@ export async function DELETE(request: NextRequest) {
     if (game.game_started || ["ended", "cancelled"].includes(game.status ?? "")) {
       await connection.rollback();
       return jsonError("Reservations are locked — this game has started or ended", 409);
+    }
+    // Casino games: a plain unreserve would hand out a free re-roll; only
+    // Emergency Unreserve (docs/casino-integration.md, step 6) or the host can.
+    if (parseGameData(game.game_data).add_on === "randomizer") {
+      await connection.rollback();
+      return jsonError("This is a Casino game: you can't unreserve here. Ask the host if you can't play.", 409);
     }
 
     const [heldRows] = await connection.query<SlotRow[]>(
