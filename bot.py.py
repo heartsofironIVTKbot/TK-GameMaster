@@ -27345,6 +27345,7 @@ async def _check_scheduled_announcements_for_guild():
                 # Fortunes co-hosts as strings: JavaScript rounds 19-digit ids.
                 "add_on": addon_value if addon_value != "none" else None,
                 "co_hosts": [str(uid) for uid in item.get("co_hosts") or []],
+                "casino_settings": item.get("casino_settings") if randomizer_only else None,
                 "nation_layout": nation_layout,
                 "layout_disabled_nations": not_playable,
                 "managed_mods": mod_entries,
@@ -31695,6 +31696,8 @@ async def web_schedule_request_loop():
                 ok, result, err = await _process_web_roster_assign(req)
             elif action == "roster_remove":
                 ok, result, err = await _process_web_roster_remove(req)
+            elif action in ("casino_roll", "casino_extra"):
+                ok, result, err = await _process_web_casino_grant(req)
             elif action in ("moderation", "dishonored"):
                 ok, result, err = await _process_web_moderation(req)
             elif action == "host_rating":
@@ -32054,6 +32057,392 @@ async def _roster_drop_player_state(thread_id: str, user_id: int) -> None:
         print(f"[WARN] roster: web session purge failed: {e}")
 
 
+# ————— Casino games: the host tools (docs/casino-integration.md, step 5) —————
+# On a Casino game the map's Host Tool never moves or swaps players: a path,
+# build and the rest belong to one nation. The game's host, its co-hosts and
+# Host Management can add a player to a free nation, give a roll, give extra
+# rolls for some rooms, or remove a player. Every roll is a host override
+# grant: a host_override_requests row (completed by the Casino's
+# /api/host/override/complete, applied by host_override_sync_loop) and a
+# single-use link DM'd to the player, valid for a day.
+
+CASINO_GRANT_TTL_SEC = 24 * 3600
+_CASINO_ROOMS = ("ideology", "path", "doctrine", "build", "achievements")
+# The Casino's stages: ideology and path share stage 1 (its buildCasinoConfig).
+_CASINO_STAGE_OF_ROOM = {"ideology": "1", "path": "1", "doctrine": "2", "build": "3", "achievements": "4"}
+_CASINO_ROOM_LABELS = {"ideology": "Ideology", "path": "Path", "doctrine": "Doctrine", "build": "Build", "achievements": "Achievements"}
+_CASINO_TOOL_REFUSAL = "❌ Only this game's host, its co-hosts and Host Management can change a Casino game's players."
+
+
+def _is_casino_game_dict(game: dict) -> bool:
+    return bool(game.get("randomizer_only") or game.get("add_on") == "randomizer")
+
+
+def _can_manage_casino_game(actor, game: dict) -> bool:
+    if actor is None:
+        return False
+    if _member_is_staff(actor) or str(game.get("host_id") or "") == str(actor.id):
+        return True
+    return str(actor.id) in {str(uid) for uid in game.get("co_hosts") or []}
+
+
+def _casino_boxes(game: dict) -> dict:
+    """The game's Casino rooms (GameMaster's setup; host_settings once synced)."""
+    for source in (game.get("host_settings"), game.get("casino_settings")):
+        boxes = (source or {}).get("randomizers") if isinstance(source, dict) else None
+        if isinstance(boxes, dict) and boxes:
+            return boxes
+    return {}
+
+
+def _casino_room_on(game: dict, room: str) -> bool:
+    box = _casino_boxes(game).get(room)
+    return bool(box.get("enabled", True)) if isinstance(box, dict) else True
+
+
+def _casino_rooms_on(game: dict) -> list:
+    return [room for room in _CASINO_ROOMS if _casino_room_on(game, room)]
+
+
+def _casino_default_rerolls(game: dict, room: str, tier: str) -> int:
+    """The game's re-rolls for a room: 'major' / 'minor', or 'any' (the larger)."""
+    box = _casino_boxes(game).get(room)
+    rerolls = box.get("rerolls") if isinstance(box, dict) else None
+
+    def pick(value) -> int:
+        value = value if isinstance(value, dict) else {}
+        major, minor = int(value.get("major") or 0), int(value.get("minor") or 0)
+        return major if tier == "major" else minor if tier == "minor" else max(major, minor)
+
+    if not isinstance(rerolls, dict):
+        return 0
+    if room == "build":
+        return max(pick(rerolls.get("land")), pick(rerolls.get("navyAir")))
+    return pick(rerolls)
+
+
+def _insert_casino_grant_request_sync(request_id: str, game_id: str, target_id: int, host_id: int, mode: str, payload: dict) -> None:
+    """Record the grant so the Casino's completion can hand the results back."""
+    conn = None
+    cur = None
+    try:
+        conn = _db_get_connection()
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO host_override_requests (request_id, game_id, target_user_id, host_user_id, mode, action, payload, dirty, created_at) "
+            "VALUES (%s, %s, %s, %s, %s, 'execute', %s, 0, %s)",
+            (request_id, str(game_id), int(target_id), int(host_id), mode, json.dumps(payload, ensure_ascii=False), int(time.time())),
+        )
+        conn.commit()
+    finally:
+        if cur is not None:
+            try:
+                cur.close()
+            except Exception:
+                pass
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+
+async def _casino_grant_link(game_key, target, actor, *, mode: str, nation, rooms: list, allowances: dict) -> str:
+    """A single-use Casino link for one host override (fresh: a whole run,
+    with `nation` a name or 'random'; partial: only `rooms`)."""
+    request_id = uuid.uuid4().hex
+    config = {
+        "gameId": str(game_key),
+        "offline": False,
+        "overrideTarget": str(target.id),
+        "overrideMode": mode,
+        "overrideKey": request_id,
+    }
+    if nation:
+        config["nation"] = nation
+    for room in _CASINO_ROOMS:
+        config[room] = room in rooms
+    stages = {}
+    for room in rooms:
+        stage = _CASINO_STAGE_OF_ROOM.get(room)
+        if stage:
+            stages[stage] = max(stages.get(stage, 0), max(0, min(10, int(allowances.get(room) or 0))))
+    if stages:
+        config["stageRedraws"] = json.dumps(stages)
+    await _run_mysql_io(
+        _insert_casino_grant_request_sync, request_id, str(game_key), target.id, actor.id, mode,
+        {"config": config, "source": "gamemaster"}, label="casino grant request",
+    )
+    username, is_banned = _member_identity_flags(target)
+    roles = _live_role_flags(target)
+    token = await _generate_web_access_token(
+        target.id,
+        can_roll_majors=roles["can_roll_majors"],
+        role_tier=roles["role_tier"],
+        game_id=str(game_key),
+        username=username,
+        is_vip=roles["is_vip"],
+        is_trusted=roles["is_trusted"],
+        is_verified=roles["is_verified"],
+        is_authenticated=roles["is_authenticated"],
+        is_banned=is_banned,
+        # A host override grant: the config drives the stages, never straight to a receipt.
+        is_grant=True,
+        grant_config=json.dumps(config, ensure_ascii=False),
+        ttl_seconds=CASINO_GRANT_TTL_SEC,
+    )
+    raw = json.dumps(config, ensure_ascii=False, separators=(",", ":"))
+    encoded = base64.urlsafe_b64encode(raw.encode("utf-8")).decode("ascii").rstrip("=")
+    return f"{BASE_URL}/?token={token}&config={encoded}"
+
+
+async def _casino_dm_link(target, game: dict, actor, *, title: str, text: str, url: str, label: str) -> bool:
+    """The player's Casino link, as a DM (sent even to a host acting on themselves)."""
+    mode = str(game.get("mode") or "Game")
+    embed = discord.Embed(
+        title=title,
+        description=f"{text}\n\n*The link works once, for 24 hours.*",
+        color=EmbedColor.SUCCESS,
+    )
+    ts = int(game.get("start_timestamp") or 0)
+    when = f" · <t:{ts}:F>" if ts > 0 else ""
+    embed.add_field(name="Game", value=f"{MODE_THREAD_LABELS.get(mode, mode)}{when}", inline=False)
+    who = getattr(actor, "display_name", None)
+    if who:
+        embed.set_footer(text=f"From {who} with the Host Tool")
+    view = discord.ui.View()
+    view.add_item(discord.ui.Button(label="Open the Casino", style=discord.ButtonStyle.link, url=url, emoji="🎲"))
+    return bool(await _dm_user_safe(target, embed=embed, view=view, label=label))
+
+
+def _casino_block_warnings(game: dict, target) -> list:
+    """Why a host may want a second look before adding this player back."""
+    warnings = []
+    uid = str(target.id)
+    if uid in {str(x) for x in game.get("randomizer_unreserved") or []}:
+        reason = str((game.get("randomizer_unreserve_reasons") or {}).get(uid) or "").strip()
+        warnings.append(
+            f"{target.display_name} used Emergency Unreserve in this game"
+            + (f" (their reason: {reason})." if reason else ".")
+        )
+    if uid in {str(x) for x in game.get("casino_host_removed") or []}:
+        warnings.append(f"A host removed {target.display_name} from this game earlier.")
+    return warnings
+
+
+def _casino_unblock(game: dict, user_id) -> None:
+    """A host bringing a player back clears what kept them out."""
+    uid = str(user_id)
+    for field in ("randomizer_unreserved", "casino_host_removed"):
+        if game.get(field):
+            game[field] = [x for x in game[field] if str(x) != uid]
+
+
+async def _web_casino_add(payload: dict, actor, game: dict, thread_id: str, user_id: int):
+    """Host Tool on a Casino game: a player onto a free nation (never a move or swap)."""
+    if not _can_manage_casino_game(actor, game):
+        return False, None, _CASINO_TOOL_REFUSAL
+    if str(payload.get("kind") or "") != "nation":
+        return False, None, "❌ Casino games only have nations: no co-ops or fillers."
+    if game.get("game_started"):
+        return False, None, "❌ This game has started, so the Casino is closed for it."
+    target = await _web_fetch_member(user_id)
+    if target is None:
+        return False, None, "❌ That player is no longer in the server."
+    mode = game.get("mode", "")
+    key = str(payload.get("nation") or "").strip()
+    if mode != "Other" and key not in _roster_valid_nations(mode):
+        return False, None, f"❌ '{key}' isn't a nation in {mode}."
+    res = game.get("reservations") or {}
+    current = _roster_slot_of(res, user_id)
+    if current:
+        return False, None, (
+            f"❌ {target.display_name} already has **{_pretty_reservation_name(current)}**. "
+            "Casino games don't move players: remove them first."
+        )
+    if res.get(key) is not None:
+        return False, None, f"❌ **{key}** is taken. Casino games never swap: remove that player first."
+    if not bool(payload.get("force")):
+        warnings = _casino_block_warnings(game, target)
+        if warnings:
+            return WEB_REQUEST_CONFIRM, {"warnings": warnings}, None
+
+    # Apply on a fresh read: the board may have changed while we checked.
+    games_data = await _read_games_fresh()
+    game = games_data.get(thread_id)
+    if not isinstance(game, dict):
+        return False, None, "❌ This game no longer exists."
+    res = game.get("reservations") or {}
+    if res.get(key) is not None or _roster_slot_of(res, user_id):
+        return False, None, "❌ The board changed while this was being checked — try again."
+    res[key] = user_id
+    game["reservations"] = res
+    _casino_unblock(game, user_id)
+    await save_single_game(thread_id, game, rewrite_reservations=True)
+    await _roster_after_change(thread_id)
+
+    label = _pretty_reservation_name(key)
+    try:
+        tier = "major" if is_major(key, mode) else "minor"
+    except Exception:
+        tier = "minor"
+    rooms = _casino_rooms_on(game)
+    dm_sent = False
+    if rooms:
+        url = await _casino_grant_link(
+            thread_id, target, actor, mode="fresh", nation=key, rooms=rooms,
+            allowances={room: _casino_default_rerolls(game, room, tier) for room in rooms},
+        )
+        dm_sent = await _casino_dm_link(
+            target, game, actor,
+            title="🎲 You were added to a Casino game",
+            text=f"**{actor.display_name}** added you to **{label}**. Roll the rest of your setup at the Casino.",
+            url=url, label="casino add",
+        )
+    else:
+        dm_sent = await _roster_notify_player(
+            target, game, thread_id, actor,
+            title="📋 You were added to a game",
+            text=f"**{actor.display_name}** added you to the game as **{label}**.",
+            color=EmbedColor.SUCCESS, label="casino add",
+        )
+    _audit_log("INFO", f"web casino add thread={thread_id} by={actor.id} user={user_id} slot={key} dm={dm_sent}")
+    audit_event(
+        "roster", "casino_add",
+        f"{actor.display_name} added {target.display_name} to {label} in a Casino game"
+        + (f" ({game['thread_name']})" if game.get("thread_name") else ""),
+        actor_id=actor.id, actor_name=actor.display_name,
+        target_id=user_id, target_name=target.display_name, game_id=thread_id,
+        details={"slot": key, "rooms": rooms, "dm_sent": dm_sent}, source="web",
+    )
+    return True, {"slot_key": key, "dm_sent": dm_sent}, None
+
+
+async def _web_casino_remove(payload: dict, actor, game: dict, thread_id: str, user_id: int):
+    """Host Tool on a Casino game: take a player off. Their receipt goes too,
+    and they can't roll their way back in (a host can add them again)."""
+    if not _can_manage_casino_game(actor, game):
+        return False, None, _CASINO_TOOL_REFUSAL
+    res = game.get("reservations") or {}
+    keys = [k for k, v in res.items() if str(v) == str(user_id)]
+    if not keys:
+        return True, {"removed": None}, None
+    for key in keys:
+        del res[key]
+    game["reservations"] = res
+    blocked = [str(x) for x in game.get("casino_host_removed") or []]
+    if str(user_id) not in blocked:
+        blocked.append(str(user_id))
+    game["casino_host_removed"] = blocked
+    for field in ("randomizer_last_roll", "web_override_rolls"):
+        if isinstance(game.get(field), dict):
+            game[field].pop(str(user_id), None)
+    await save_single_game(thread_id, game, rewrite_reservations=True)
+    await _roster_after_change(thread_id)
+    # Purges their web run (the receipt disappears) and flips the receipt log.
+    await _roster_drop_player_state(thread_id, user_id)
+    label = _pretty_reservation_name(keys[0])
+    if _roster_notify_on(payload):
+        await _roster_notify_player(
+            await _web_fetch_member(user_id), game, thread_id, actor,
+            title="🚫 You were removed from a Casino game",
+            text=f"**{actor.display_name}** removed you from **{label}**. Your Casino receipt for this game is gone.",
+            color=EmbedColor.DANGER, label="casino remove",
+        )
+    _audit_log("INFO", f"web casino remove thread={thread_id} by={actor.id} user={user_id} slots={keys}")
+    target_name = _audit_who(user_id) or str(user_id)
+    audit_event(
+        "roster", "casino_remove",
+        f"{actor.display_name} removed {target_name} from {label} in a Casino game"
+        + (f" ({game['thread_name']})" if game.get("thread_name") else ""),
+        actor_id=actor.id, actor_name=actor.display_name,
+        target_id=user_id, target_name=target_name, game_id=thread_id,
+        details={"slots": keys}, source="web",
+    )
+    return True, {"removed": keys[0]}, None
+
+
+async def _process_web_casino_grant(req: dict):
+    """Host Tool on a Casino game: "casino_roll" (a whole new roll, nation by
+    the wheel, for a player without one) or "casino_extra" (more rolls for
+    some rooms, for a player with a nation). The player gets the link by DM."""
+    action = str(req.get("action") or "")
+    payload = req.get("payload") or {}
+    actor = await _web_fetch_member(int(req.get("host_id") or 0))
+    if not _member_is_host(actor):
+        return False, None, "❌ Only members with a Host role can manage players."
+    thread_id, user_id, err = _roster_payload_ids(payload)
+    if err:
+        return False, None, err
+    games_data = await _read_games_fresh()
+    game = games_data.get(thread_id)
+    if not isinstance(game, dict):
+        return False, None, "❌ This game no longer exists."
+    if not _is_casino_game_dict(game):
+        return False, None, "❌ This isn't a Casino game."
+    if not _can_manage_casino_game(actor, game):
+        return False, None, _CASINO_TOOL_REFUSAL
+    if game.get("game_started") or game.get("status") in ("ended", "cancelled"):
+        return False, None, "❌ This game has started or ended, so the Casino is closed for it."
+    target = await _web_fetch_member(user_id)
+    if target is None:
+        return False, None, "❌ That player is no longer in the server."
+    current = _roster_slot_of(game.get("reservations") or {}, user_id)
+    if action == "casino_roll":
+        if current:
+            return False, None, (
+                f"❌ {target.display_name} already has **{_pretty_reservation_name(current)}**. "
+                "Give them extra rolls instead, or remove them first."
+            )
+        if not _casino_room_on(game, "nation"):
+            return False, None, "❌ This game doesn't roll nations: add the player to a nation instead."
+        if not bool(payload.get("force")):
+            warnings = _casino_block_warnings(game, target)
+            if warnings:
+                return WEB_REQUEST_CONFIRM, {"warnings": warnings}, None
+        rooms = _casino_rooms_on(game)
+        url = await _casino_grant_link(
+            thread_id, target, actor, mode="fresh", nation="random", rooms=rooms,
+            allowances={room: _casino_default_rerolls(game, room, "any") for room in rooms},
+        )
+        _casino_unblock(game, user_id)
+        await save_single_game(thread_id, game)
+        title, text = "🎲 You've got a Casino roll", f"**{actor.display_name}** gave you a roll in this Casino game. The wheel picks your nation."
+        summary = f"gave {target.display_name} a Casino roll"
+    else:
+        if not current:
+            return False, None, f"❌ {target.display_name} has no nation here yet: give them a roll or add them to a nation."
+        asked = [str(room) for room in payload.get("rooms") or []]
+        rooms = [room for room in _CASINO_ROOMS if room in asked and _casino_room_on(game, room)]
+        if not rooms:
+            return False, None, "❌ Pick at least one room that's on in this game."
+        try:
+            count = max(1, min(10, int(payload.get("count") or 1)))
+        except (TypeError, ValueError):
+            count = 1
+        url = await _casino_grant_link(
+            thread_id, target, actor, mode="partial", nation=None, rooms=rooms,
+            allowances={room: count for room in rooms},
+        )
+        names = ", ".join(_CASINO_ROOM_LABELS[room] for room in rooms)
+        title = "🎲 Extra Casino rolls"
+        text = (
+            f"**{actor.display_name}** gave you {count} extra roll{'s' if count != 1 else ''} for "
+            f"**{names}** on **{_pretty_reservation_name(current)}**."
+        )
+        summary = f"gave {target.display_name} {count} extra roll(s) for {names}"
+    dm_sent = await _casino_dm_link(target, game, actor, title=title, text=text, url=url, label=action)
+    _audit_log("INFO", f"web {action} thread={thread_id} by={actor.id} user={user_id} dm={dm_sent}")
+    audit_event(
+        "roster", action,
+        f"{actor.display_name} {summary}" + (f" in {game['thread_name']}" if game.get("thread_name") else ""),
+        actor_id=actor.id, actor_name=actor.display_name,
+        target_id=user_id, target_name=target.display_name, game_id=thread_id,
+        details={"rooms": rooms, "dm_sent": dm_sent}, source="web",
+    )
+    return True, {"dm_sent": dm_sent}, None
+
+
 async def _process_web_roster_assign(req: dict):
     """Put a player on a nation, co-op slot or filler (formerly /add,
     /add_coop, /add_filler). A taken nation needs occupied='swap' (the other
@@ -32079,6 +32468,8 @@ async def _process_web_roster_assign(req: dict):
         return False, None, "❌ This game no longer exists."
     if game.get("status") in ("ended", "cancelled"):
         return False, None, "❌ This game has ended."
+    if _is_casino_game_dict(game):
+        return await _web_casino_add(payload, actor, game, thread_id, user_id)
     target = await _web_fetch_member(user_id)
     if target is None:
         return False, None, "❌ That player is no longer in the server."
@@ -32323,6 +32714,8 @@ async def _process_web_roster_remove(req: dict):
     game = games_data.get(thread_id)
     if not isinstance(game, dict):
         return False, None, "❌ This game no longer exists."
+    if _is_casino_game_dict(game):
+        return await _web_casino_remove(payload, actor, game, thread_id, user_id)
     res = game.get("reservations") or {}
     keys = [k for k, v in res.items() if str(v) == str(user_id)]
     if not keys:
