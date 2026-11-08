@@ -31086,6 +31086,63 @@ async def close_ticket_command(interaction: discord.Interaction, resolution: str
     await _ticket_close_from_interaction(interaction, resolution)
 
 
+# ————— /botprofile: the bot's own avatar and banner (bot owner only) —————
+# The Developer Portal won't take animated GIFs, but the API does, so the
+# owner uploads them here. Home server only (HOME_ONLY_COMMANDS).
+
+BOT_PROFILE_MAX_BYTES = 10 * 1024 * 1024
+BOT_PROFILE_TYPES = {"image/gif", "image/png", "image/jpeg", "image/webp"}
+
+
+def _bot_profile_problem(attachment: discord.Attachment, label: str) -> str | None:
+    """Why this file can't be the bot's avatar or banner, or None if it can."""
+    kind = (attachment.content_type or "").split(";")[0].strip().lower()
+    if kind not in BOT_PROFILE_TYPES:
+        return f"❌ The {label} must be a GIF, PNG, JPG or WebP image."
+    if attachment.size > BOT_PROFILE_MAX_BYTES:
+        return f"❌ The {label} is {attachment.size / 1_000_000:.1f} MB; Discord takes up to 10 MB."
+    return None
+
+
+@tree.command(name="botprofile", description="[Bot owner] Change GameMaster's avatar and banner (animated GIFs work).", guild=discord.Object(id=GUILD_ID))
+@app_commands.default_permissions(administrator=True)
+@app_commands.describe(
+    avatar="New avatar: GIF, PNG, JPG or WebP, up to 10 MB",
+    banner="New profile banner: GIF, PNG, JPG or WebP, up to 10 MB (680×240 or bigger)",
+)
+async def bot_profile_command(
+    interaction: discord.Interaction,
+    avatar: Optional[discord.Attachment] = None,
+    banner: Optional[discord.Attachment] = None,
+):
+    if not await bot.is_owner(interaction.user):
+        return await _ticket_reply(interaction, "❌ Only the bot's owner can change its avatar and banner.")
+    if avatar is None and banner is None:
+        return await _ticket_reply(interaction, "❌ Attach an avatar, a banner, or both.")
+    for attachment, label in ((avatar, "avatar"), (banner, "banner")):
+        if attachment is not None and (problem := _bot_profile_problem(attachment, label)):
+            return await _ticket_reply(interaction, problem)
+    await _defer_ephemeral(interaction)
+    changes = {}
+    try:
+        if avatar is not None:
+            changes["avatar"] = await avatar.read()
+        if banner is not None:
+            changes["banner"] = await banner.read()
+        await bot.user.edit(**changes)
+    except ValueError:
+        return await _ticket_reply(interaction, "❌ Discord didn't recognise that file as an image. Try exporting it again.")
+    except discord.HTTPException as e:
+        return await _ticket_reply(
+            interaction,
+            f"❌ Discord refused the change: {e.text or e}\n"
+            "The avatar can only change a few times an hour; if it says too fast, wait and try again.",
+        )
+    done = " and ".join(name for name in ("avatar", "banner") if name in changes)
+    _audit_log("INFO", f"bot profile {done} changed by={interaction.user.id}")
+    await _ticket_reply(interaction, f"✅ Updated the bot's {done}. It can take a minute to show everywhere.")
+
+
 # ————— Inactive tickets: a ping after 24 h, closed after 48 h —————
 
 async def _ticket_last_human_activity(channel) -> float | None:
@@ -33398,7 +33455,7 @@ _PER_GUILD_SCALARS = (
     "HOST_LOG_WEBHOOK_URL", "TICKET_CATEGORY_ID",
 )
 # Slash commands only the home server gets.
-HOME_ONLY_COMMANDS: set[str] = set()
+HOME_ONLY_COMMANDS: set[str] = {"botprofile"}
 # Features a server can switch off (server settings → Features).
 SERVER_FEATURES = {
     "valor_merit": True, "daily_role_check": True, "vip_auto_carry_over": True, "cross_server_ban_alerts": True,
