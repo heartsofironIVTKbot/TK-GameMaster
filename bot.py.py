@@ -11232,7 +11232,7 @@ def format_reservation_totals(reservations: dict, mode: str) -> str:
 # GAME-HISTORY RECONSTRUCTION
 # Player / host game history was moved off player_stats and now lives in the
 # authoritative games record. These helpers rebuild "which game they played
-# what" straight from the games data so /info, /report and /report_host can
+# what" straight from the games data so the profile, /report and /report_host can
 # always show an accurate, up-to-date career instead of the empty legacy field.
 # ==========================================================================
 DISCORD_EPOCH_MS = 1420070400000
@@ -23540,7 +23540,7 @@ async def _send_game_reminder(guild, actor, key: str, game: dict, kind: str) -> 
                 + (f"🔢 **Checksum:** `{checksum}`\n" if checksum else "")
                 + f"\n⚠️ **Requirement:** You must show up for the game. {penalty_text}\n"
                 f"🚪 **Can't make it?** Unreserve on the website as soon as possible: {_map_game_url(key)}\n\n"
-                f"🆘 **Need Help?** Use `/help` in any {_community_name()} Discord channel for rules & mods."
+                f"🆘 **Need help?** The rules and mods are on the game's page (📜 Rules / 🧩 Mods)."
             )
             if await _dm_user_safe(member, content=content, label="early reminder"):
                 sent += 1
@@ -26645,104 +26645,7 @@ async def info(interaction: discord.Interaction):
     view.add_item(discord.ui.Button(label="Open my profile", style=discord.ButtonStyle.link, url=url, emoji="👤"))
     await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
-# HELP SYSTEM UI & COMMAND
-class HelpSelect(discord.ui.Select):
-    def __init__(self):
-        options = [
-            discord.SelectOption(label="How to actually play?", value="how_to_play", description="Learn how reservations and lobbies work.", emoji="🎮"),
-            discord.SelectOption(label="Wrong Checksum", value="wrong_checksum", description="Fix checksum and mod issues.", emoji="😭"),
-            discord.SelectOption(label="Connection Timed Out", value="connection_timed_out", description="Fix connection issues when checksum is correct.", emoji="😓")
-        ]
-        super().__init__(placeholder="Select an issue...", min_values=1, max_values=1, options=options)
-
-    async def callback(self, interaction: discord.Interaction):
-        await interaction.response.defer(ephemeral=True)
-        user = interaction.user
-        choice = self.values[0]
-
-        try:
-            if choice == "how_to_play":
-                msg = (
-                    "- First, make sure that you are on reservation list before game start date. Reserve through the map link in the game's announcement.\n\n"
-                    "- When the host opens the multiplayer lobby, you will get DM from me (the Gamemaster bot).\n\n"
-                    "- After you get the DM, you'll gain access to secret game Information channel, where ID, Password and game Checksum is posted. You'll also get **Roleplay Pass** discord role, which also grants you access to more voice channels. Every nation gets their unique voice channel.\n\n"
-                    "❓ *Don't have the right checksum? Request help from the bot!*\n\n"
-                    "❗ Make sure to use same (or similar) username in game as in discord. This helps host(s) to manage games.\n\n"
-                    "https://giphy.com/gifs/id-password-smTtOG3raHuhx23HTY"
-                )
-                await user.send(msg)
-
-            elif choice == "wrong_checksum":
-                msg1 = (
-                    "__Getting bunch of connection timed outs or wrong checksum errors?__\n\n"
-                    "- First, double check that you have correct mods installed.\n\n"
-                    "https://giphy.com/gifs/download-mods-6GtQ7SxzO9dqreWJMB"
-                )
-                msg2 = (
-                    "- Then make sure that you have them turned on, and that you have correct playlist selected.\n\n"
-                    "https://giphy.com/gifs/check-correct-playlist-Sh6dvzJUHITHygntol"
-                )
-                msg3 = (
-                    "- Check in-game checksum again. Does it match the one mentioned in Info channel?\n\n"
-                    "❓ Don't know what checksum is and where to find it? Look at the gif down below for visual guide! Its that 4 digit number in (brackets).\n\n"
-                    "https://giphy.com/gifs/checksum-l1YRb5ioBh7WHKWds3"
-                )
-                msg4 = (
-                    "💢 Have correct checksum but still can't connect? Type /help again in any discord channel and open following guide: \"Connection Timed Out 😓\".\n\n"
-                    "(Link will be added later)"
-                )
-                await user.send(msg1)
-                await user.send(msg2)
-                await user.send(msg3)
-                await user.send(msg4)
-
-            elif choice == "connection_timed_out":
-                msg1 = (
-                    "__Have Correct Checksum but still can't connect?__\n\n"
-                    "- First Triple Check that you have correct checksum. The Checksum is always provided in game-Information channel (which is hidden until lobby opens).\n\n"
-                    "❓ Don't have correct checksum? Go to discord and type /help again, then open following guide: \"Wrong Checksum 😭\"\n\n"
-                    "https://giphy.com/gifs/checksum-l1YRb5ioBh7WHKWds3"
-                )
-                msg2 = (
-                    "__If you have correct Checksum but still can't connect, Here is 2 step fix.__\n\n"
-                    "- First, close your game. Launch the game. Go to \"Game Settings\", scroll down to __Game__ category and click **CLEAR USER DIRECTORY.** \n\n"
-                    "- Then go back to \"Playsets\", Disable and then Re-Enable mods again. Double check that you are using correct Playset in \"Home\" tab and click Play.\n\n"
-                    "https://giphy.com/gifs/mWpsiSzmTSGLR8ifDo"
-                )
-                msg3 = (
-                    "- After you have restarted your game, make sure to Rename yourself in \"Multiplayer\" tab as something else.\n\n"
-                    "https://giphy.com/gifs/uqjPHJYEsa3IXQqXGG"
-                )
-                msg4 = (
-                    "__Still can't connect?__\n\n"
-                    "- If you still can't connect after completing first 2 steps, please ping the game host and say: \"Lobby is most likely bugged, can't connect\".\n\n"
-                    "❗ Lobby Bug is a famous Hoi4 bug that prevents any new players joining in the lobby. Lobby Bug usually occurs when Lobby has been open for a long time. The only fix is for the host to close the current lobby and open a new one with new ID and Password."
-                )
-                await user.send(msg1)
-                await user.send(msg2)
-                await user.send(msg3)
-                await user.send(msg4)
-
-            # Let the user know the DMs were sent
-            await interaction.followup.send("✅ I've sent you a DM with the instructions!", ephemeral=True)
-
-        except discord.Forbidden:
-            # Catch users who have their server DMs turned off
-            await interaction.followup.send("❌ I cannot send you a DM. Please check your privacy settings and allow direct messages from server members.", ephemeral=True)
-
-
-class HelpView(discord.ui.View):
-    def __init__(self):
-        super().__init__(timeout=None)
-        self.add_item(HelpSelect())
-
-
-@tree.command(name="help", description="Get help with the game or connection issues.", guild=discord.Object(id=GUILD_ID))
-async def help_command(interaction: discord.Interaction):
-    view = HelpView()
-    # Sends an ephemeral message with the dropdown menu so only the user can see it
-    await interaction.response.send_message("What do you need help with? Please select an option below:", view=view, ephemeral=True)
-
+# (/help was removed on 2026-11-08, Niko's pick.)
 
 
 SCHEDULE_CHANNEL_ID = 0
@@ -30234,7 +30137,7 @@ async def _process_web_day_lock(req: dict, lock: bool) -> tuple[bool, dict | Non
 # =============================================================================
 # TICKETS — merged in from the TicketMaster bot (Hearts of Iron IV only)
 # -----------------------------------------------------------------------------
-# Players press the ticket panel (/spawn); GameMaster makes a private channel
+# Players press the ticket panel (posted from the website); GameMaster makes a private channel
 # for them and the staff who handle that kind of ticket:
 #   Verification (RP / Historical)    Ticket Support + Host Management
 #   Host application (RP / HIST)      Host Management only
@@ -31009,7 +30912,7 @@ TICKET_PANEL_DESCRIPTION = (
 
 
 class TicketPanelView(discord.ui.View):
-    """The ticket panel (/spawn). The first three ids are the old ticket bot's,
+    """The ticket panel (posted from the website). The first three ids are the old ticket bot's,
     so a panel it posted keeps working."""
 
     def __init__(self):
@@ -31056,24 +30959,43 @@ class TicketPanelView(discord.ui.View):
         ))
 
 
-@tree.command(name="spawn", description="[Host Management] Post the ticket panel in this channel.", guild=discord.Object(id=GUILD_ID))
-async def spawn_ticket_panel(interaction: discord.Interaction):
-    if interaction.guild is None:
-        return await _ticket_reply(interaction, "❌ This only works inside the server.")
-    if not _member_is_staff(interaction.user):
-        return await _ticket_reply(interaction, "❌ Only Host Management (or admins) can post the ticket panel.")
+TICKET_PANEL_KEY = "ticket_panel"  # bot_config: {"channel_id", "message_id"}
+
+
+async def _post_ticket_panel(guild) -> str:
+    """Post the ticket panel in the ticket panel channel and remove the previous
+    one (the website's "Post or re-post the ticket panel"; /spawn did this
+    until 2026-11-08). Run inside the server's scope. Raises ModerationError
+    when it can't."""
+    channel_id = int(G.TICKET_CHANNEL_ID or 0)
+    channel = guild.get_channel(channel_id) if channel_id else None
+    if channel is None:
+        raise ModerationError("❌ Pick the Ticket panel channel in Channels (and save) first.")
     embed = discord.Embed(title="Contact the Host Team", description=TICKET_PANEL_DESCRIPTION, color=EmbedColor.SUCCESS)
     try:
-        await interaction.channel.send(embed=embed, view=TicketPanelView())
+        message = await channel.send(embed=embed, view=TicketPanelView())
+    except discord.Forbidden:
+        raise ModerationError(f"❌ GameMaster can't post in #{channel.name} — give it View Channel and Send Messages there.")
     except discord.HTTPException as e:
-        return await _ticket_reply(interaction, f"❌ Couldn't post the panel here: {e}")
+        raise ModerationError(f"❌ Couldn't post the ticket panel in #{channel.name}: {e}")
+    config = await read_json(BOT_CONFIG_FILE)
+    old = config.get(TICKET_PANEL_KEY) or {}
+    if old.get("message_id") and int(old.get("message_id")) != message.id:
+        try:
+            old_channel = guild.get_channel(int(old.get("channel_id") or 0))
+            if old_channel is not None:
+                await (await old_channel.fetch_message(int(old["message_id"]))).delete()
+        except Exception:
+            pass  # already gone
+    config[TICKET_PANEL_KEY] = {"channel_id": channel.id, "message_id": message.id}
+    await write_json(BOT_CONFIG_FILE, config)
     missing = []
     if not G.TICKET_CATEGORY_ID:
         missing.append("a ticket category")
     if not TICKET_SUPPORT_ROLES:
         missing.append("a Ticket Support role")
-    note = f"\n⚠️ Still to set on the website (server settings → Tickets): {', '.join(missing)}." if missing else ""
-    await _ticket_reply(interaction, "✅ Ticket panel posted." + note)
+    note = f" Still to set (Tickets): {', '.join(missing)}." if missing else ""
+    return f"Posted the ticket panel in #{channel.name}.{note}"
 
 
 @tree.command(name="close", description="Close this ticket if its buttons don't work.", guild=discord.Object(id=GUILD_ID))
@@ -31086,61 +31008,8 @@ async def close_ticket_command(interaction: discord.Interaction, resolution: str
     await _ticket_close_from_interaction(interaction, resolution)
 
 
-# ————— /botprofile: the bot's own avatar and banner (bot owner only) —————
-# The Developer Portal won't take animated GIFs, but the API does, so the
-# owner uploads them here. Home server only (HOME_ONLY_COMMANDS).
-
-BOT_PROFILE_MAX_BYTES = 10 * 1024 * 1024
-BOT_PROFILE_TYPES = {"image/gif", "image/png", "image/jpeg", "image/webp"}
-
-
-def _bot_profile_problem(attachment: discord.Attachment, label: str) -> str | None:
-    """Why this file can't be the bot's avatar or banner, or None if it can."""
-    kind = (attachment.content_type or "").split(";")[0].strip().lower()
-    if kind not in BOT_PROFILE_TYPES:
-        return f"❌ The {label} must be a GIF, PNG, JPG or WebP image."
-    if attachment.size > BOT_PROFILE_MAX_BYTES:
-        return f"❌ The {label} is {attachment.size / 1_000_000:.1f} MB; Discord takes up to 10 MB."
-    return None
-
-
-@tree.command(name="botprofile", description="[Bot owner] Change GameMaster's avatar and banner (animated GIFs work).", guild=discord.Object(id=GUILD_ID))
-@app_commands.default_permissions(administrator=True)
-@app_commands.describe(
-    avatar="New avatar: GIF, PNG, JPG or WebP, up to 10 MB",
-    banner="New profile banner: GIF, PNG, JPG or WebP, up to 10 MB (680×240 or bigger)",
-)
-async def bot_profile_command(
-    interaction: discord.Interaction,
-    avatar: Optional[discord.Attachment] = None,
-    banner: Optional[discord.Attachment] = None,
-):
-    if not await bot.is_owner(interaction.user):
-        return await _ticket_reply(interaction, "❌ Only the bot's owner can change its avatar and banner.")
-    if avatar is None and banner is None:
-        return await _ticket_reply(interaction, "❌ Attach an avatar, a banner, or both.")
-    for attachment, label in ((avatar, "avatar"), (banner, "banner")):
-        if attachment is not None and (problem := _bot_profile_problem(attachment, label)):
-            return await _ticket_reply(interaction, problem)
-    await _defer_ephemeral(interaction)
-    changes = {}
-    try:
-        if avatar is not None:
-            changes["avatar"] = await avatar.read()
-        if banner is not None:
-            changes["banner"] = await banner.read()
-        await bot.user.edit(**changes)
-    except ValueError:
-        return await _ticket_reply(interaction, "❌ Discord didn't recognise that file as an image. Try exporting it again.")
-    except discord.HTTPException as e:
-        return await _ticket_reply(
-            interaction,
-            f"❌ Discord refused the change: {e.text or e}\n"
-            "The avatar can only change a few times an hour; if it says too fast, wait and try again.",
-        )
-    done = " and ".join(name for name in ("avatar", "banner") if name in changes)
-    _audit_log("INFO", f"bot profile {done} changed by={interaction.user.id}")
-    await _ticket_reply(interaction, f"✅ Updated the bot's {done}. It can take a minute to show everywhere.")
+# (/botprofile was removed on 2026-11-08, Niko's pick: set the bot's avatar
+# and banner in the Discord Developer Portal.)
 
 
 # ————— Inactive tickets: a ping after 24 h, closed after 48 h —————
@@ -33455,7 +33324,7 @@ _PER_GUILD_SCALARS = (
     "HOST_LOG_WEBHOOK_URL", "TICKET_CATEGORY_ID",
 )
 # Slash commands only the home server gets.
-HOME_ONLY_COMMANDS: set[str] = {"botprofile"}
+HOME_ONLY_COMMANDS: set[str] = set()  # none since /botprofile went (2026-11-08)
 # Features a server can switch off (server settings → Features).
 SERVER_FEATURES = {
     "valor_merit": True, "daily_role_check": True, "vip_auto_carry_over": True, "cross_server_ban_alerts": True,
@@ -34858,7 +34727,7 @@ async def _run_for_active_guilds(func, label: str) -> None:
 
 
 # ————— Website requests: create a role / channel during setup —————
-SERVER_SETUP_OPS = ("create_role", "create_channel", "refresh", "sync_commands", "resend_welcome", "test_post", "schedule_panel")
+SERVER_SETUP_OPS = ("create_role", "create_channel", "refresh", "sync_commands", "resend_welcome", "test_post", "schedule_panel", "ticket_panel")
 SERVER_SETUP_CHANNEL_KINDS = ("text", "voice", "category", "forum")
 
 
@@ -34907,6 +34776,12 @@ async def _process_web_server_setup(req: dict):
             try:
                 with guild_scope(guild.id):
                     done = await _post_schedule_panel(guild)
+            except ModerationError as e:
+                return False, None, str(e)
+        elif op == "ticket_panel":
+            try:
+                with guild_scope(guild.id):
+                    done = await _post_ticket_panel(guild)
             except ModerationError as e:
                 return False, None, str(e)
         elif op == "resend_welcome":
