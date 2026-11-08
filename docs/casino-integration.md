@@ -107,10 +107,16 @@ The Casino and the bot share the database, and that is the hand-off:
    games, and `/api/reserve` refuses picking and unreserving there.
    `CASINO_URL` (default https://tkcasino.online) can point it elsewhere.
    Not yet tried against the real database (step 4's end-to-end test).
-3. **The Casino site:** View reservations button, texts that point to
-   GameMaster, denied/expired screens that link back, TLS for Aiven. Niko puts
-   the bot's database settings into the Casino's Vercel project (dashboard,
-   never in git).
+3. ✅ **The Casino site** (2026-11-08, `hoi4-casino` commit `01711aa`):
+   receipts (live and `/receipt/<id>`) have a **View reservations** button to
+   the game's map; the expired-link screen sends players back to GameMaster
+   for a fresh link (straight to the game); the old "/gamble" texts are gone;
+   the database connection checks the provider's certificate when one is
+   set (`lib/db.ts`), and no longer logs any of the password's characters.
+   **Niko:** in the Casino's Vercel project, set the database settings to the
+   same values the bot uses (incl. the certificate), never in git. The
+   Casino's host Inspect / Override pages still mention Discord commands;
+   step 5 replaces them.
 4. **Picks on the map at once**, and **View receipt** on players for the host
    and co-hosts.
 5. **Host tools:** add, give a roll, extra rolls, remove, with the DMs; no
