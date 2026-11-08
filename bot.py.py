@@ -851,6 +851,35 @@ CREATE TABLE IF NOT EXISTS receipt_dm_queue (
 # Web-initiated unreserves (Phase 5 web panel) enqueue rows with
 # action='unreserve' (or an empty slot_key) — the loop removes the user's
 # reservation for that thread.
+# Fortunes of War (docs/casino-integration.md, step 7): one row per player in
+# a Fortunes game. The bot keeps nation / HOI4 tag / major / allowance in step
+# with the reservations (fortunes_sync_loop); GameMaster's /casino/<game> sets
+# the access key; tkcasino.online's Fortunes room deals the deck and records
+# the card (state: new → dealt → pending → locked). The card stays with the
+# player when they change nation.
+_FORTUNES_DRAWS_DDL = """
+CREATE TABLE IF NOT EXISTS fortunes_draws (
+    game_id VARCHAR(64) NOT NULL,
+    user_id BIGINT NOT NULL,
+    nation VARCHAR(128) NULL,
+    hoi4_tag VARCHAR(8) NULL,
+    slot_priority TINYINT NOT NULL DEFAULT 0,
+    is_major TINYINT(1) NOT NULL DEFAULT 0,
+    max_redraws INT NOT NULL DEFAULT 0,
+    redraws_used INT NOT NULL DEFAULT 0,
+    deck TEXT NULL,
+    card VARCHAR(80) NULL,
+    card_name VARCHAR(80) NULL,
+    state VARCHAR(12) NOT NULL DEFAULT 'new',
+    access_key CHAR(32) NULL,
+    key_expires_at BIGINT NULL,
+    created_at BIGINT NOT NULL,
+    updated_at BIGINT NOT NULL,
+    PRIMARY KEY (game_id, user_id),
+    UNIQUE KEY uq_fortunes_access_key (access_key)
+)
+"""
+
 _RESERVATION_SYNC_QUEUE_DDL = """
 CREATE TABLE IF NOT EXISTS reservation_sync_queue (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -1543,6 +1572,8 @@ def _ensure_users_schema_mysql() -> list[str]:
         cursor.execute(_TICKET_RECORDS_DDL)
         cursor.execute(_TICKET_MESSAGES_DDL)
         cursor.execute(_TICKET_FILES_DDL)
+        # Fortunes of War cards (shared with the website and tkcasino.online).
+        cursor.execute(_FORTUNES_DRAWS_DDL)
 
         # House Receipt logging (Phase 3): game_reservations gains an optional
         # log_message_id column (self-healed for tables created before it).
@@ -31570,7 +31601,7 @@ async def audit_trail_retention_loop():
 _AUDIT_SELF_RECORDED = frozenset({
     # feedback_rate: who gave which rating stays private, so no audit row.
     "roster_assign", "roster_remove", "moderation", "dishonored", "host_rating", "member_roles", "feedback_rate",
-    "casino_emergency_unreserve",
+    "casino_emergency_unreserve", "fortunes_redraw", "fortunes_reset",
     *GAME_LIFECYCLE_ACTIONS,
 })
 # Request action → (audit category, audit action, what the actor did).
@@ -31701,6 +31732,8 @@ async def web_schedule_request_loop():
                 ok, result, err = await _process_web_casino_grant(req)
             elif action == "casino_emergency_unreserve":
                 ok, result, err = await _process_web_casino_emergency_unreserve(req)
+            elif action in ("fortunes_redraw", "fortunes_reset"):
+                ok, result, err = await _process_web_fortunes_tool(req)
             elif action in ("moderation", "dishonored"):
                 ok, result, err = await _process_web_moderation(req)
             elif action == "host_rating":
@@ -32363,6 +32396,235 @@ async def _web_casino_remove(payload: dict, actor, game: dict, thread_id: str, u
         details={"slots": keys}, source="web",
     )
     return True, {"removed": keys[0]}, None
+
+
+# ————— Fortunes of War (docs/casino-integration.md, step 7) —————
+# Players reserve on the map as usual, then draw one of 15 face-down cards in
+# the Fortunes room on tkcasino.online (via GameMaster's /casino/<game>).
+# The bot keeps each player's fortunes_draws row in step with their nation,
+# and runs the host's Redraw / Reset from the map's Host Tool.
+
+FORTUNES_SYNC_INTERVAL_SEC = 10
+_fortunes_sync_sig: dict = {}
+
+
+def _is_fortunes_game_dict(game) -> bool:
+    return isinstance(game, dict) and (bool(game.get("fortunes_only")) or game.get("add_on") == "fortunes")
+
+
+def _fortunes_base_redraws(fortunes_mode: str, major: bool) -> int:
+    """Casual: majors 2, minors 1. Competitive: majors 1, minors 0 (as /draw had)."""
+    if fortunes_mode == "competitive":
+        return 1 if major else 0
+    return 2 if major else 1
+
+
+def _fortunes_players(game: dict) -> dict:
+    """Who holds a nation in a Fortunes game: user id → nation, HOI4 tag, slot priority, major."""
+    mode = str(game.get("mode") or "")
+    players = {}
+    for uid in sorted({str(v) for v in (game.get("reservations") or {}).values()}):
+        if not uid.isdigit():
+            continue
+        key = _fortune_live_reservation_key(game, uid)
+        if not key or str(key).startswith("_FILL_"):
+            continue
+        base = str(key).split("_coop", 1)[0].strip()
+        try:
+            major = bool(is_major(base, mode))
+        except Exception:
+            major = False
+        players[uid] = {
+            "nation": base,
+            "tag": _hoi4_tag_for_nation(base),
+            # The main holder's card wins over a co-op's in the host's script.
+            "priority": 2 if "_coop" in str(key) else 3,
+            "major": major,
+        }
+    return players
+
+
+def _sync_fortunes_draws_sync(game_id: str, players: dict, fortunes_mode: str) -> None:
+    conn = None
+    cur = None
+    try:
+        conn = _db_get_connection()
+        cur = conn.cursor()
+        now = int(time.time())
+        for uid, entry in players.items():
+            cur.execute(
+                "INSERT INTO fortunes_draws (game_id, user_id, nation, hoi4_tag, slot_priority, is_major, max_redraws, created_at, updated_at) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) "
+                "ON DUPLICATE KEY UPDATE nation = VALUES(nation), hoi4_tag = VALUES(hoi4_tag), "
+                "slot_priority = VALUES(slot_priority), is_major = VALUES(is_major), updated_at = VALUES(updated_at)",
+                (
+                    str(game_id), int(uid), entry["nation"][:128], entry["tag"], int(entry["priority"]),
+                    1 if entry["major"] else 0, _fortunes_base_redraws(fortunes_mode, entry["major"]), now, now,
+                ),
+            )
+        # Off the board: the card stays with them, but no nation means no line in the script.
+        if players:
+            marks = ",".join(["%s"] * len(players))
+            cur.execute(
+                f"UPDATE fortunes_draws SET nation = NULL, hoi4_tag = NULL, slot_priority = 0, updated_at = %s "
+                f"WHERE game_id = %s AND nation IS NOT NULL AND user_id NOT IN ({marks})",
+                (now, str(game_id), *[int(uid) for uid in players]),
+            )
+        else:
+            cur.execute(
+                "UPDATE fortunes_draws SET nation = NULL, hoi4_tag = NULL, slot_priority = 0, updated_at = %s "
+                "WHERE game_id = %s AND nation IS NOT NULL",
+                (now, str(game_id)),
+            )
+        conn.commit()
+    finally:
+        if cur is not None:
+            try:
+                cur.close()
+            except Exception:
+                pass
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+
+@tasks.loop(seconds=FORTUNES_SYNC_INTERVAL_SEC)
+async def fortunes_sync_loop():
+    """Keeps fortunes_draws in step with who holds which nation in Fortunes games."""
+    try:
+        for key, game in list(_all_games().items()):
+            key = str(key)
+            if not _is_fortunes_game_dict(game) or game.get("status") in ("ended", "cancelled"):
+                _fortunes_sync_sig.pop(key, None)
+                continue
+            with guild_scope(game.get("guild_id")):
+                players = _fortunes_players(game)
+            fortunes_mode = "competitive" if game.get("fortunes_mode") == "competitive" else "casual"
+            sig = json.dumps([players, fortunes_mode], sort_keys=True)
+            if _fortunes_sync_sig.get(key) == sig:
+                continue
+            await _run_mysql_io(_sync_fortunes_draws_sync, key, players, fortunes_mode, label="fortunes sync")
+            _fortunes_sync_sig[key] = sig
+    except Exception as e:
+        print(f"Error in fortunes_sync_loop: {e}")
+
+
+def _fortunes_row_sync(game_id: str, user_id: int):
+    conn = None
+    cur = None
+    try:
+        conn = _db_get_connection()
+        cur = conn.cursor(dictionary=True)
+        cur.execute(
+            "SELECT nation, state, card_name, max_redraws, redraws_used FROM fortunes_draws WHERE game_id = %s AND user_id = %s",
+            (str(game_id), int(user_id)),
+        )
+        row = cur.fetchone()
+        return dict(row) if row else None
+    finally:
+        if cur is not None:
+            try:
+                cur.close()
+            except Exception:
+                pass
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+
+def _fortunes_tool_update_sync(game_id: str, user_id: int, op: str) -> None:
+    conn = None
+    cur = None
+    try:
+        conn = _db_get_connection()
+        cur = conn.cursor()
+        now = int(time.time())
+        if op == "redraw":
+            # One more redraw; a locked card opens again (keep it or redraw).
+            cur.execute(
+                "UPDATE fortunes_draws SET max_redraws = max_redraws + 1, "
+                "state = IF(state = 'locked', 'pending', state), updated_at = %s "
+                "WHERE game_id = %s AND user_id = %s",
+                (now, str(game_id), int(user_id)),
+            )
+        else:
+            # A fresh deck with their usual redraws; old links stop working.
+            cur.execute(
+                "UPDATE fortunes_draws SET deck = NULL, card = NULL, card_name = NULL, state = 'new', "
+                "redraws_used = 0, access_key = NULL, key_expires_at = NULL, updated_at = %s "
+                "WHERE game_id = %s AND user_id = %s",
+                (now, str(game_id), int(user_id)),
+            )
+        conn.commit()
+    finally:
+        if cur is not None:
+            try:
+                cur.close()
+            except Exception:
+                pass
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+
+async def _process_web_fortunes_tool(req: dict):
+    """Host Tool on a Fortunes game: "fortunes_redraw" (one extra redraw) or
+    "fortunes_reset" (a fresh deck). The player gets a DM with the link."""
+    action = str(req.get("action") or "")
+    payload = req.get("payload") or {}
+    actor = await _web_fetch_member(int(req.get("host_id") or 0))
+    if not _member_is_host(actor):
+        return False, None, "❌ Only members with a Host role can manage players."
+    thread_id, user_id, err = _roster_payload_ids(payload)
+    if err:
+        return False, None, err
+    games_data = await _read_games_fresh()
+    storage_key, game = _find_game_entry(games_data, thread_id)
+    if not _is_fortunes_game_dict(game):
+        return False, None, "❌ This isn't a Fortunes of War game."
+    key = str(storage_key or thread_id)
+    if not _can_manage_casino_game(actor, game):
+        return False, None, "❌ Only this game's host, its co-hosts and Host Management can change players' cards."
+    if game.get("game_started") or game.get("status") in ("ended", "cancelled"):
+        return False, None, "❌ This game has started, so the cards are sealed."
+    target = await _web_fetch_member(user_id)
+    name = getattr(target, "display_name", None) or _audit_who(user_id) or str(user_id)
+    row = await _run_mysql_io(_fortunes_row_sync, key, user_id, label="fortunes row")
+    if not row or not row.get("nation"):
+        return False, None, f"❌ {name} has no nation in this game, so there's no card to change."
+    op = "redraw" if action == "fortunes_redraw" else "reset"
+    await _run_mysql_io(_fortunes_tool_update_sync, key, user_id, op, label=f"fortunes {op}")
+
+    dm_sent = False
+    if target is not None:
+        text = (
+            f"**{actor.display_name}** gave you an extra redraw for your Fortunes of War card."
+            if op == "redraw"
+            else f"**{actor.display_name}** reset your Fortunes of War card. Draw a fresh one."
+        )
+        embed = discord.Embed(title="🎴 Fortunes of War", description=text, color=EmbedColor.ROLEPLAY)
+        mode = str(game.get("mode") or "Game")
+        ts = int(game.get("start_timestamp") or 0)
+        embed.add_field(name="Game", value=MODE_THREAD_LABELS.get(mode, mode) + (f" · <t:{ts}:F>" if ts > 0 else ""), inline=False)
+        view = discord.ui.View()
+        view.add_item(discord.ui.Button(label="Open Fortunes of War", style=discord.ButtonStyle.link, url=f"{WEB_SITE_URL}/casino/{key}", emoji="🎴"))
+        dm_sent = bool(await _dm_user_safe(target, embed=embed, view=view, label=f"fortunes {op}"))
+    _audit_log("INFO", f"web fortunes {op} thread={key} by={actor.id} user={user_id} dm={dm_sent}")
+    audit_event(
+        "roster", f"fortunes_{op}",
+        f"{actor.display_name} {'gave ' + name + ' an extra Fortunes redraw' if op == 'redraw' else 'reset ' + name + chr(39) + 's Fortunes card'}"
+        + (f" ({game['thread_name']})" if game.get("thread_name") else ""),
+        actor_id=actor.id, actor_name=actor.display_name,
+        target_id=user_id, target_name=name, game_id=key,
+        details={"card": row.get("card_name"), "state": row.get("state"), "dm_sent": dm_sent}, source="web",
+    )
+    return True, {"dm_sent": dm_sent}, None
 
 
 # ————— Casino games: Emergency Unreserve (docs/casino-integration.md, step 6) —————
@@ -35787,6 +36049,11 @@ async def on_ready():
         # SELECTION time and re-renders the public reservation embeds.
         if not reservation_sync_loop.is_running():
             reservation_sync_loop.start()
+            loops_started += 1
+
+        # Fortunes of War: keeps fortunes_draws in step with the reservations.
+        if not fortunes_sync_loop.is_running():
+            fortunes_sync_loop.start()
             loops_started += 1
 
         # Web run FINALIZED → receipt DM delivery: drains receipt_dm_queue
