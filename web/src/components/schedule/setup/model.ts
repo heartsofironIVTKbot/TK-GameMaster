@@ -1,4 +1,5 @@
 import { Check, Gamepad2, Megaphone, Sparkles, Users, type LucideIcon } from "lucide-react";
+import { defaultCasinoConfig, sanitizeCasinoConfig, type CasinoConfig } from "@/lib/casinoSettings";
 import {
   ADD_ON_VALUES,
   addOnOption,
@@ -103,6 +104,10 @@ export interface SetupForm {
   mods: ResourceEntry[] | null;
   /** Draft game settings; null = a normal game. */
   draft: DraftForm | null;
+  /** Casino games: rooms, re-rolls and the step-down (Extras → Casino). */
+  casino: CasinoConfig;
+  /** Casino / Fortunes games: co-hosts' Discord ids. */
+  coHosts: string[];
 }
 
 export interface DraftTeamForm {
@@ -193,6 +198,8 @@ export function initialForm(date: string): SetupForm {
     rules: null,
     mods: null,
     draft: null,
+    casino: defaultCasinoConfig(),
+    coHosts: [],
   };
 }
 
@@ -302,6 +309,8 @@ export function formFromSettings(settings: SlotSettings, timeZone: string): Setu
   form.layout = settings.nation_layout;
   form.rules = settings.rules;
   form.mods = settings.mods;
+  if (settings.casino_settings) form.casino = sanitizeCasinoConfig(settings.casino_settings);
+  form.coHosts = [...(settings.co_hosts ?? [])];
   if (settings.draft && settings.draft.teams.length === 2) {
     const [one, two] = settings.draft.teams.map((team) => ({
       name: team.name,
@@ -432,6 +441,8 @@ export function deriveSetup(form: SetupForm, context: SetupContext): DerivedSetu
           first_picker: form.draft.coinFlip ? null : form.draft.firstPicker,
         }
       : null,
+    casino_settings: form.addOn === "randomizer" ? form.casino : null,
+    co_hosts: form.addOn === "randomizer" || form.addOn === "fortunes" ? form.coHosts : [],
   };
 
   const validation = timeOnly

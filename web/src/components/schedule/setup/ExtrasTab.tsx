@@ -4,9 +4,11 @@ import { BellRing, CircleOff, ClipboardCheck, Construction, Dices, Shuffle, Skul
 import { useEffect, useState } from "react";
 import ResourceListEditor from "@/components/presets/ResourceListEditor";
 import { PRESET_LIMITS, type ModeDefaults } from "@/lib/presetTypes";
-import { ADD_ONS, LOGGING_MODES, addOnOption } from "@/lib/scheduleOptions";
+import { ADD_ONS, HOME_ONLY_ADD_ONS, LOGGING_MODES, addOnOption } from "@/lib/scheduleOptions";
+import type { HostOption } from "@/lib/scheduleTypes";
 import { DRAFT_BLOCKED_ADDONS } from "@/lib/scheduleValidation";
 import { Segmented, SectionCard, Toggle } from "../ui";
+import CasinoSection, { CoHostsCard } from "./CasinoSection";
 import DraftSection from "./DraftSection";
 import { randomChecksum, type SetupForm } from "./model";
 
@@ -23,11 +25,22 @@ export default function ExtrasTab({
   form,
   update,
   modeDefaults,
+  homeServer,
+  hosts,
+  hostId,
+  gameSec,
 }: {
   form: SetupForm;
   update: (patch: Partial<SetupForm>) => void;
   /** The mode's standard rules and mods (from the bot). */
   modeDefaults?: ModeDefaults;
+  /** TommyKay's server: the only one with the Casino and Fortunes of War. */
+  homeServer: boolean;
+  /** The server's hosts (co-hosts are picked from them). */
+  hosts: HostOption[];
+  /** The game's host. */
+  hostId: string;
+  gameSec: number;
 }) {
   // Draft teams draft from the game's nation groups (the preset's turned-on ones, else the mode's).
   const draftGroups = form.layout
@@ -52,7 +65,7 @@ export default function ExtrasTab({
     <div className="space-y-3">
       <SectionCard icon={Sparkles} title="Add-on" subtitle="Add-on games show purple on the calendar.">
         <div className="grid gap-1">
-          {ADD_ONS.map((addOn) => {
+          {ADD_ONS.filter((addOn) => homeServer || !addOn.value || !HOME_ONLY_ADD_ONS.has(addOn.value)).map((addOn) => {
             const active = form.addOn === addOn.value;
             const Icon = ADD_ON_ICON[addOn.value ?? "none"] ?? Sparkles;
             return (
@@ -219,6 +232,10 @@ export default function ExtrasTab({
           />
         </>
       )}
+
+      {/* Casino settings come last, under everything (Niko, 2026-11-08). */}
+      {form.addOn === "randomizer" && <CasinoSection form={form} update={update} gameSec={gameSec} />}
+      {(form.addOn === "randomizer" || form.addOn === "fortunes") && <CoHostsCard form={form} update={update} hosts={hosts} hostId={hostId} />}
     </div>
   );
 }

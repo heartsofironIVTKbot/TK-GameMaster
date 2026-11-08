@@ -104,10 +104,33 @@ export interface AddOnOption {
   unavailable?: boolean;
 }
 
+/**
+ * Casino and Fortunes of War come back with the Casino integration
+ * (docs/casino-integration.md, switched on in its last step). Until then only
+ * the local dev server can pick them, to build and test it.
+ */
+const CASINO_READY = process.env.NODE_ENV === "development";
+
+/** Add-ons only TommyKay's server (the home server) can use. */
+export const HOME_ONLY_ADD_ONS = new Set(["randomizer", "fortunes"]);
+
 export const ADD_ONS: AddOnOption[] = [
   { value: null, label: "No add-on", emoji: "✨", description: "Standard game — players reserve on the map." },
-  { value: "randomizer", label: "Casino", emoji: "🎲", description: "Currently unavailable.", casino: true, unavailable: true },
-  { value: "fortunes", label: "Fortunes of War", emoji: "🃏", description: "Currently unavailable.", unavailable: true },
+  {
+    value: "randomizer",
+    label: "Casino",
+    emoji: "🎲",
+    description: CASINO_READY ? "Players roll their nation and more on tkcasino.online." : "Currently unavailable.",
+    casino: true,
+    unavailable: !CASINO_READY,
+  },
+  {
+    value: "fortunes",
+    label: "Fortunes of War",
+    emoji: "🃏",
+    description: CASINO_READY ? "Players draw power-up cards on tkcasino.online." : "Currently unavailable.",
+    unavailable: !CASINO_READY,
+  },
   { value: "zombies", label: "Zombies", emoji: "🧟", description: "Submod required." },
   { value: "leviathan", label: "Leviathan", emoji: "🔱", description: "Submod required." },
 ];

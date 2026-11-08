@@ -1,3 +1,4 @@
+import { MAX_CO_HOSTS, sanitizeCasinoConfig, toCasinoLevel, type CasinoConfig } from "@/lib/casinoSettings";
 import { parseRequireIronLegion } from "@/lib/ironlegion";
 import {
   ADD_ON_VALUES,
@@ -310,6 +311,26 @@ export function validateSchedulePayload(raw: unknown, nowSec: number): Validatio
   const draft = validateDraftSettings(input.draft, typeof addOn === "string" ? addOn : null);
   if (!draft.ok) issue("extras", draft.error);
 
+  // Casino games: the Casino's own settings. Who may roll at first is the
+  // Players tab's "who can reserve", copied in (docs/casino-integration.md).
+  let casinoSettings: CasinoConfig | null = null;
+  if (addOn === "randomizer") {
+    casinoSettings = sanitizeCasinoConfig(input.casino_settings);
+    if (isLockLevel(majorLevel) && isLockLevel(minorLevel)) {
+      casinoSettings.randomizers.nation.entry = { major: toCasinoLevel(majorLevel), minor: toCasinoLevel(minorLevel) };
+    }
+    const { locks } = casinoSettings;
+    if (locks.enabled && locks.threshold.mode === "hours" && locks.threshold.seconds > 30 * 86_400) {
+      issue("extras", "The Casino's access step-down can be at most 30 days before the game.");
+    }
+  }
+  // Casino and Fortunes games can have co-hosts.
+  const coHosts =
+    addOn === "randomizer" || addOn === "fortunes"
+      ? [...new Set((Array.isArray(input.co_hosts) ? input.co_hosts : []).map(String).filter((id) => /^\d{15,25}$/.test(id)))]
+      : [];
+  if (coHosts.length > MAX_CO_HOSTS) issue("extras", `A game can have at most ${MAX_CO_HOSTS} co-hosts.`);
+
   if (issues.length > 0 || !layout.ok || !rules.ok || !mods.ok || !draft.ok) return { ok: false, issues };
   return {
     ok: true,
@@ -337,6 +358,8 @@ export function validateSchedulePayload(raw: unknown, nowSec: number): Validatio
       rules: rules.value,
       mods: mods.value,
       draft: draft.value,
+      casino_settings: casinoSettings,
+      co_hosts: coHosts,
     },
   };
 }

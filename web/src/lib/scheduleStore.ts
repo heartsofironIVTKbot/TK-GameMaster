@@ -1,3 +1,4 @@
+import { sanitizeCasinoConfig } from "@/lib/casinoSettings";
 import { applyDemoRating } from "@/lib/archiveDemo";
 import crypto from "node:crypto";
 import type { RowDataPacket } from "mysql2";
@@ -155,6 +156,9 @@ function settingsFromSlotData(data: Record<string, unknown>, fallbackTs: number)
     rules: preset.rules,
     mods: preset.mods,
     draft: draftFromSlotData(data),
+    // Casino games: the bot keeps the settings it saved for the Casino on the slot too.
+    casino_settings: data.add_on === "randomizer" && data.casino_settings ? sanitizeCasinoConfig(data.casino_settings) : null,
+    co_hosts: Array.isArray(data.co_hosts) ? data.co_hosts.map(String) : [],
   };
 }
 
@@ -540,6 +544,7 @@ export const DEMO_HOST: HostProfile = {
   disabled_modes: [],
   booking_days: null,
   guild_id: HOME_GUILD_ID,
+  home_server: true,
   servers: [],
   demo: true,
 };

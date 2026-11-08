@@ -1,12 +1,29 @@
 "use client";
 
 import { Check, CircleAlert, ClipboardList, Gamepad2, Send, TriangleAlert } from "lucide-react";
+import { CASINO_ROOMS, fromCasinoLevel, stepDownHours } from "@/lib/casinoSettings";
 import { addOnOption, lockLevelLabel, modeOption } from "@/lib/scheduleOptions";
 import type { HostOption } from "@/lib/scheduleTypes";
 import { formatInZone, formatRelative, zoneCity } from "@/lib/timeEngine";
 import { SectionCard } from "../ui";
 import { TABS, tabOfSection, type DerivedSetup, type EditTarget, type SetupForm, type TabId } from "./model";
 import Timeline, { type TimelineMarker } from "./Timeline";
+
+/** The Casino rooms that are on, with their re-rolls (majors / minors). */
+function casinoRooms(form: SetupForm): string {
+  const boxes = form.casino.randomizers;
+  return CASINO_ROOMS.filter((room) => boxes[room.key].enabled)
+    .map((room) => {
+      if (room.key === "build") {
+        const { land, navyAir } = boxes.build.rerolls;
+        return `Build (land ${land.major}/${land.minor}, navy/air ${navyAir.major}/${navyAir.minor})`;
+      }
+      const { major, minor } = (boxes[room.key] as { rerolls: { major: number; minor: number } }).rerolls;
+      const tiers = room.key === "achievements" ? `, tiers ${boxes.achievements.tierFilter.join(" ")}` : "";
+      return `${room.label} (${major}/${minor}${tiers})`;
+    })
+    .join(", ");
+}
 
 export default function ReviewTab({
   form,
@@ -183,6 +200,26 @@ export default function ReviewTab({
             {addOn.label}
             {form.addOn === "fortunes" && ` (${form.fortunesMode})`}
           </dd>
+          {form.addOn === "randomizer" && (
+            <>
+              <dt className="text-ink-500">Casino rooms</dt>
+              <dd className="text-ink-200">{casinoRooms(form) || "None"}</dd>
+              <dt className="text-ink-500">Step-down</dt>
+              <dd className="text-ink-200">
+                {form.casino.locks.enabled
+                  ? `${stepDownHours(form.casino, derived.gameSec)} h before: majors ${lockLevelLabel(fromCasinoLevel(form.casino.locks.degraded.major))}, minors ${lockLevelLabel(fromCasinoLevel(form.casino.locks.degraded.minor))}`
+                  : "None"}
+              </dd>
+            </>
+          )}
+          {(form.addOn === "randomizer" || form.addOn === "fortunes") && (
+            <>
+              <dt className="text-ink-500">Co-hosts</dt>
+              <dd className="text-ink-200">
+                {form.coHosts.length ? form.coHosts.map((id) => hostName(id)).join(", ") : "None"}
+              </dd>
+            </>
+          )}
           <dt className="text-ink-500">Attendance</dt>
           <dd className="text-ink-200">{form.loggingMode}</dd>
           <dt className="text-ink-500">Reminder</dt>

@@ -86,8 +86,14 @@ The Casino and the bot share the database, and that is the hand-off:
 
 ## Steps
 
-1. **Casino settings in game setup**, including co-hosts, saved as
-   `host_settings`.
+1. ✅ **Casino settings in game setup**, including co-hosts, saved as
+   `host_settings` (2026-11-08). Extras → Casino rooms / Access step-down /
+   Co-hosts (`web/src/components/schedule/setup/CasinoSection.tsx`, format in
+   `web/src/lib/casinoSettings.ts`); "who can reserve" on the Players tab is
+   the first tier. The bot checks it again (`_sanitize_casino_settings`),
+   keeps it on the slot and writes `host_settings`; it no longer DMs the
+   Casino Host Panel link. Until step 8 only the local dev server can pick
+   the add-ons, and only on the home server.
 2. **The way in:** `/casino/<game>` on GameMaster and the announcement link.
 3. **The Casino site:** View reservations button, texts that point to
    GameMaster, denied/expired screens that link back, TLS for Aiven. Niko puts

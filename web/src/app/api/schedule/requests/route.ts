@@ -47,6 +47,13 @@ import {
   validateGameResources,
 } from "@/lib/gameControlValidation";
 import { notePresetUsed } from "@/lib/presetStore";
+import { HOME_ONLY_ADD_ONS } from "@/lib/scheduleOptions";
+
+/** The Casino and Fortunes of War are TommyKay's server's only (the bot checks too). */
+function homeOnlyRefusal(host: HostProfile, addOn: string | null | undefined): string | null {
+  if (!addOn || !HOME_ONLY_ADD_ONS.has(addOn)) return null;
+  return host.home_server ? null : "The Casino and Fortunes of War add-ons are only available on TommyKay's server.";
+}
 
 /**
  * POST /api/schedule/requests
@@ -179,6 +186,8 @@ export async function POST(request: Request) {
       if (host.disabled_modes.includes(validation.value.mode)) {
         return jsonError(`${validation.value.mode} is turned off in this server's settings.`, 409);
       }
+      const homeOnly = homeOnlyRefusal(host, validation.value.add_on);
+      if (homeOnly) return jsonError(homeOnly, 403);
       const refusal = await branchRefusal(host, validation.value.mode, null);
       if (refusal) return jsonError(refusal, 403);
       // Pre-assigned so the bot's save is idempotent and the page can link it.
@@ -233,6 +242,8 @@ export async function POST(request: Request) {
       if (!validation.ok) {
         return jsonError(validation.issues[0].message, 400, { issues: validation.issues });
       }
+      const homeOnly = homeOnlyRefusal(host, "add_on" in validation.value ? (validation.value.add_on as string | null) : null);
+      if (homeOnly) return jsonError(homeOnly, 403);
       // Hosts host their own branch's games (the bot checks this too).
       const editedMode = String("mode" in validation.value ? validation.value.mode : details.settings.mode);
       const handover = typeof newHostId === "string" && newHostId !== host.discord_id ? newHostId : null;

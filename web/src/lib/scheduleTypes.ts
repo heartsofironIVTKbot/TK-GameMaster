@@ -1,3 +1,4 @@
+import type { CasinoConfig } from "@/lib/casinoSettings";
 import type { HostBranch } from "@/lib/hostBranches";
 import type { GameMessageProgress } from "@/lib/messageTypes";
 import type { ModerationOutcome } from "@/lib/moderationTypes";
@@ -30,6 +31,8 @@ export interface HostProfile {
   booking_days: Record<HostBranch, number | null> | null;
   /** The server the host pages are on (header server switcher). */
   guild_id: string;
+  /** That server is TommyKay's (the home server): the Casino and Fortunes of War add-ons. */
+  home_server: boolean;
   /** Every server the viewer hosts in (the switcher's list). */
   servers: HostServer[];
   /** Local preview mode (no database / Discord). */
@@ -188,7 +191,6 @@ export interface ScheduleRequestStatus {
   error: string | null;
   result: {
     slot_id?: string;
-    panel_url?: string;
     notified?: number;
     /** Roster actions: why the bot wants the host to confirm. */
     warnings?: string[];
@@ -268,6 +270,8 @@ export interface SlotSettings {
   rules: ResourceEntry[] | null;
   mods: ResourceEntry[] | null;
   draft: DraftSettings | null;
+  casino_settings: CasinoConfig | null;
+  co_hosts: string[];
 }
 
 export interface SlotDetails {
@@ -328,6 +332,10 @@ export interface SchedulePayload {
   mods: ResourceEntry[] | null;
   /** Draft game: two teams (nation groups + a captain each) and the pick order; null = a normal game. */
   draft: DraftSettings | null;
+  /** Casino games: the rooms, re-rolls and step-down, in the Casino's format; null for other games. */
+  casino_settings: CasinoConfig | null;
+  /** Casino / Fortunes games: hosts who help run it (Discord ids); empty for other games. */
+  co_hosts: string[];
 }
 
 export interface DraftTeamSettings {

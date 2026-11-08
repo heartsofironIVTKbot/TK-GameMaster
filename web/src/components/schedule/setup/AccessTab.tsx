@@ -53,8 +53,8 @@ export default function AccessTab({
         <p className="gm-cut flex gap-2.5 bg-fuchsia-950/50 px-3 py-2.5 text-xs leading-relaxed text-fuchsia-100 [--cut:9px]">
           <Dices aria-hidden className="mt-px h-4 w-4 shrink-0 text-fuchsia-300" strokeWidth={1.75} />
           <span>
-            <b>Casino games</b> set their two-step access on the Casino Host Panel. Once the bot saves this game you
-            get the panel link, here and in your Discord DMs.
+            <b>Casino games:</b> who can reserve below is who may roll at first on the Casino. The step-down closer to
+            the game is set in Extras → Access step-down.
           </span>
         </p>
       )}

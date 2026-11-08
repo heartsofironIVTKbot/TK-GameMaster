@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarCheck, Check, Settings, X } from "lucide-react";
+import { CalendarCheck, Check, X } from "lucide-react";
 import Link from "next/link";
 import { formatInZone } from "@/lib/timeEngine";
 import { Spinner } from "../ui";
@@ -32,7 +32,6 @@ export default function SubmitOverlay({
 }) {
   const { status, waitedSec } = useRequestPoller(requestId);
   const state = status?.status ?? "pending";
-  const panelUrl = status?.result?.panel_url;
   const notified = status?.result?.notified ?? 0;
 
   const steps: { label: string; state: "done" | "active" | "error" | "todo" }[] = [
@@ -118,16 +117,6 @@ export default function SubmitOverlay({
         )}
 
         <div className="mt-6 flex flex-col gap-2">
-          {state === "done" && panelUrl && (
-            <a
-              href={panelUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="gm-btn gm-btn-primary h-11"
-            >
-              <Settings aria-hidden strokeWidth={1.75} /> Open the Host Scheduling Panel
-            </a>
-          )}
           {state === "error" ? (
             <button
               type="button"
@@ -139,7 +128,7 @@ export default function SubmitOverlay({
           ) : (
             <Link
               href="/schedule"
-              className={`gm-btn h-11 ${state === "done" && !panelUrl ? "gm-btn-primary" : "gm-btn-secondary"}`}
+              className={`gm-btn h-11 ${state === "done" ? "gm-btn-primary" : "gm-btn-secondary"}`}
             >
               Back to the calendar
             </Link>

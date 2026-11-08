@@ -29551,18 +29551,13 @@ def _web_parse_draft(raw, mode: str, add_on, nation_layout):
     }, None
 
 
-async def _dm_web_schedule_confirmation(member, slot: dict, panel_url: str) -> None:
-    """DM the host what the /schedule wizard used to show ephemerally: the
-    shared host access key and the Host Scheduling Panel link."""
+async def _dm_web_schedule_confirmation(member, slot: dict) -> None:
+    """DM the host that the game is on the calendar. (Casino settings are set in
+    GameMaster's game setup now, not on a Casino panel link.)"""
     g_time = int(slot.get("game_timestamp") or 0)
     embed = discord.Embed(
         title="📅 Game Scheduled from the Web Calendar",
-        description=(
-            f"**{slot.get('mode')}** · <t:{g_time}:F> (<t:{g_time}:R>) is now on the schedule board.\n\n"
-            f"Your shared host access key is: `{slot.get('host_key')}`\n"
-            "Open the Host Scheduling Panel to configure casino modules, re-roll "
-            "budgets and entry-level gating.\n*Link valid for 3 days.*"
-        ),
+        description=f"**{slot.get('mode')}** · <t:{g_time}:F> (<t:{g_time}:R>) is now on the calendar.",
         color=EmbedColor.INK,
     )
     ann_ts = slot.get("announce_timestamp")
@@ -29577,16 +29572,7 @@ async def _dm_web_schedule_confirmation(member, slot: dict, panel_url: str) -> N
         )
     if slot.get("preset_name"):
         embed.add_field(name="Preset", value=str(slot["preset_name"]), inline=True)
-    view = discord.ui.View()
-    view.add_item(
-        discord.ui.Button(
-            label="Open Host Scheduling Panel",
-            style=discord.ButtonStyle.link,
-            url=panel_url,
-            emoji="⚙️",
-        )
-    )
-    await _dm_user_safe(member, embed=embed, view=view, label="web schedule confirmation")
+    await _dm_user_safe(member, embed=embed, label="web schedule confirmation")
 
 
 def _member_is_staff(member) -> bool:
@@ -29627,6 +29613,111 @@ async def _web_day_lock_error(week_key: str, day: str) -> str | None:
         f"⛔ {day} (week of {_week_range_label(week_key)}) is locked by staff"
         f"{reason_txt} and cannot be scheduled."
     )
+
+
+# ————— Casino games: settings from GameMaster's game setup —————
+# Extras → Casino on the website (docs/casino-integration.md) sends the
+# Casino's own settings format (its lib/host-config.ts); checked again here
+# with the Casino's own limits, then kept on the slot (so editing loads them)
+# and written to host_settings, which the Casino reads and
+# host_config_sync_loop applies to the game.
+
+_CASINO_LEVELS = ("vip", "trusted", "verified", "all")
+_CASINO_LEVEL_OF = {"VIP": "vip", "Trusted": "trusted", "Verified": "verified", "All Users": "all"}
+MAX_CO_HOSTS = 5
+
+
+def _sanitize_casino_settings(raw, major_level: str, minor_level: str) -> dict:
+    """A complete Casino config from whatever the website sent. Who may roll
+    at first (nation.entry) is the game's own major / minor lock levels."""
+    source = raw if isinstance(raw, dict) else {}
+    boxes = source.get("randomizers") if isinstance(source.get("randomizers"), dict) else {}
+
+    def box(key):
+        value = boxes.get(key)
+        return value if isinstance(value, dict) else {}
+
+    def count(value):
+        try:
+            return max(0, min(10, int(value)))
+        except (TypeError, ValueError):
+            return 0
+
+    def rerolls(value):
+        value = value if isinstance(value, dict) else {}
+        return {"major": count(value.get("major")), "minor": count(value.get("minor"))}
+
+    def level(value, fallback):
+        text = str(value or "").lower()
+        return text if text in _CASINO_LEVELS else fallback
+
+    def enabled(key):
+        value = box(key).get("enabled")
+        return value if isinstance(value, bool) else True
+
+    build = box("build").get("rerolls") if isinstance(box("build").get("rerolls"), dict) else {}
+    tiers = box("achievements").get("tierFilter")
+    tiers = sorted({count(t) for t in tiers if count(t) in (1, 2, 3, 4, 5)}) if isinstance(tiers, list) else []
+    locks = source.get("locks") if isinstance(source.get("locks"), dict) else {}
+    threshold = locks.get("threshold") if isinstance(locks.get("threshold"), dict) else {}
+    degraded = locks.get("degraded") if isinstance(locks.get("degraded"), dict) else {}
+    try:
+        seconds = max(0, min(4102444800, int(threshold.get("seconds") or 0)))
+    except (TypeError, ValueError):
+        seconds = 24 * 3600
+    return {
+        "randomizers": {
+            "nation": {
+                "enabled": enabled("nation"),
+                "rerolls": rerolls(box("nation").get("rerolls")),
+                "entry": {
+                    "major": _CASINO_LEVEL_OF.get(major_level, "trusted"),
+                    "minor": _CASINO_LEVEL_OF.get(minor_level, "all"),
+                },
+            },
+            **{
+                key: {"enabled": enabled(key), "rerolls": rerolls(box(key).get("rerolls"))}
+                for key in ("ideology", "path", "doctrine")
+            },
+            "build": {
+                "enabled": enabled("build"),
+                "rerolls": {"land": rerolls(build.get("land")), "navyAir": rerolls(build.get("navyAir"))},
+            },
+            "achievements": {
+                "enabled": enabled("achievements"),
+                "rerolls": rerolls(box("achievements").get("rerolls")),
+                "tierFilter": tiers or [1, 2, 3, 4, 5],
+            },
+        },
+        "locks": {
+            "enabled": locks.get("enabled") is True,
+            "threshold": {"mode": "custom" if threshold.get("mode") == "custom" else "hours", "seconds": seconds},
+            "degraded": {"major": level(degraded.get("major"), "verified"), "minor": level(degraded.get("minor"), "all")},
+        },
+    }
+
+
+def _web_co_hosts(payload: dict, add_on) -> list:
+    """Casino / Fortunes games' co-hosts (Discord ids); none for other games."""
+    if add_on not in ("randomizer", "fortunes"):
+        return []
+    ids = []
+    for raw in payload.get("co_hosts") or []:
+        text = str(raw)
+        if text.isdigit() and 15 <= len(text) <= 25 and int(text) not in ids:
+            ids.append(int(text))
+    return ids[:MAX_CO_HOSTS]
+
+
+async def _save_casino_settings(slot_id: str, fields: dict) -> None:
+    """Write a Casino game's settings where the Casino reads them."""
+    settings = fields.get("casino_settings")
+    if not settings:
+        return
+    try:
+        await _run_mysql_io(_save_host_settings_mysql, slot_id, settings, label="casino settings save")
+    except Exception as e:
+        print(f"[WARN] casino settings for slot {slot_id} not saved: {e}")
 
 
 async def _build_web_schedule_fields(payload: dict, keep_day: tuple | None = None):
@@ -29783,6 +29874,11 @@ async def _build_web_schedule_fields(payload: dict, keep_day: tuple | None = Non
             ("competitive" if payload.get("fortunes_mode") == "competitive" else "casual")
             if add_on == "fortunes" else None
         ),
+        "casino_settings": (
+            _sanitize_casino_settings(payload.get("casino_settings"), major_level, minor_level)
+            if add_on == "randomizer" else None
+        ),
+        "co_hosts": _web_co_hosts(payload, add_on),
     }
     return fields, None
 
@@ -29871,13 +29967,11 @@ async def _process_web_schedule_create(req: dict) -> tuple[bool, dict | None, st
     saved, err = await _save_schedule_slot(slot)
     if not saved:
         return False, None, err
-
-    token = await _generate_host_access_token(
-        slot_id, host_id, is_senior=_is_senior_member(member)
-    )
-    panel_url = f"{BASE_URL}/host?gameId={slot_id}&token={token}"
-    await _dm_web_schedule_confirmation(member, slot, panel_url)
-    return True, {"slot_id": slot_id, "panel_url": panel_url}, None
+    await _save_casino_settings(slot_id, fields)
+    # (No Casino Host Scheduling Panel link any more: Casino games are set up
+    # in GameMaster's game setup.)
+    await _dm_web_schedule_confirmation(member, slot)
+    return True, {"slot_id": slot_id}, None
 
 
 def _shift_pending_unlocks(container: dict, delta: int) -> None:
@@ -30066,6 +30160,7 @@ async def _process_web_schedule_update(req: dict) -> tuple[bool, dict | None, st
             target["host_id"] = new_host.id
             target["host_username"] = new_host.name or str(new_host.id)
         await write_json(SCHEDULE_FILE, schedule_data)
+    await _save_casino_settings(slot_id, fields)
     _audit_log(
         "INFO",
         f"web edit slot={slot_id} by={requester_id} host={target.get('host_id')} "

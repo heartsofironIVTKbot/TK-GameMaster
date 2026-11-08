@@ -2,7 +2,7 @@ import { DatabaseConfigError } from "@/lib/db";
 import { HOST_BRANCH_VALUES, type HostBranch, type HostRank } from "@/lib/hostBranches";
 import { hostRanksOf, memberRoleIds } from "@/lib/playerProfile";
 import { getSession } from "@/lib/session";
-import { currentGuildId, hostServersOf } from "@/lib/currentGuild";
+import { currentGuildId, hostServersOf, isHomeGuild } from "@/lib/currentGuild";
 import { settingsOf } from "@/lib/serverSettings";
 import { disabledModes, type ServerSettings } from "@/lib/serverSettingsTypes";
 import {
@@ -29,6 +29,7 @@ export async function getHostStatus(): Promise<HostStatusResponse> {
       host: {
         ...DEMO_HOST,
         guild_id: guildId,
+        home_server: isHomeGuild(guildId),
         servers: await hostServersOf(DEMO_HOST.discord_id),
         disabled_modes: disabledModes(settings),
         booking_days: bookingDays(settings, DEMO_HOST.is_staff, null),
@@ -78,6 +79,7 @@ export async function getHostStatus(): Promise<HostStatusResponse> {
       disabled_modes: disabledModes(settings),
       booking_days: bookingDays(settings, entry.is_staff, ranks),
       guild_id: guildId,
+      home_server: isHomeGuild(guildId),
       servers: await hostServersOf(session.discord_id),
       demo: false,
     };

@@ -169,7 +169,7 @@ export default function GameSetupApp({
     };
   }, [form.mode, defaultCheckedFor, editSlotId, initialPresetId]);
 
-  // Editing: load the game's stored settings + the hosts it can go to.
+  // Editing: load the game's stored settings.
   useEffect(() => {
     if (!editSlotId) return undefined;
     let cancelled = false;
@@ -200,6 +200,14 @@ export default function GameSetupApp({
       .catch(() => {
         if (!cancelled) setEditLoad({ state: "error", message: "Network error — reload to try again." });
       });
+    return () => {
+      cancelled = true;
+    };
+  }, [editSlotId]);
+
+  // The server's hosts: who a game can be handed to, and its co-hosts (Casino games).
+  useEffect(() => {
+    let cancelled = false;
     fetch("/api/schedule/hosts", { cache: "no-store" })
       .then((response) => (response.ok ? (response.json() as Promise<{ hosts: HostOption[] }>) : null))
       .then((result) => {
@@ -209,7 +217,7 @@ export default function GameSetupApp({
     return () => {
       cancelled = true;
     };
-  }, [editSlotId]);
+  }, []);
 
   useEffect(() => {
     const timer = window.setInterval(() => setNowMs(Date.now()), 30_000);
@@ -641,7 +649,17 @@ export default function GameSetupApp({
               />
             </>
           )}
-          {tab === "extras" && <ExtrasTab form={form} update={update} modeDefaults={modeDefaults} />}
+          {tab === "extras" && (
+            <ExtrasTab
+              form={form}
+              update={update}
+              modeDefaults={modeDefaults}
+              homeServer={host.home_server}
+              hosts={hosts}
+              hostId={editing ? (form.handoverTo ?? editing.hostId) : host.discord_id}
+              gameSec={derived.gameSec}
+            />
+          )}
           {tab === "review" && (
             <ReviewTab
               form={form}
