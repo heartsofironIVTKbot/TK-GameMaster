@@ -70,6 +70,8 @@ function homeOnlyRefusal(host: HostProfile, addOn: string | null | undefined): s
  *   {action: "roster_remove", payload: {thread_id, user_id}}
  *   {action: "casino_roll" | "casino_extra", payload: CasinoGrantPayload}
  *                                              — Casino games' Host Tool rolls
+ *   {action: "fortunes_redraw" | "fortunes_reset", payload: {thread_id, user_id}}
+ *                                              — Fortunes games: an extra redraw / a fresh deck
  *                                              — live map host tools
  *                                                (formerly /add, /add_coop,
  *                                                /add_filler, /remove)
@@ -267,12 +269,19 @@ export async function POST(request: Request) {
       return Response.json({ request_id: requestId, slot_id: slotId }, { status: 202 });
     }
 
-    if (body.action === "roster_assign" || body.action === "roster_remove" || body.action === "casino_roll" || body.action === "casino_extra") {
-      // casino_*: Casino games' Host Tool rolls (the bot checks the game's host / co-hosts / staff).
+    if (
+      body.action === "roster_assign" ||
+      body.action === "roster_remove" ||
+      body.action === "casino_roll" ||
+      body.action === "casino_extra" ||
+      body.action === "fortunes_redraw" ||
+      body.action === "fortunes_reset"
+    ) {
+      // casino_* / fortunes_*: the Host Tool on Casino and Fortunes games (the bot checks the game's host / co-hosts / staff).
       const payload =
         body.action === "roster_assign"
           ? validateRosterAssign(body.payload)
-          : body.action === "roster_remove"
+          : body.action === "roster_remove" || body.action === "fortunes_redraw" || body.action === "fortunes_reset"
             ? validateRosterRemove(body.payload)
             : validateCasinoGrant(body.payload, body.action);
       if (!payload) return jsonError("Invalid player action", 400);

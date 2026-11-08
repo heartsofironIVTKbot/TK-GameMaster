@@ -1,4 +1,4 @@
-import { isCasinoGame } from "@/lib/casinoSettings";
+import { isCasinoGame, isFortunesGame } from "@/lib/casinoSettings";
 import crypto from "node:crypto";
 import type { RowDataPacket } from "mysql2";
 import { HOME_GUILD_ID, isHomeGuild, playerRecords } from "@/lib/currentGuild";
@@ -30,7 +30,7 @@ const RECEIPT_LINK_SEC = 24 * 3600;
 const TIER = { vip: 0, trusted: 1, verified: 2, none: 3 } as const;
 
 export type CasinoEntry =
-  | { status: "ok"; url: string; kind: "new" | "resume" | "receipt"; nation: string | null; preview?: boolean }
+  | { status: "ok"; url: string; kind: "new" | "resume" | "receipt" | "fortunes"; nation: string | null; preview?: boolean }
   | { status: "not_casino"; map_url: string }
   | { status: "denied"; title: string; message: string; map_url: string | null; action?: { label: string; url: string } };
 
@@ -76,6 +76,7 @@ export async function casinoEntry(gameKey: string, userId: string, username: str
   const game = games[0];
   if (!game) return { status: "denied", title: "Game not found", message: "This game isn't on GameMaster any more. It may have been cancelled.", map_url: null };
   const data = json(game.game_data);
+  if (isFortunesGame(data)) return fortunesEntry(db, game, gameKey, userId);
   if (!isCasinoGame(data)) return { status: "not_casino", map_url: map };
   const guildId = game.guild_id ? String(game.guild_id) : HOME_GUILD_ID;
   if (!isHomeGuild(guildId)) {
@@ -135,6 +136,73 @@ export async function casinoEntry(gameKey: string, userId: string, username: str
   if (nation) kind = (await runOf(db, gameKey, userId)).finished ? "receipt" : "resume";
   const token = await writeToken(db, gameKey, userId, username, player, kind);
   return { status: "ok", kind, nation, url: casinoLink(token, gameKey) };
+}
+
+/** A Fortunes of War link lasts a day; each visit replaces the last one. */
+const FORTUNES_LINK_SEC = 24 * 3600;
+
+/**
+ * Fortunes of War (docs/casino-integration.md, step 7): players reserve on the
+ * map as usual, then draw a card in the Casino's Fortunes room. The bot keeps
+ * their fortunes_draws row (nation, major, redraws); this hands out the key
+ * that opens it. The card stays with the player if they change nation.
+ */
+async function fortunesEntry(db: Pool, game: GameRow, gameKey: string, userId: string): Promise<CasinoEntry> {
+  const map = mapUrlOf(gameKey);
+  const guildId = game.guild_id ? String(game.guild_id) : HOME_GUILD_ID;
+  if (!isHomeGuild(guildId)) {
+    return { status: "denied", title: "Not a Casino server", message: "Fortunes of War is only for TommyKay's server.", map_url: map };
+  }
+  let row: Row | undefined;
+  try {
+    const [rows] = await db.query<Row[]>("SELECT nation, state FROM fortunes_draws WHERE game_id = ? AND user_id = ? LIMIT 1", [gameKey, userId]);
+    row = rows[0];
+  } catch (error) {
+    if (/ER_NO_SUCH_TABLE|doesn't exist/i.test(String((error as Error)?.message ?? error))) {
+      return { status: "denied", title: "Not ready yet", message: "Fortunes of War isn't set up yet. Try again in a few minutes.", map_url: map };
+    }
+    throw error;
+  }
+  const hasCard = row?.state === "pending" || row?.state === "locked";
+  const closed = flag(game.game_started) || game.status === "ended" || game.status === "cancelled";
+  if (closed && !hasCard) {
+    return { status: "denied", title: "The cards are sealed", message: "This game has already started or ended, so Fortunes of War is closed for it.", map_url: map };
+  }
+  const [held] = await db.query<Row[]>("SELECT slot_key FROM game_reservations WHERE thread_id = ? AND user_id = ? LIMIT 1", [gameKey, userId]);
+  const slot = held[0]?.slot_key ? String(held[0].slot_key) : null;
+  if (!slot && !hasCard) {
+    return {
+      status: "denied",
+      title: "Reserve a nation first",
+      message: "Fortunes of War cards are for players with a nation. Reserve one on the map, then draw your card.",
+      map_url: map,
+    };
+  }
+  const player = await playerFlags(db, guildId, userId);
+  if (!player.member) {
+    return { status: "denied", title: "Join the server first", message: "You need to be a member of TommyKay's Discord server to draw a card.", map_url: map };
+  }
+  if (player.banned && !hasCard) {
+    return { status: "denied", title: "You can't draw", message: "You're banned from reserving nations on this server.", map_url: map };
+  }
+  if (!row) {
+    // The bot adds the row within a few seconds of the reservation.
+    return {
+      status: "denied",
+      title: "Dealing your cards",
+      message: "GameMaster is getting your deck ready. Try again in a few seconds.",
+      map_url: map,
+      action: { label: "Try again", url: `/casino/${encodeURIComponent(gameKey)}` },
+    };
+  }
+  const key = crypto.randomBytes(16).toString("hex");
+  await db.query("UPDATE fortunes_draws SET access_key = ?, key_expires_at = ? WHERE game_id = ? AND user_id = ?", [
+    key,
+    Math.floor(Date.now() / 1000) + FORTUNES_LINK_SEC,
+    gameKey,
+    userId,
+  ]);
+  return { status: "ok", kind: "fortunes", nation: row.nation ? String(row.nation) : slot, url: `${CASINO_URL}/fortunes?k=${key}` };
 }
 
 /** A player's standing on the server, as the old Discord panel read it from their live roles. */

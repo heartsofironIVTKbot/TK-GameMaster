@@ -52,6 +52,8 @@ export default function HostToolsPanel({
   slotLabel,
   casino = null,
   onCasinoGrant,
+  fortunes = false,
+  onFortunesTool,
 }: {
   lobbyName: string;
   /** Lobbies the host can manage (open + in progress). */
@@ -77,6 +79,10 @@ export default function HostToolsPanel({
   casino?: { rooms: string[]; nationRoll: boolean } | null;
   /** Casino games: give the player a roll, or extra rolls for some rooms (the bot DMs them the link). */
   onCasinoGrant?: (player: HostPlayer, action: "casino_roll" | "casino_extra", rooms: string[], count: number) => void;
+  /** A Fortunes of War game: the card tools (null/false = not one). */
+  fortunes?: boolean;
+  /** Fortunes games: one extra redraw, or a fresh deck (the bot DMs the player). */
+  onFortunesTool?: (player: HostPlayer, action: "fortunes_redraw" | "fortunes_reset") => void;
 }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<DirectoryMember[]>([]);
@@ -260,6 +266,16 @@ export default function HostToolsPanel({
                 Esc
               </button>
             </div>
+          )}
+          {heldPlayer && fortunes && onFortunesTool && heldPlayer.from_slot && (
+            <FortunesToolCard
+              player={heldPlayer}
+              slotLabel={slotLabel}
+              onTool={(action) => {
+                onFortunesTool(heldPlayer, action);
+                onPickUp(null);
+              }}
+            />
           )}
           {heldPlayer && casino && onCasinoGrant && (
             <CasinoGrantCard
@@ -659,6 +675,35 @@ function CasinoGrantCard({
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+/** Fortunes games: the picked-up player's card. The bot DMs them the link either way. */
+function FortunesToolCard({
+  player,
+  slotLabel,
+  onTool,
+}: {
+  player: HostPlayer;
+  slotLabel: (slot: string) => string;
+  onTool: (action: "fortunes_redraw" | "fortunes_reset") => void;
+}) {
+  return (
+    <div className="gm-cut space-y-2.5 bg-ink-900 p-2.5 text-[12.5px] [--cut:8px]">
+      <p className="text-xs font-semibold text-ink-300">🎴 Fortunes card for {player.name}</p>
+      <p className="text-[11.5px] text-ink-400">
+        On {player.from_slot ? slotLabel(player.from_slot) : "the board"}. An extra redraw lets them swap their card once more; a reset gives
+        them a fresh deck with their usual redraws.
+      </p>
+      <div className="flex gap-2">
+        <button type="button" onClick={() => onTool("fortunes_redraw")} className="gm-btn gm-btn-primary h-8 flex-1 text-xs [--cut:6px]">
+          Give a redraw
+        </button>
+        <button type="button" onClick={() => onTool("fortunes_reset")} className="gm-btn gm-btn-secondary h-8 flex-1 text-xs [--cut:6px]">
+          Reset card
+        </button>
+      </div>
     </div>
   );
 }

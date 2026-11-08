@@ -1,4 +1,4 @@
-import { isCasinoGame } from "@/lib/casinoSettings";
+import { isCasinoGame, isFortunesGame } from "@/lib/casinoSettings";
 import crypto from "node:crypto";
 import type { RowDataPacket } from "mysql2";
 import { HOME_GUILD_ID, isHomeGuild } from "@/lib/currentGuild";
@@ -49,6 +49,8 @@ export interface LobbyGame {
   ironlegion: { verify_url: string | null } | null;
   /** A Casino game: players roll their nation on tkcasino.online (via /casino/<game>), not on the map. */
   casino: boolean;
+  /** A Fortunes of War game: players reserve here, then draw a card in the Casino's Fortunes room (via /casino/<game>). */
+  fortunes: boolean;
   /** Casino / Fortunes games: the co-hosts (Discord ids; they see receipts and use the host tools). */
   co_hosts: string[];
   /** Casino games: the rooms that are on (ideology, path, doctrine, build, achievements; nation separately). */
@@ -171,6 +173,7 @@ function parseGameData(raw: unknown): {
   require_ironlegion?: unknown;
   add_on?: unknown;
   randomizer_only?: unknown;
+  fortunes_only?: unknown;
   co_hosts?: unknown;
   host_settings?: unknown;
   casino_settings?: unknown;
@@ -290,6 +293,7 @@ async function buildSnapshot(threadId: string): Promise<LobbySnapshot> {
           draft,
           ironlegion,
           casino: isCasinoGame(gameData),
+          fortunes: isFortunesGame(gameData),
           co_hosts: Array.isArray(gameData.co_hosts) ? gameData.co_hosts.map(String) : [],
           ...casinoRoomsOf(gameData),
         }

@@ -160,7 +160,36 @@ The Casino and the bot share the database, and that is the hand-off:
    co-hosts. Closed once the game starts. A host adding them back gets the
    warning with that reason (step 5). This replaces the old Discord
    Emergency Unreserve button. Plain unreserving stays off on Casino games.
-7. **Fortunes of War** room on the Casino site.
+7. ✅ **Fortunes of War** (2026-11-09; Niko picked: card stays with the
+   player, script on the Games page, Redraw + Reset host tools, cards in the
+   Casino's own style). Players reserve on the map as usual; their own
+   nation then has **Draw your Fortunes card**, which goes through
+   `/casino/<game>` (`fortunesEntry` in `casinoEntry.ts`: a nation, in the
+   server, not banned, game not started) to the Casino's `/fortunes?k=<key>`
+   room (`hoi4-casino`: `app/fortunes`, `components/fortunes/fortunes-room.tsx`,
+   `app/api/fortunes`, the 15 cards in `lib/fortunes-deck.ts`, ported from the
+   bot). 15 face-down cards on the felt; flip one, keep it or redraw (casual:
+   majors 2, minors 1; competitive: majors 1, minors 0); with no redraws left
+   it locks at once. Majors draw from all 15, minors from the 11 that aren't
+   major-only. The deck stays on the server.
+   - **Shared table `fortunes_draws`** (one row per player; the bot creates
+     it). The bot's `fortunes_sync_loop` keeps nation, HOI4 tag, major and
+     allowance in step with the reservations; the card stays with the player
+     if they change nation (off the board = left out of the script).
+     GameMaster sets the access key (a day, replaced on each visit); the
+     Casino deals and records the card (`new → dealt → pending → locked`).
+   - **Games page:** a Fortunes of War card on the Players tab (host, co-hosts,
+     Host Management) with everyone's card and **Copy script**: the
+     `on_startup` block for the submod (`lib/fortunesScript.ts`; a pending
+     card counts; on a shared tag the main holder beats the co-op). It replaces
+     the old pinned Discord message.
+   - **Host Tool:** on a Fortunes game a picked-up player with a nation gets
+     **Give a redraw** (one more; a locked card opens again) and **Reset
+     card** (a fresh deck, old links stop working); the bot DMs them a link
+     to `/casino/<game>`. Closed once the game starts.
+   - `k=preview` shows the room without a database. Not yet tried against the
+     real database (step 8). The old Discord `/draw` code is still in the bot,
+     unused.
 8. **Switch on and test:** take both add-ons out of `_UNAVAILABLE_ADDONS`,
    play a Casino and a Fortunes game end to end, and a fallback if the Casino
    is down. Then the front page and docs mention the Casino again, and the

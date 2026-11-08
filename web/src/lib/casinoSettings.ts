@@ -161,3 +161,8 @@ export function isCasinoGame(data: { randomizer_only?: unknown; add_on?: unknown
 /** Emergency Unreserve: how long the reason must be (the bot checks the same). */
 export const UNRESERVE_REASON_MIN = 5;
 export const UNRESERVE_REASON_MAX = 300;
+
+/** A Fortunes of War game (the bot's `fortunes_only`, or `add_on: "fortunes"`). */
+export function isFortunesGame(data: { fortunes_only?: unknown; add_on?: unknown } | null | undefined): boolean {
+  return Boolean(data) && (data?.fortunes_only === true || data?.add_on === "fortunes");
+}

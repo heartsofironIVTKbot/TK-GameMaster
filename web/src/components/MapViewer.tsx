@@ -691,6 +691,7 @@ function parseLobby(raw: unknown): LobbyReply | null {
       draft?: LobbyGameLock["draft"];
       ironlegion?: LobbyGameLock["ironlegion"];
       casino?: boolean;
+      fortunes?: boolean;
       co_hosts?: string[];
       casino_rooms?: string[];
       casino_nation_roll?: boolean;
@@ -715,6 +716,7 @@ function parseLobby(raw: unknown): LobbyReply | null {
           draft: game.draft ?? null,
           ironlegion: game.ironlegion ?? null,
           casino: Boolean(game.casino),
+          fortunes: Boolean(game.fortunes),
           co_hosts: Array.isArray(game.co_hosts) ? game.co_hosts.map(String) : [],
           casino_rooms: Array.isArray(game.casino_rooms) ? game.casino_rooms.map(String) : [],
           casino_nation_roll: game.casino_nation_roll !== false,
@@ -1648,6 +1650,13 @@ export default function MapViewer({
                   </a>
                 </ReserveGlow>
               ))}
+            {selectionKind === "self" && lobbyLock?.fortunes && selectedThread && (
+              <ReserveGlow>
+                <a href={`/casino/${encodeURIComponent(selectedThread)}`} className={RESERVE_BUTTON}>
+                  🎴 Draw your Fortunes card
+                </a>
+              </ReserveGlow>
+            )}
             {selectionKind === "self" && (
               <button
                 type="button"

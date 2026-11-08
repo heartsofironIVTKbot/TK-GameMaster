@@ -39,6 +39,7 @@ import AccessCard from "./AccessCard";
 import ChatLogCard from "./ChatLogCard";
 import DraftCard from "./DraftCard";
 import HotJoinCard from "./HotJoinCard";
+import FortunesCard from "./FortunesCard";
 import LateJoinCard from "./LateJoinCard";
 import MessagePlayersCard from "./MessagePlayersCard";
 import RemindersCard from "./RemindersCard";
@@ -383,6 +384,7 @@ export default function GameControlPanel({
           busyNote
         ) : (
           <>
+            {game.add_on === "fortunes" && <FortunesCard game={game} />}
             {game.draft && game.phase === "announced" && <DraftCard game={game} now={now} onChanged={refreshAll} />}
             {game.phase === "live" && <HotJoinCard game={game} onChanged={refreshAll} />}
             {game.phase === "live" && showControls && <LateJoinCard game={game} onChanged={refreshAll} />}

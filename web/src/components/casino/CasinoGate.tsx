@@ -20,6 +20,7 @@ const KIND_TEXT = {
   new: "Opening the Casino…",
   resume: "Taking you back to where you left off…",
   receipt: "You've already rolled here. Opening your receipt…",
+  fortunes: "Opening Fortunes of War…",
 } as const;
 
 export default function CasinoGate() {
@@ -84,7 +85,7 @@ export default function CasinoGate() {
         {state.phase === "entry" && state.entry.status === "ok" && (
           <>
             <Dices aria-hidden className="mx-auto h-9 w-9 text-brand-400" strokeWidth={1.5} />
-            <h1 className="gm-title mt-3 text-[30px]">The Casino</h1>
+            <h1 className="gm-title mt-3 text-[30px]">{state.entry.kind === "fortunes" ? "Fortunes of War" : "The Casino"}</h1>
             <p className="mt-2 text-sm text-ink-300">
               {KIND_TEXT[state.entry.kind]}
               {state.entry.nation && (
@@ -98,7 +99,7 @@ export default function CasinoGate() {
               <p className="mt-3 text-xs text-ink-500">Preview mode: there&apos;s no Casino behind this sample game, so it doesn&apos;t go on.</p>
             )}
             <a href={state.entry.url} className="gm-btn gm-btn-primary mt-5 inline-flex">
-              <ExternalLink aria-hidden strokeWidth={1.75} /> Open the Casino
+              <ExternalLink aria-hidden strokeWidth={1.75} /> {state.entry.kind === "fortunes" ? "Open Fortunes of War" : "Open the Casino"}
             </a>
           </>
         )}

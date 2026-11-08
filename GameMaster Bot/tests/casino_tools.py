@@ -88,9 +88,18 @@ async def save_game(key, game, rewrite_reservations=False):
     store[key] = game
 
 
+fortune_rows = {}
+fortune_ops = []
+
+
 async def run_mysql(fn, *args, label=None):
     if fn is gm._insert_casino_grant_request_sync:
         grants.append({"request_id": args[0], "game": args[1], "target": args[2], "host": args[3], "mode": args[4], "payload": args[5]})
+        return None
+    if fn is gm._fortunes_row_sync:
+        return fortune_rows.get(int(args[1]))
+    if fn is gm._fortunes_tool_update_sync:
+        fortune_ops.append((args[0], int(args[1]), args[2]))
         return None
     return None
 
@@ -285,6 +294,50 @@ async def main():
     store[GAME]["randomizer_only"] = False
     ok, _, err = await leave(BOB)
     check("EU: only on Casino games", ok is False and "only for Casino games" in (err or "") and store[GAME]["reservations"].get("Germany") == BOB, err)
+
+    # Fortunes of War (step 7).
+    check("Fortunes redraws: casual majors 2, minors 1", gm._fortunes_base_redraws("casual", True) == 2 and gm._fortunes_base_redraws("casual", False) == 1)
+    check("Fortunes redraws: competitive majors 1, minors 0", gm._fortunes_base_redraws("competitive", True) == 1 and gm._fortunes_base_redraws("competitive", False) == 0)
+    fortunes_game = {
+        "mode": "Roleplay", "host_id": HOST, "co_hosts": [str(COHOST)], "fortunes_only": True,
+        "reservations": {"Germany": BOB, "Germany_coop": ALICE, "_FILL_Filler": CAROL, "Belgium": STAFF},
+    }
+    players = gm._fortunes_players(fortunes_game)
+    check("Fortunes sync: the main holder, tag and major", players.get(str(BOB)) == {"nation": "Germany", "tag": "GER", "priority": 3, "major": True}, players.get(str(BOB)))
+    check("Fortunes sync: a co-op shares the tag, lower priority", players.get(str(ALICE), {}).get("tag") == "GER" and players[str(ALICE)]["priority"] == 2)
+    check("Fortunes sync: a minor", players.get(str(STAFF)) == {"nation": "Belgium", "tag": "BEL", "priority": 3, "major": False}, players.get(str(STAFF)))
+    check("Fortunes sync: fillers draw no card", str(CAROL) not in players)
+
+    def fortunes_tool(action, actor, uid):
+        return gm._process_web_fortunes_tool({"action": action, "host_id": actor, "payload": {"thread_id": GAME, "user_id": str(uid)}})
+
+    def fortunes_reset():
+        reset()
+        store[GAME] = {**fresh_game(), "randomizer_only": False, "fortunes_only": True, "reservations": {"Germany": BOB}}
+        fortune_rows.clear()
+        fortune_rows[BOB] = {"nation": "Germany", "state": "locked", "card_name": "Blitzkrieg", "max_redraws": 2, "redraws_used": 2}
+        fortune_ops.clear()
+
+    fortunes_reset()
+    ok, result, err = await fortunes_tool("fortunes_redraw", COHOST, BOB)
+    check("Fortunes: a co-host gives a redraw", ok is True and fortune_ops == [(GAME, BOB, "redraw")], err)
+    check("Fortunes: the player is DM'd a GameMaster link", result.get("dm_sent") is True and dms and dms[-1]["to"] == BOB and dms[-1]["url"].endswith(f"/casino/{GAME}"), dms)
+    fortunes_reset()
+    ok, _, err = await fortunes_tool("fortunes_reset", HOST, BOB)
+    check("Fortunes: the host resets a card", ok is True and fortune_ops == [(GAME, BOB, "reset")], err)
+    fortunes_reset()
+    ok, _, err = await fortunes_tool("fortunes_redraw", OTHER_HOST, BOB)
+    check("Fortunes: another host is refused", ok is False and not fortune_ops, err)
+    fortunes_reset()
+    ok, _, err = await fortunes_tool("fortunes_redraw", HOST, ALICE)
+    check("Fortunes: no nation, no card to change", ok is False and "no nation" in (err or "") and not fortune_ops, err)
+    fortunes_reset()
+    store[GAME]["game_started"] = True
+    ok, _, err = await fortunes_tool("fortunes_reset", HOST, BOB)
+    check("Fortunes: sealed once the game starts", ok is False and "sealed" in (err or "") and not fortune_ops, err)
+    reset()
+    ok, _, err = await fortunes_tool("fortunes_redraw", HOST, BOB)
+    check("Fortunes: refused on a Casino game", ok is False and "isn't a Fortunes" in (err or ""), err)
 
     # Normal games are untouched.
     reset()

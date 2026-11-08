@@ -318,6 +318,8 @@ function requestFromRow(row: RequestRow): ScheduleRequestStatus {
       "casino_roll",
       "casino_extra",
       "casino_emergency_unreserve",
+      "fortunes_redraw",
+      "fortunes_reset",
       "moderation",
       "dishonored",
       "host_rating",
@@ -804,7 +806,7 @@ function processDemoRequests(): void {
       continue;
     }
 
-    if (request.action === "casino_roll" || request.action === "casino_extra") {
+    if (request.action === "casino_roll" || request.action === "casino_extra" || request.action === "fortunes_redraw" || request.action === "fortunes_reset") {
       // Preview: there's no bot to DM the link; say it went out.
       request.status = "done";
       request.result = { dm_sent: true };
