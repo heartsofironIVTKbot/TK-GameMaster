@@ -11232,7 +11232,7 @@ def format_reservation_totals(reservations: dict, mode: str) -> str:
 # GAME-HISTORY RECONSTRUCTION
 # Player / host game history was moved off player_stats and now lives in the
 # authoritative games record. These helpers rebuild "which game they played
-# what" straight from the games data so /info, /report and /report_host can
+# what" straight from the games data so the profile, /report and /report_host can
 # always show an accurate, up-to-date career instead of the empty legacy field.
 # ==========================================================================
 DISCORD_EPOCH_MS = 1420070400000
@@ -26626,24 +26626,7 @@ def get_category_name_for_nation(nation: str, game_mode: str):
 
     return "⚠️ UNMAPPED NATIONS"
 
-@tree.command(name="info", description="Open your player profile: stats, standing, history and roles.", guild=discord.Object(id=GUILD_ID))
-async def info(interaction: discord.Interaction):
-    """Sends the player to their own profile on the website (the same record
-    hosts see on the Database page, without staff-only tools or names)."""
-    url = f"{WEB_SITE_URL}/profile?guild={interaction.guild_id or cur_gid()}"
-    embed = discord.Embed(
-        title=f"👤 {interaction.user.display_name}",
-        description=(
-            "Your full profile is on the website: games and attendance, commends and warnings, "
-            "Merit and Hearts of Valor, bans, Dishonored, your recent games and your roles.\n\n"
-            "*Log in with Discord on the page if it asks — it only shows your own record.*"
-        ),
-        color=EmbedColor.INFO,
-    )
-    embed.set_thumbnail(url=interaction.user.display_avatar.url)
-    view = discord.ui.View()
-    view.add_item(discord.ui.Button(label="Open my profile", style=discord.ButtonStyle.link, url=url, emoji="👤"))
-    await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+# (/info was removed on 2026-11-08: My Profile on the website does the same.)
 
 # HELP SYSTEM UI & COMMAND
 class HelpSelect(discord.ui.Select):
@@ -30234,7 +30217,7 @@ async def _process_web_day_lock(req: dict, lock: bool) -> tuple[bool, dict | Non
 # =============================================================================
 # TICKETS — merged in from the TicketMaster bot (Hearts of Iron IV only)
 # -----------------------------------------------------------------------------
-# Players press the ticket panel (/spawn); GameMaster makes a private channel
+# Players press the ticket panel (posted from the website); GameMaster makes a private channel
 # for them and the staff who handle that kind of ticket:
 #   Verification (RP / Historical)    Ticket Support + Host Management
 #   Host application (RP / HIST)      Host Management only
@@ -31009,7 +30992,7 @@ TICKET_PANEL_DESCRIPTION = (
 
 
 class TicketPanelView(discord.ui.View):
-    """The ticket panel (/spawn). The first three ids are the old ticket bot's,
+    """The ticket panel (posted from the website). The first three ids are the old ticket bot's,
     so a panel it posted keeps working."""
 
     def __init__(self):
@@ -31056,34 +31039,46 @@ class TicketPanelView(discord.ui.View):
         ))
 
 
-@tree.command(name="spawn", description="[Host Management] Post the ticket panel in this channel.", guild=discord.Object(id=GUILD_ID))
-async def spawn_ticket_panel(interaction: discord.Interaction):
-    if interaction.guild is None:
-        return await _ticket_reply(interaction, "❌ This only works inside the server.")
-    if not _member_is_staff(interaction.user):
-        return await _ticket_reply(interaction, "❌ Only Host Management (or admins) can post the ticket panel.")
+TICKET_PANEL_KEY = "ticket_panel"  # bot_config: {"channel_id", "message_id"}
+
+
+async def _post_ticket_panel(guild) -> str:
+    """Post the ticket panel in the ticket panel channel and remove the previous
+    one (the website's "Post or re-post the ticket panel"; /spawn did this
+    until 2026-11-08). Run inside the server's scope. Raises ModerationError
+    when it can't."""
+    channel_id = int(G.TICKET_CHANNEL_ID or 0)
+    channel = guild.get_channel(channel_id) if channel_id else None
+    if channel is None:
+        raise ModerationError("❌ Pick the Ticket panel channel in Channels (and save) first.")
     embed = discord.Embed(title="Contact the Host Team", description=TICKET_PANEL_DESCRIPTION, color=EmbedColor.SUCCESS)
     try:
-        await interaction.channel.send(embed=embed, view=TicketPanelView())
+        message = await channel.send(embed=embed, view=TicketPanelView())
+    except discord.Forbidden:
+        raise ModerationError(f"❌ GameMaster can't post in #{channel.name} — give it View Channel and Send Messages there.")
     except discord.HTTPException as e:
-        return await _ticket_reply(interaction, f"❌ Couldn't post the panel here: {e}")
+        raise ModerationError(f"❌ Couldn't post the ticket panel in #{channel.name}: {e}")
+    config = await read_json(BOT_CONFIG_FILE)
+    old = config.get(TICKET_PANEL_KEY) or {}
+    if old.get("message_id") and int(old.get("message_id")) != message.id:
+        try:
+            old_channel = guild.get_channel(int(old.get("channel_id") or 0))
+            if old_channel is not None:
+                await (await old_channel.fetch_message(int(old["message_id"]))).delete()
+        except Exception:
+            pass  # already gone
+    config[TICKET_PANEL_KEY] = {"channel_id": channel.id, "message_id": message.id}
+    await write_json(BOT_CONFIG_FILE, config)
     missing = []
     if not G.TICKET_CATEGORY_ID:
         missing.append("a ticket category")
     if not TICKET_SUPPORT_ROLES:
         missing.append("a Ticket Support role")
-    note = f"\n⚠️ Still to set on the website (server settings → Tickets): {', '.join(missing)}." if missing else ""
-    await _ticket_reply(interaction, "✅ Ticket panel posted." + note)
+    note = f" Still to set (Tickets): {', '.join(missing)}." if missing else ""
+    return f"Posted the ticket panel in #{channel.name}.{note}"
 
 
-@tree.command(name="close", description="Close this ticket if its buttons don't work.", guild=discord.Object(id=GUILD_ID))
-@app_commands.describe(resolution="Resolved (gives the role a verification / host application ticket is for) or Unresolved")
-@app_commands.choices(resolution=[
-    app_commands.Choice(name="Resolved", value="Resolved"),
-    app_commands.Choice(name="Unresolved", value="Unresolved"),
-])
-async def close_ticket_command(interaction: discord.Interaction, resolution: str = "Unresolved"):
-    await _ticket_close_from_interaction(interaction, resolution)
+# (/close was removed on 2026-11-08: tickets close with their own buttons.)
 
 
 # ————— /botprofile: the bot's own avatar and banner (bot owner only) —————
@@ -34858,7 +34853,7 @@ async def _run_for_active_guilds(func, label: str) -> None:
 
 
 # ————— Website requests: create a role / channel during setup —————
-SERVER_SETUP_OPS = ("create_role", "create_channel", "refresh", "sync_commands", "resend_welcome", "test_post", "schedule_panel")
+SERVER_SETUP_OPS = ("create_role", "create_channel", "refresh", "sync_commands", "resend_welcome", "test_post", "schedule_panel", "ticket_panel")
 SERVER_SETUP_CHANNEL_KINDS = ("text", "voice", "category", "forum")
 
 
@@ -34907,6 +34902,12 @@ async def _process_web_server_setup(req: dict):
             try:
                 with guild_scope(guild.id):
                     done = await _post_schedule_panel(guild)
+            except ModerationError as e:
+                return False, None, str(e)
+        elif op == "ticket_panel":
+            try:
+                with guild_scope(guild.id):
+                    done = await _post_ticket_panel(guild)
             except ModerationError as e:
                 return False, None, str(e)
         elif op == "resend_welcome":

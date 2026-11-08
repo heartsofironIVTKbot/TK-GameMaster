@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarDays, CircleAlert, CircleCheck, Flag, FlaskConical, Hand, KeyRound, Radio, RefreshCw, Stethoscope, Terminal, TrendingUp, TriangleAlert, Users, Wrench, type LucideIcon } from "lucide-react";
+import { CalendarDays, CircleAlert, CircleCheck, Flag, FlaskConical, Hand, KeyRound, Radio, RefreshCw, Stethoscope, Terminal, Ticket, TrendingUp, TriangleAlert, Users, Wrench, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Avatar from "@/components/database/Avatar";
@@ -32,7 +32,7 @@ const LEVEL: Record<CheckLevel, { icon: LucideIcon; tone: string }> = {
 };
 
 /** The fix-it buttons' icons (FIX_ACTIONS in lib/serverDashboardTypes.ts). */
-const FIX_ICON: Record<string, LucideIcon> = { refresh: RefreshCw, commands: Terminal, test: FlaskConical, panel: CalendarDays, welcome: Hand };
+const FIX_ICON: Record<string, LucideIcon> = { refresh: RefreshCw, commands: Terminal, test: FlaskConical, panel: CalendarDays, ticket: Ticket, welcome: Hand };
 
 function LevelIcon({ level }: { level: CheckLevel }) {
   const Icon = LEVEL[level].icon;

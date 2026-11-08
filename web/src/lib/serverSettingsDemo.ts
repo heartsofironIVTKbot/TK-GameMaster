@@ -327,9 +327,13 @@ export function applyDemoServerSetup(payload: Record<string, unknown>): DemoOutc
     test_post: "Posted a test message in #bot-logs",
     resend_welcome: "Sent the setup welcome again (to the owner's DMs, else the system channel)",
     schedule_panel: "Posted and pinned the Host Panel",
+    ticket_panel: "Posted the ticket panel",
   };
   if (payload.op === "schedule_panel" && !server.settings?.channels.schedule_panel) {
     return refuse("❌ Pick the Host Panel channel and save first.");
+  }
+  if (payload.op === "ticket_panel" && !server.settings?.channels.tickets) {
+    return refuse("❌ Pick the Ticket panel channel in Channels (and save) first.");
   }
   if (typeof payload.op === "string" && payload.op in fixed) {
     if (payload.op === "sync_commands" && server.status !== "active") {

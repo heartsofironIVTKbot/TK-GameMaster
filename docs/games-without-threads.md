@@ -42,7 +42,7 @@ channels). Captains, submod details and the old dashed lines were dropped.
 ## The map's top bar
 
 Everyone sees **📜 Rules** and **🧩 Mods** (glowing, with a light sweep) and
-**👤 My profile** (the same page as `/info`). Hosts also see Schedule,
+**👤 My profile** (the website's My Profile). Hosts also see Schedule,
 Database, Games, Attendance, Servers and the Host Tool. There's no mode
 picker any more: the map follows the selected game's mode. Hovering a nation
 shows just its name in a small pill under the top bar, and nations the host

@@ -37,7 +37,11 @@ website.
 > (hot-join and crash reports are on the website) and /run_ai_analysis (the
 > Games page's chat-log card) went too. Then the TicketMaster bot was merged
 > in (see [tickets.md](tickets.md)), which brought **/spawn** (post the ticket
-> panel) and **/close** (close a ticket if its buttons fail). **5 commands.**
+> panel) and **/close** (close a ticket if its buttons fail). On 2026-11-08
+> /info (the website's My Profile does the same), /spawn (the ticket panel is
+> posted from server settings → Tickets) and /close (tickets close with their
+> buttons) were removed. **2 commands:** /help, and /botprofile (bot owner,
+> home server only).
 > The Settings clean-up added one message context menu, **Delete GameMaster
 > message** (right-click → Apps; Host Management only, the bot's own messages
 > only, logged in the audit log). The weekly schedule board was removed from the
@@ -45,7 +49,7 @@ website.
 > Attendance pages) took its place.
 > Rows marked ✅ below are done; ❌ = removed.
 >
-> Now: /help, /info, /spawn, /close.
+> Now: /help, /botprofile (home server only).
 >
 > The chat-log upload + AI analysis (lived in the Host Control Center) is
 > now on the Games page, with stricter grading — see
@@ -171,7 +175,7 @@ and /game_start, /game_end, /game_cancel and /announce_game (Games page).
 | ❌ /chaos | Players | Removed (October 2026) with the All Add-ons add-on. Tommy's Lootboxes and Star Wars were removed too. |
 | ❌ /gamble | Players | Hands the player a casino web link (removed until the Casino integration) |
 | ❌ /achievement | Players | Fun achievement roll (removed) |
-| ✅ /info | Players | Opens the player's own profile on the website (`/profile`): the Database record layout, read-only, without staff names |
+| ❌ /info | Players | Opens the player's own profile on the website (`/profile`): the Database record layout, read-only, without staff names |
 | /help | Players | Help menu for connection / game issues |
 | ✅ /draft_pick | Draft captains | Moved anyway: captains pick on the website map's draft pool |
 | ✅ /clean | Host | Deletes chat messages in the thread — it's about Discord chat itself |

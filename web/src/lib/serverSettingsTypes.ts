@@ -105,7 +105,7 @@ export const CHANNEL_FIELDS = [
 
 /** The Tickets step's channels (the ticket system merged in from TicketMaster). */
 export const TICKET_CHANNEL_FIELDS = [
-  { key: "tickets", label: "Ticket panel channel", kind: "text", required: false, hint: "Where /spawn posts the ticket panel — the buttons players press to open a ticket. Players are also pointed here for appeals and commends." },
+  { key: "tickets", label: "Ticket panel channel", kind: "text", required: false, hint: "Where the ticket panel goes — the buttons players press to open a ticket (post it with the button below once saved). Players are also pointed here for appeals and commends." },
   { key: "ticket_category", label: "Ticket category", kind: "category", required: false, hint: "Every new ticket is a channel in this category. Keep the category hidden from @everyone; GameMaster gives each ticket's own people access." },
 ] as const;
 

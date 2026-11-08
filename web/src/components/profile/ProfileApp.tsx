@@ -26,7 +26,7 @@ import type { HostStanding } from "@/lib/moderationTypes";
 import type { MyProfileResponse } from "@/lib/profileTypes";
 
 /**
- * A player's own profile, where the /info command sends them. The same
+ * A player's own profile (My Profile). The same
  * layout as a record on the Database page (header + portfolio), read-only:
  * no staff tools, no staff names.
  */

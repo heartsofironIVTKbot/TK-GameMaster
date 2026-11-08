@@ -67,7 +67,7 @@ them, and prove them with a load test (Phase 4).
    - Database page: commend, warn, ban, Dishonored, host ratings (mirror
      rules, only Host Management can take back), verification, VIP, host
      ranks, role check;
-   - Attendance page; crash reports (`/crash`); tickets (`/spawn`, each kind,
+   - Attendance page; crash reports (`/crash`); tickets (the panel posted from the website, each kind,
      closing, 24 h ping / 48 h auto-close);
    - per-game forum threads, scheduling panel, "Delete GameMaster message".
 5. Write down every bug, fix it, re-test.

@@ -521,6 +521,7 @@ const TICKET_ACCESS = [
 
 export function TicketsStep({ ctx }: { ctx: StepContext }) {
   const { draft } = ctx;
+  const fix = useFixAction(ctx.serverId, ctx.refreshSnapshot);
   return (
     <div className="space-y-4">
       <Card
@@ -538,8 +539,8 @@ export function TicketsStep({ ctx }: { ctx: StepContext }) {
         </ul>
         <p className="text-[11px] text-ink-500">
           Server admins can open and close every ticket. Resolving a verification ticket gives the player that branch&apos;s Verified role;
-          resolving a host application gives the Assistant host role of the branch they applied for. Staff post the panel with{" "}
-          <code className="gm-cut [--cut:4px] bg-ink-900/80 px-1">/spawn</code> in the ticket panel channel.
+          resolving a host application gives the Assistant host role of the branch they applied for. Post the panel with &quot;Post or
+          re-post the ticket panel&quot; under Ticket channels below.
         </p>
       </Card>
       <Card icon={Briefcase} title="Ticket staff">
@@ -586,6 +587,20 @@ export function TicketsStep({ ctx }: { ctx: StepContext }) {
                 suggestedName={field.key === "ticket_category" ? "TICKETS" : field.key.replace(/_/g, "-")}
                 label={field.label}
               />
+              {field.key === "tickets" && ctx.setupDone && (
+                <div className="space-y-1.5">
+                  <button
+                    type="button"
+                    disabled={fix.op !== null || !draft.channels.tickets}
+                    onClick={() => void fix.run("ticket_panel")}
+                    className="flex items-center gap-1.5 gm-cut [--cut:7px] border border-ink-800 bg-ink-800 px-2.5 py-1.5 text-xs font-bold text-ink-200 hover:border-brand-300/40 hover:text-ink-100 disabled:opacity-50"
+                  >
+                    {fix.op === "ticket_panel" ? <Spinner className="h-3 w-3 text-brand-300" /> : <Ticket aria-hidden className="h-3.5 w-3.5" strokeWidth={1.75} />} Post or re-post the ticket panel
+                  </button>
+                  <p className="text-[11px] text-ink-500">Save a new channel first. The old panel is removed.</p>
+                  {fix.message && <Callout tone={fix.message.tone === "ok" ? "ok" : "error"}>{fix.message.text}</Callout>}
+                </div>
+              )}
             </Field>
           ))}
         </div>

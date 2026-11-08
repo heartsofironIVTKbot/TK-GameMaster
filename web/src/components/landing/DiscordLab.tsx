@@ -12,7 +12,7 @@ import "./front/front.css";
  *
  *   ?view=announce&mode=Roleplay&when=<unix s>&host=Demo%20Host&state=0|1|2&site=<url>
  *       a game's announcement: 0 before it, 1 just posted ("(Creating link...)"), 2 link edited in
- *   ?view=panel     the ticket panel (/spawn): "Contact the Host Team"
+ *   ?view=panel     the ticket panel (posted from the website): "Contact the Host Team"
  *   ?view=ticket    ticket #0114 (a player report) in its private channel, the close buttons
  *   ?view=dm&site=  the DM the player gets when it's closed, with the website link
  */
