@@ -27341,6 +27341,10 @@ async def _check_scheduled_announcements_for_guild():
                 "preset_id": item.get("preset_id"),
                 "preset_name": item.get("preset_name"),
                 "require_ironlegion": item.get("require_ironlegion"),
+                # The add-on by name (the website reads it), and Casino /
+                # Fortunes co-hosts as strings: JavaScript rounds 19-digit ids.
+                "add_on": addon_value if addon_value != "none" else None,
+                "co_hosts": [str(uid) for uid in item.get("co_hosts") or []],
                 "nation_layout": nation_layout,
                 "layout_disabled_nations": not_playable,
                 "managed_mods": mod_entries,
