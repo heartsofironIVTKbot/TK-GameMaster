@@ -401,6 +401,8 @@ export interface RosterAssignPayload {
   force: boolean;
   /** DM the players this changes (Host Tool → Notify players). Missing = on. */
   notify?: boolean;
+  /** The map nation's tag: the website turns the map's name into the bot's (lib/botNation.ts). */
+  tag?: string | null;
 }
 
 /** Take a player off a game (formerly /remove). */

@@ -8,10 +8,11 @@ import {
   getSlotDetails,
   hostEntryOn,
   insertRequest,
+  isSchedulerDemo,
   listHosts,
 } from "@/lib/scheduleStore";
 import { branchOfMode } from "@/lib/hostBranches";
-import type { HostProfile } from "@/lib/scheduleTypes";
+import type { HostProfile, RosterAssignPayload } from "@/lib/scheduleTypes";
 import {
   validateDayLock,
   validateRosterAssign,
@@ -49,6 +50,17 @@ import {
 } from "@/lib/gameControlValidation";
 import { notePresetUsed } from "@/lib/presetStore";
 import { HOME_ONLY_ADD_ONS, addOnLocked } from "@/lib/scheduleOptions";
+import { botNationName } from "@/lib/botNation";
+import { moderationOptions } from "@/lib/playerIndex";
+import { getPool } from "@/lib/db";
+import type { RowDataPacket } from "mysql2";
+
+/** A game's mode (the bot's nation lists are per mode). */
+async function gameModeOf(threadId: string): Promise<string | null> {
+  if (isSchedulerDemo()) return "Roleplay";
+  const [rows] = await getPool().query<(RowDataPacket & { mode: string | null })[]>("SELECT mode FROM games WHERE thread_id = ? LIMIT 1", [threadId]);
+  return rows[0]?.mode ?? null;
+}
 
 /** The Casino and Fortunes of War are TommyKay's server's only (the bot checks too). */
 function homeOnlyRefusal(host: HostProfile, addOn: string | null | undefined): string | null {
@@ -306,6 +318,14 @@ export async function POST(request: Request) {
       if (!gameGuild) return jsonError("That game no longer exists.", 404);
       if (gameGuild !== host.guild_id && !(await hostEntryOn(host.discord_id, gameGuild))) {
         return jsonError("You're not a host on that game's server.", 403);
+      }
+      // The map's nation name ("German Reich") → the bot's for the game's mode ("Germany").
+      if (body.action === "roster_assign") {
+        const assign = payload as RosterAssignPayload;
+        if (assign.nation && assign.kind !== "filler") {
+          const [options, mode] = await Promise.all([moderationOptions(gameGuild).catch(() => null), gameModeOf(assign.thread_id)]);
+          assign.nation = botNationName(options?.mode_nations?.[mode ?? ""], assign.tag, assign.nation);
+        }
       }
       await insertRequest({
         requestId,

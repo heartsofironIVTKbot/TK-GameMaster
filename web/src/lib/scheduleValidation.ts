@@ -138,6 +138,7 @@ export function validateRosterAssign(raw: unknown): RosterAssignPayload | null {
     occupied,
     force: input.force === true,
     notify: input.notify !== false,
+    tag: typeof input.tag === "string" && /^[A-Z0-9]{2,4}$/.test(input.tag) ? input.tag : null,
   };
 }
 

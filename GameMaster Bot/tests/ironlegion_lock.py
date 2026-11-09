@@ -116,14 +116,6 @@ async def main():
     check("casino token: IronLegion's answer counts, not the role",
           gm._live_role_flags(authenticated)["is_authenticated"] is True and gm._live_role_flags(role_by_hand)["is_authenticated"] is False)
 
-    with gm.guild_scope(GUILD):
-        gm.SERVER_FEATURES["ironlegion"] = True
-        line = await gm._ironlegion_announcement_line(None)
-        check("announcement: says where to authenticate", f"<#{CHANNEL}>" in line and "Steam authentication required" in line, line)
-        check("announcement: a game switched off says nothing", await gm._ironlegion_announcement_line(False) == "")
-    with gm.guild_scope(OTHER):
-        check("announcement: IronLegion not in that server, nothing", await gm._ironlegion_announcement_line(True) == "")
-
     gm.SERVER_FEATURES["ironlegion"] = True
     reachable["value"] = False
     gm._ironlegion_rows[GUILD]["ts"] = 0

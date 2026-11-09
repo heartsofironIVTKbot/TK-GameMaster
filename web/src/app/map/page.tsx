@@ -383,7 +383,7 @@ export default function Home() {
   const sendAssign = useCallback(
     (
       player: HostPlayer,
-      fields: Pick<RosterAssignPayload, "kind" | "nation" | "filler_name" | "occupied">,
+      fields: Pick<RosterAssignPayload, "kind" | "nation" | "filler_name" | "occupied" | "tag">,
       label: string,
     ) => {
       void host.send(
@@ -413,12 +413,14 @@ export default function Home() {
         return;
       }
       if (!toolsActive) return;
-      const occupant = reservations.find((reservation) => reservation.slot_key === slot);
+      // Reservations use the bot's names ("Germany"), the map the scenario's ("German Reich").
+      const keys = nationMatchKeys(nation.tag, slot, nation.name);
+      const occupant = reservations.find((reservation) => keys.has(canonicalName(String(reservation.slot_key))));
       if (occupant && String(occupant.user_id) === player.user_id) return;
       if (!occupant || gameLock?.casino) {
         sendAssign(
           player,
-          { kind: "nation", nation: slot, filler_name: null, occupied: null },
+          { kind: "nation", nation: slot, filler_name: null, occupied: null, tag: nation.tag },
           `${player.name} → ${nationName}`,
         );
         return;
@@ -429,6 +431,7 @@ export default function Home() {
         player,
         occupant: playerFromReservation(occupant),
         slot,
+        tag: nation.tag,
         nationName,
         allowCoop: majorTagsFor(scenarioId).has(nation.tag),
       });
@@ -507,15 +510,15 @@ export default function Home() {
       return;
     }
     if (prompt.type !== "occupied") return;
-    const { player, occupant, slot, nationName } = prompt;
+    const { player, occupant, slot, nationName, tag } = prompt;
     if (choice.kind === "coop") {
-      sendAssign(player, { kind: "coop", nation: slot, filler_name: null, occupied: null }, `${player.name} → ${nationName} co-op`);
+      sendAssign(player, { kind: "coop", nation: slot, filler_name: null, occupied: null, tag }, `${player.name} → ${nationName} co-op`);
     } else if (choice.kind === "swap") {
-      sendAssign(player, { kind: "nation", nation: slot, filler_name: null, occupied: "swap" }, `${player.name} ⇄ ${occupant.name}`);
+      sendAssign(player, { kind: "nation", nation: slot, filler_name: null, occupied: "swap", tag }, `${player.name} ⇄ ${occupant.name}`);
     } else if (choice.kind === "replace") {
       sendAssign(
         player,
-        { kind: "nation", nation: slot, filler_name: null, occupied: "replace" },
+        { kind: "nation", nation: slot, filler_name: null, occupied: "replace", tag },
         `${player.name} replaces ${occupant.name} on ${nationName}`,
       );
     }

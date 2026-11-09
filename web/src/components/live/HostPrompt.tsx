@@ -15,8 +15,9 @@ export type HostPromptRequest =
       point: DropPoint;
       player: HostPlayer;
       occupant: HostPlayer;
-      /** Target nation slot name + display name. */
+      /** Target nation slot name + display name, and its map tag. */
       slot: string;
+      tag: string;
       nationName: string;
       /** Majors can take co-op players. */
       allowCoop: boolean;

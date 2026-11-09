@@ -15,7 +15,9 @@ import { ironLegionRequired, ironLegionVerifyUrl, parseRequireIronLegion } from 
 import { ironLegionMemberVerified } from "@/lib/ironlegionMember";
 import { settingsOf } from "@/lib/serverSettings";
 import { categoryOfMode } from "@/lib/scheduleOptions";
-import { isSchedulerDemo } from "@/lib/scheduleStore";
+import { getHostRosterEntry, isSchedulerDemo } from "@/lib/scheduleStore";
+import { botNationName } from "@/lib/botNation";
+import { moderationOptions } from "@/lib/playerIndex";
 import tagToSlotJson from "@/lib/tag_to_slot.json";
 
 /** Owner tag -> playable country slot name (bot's canonical naming). */
@@ -67,6 +69,7 @@ interface UserRow extends RowDataPacket {
   /** Missing until the bot has added the column (then Historical falls back to hoi4_verified). */
   hist_verified?: number | boolean;
   banned: number | boolean;
+  vip?: number | boolean;
 }
 
 /**
@@ -101,6 +104,9 @@ interface GameDataDocument {
   locked_regions?: unknown;
   layout_disabled_nations?: unknown;
   is_draft?: unknown;
+  /** Who may reserve majors / minors: "VIP" | "Trusted" | "Verified" | "All Users". */
+  major_lock_level?: unknown;
+  minor_lock_level?: unknown;
 }
 
 function parseGameData(raw: unknown): GameDataDocument {
@@ -231,7 +237,7 @@ export async function POST(request: NextRequest) {
 
   // Translate raw owner tags to the bot's playable slot names when a client
   // posts a tag (e.g. "GER" -> "Germany").
-  const resolvedSlotKey =
+  let resolvedSlotKey =
     tagToSlot[slotKey.trim().toUpperCase()] ?? slotKey.trim();
 
   let connection: PoolConnection;
@@ -259,6 +265,10 @@ export async function POST(request: NextRequest) {
       return jsonError("Game not found", 404);
     }
     const gameData = parseGameData(game.game_data);
+    // The map's nation name ("German Reich") → the bot's for the game's mode
+    // ("Germany"), so the bot accepts it and one nation can't be taken twice.
+    const options = await moderationOptions(game.guild_id ? String(game.guild_id) : undefined).catch(() => null);
+    resolvedSlotKey = botNationName(options?.mode_nations?.[String(game.mode ?? "")], mapTag, resolvedSlotKey);
 
     if (game.game_started || ["ended", "cancelled"].includes(game.status ?? "")) {
       await connection.rollback();
@@ -320,14 +330,38 @@ export async function POST(request: NextRequest) {
       await connection.rollback();
       return jsonError("You are banned from reserving nations", 403);
     }
-    if (historical ? !user.hist_verified : !user.hoi4_verified) {
-      await connection.rollback();
-      return jsonError(
-        historical
-          ? "You need Hist Verified before reserving in Historical games — ask the staff (or open a ticket)"
-          : "Your HOI4 account must be verified (RP Verified) before reserving",
-        403,
-      );
+    // Who may reserve: the game's own levels (Games page / game setup), majors
+    // and minors separately, as the bot's _member_meets_lock_level: everyone,
+    // Verified+ (Verified or Trusted), Trusted+, or VIP. Hosts always may.
+    if (!isFillerSlot(resolvedSlotKey)) {
+      const lists = options?.mode_nations?.[String(game.mode ?? "")];
+      const base = isCoopSlot(resolvedSlotKey) ? resolvedSlotKey.split("_coop", 1)[0] : resolvedSlotKey;
+      const major = lists ? lists.majors.includes(base) : false;
+      const raw = major ? gameData.major_lock_level ?? "Trusted" : gameData.minor_lock_level ?? "All Users";
+      const level = ["VIP", "Trusted", "Verified", "All Users"].includes(String(raw)) ? String(raw) : major ? "Trusted" : "All Users";
+      if (level !== "All Users" && !(await getHostRosterEntry(session.discord_id, gameGuild).catch(() => null))) {
+        const [roleIds, directory] = await Promise.all([
+          memberRoleIds(gameGuild),
+          connection.query<(RowDataPacket & { role_ids: string | null })[]>(
+            "SELECT role_ids FROM web_member_directory WHERE guild_id = ? AND user_id = ? LIMIT 1",
+            [gameGuild, session.discord_id],
+          ),
+        ]);
+        // Role ids as digit strings: JSON.parse would round 19-digit snowflakes.
+        const raws = directory[0][0]?.role_ids;
+        const roles = new Set(typeof raws === "string" ? (raws.match(/\d{5,25}/g) ?? []) : []);
+        const has = (id: string | null) => Boolean(id && roles.has(id));
+        const vip = roleIds.vip_all.some((id) => roles.has(id)) || Boolean(user.vip);
+        const trusted = has(historical ? roleIds.hist_trusted : roleIds.rp_trusted);
+        const verifiedRole = historical ? roleIds.hist_verified : roleIds.rp_verified;
+        const verified = verifiedRole ? has(verifiedRole) : Boolean(historical ? user.hist_verified : user.hoi4_verified);
+        const allowed = level === "VIP" ? vip : level === "Trusted" ? trusted : verified || trusted;
+        if (!allowed) {
+          await connection.rollback();
+          const who = level === "VIP" ? "VIP" : level === "Trusted" ? "Trusted+" : "Verified+";
+          return jsonError(`${major ? "Major" : "Minor"} nations in this game are for ${who} players only.`, 403);
+        }
+      }
     }
 
     const ironLegion = await ironLegionRefusal(connection, gameGuild, session.discord_id, gameData);
