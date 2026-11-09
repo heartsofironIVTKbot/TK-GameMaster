@@ -494,31 +494,12 @@ body {
   will-change: opacity;
 }
 
-/* 2. Pending (yellow): clockwise chasing snake. The dash pattern advances by
-   exactly one period so the loop is seamless. The period is fixed at 240px
-   (matches nationHighlights.ts SNAKE_PERIOD) and is NOT read from a CSS
-   variable: `var()` inside @keyframes is unreliable in some engines, and a
-   hardcoded value keeps the animation from being silently dropped. Rings are
-   wound counter-clockwise, so a growing dash offset travels clockwise on
-   screen. This is the only animation that repaints, and it is confined to the
-   pending pane's own <svg>. */
-@keyframes nationSnakeChase {
-  from {
-    stroke-dashoffset: 0;
-  }
-  to {
-    stroke-dashoffset: 240px;
-  }
-}
-.nation-snake {
-  animation: nationSnakeChase 2.1s linear infinite;
-}
+/* 2. Pending (yellow): a still glow, no animation (nationHighlights.ts). */
 
 @media (prefers-reduced-motion: reduce) {
-  /* The chasing snake and the hover breathing are core indicators and keep
-     running (the breathing is an in-place opacity fade — no movement); only
-     the soft self/coop pulses are disabled under reduced motion (they are
-     cosmetic, and the borders themselves remain visible). */
+  /* The hover breathing is a core indicator and keeps running (an in-place
+     opacity fade, no movement); only the soft self/coop pulses are disabled
+     under reduced motion (they are cosmetic; the borders stay visible). */
   .leaflet-nation-self-pane,
   .leaflet-nation-coop-pane {
     animation: none;

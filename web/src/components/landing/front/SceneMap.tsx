@@ -7,15 +7,15 @@ import NationCard from "./NationCard";
 
 /**
  * "Claim your nation": the reservation map playing itself. As soon as it's
- * on screen a cursor opens the United Kingdom (the pending snake chases round
- * it) and reserves it; the nation panel closes, the reservations drawer slides
+ * on screen a cursor opens the United Kingdom (it glows yellow) and reserves
+ * it; the nation panel closes, the reservations drawer slides
  * in, and the lobby fills up: each nation glows yellow while someone picks it,
  * then turns taken; Germany gets a co-op (blue). Then it starts over, and it
  * pauses while it's off screen. No glitches here (Niko, 2026-11-06).
  *
  * It copies the real map: teal-black sea, the nation panel with its glowing
  * Reserve button, the drawer, and the highlight recipes of nationHighlights.ts
- * (pending snake, others' dashed yellow, your green, co-op blue, taken grey),
+ * (pending yellow glow, others' dashed yellow, your green, co-op blue, taken grey),
  * on the real vanilla borders (public/landing/map-vanilla.json). The map always
  * fills its frame: it's drawn three times side by side (it wraps east-west)
  * and the camera never shows past its top or bottom edge.
@@ -122,7 +122,6 @@ interface Layer {
   strokeOpacity?: number;
   width?: number;
   dash?: readonly [number, number];
-  snake?: boolean;
 }
 const TAKEN: Layer[] = [{ fill: "#232a35", fillOpacity: 0.7, stroke: "#9aa4b2", strokeOpacity: 0.22, width: 0.8 }];
 const SELF: Layer[] = [
@@ -144,12 +143,11 @@ const OTHERS: Layer[] = [
   { fill: "#ffe14d", fillOpacity: 0.1, stroke: "#ffb000", strokeOpacity: 0.3, width: 8 },
   { stroke: "#ffd60a", strokeOpacity: 0.95, width: 1.8, dash: [7, 5] },
 ];
-/** Your pending claim: a glowing snake chasing round the border (globals.css nation-snake). */
+/** Your pending claim: a still yellow glow (the real map's, nationHighlights.ts). */
 const PENDING: Layer[] = [
-  { stroke: "#ffd60a", strokeOpacity: 0.34, width: 2 },
-  { stroke: "#ffb000", strokeOpacity: 0.28, width: 9, dash: [150, 90], snake: true },
-  { stroke: "#ffe14d", strokeOpacity: 0.92, width: 3.2, dash: [84, 156], snake: true },
-  { stroke: "#fffbe6", strokeOpacity: 1, width: 1.7, dash: [30, 210], snake: true },
+  { fill: "#ffe14d", fillOpacity: 0.12, stroke: "#ffb000", strokeOpacity: 0.34, width: 9 },
+  { stroke: "#ffe14d", strokeOpacity: 0.95, width: 2.6 },
+  { stroke: "#fffbe6", strokeOpacity: 0.85, width: 1.1 },
 ];
 const HOVER: Layer[] = [
   { fill: "#ffffff", fillOpacity: 0.16 },
@@ -160,8 +158,7 @@ const HOVER: Layer[] = [
 /**
  * One nation's highlight. The map is zoomed by a CSS transform, so widths and
  * dashes are given in map units (screen px / zoom) to look like the real
- * map's. The snake runs on the browser's own SVG animation, not a stylesheet,
- * so its period can follow the zoom.
+ * map's.
  */
 function Highlight({ d, layers, zoom }: { d: string; layers: Layer[]; zoom: number }) {
   const unit = 1 / zoom;
@@ -179,11 +176,7 @@ function Highlight({ d, layers, zoom }: { d: string; layers: Layer[]; zoom: numb
           strokeDasharray={layer.dash?.map((value) => value * unit).join(" ")}
           strokeLinejoin="round"
           strokeLinecap="round"
-        >
-          {layer.snake && (
-            <animate attributeName="stroke-dashoffset" from="0" to={String(240 * unit)} dur="2.1s" repeatCount="indefinite" />
-          )}
-        </path>
+        />
       ))}
     </g>
   );
@@ -371,7 +364,7 @@ export default function SceneMap({ number }: { number: number }) {
 
   // The highlight layers, in the real map's order (taken under everything).
   // Static ones live with the nations; the breathing ones (yours, the co-op)
-  // and the moving snake get layers of their own, so they don't make the
+  // and the pending UK get layers of their own, so they don't make the
   // whole map repaint every frame.
   const highlights: { key: string; tag: string; layers: Layer[] }[] = [];
   for (const [tag] of CLAIMS.slice(0, claimed)) {
@@ -565,7 +558,7 @@ export default function SceneMap({ number }: { number: number }) {
                 </svg>
               )}
 
-              {/* The pending snake round the UK's home islands: its own small layer. */}
+              {/* The pending glow round the UK's home islands: its own small layer. */}
               {(beat === 3 || beat === 4) && ukHome && (
                 <svg
                   aria-hidden

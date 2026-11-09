@@ -78,7 +78,7 @@ export interface MeProfile {
 
 /**
  * How the selected nation relates to the active lobby:
- *  - pending  free: being inspected / about to be claimed (yellow snake)
+ *  - pending  free: being inspected / about to be claimed (yellow glow)
  *  - self     reserved by the signed-in user (green)
  *  - locked   reserved by someone else, not claimable (red)
  *  - coop     reserved major power: Co-Op inspection (electric blue)

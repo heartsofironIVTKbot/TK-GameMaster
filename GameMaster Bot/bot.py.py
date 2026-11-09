@@ -2243,6 +2243,23 @@ def _ironlegion_db_config() -> Optional[dict]:
 _IRONLEGION_DB: Optional[dict] = _ironlegion_db_config()
 
 
+def _ironlegion_error_text(e: Exception) -> str:
+    """The error's kind and MySQL number, with what it most likely means
+    (never the message itself: it can carry the user and host)."""
+    errno = getattr(e, "errno", None)
+    hint = {
+        1044: "no access to that database",
+        1045: "wrong user or password",
+        1142: "the reader user may not SELECT that view (missing GRANT)",
+        1146: "the view doesn't exist (IronLegion's migration not run)",
+        1054: "a column is missing from the view",
+        2003: "can't connect to the host or port",
+        2005: "unknown host",
+        2013: "connection lost",
+    }.get(errno)
+    return f"{type(e).__name__}" + (f" {errno}" if errno else "") + (f": {hint}" if hint else "")
+
+
 def _ironlegion_fetch_sync(config: dict, guild_id: int) -> Optional[dict]:
     conn = mysql.connector.connect(**config)
     try:
@@ -2298,7 +2315,7 @@ async def _ironlegion_member(guild_id: int, discord_id: int) -> bool:
     try:
         ok = await asyncio.to_thread(_ironlegion_answer_sync, _IRONLEGION_DB, key[0], key[1])
     except Exception as e:
-        _audit_log("WARN", f"IronLegion database unreachable (guild={guild_id}): {type(e).__name__}")
+        _audit_log("WARN", f"IronLegion database unreachable (guild={guild_id}): {_ironlegion_error_text(e)}")
         await _tell_ironlegion_outage(key[0])
         return entry["ok"] if entry else True
     _ironlegion_answers[key] = {"ok": ok, "ts": time.time()}
@@ -2322,7 +2339,7 @@ async def _ironlegion_server(guild_id: int) -> Optional[dict]:
     except Exception as e:
         # Keep the last row (or none: no lock) and try again after the TTL.
         _ironlegion_rows[guild_id] = {"row": entry["row"] if entry else None, "ts": time.time()}
-        _audit_log("WARN", f"IronLegion database unreachable (guild={guild_id}): {type(e).__name__}")
+        _audit_log("WARN", f"IronLegion database unreachable (guild={guild_id}): {_ironlegion_error_text(e)}")
         await _tell_ironlegion_outage(guild_id)
         return entry["row"] if entry else None
     _ironlegion_rows[guild_id] = {"row": row, "ts": time.time()}

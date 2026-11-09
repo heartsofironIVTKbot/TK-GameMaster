@@ -10,7 +10,7 @@ import { lighten } from "./nationGeometry";
  *
  *  - hover    soft nation-colored glow + raised "pop", breathing while held
  *  - taken    flat grey wash, no border (reserved by someone else: disabled)
- *  - pending  yellow clockwise "chasing snake" neon border (selected, free)
+ *  - pending  still yellow glow border (selected, free)
  *  - self     solid green neon border with a soft pulsing glow (your nation)
  *  - locked   solid red neon border + dimmed fill (clicked a taken minor —
  *             can't be co-oped; also the host lock editor's active group)
@@ -27,8 +27,8 @@ import { lighten } from "./nationGeometry";
  *    strokes — never the 288 filled nation polygons beneath.
  *  - Neon glow is stacked strokes (wide faint halo + bright core): no CSS
  *    `filter`, so nothing to re-rasterize per frame and nothing to crop.
- *  - Pulses animate the pane's `opacity` (compositor-only); only the snake
- *    animates `stroke-dashoffset`, and it is paused while the map moves.
+ *  - Pulses animate the pane's `opacity` (compositor-only). Nothing animates
+ *    the strokes themselves, so no border is redrawn frame by frame.
  *  - Overlay panes sit above every base path, so highlighted borders are never
  *    hidden by a neighbor's fill.
  *
@@ -71,7 +71,7 @@ export interface HoverTarget {
 
 export interface HighlightState {
   hover: HoverTarget | null;
-  /** Selected nation that is still free: yellow chasing snake. */
+  /** Selected nation that is still free: still yellow glow. */
   pendingTag: string | null;
   /** Selected nation that is a reserved major power: electric blue. */
   coopTag: string | null;
@@ -135,13 +135,6 @@ const PALETTE = {
   },
 } as const;
 
-/**
- * Snake dash pattern period in px (dash + gap). Must match the hardcoded
- * 240px `to` value in globals.css `@keyframes nationSnakeChase` so the
- * marching loop is seamless.
- */
-export const SNAKE_PERIOD = 240;
-const SNAKE_CLASS = "nation-snake";
 
 const PANE_ACTIVE_CLASS = "nation-pane-active";
 /** Debounce after the last map movement before new hover is allowed again. */
@@ -399,7 +392,7 @@ const COOP_RECIPE: readonly LayerSpec[] = [
 ];
 
 /** Other players' live selections: the pending yellow, but a still, dashed
-    border and a faint wash — never the snake (no per-frame dash animation,
+    border and a faint wash (no per-frame dash animation,
     however many players are clicking around). The pane breathes instead. */
 const OTHERS_RECIPE: readonly LayerSpec[] = [
   {
@@ -412,37 +405,21 @@ const OTHERS_RECIPE: readonly LayerSpec[] = [
   { stroke: PALETTE.pending.track, strokeOpacity: 0.95, width: 1.8, dash: [7, 5] },
 ];
 
-const PENDING_RECIPE: readonly LayerSpec[] = (() => {
-  const dash = (length: number) => [length, SNAKE_PERIOD - length] as const;
-  return [
-    // Faint full outline so the pending nation is readable between snakes.
-    { stroke: PALETTE.pending.track, strokeOpacity: 0.34, width: 2 },
-    // Three dashed layers share one pattern period and one leading edge; the
-    // longer, fainter layers trail behind the short bright head — a tapered,
-    // glowing comet without any filter.
-    {
-      className: SNAKE_CLASS,
-      stroke: PALETTE.pending.glow,
-      strokeOpacity: 0.28,
-      width: 9,
-      dash: dash(150),
-    },
-    {
-      className: SNAKE_CLASS,
-      stroke: PALETTE.pending.body,
-      strokeOpacity: 0.92,
-      width: 3.2,
-      dash: dash(84),
-    },
-    {
-      className: SNAKE_CLASS,
-      stroke: PALETTE.pending.head,
-      strokeOpacity: 1,
-      width: 1.7,
-      dash: dash(30),
-    },
-  ];
-})();
+/** The selected, still-free nation: a still yellow glow (Niko, 2026-11-09:
+    performance over looks). The old "chasing snake" moved its dashes every
+    frame, which made the browser redraw the whole outline of a big nation
+    (UK, Soviet Union, France) 60 times a second and dropped the frame rate. */
+const PENDING_RECIPE: readonly LayerSpec[] = [
+  {
+    fill: PALETTE.pending.body,
+    fillOpacity: 0.12,
+    stroke: PALETTE.pending.glow,
+    strokeOpacity: 0.34,
+    width: 9,
+  },
+  { stroke: PALETTE.pending.body, strokeOpacity: 0.95, width: 2.6 },
+  { stroke: PALETTE.pending.head, strokeOpacity: 0.85, width: 1.1 },
+];
 
 function hoverRecipe(baseColor: string): readonly LayerSpec[] {
   const glow = lighten(baseColor, 0.4);

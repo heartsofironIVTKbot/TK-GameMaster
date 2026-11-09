@@ -776,7 +776,7 @@ function sameReservations(
  * reservations are drawn as overlay highlights (see nationHighlights.ts):
  *
  *  1. hover    soft nation-colored glow + raised pop, breathing
- *  2. pending  yellow clockwise "chasing snake" (selected, still free)
+ *  2. pending  still yellow glow (selected, still free)
  *  3. self     green neon, pulsing (reserved by you)
  *  4. taken    grey wash (reserved by another player)
  *  5. locked   red neon (clicked a taken minor: no Co-Op possible)
