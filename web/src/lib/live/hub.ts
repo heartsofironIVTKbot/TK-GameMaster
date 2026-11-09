@@ -71,6 +71,8 @@ interface Room {
   selections: Map<string, Hold>;
   /** `${player}:${tag}` → when that player may take that nation again. */
   cooldowns: Map<string, number>;
+  /** Players who hold a nation in this game: they can't hold another. */
+  reserved: Set<string>;
   /** Selections changed since the last flush: the new one, or null = gone. */
   changed: Map<string, Hold | null>;
   lastFlush: number;
@@ -132,6 +134,7 @@ export class LiveHub {
         content: null,
         selections: new Map(),
         cooldowns: new Map(),
+        reserved: new Set(),
         changed: new Map(),
         lastFlush: 0,
         viewers: 0,
@@ -170,6 +173,11 @@ export class LiveHub {
     if (!this.take(selection.user_id)) return { status: "limited" };
     const now = Date.now();
     const current = room.selections.get(selection.user_id);
+    // They already have a nation (one each): looking around holds nothing.
+    if (selection.tag && room.reserved.has(selection.user_id)) {
+      if (current) this.dropSelection(room, selection.user_id);
+      return { status: "ignored" };
+    }
     if (!selection.tag) {
       if (current) this.dropSelection(room, selection.user_id);
       return { status: "cleared" };
@@ -205,6 +213,15 @@ export class LiveHub {
     if (room) this.dropSelection(room, userId);
   }
 
+  /** Who holds a nation now; a player who just got one (say, the Host Tool placed them) loses their pick. */
+  private noteReserved(room: Room, snapshot: unknown): void {
+    const rows = (snapshot as { reservations?: { user_id?: unknown }[] } | null)?.reservations;
+    room.reserved = new Set((Array.isArray(rows) ? rows : []).map((row) => String(row.user_id ?? "")).filter(Boolean));
+    for (const userId of room.selections.keys()) {
+      if (room.reserved.has(userId)) this.dropSelection(room, userId);
+    }
+  }
+
   private activeHolder(room: Room, tag: string, now: number): Hold | null {
     for (const hold of room.selections.values()) {
       if (hold.tag === tag && hold.until > now) return hold;
@@ -225,6 +242,7 @@ export class LiveHub {
         if (room.version === null) {
           room.version = version;
           room.content = JSON.stringify(snapshot);
+          this.noteReserved(room, snapshot);
         }
       }
       room.version ??= version;
@@ -267,6 +285,7 @@ export class LiveHub {
           const content = JSON.stringify(snapshot);
           if (content !== room.content) {
             room.content = content;
+            this.noteReserved(room, snapshot);
             this.broadcast(room, "lobby", { ...snapshot, version });
           } else {
             // Same lobby, new version: maps keep it for their safety poll.

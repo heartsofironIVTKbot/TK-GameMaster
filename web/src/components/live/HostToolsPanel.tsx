@@ -10,6 +10,7 @@ import {
   Gamepad2,
   GripVertical,
   Hand,
+  Lock,
   Puzzle,
   Search,
   Star,
@@ -43,6 +44,8 @@ export default function HostToolsPanel({
   demo,
   notify,
   onNotifyChange,
+  keep = false,
+  onKeepChange,
   onPickUp,
   onFiller,
   onRemove,
@@ -67,6 +70,9 @@ export default function HostToolsPanel({
   /** DM players about every change made here (on by default). */
   notify: boolean;
   onNotifyChange: (next: boolean) => void;
+  /** Placed players stay put until a host changes them (off: they're locked for 30 s). */
+  keep?: boolean;
+  onKeepChange?: (next: boolean) => void;
   onPickUp: (player: HostPlayer | null) => void;
   onFiller: (player: HostPlayer, point: DropPoint) => void;
   onRemove: (player: HostPlayer, point: DropPoint) => void;
@@ -414,6 +420,31 @@ export default function HostToolsPanel({
               />
             </span>
           </button>
+
+          {onKeepChange && (
+            <button
+              type="button"
+              role="switch"
+              aria-checked={keep}
+              onClick={() => onKeepChange(!keep)}
+              className="gm-cut flex w-full items-center gap-2.5 bg-ink-900 p-2.5 text-left [--cut:10px]"
+            >
+              <Lock aria-hidden className={`h-4 w-4 shrink-0 ${keep ? "text-ink-300" : "text-ink-500"}`} />
+              <span className="min-w-0 flex-1 leading-tight">
+                <span className="block text-[13px] font-semibold text-ink-100">Keep players where I put them</span>
+                <span className="mt-0.5 block text-[11.5px] text-ink-400">
+                  {keep
+                    ? "Players you place can't unreserve or switch nation themselves until a host changes them."
+                    : "Off: players you place can't change it themselves for 30 seconds."}
+                </span>
+              </span>
+              <span className={`gm-cut relative h-[22px] w-[38px] shrink-0 transition-colors [--cut:5px] ${keep ? "bg-brand-400" : "bg-ink-700"}`}>
+                <span
+                  className={`gm-cut absolute top-[3px] h-4 w-4 transition-[left] [--cut:4px] ${keep ? "left-[19px] bg-brand-950" : "left-[3px] bg-ink-300"}`}
+                />
+              </span>
+            </button>
+          )}
 
           {actions.length > 0 && (
             <div>

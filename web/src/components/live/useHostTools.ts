@@ -36,6 +36,8 @@ export interface HostAction {
 const STORAGE_KEY = "gm_host_tools";
 /** "0" = Notify players switched off; anything else (or nothing) = on. */
 const NOTIFY_KEY = "gm_host_tools_notify";
+/** "1" = Keep players where I put them (else they're locked for 30 s). */
+const KEEP_KEY = "gm_host_tools_keep";
 const POLL_MS = 1200;
 const KEEP_FINISHED = 6;
 
@@ -45,6 +47,9 @@ export function useHostTools(onRosterChanged: () => void) {
   // DM players about every Host Tool change (on by default).
   const [notify, setNotifyState] = useState(true);
   const notifyRef = useRef(true);
+  // Placed players stay put until a host changes them (off: 30 s).
+  const [keep, setKeepState] = useState(false);
+  const keepRef = useRef(false);
   const [actions, setActions] = useState<HostAction[]>([]);
   const nextId = useRef(1);
   const changedRef = useRef(onRosterChanged);
@@ -65,6 +70,9 @@ export function useHostTools(onRosterChanged: () => void) {
             const notifyOn = window.localStorage.getItem(NOTIFY_KEY) !== "0";
             notifyRef.current = notifyOn;
             setNotifyState(notifyOn);
+            const keepOn = window.localStorage.getItem(KEEP_KEY) === "1";
+            keepRef.current = keepOn;
+            setKeepState(keepOn);
           } catch {
             // Storage blocked — tools start off.
           }
@@ -97,6 +105,16 @@ export function useHostTools(onRosterChanged: () => void) {
     }
   }, []);
 
+  const setKeep = useCallback((next: boolean) => {
+    keepRef.current = next;
+    setKeepState(next);
+    try {
+      window.localStorage.setItem(KEEP_KEY, next ? "1" : "0");
+    } catch {
+      // Not persisted; still applies now.
+    }
+  }, []);
+
   const update = useCallback((id: number, patch: Partial<HostAction>) => {
     setActions((current) => current.map((action) => (action.id === id ? { ...action, ...patch } : action)));
   }, []);
@@ -106,7 +124,11 @@ export function useHostTools(onRosterChanged: () => void) {
       // Stamp the Notify players switch as it is now ("Add anyway" re-sends keep it).
       const payload = {
         ...request,
-        payload: { ...request.payload, notify: request.payload.notify ?? notifyRef.current },
+        payload: {
+          ...request.payload,
+          notify: request.payload.notify ?? notifyRef.current,
+          ...(request.action === "roster_assign" ? { lock: request.payload.lock ?? keepRef.current } : {}),
+        },
       } as HostAction["payload"];
       const id = nextId.current++;
       const fresh: HostAction = {
@@ -192,6 +214,8 @@ export function useHostTools(onRosterChanged: () => void) {
     setEnabled: setToolsEnabled,
     notify,
     setNotify,
+    keep,
+    setKeep,
     actions,
     send,
     dismiss,

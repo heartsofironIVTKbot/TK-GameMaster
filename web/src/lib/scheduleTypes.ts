@@ -403,6 +403,8 @@ export interface RosterAssignPayload {
   notify?: boolean;
   /** The map nation's tag: the website turns the map's name into the bot's (lib/botNation.ts). */
   tag?: string | null;
+  /** Host Tool "Keep players where I put them": they can't change it themselves until a host does (else 30 s). */
+  lock?: boolean;
 }
 
 /** Take a player off a game (formerly /remove). */

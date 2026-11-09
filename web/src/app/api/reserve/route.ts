@@ -104,6 +104,8 @@ interface GameDataDocument {
   locked_regions?: unknown;
   layout_disabled_nations?: unknown;
   is_draft?: unknown;
+  /** Players the Host Tool placed: user id → until (epoch s; 0 = until a host changes them). */
+  host_locks?: unknown;
   /** Who may reserve majors / minors: "VIP" | "Trusted" | "Verified" | "All Users". */
   major_lock_level?: unknown;
   minor_lock_level?: unknown;
@@ -527,9 +529,22 @@ export async function DELETE(request: NextRequest) {
     }
     // Casino games: a plain unreserve would hand out a free re-roll; only
     // Emergency Unreserve (api/casino/<game>/unreserve) or the host can.
-    if (isCasinoGame(parseGameData(game.game_data))) {
+    const lockedData = parseGameData(game.game_data);
+    if (isCasinoGame(lockedData)) {
       await connection.rollback();
       return jsonError("This is a Casino game: if you can't play, use Emergency Unreserve under your nation.", 409);
+    }
+    // The Host Tool placed them: they can't undo it themselves for a while (bot _host_lock).
+    const locks = lockedData.host_locks && typeof lockedData.host_locks === "object" ? (lockedData.host_locks as Record<string, unknown>) : {};
+    const lockUntil = Number(locks[session.discord_id] ?? -1);
+    const nowSec = Math.floor(Date.now() / 1000);
+    if (lockUntil === 0) {
+      await connection.rollback();
+      return jsonError("The host placed you on this nation: ask a host if you need to change it.", 409);
+    }
+    if (lockUntil > nowSec) {
+      await connection.rollback();
+      return jsonError(`The host just placed you on this nation: you can change it in ${lockUntil - nowSec}s.`, 409);
     }
 
     const [heldRows] = await connection.query<SlotRow[]>(

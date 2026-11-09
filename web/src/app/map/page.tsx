@@ -727,6 +727,8 @@ export default function Home() {
           demo={host.demo}
           notify={host.notify}
           onNotifyChange={host.setNotify}
+          keep={host.keep}
+          onKeepChange={host.setKeep}
           onPickUp={setHeldPlayer}
           onFiller={handleFillerRequest}
           onRemove={handleRemoveRequest}
