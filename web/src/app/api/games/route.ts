@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
       // host_id as text: snowflakes exceed 2^53 and would be rounded.
       `SELECT thread_id, mode, status, thread_name, game_started, CAST(host_id AS CHAR) AS host_id, start_timestamp
        FROM games
-       WHERE guild_id = ? AND status NOT IN ('ended', 'cancelled')
+       WHERE guild_id = ? AND (status IS NULL OR status NOT IN ('ended', 'cancelled'))
          AND (game_started = 0 OR COALESCE(start_timestamp, 0) >= ?)
        ORDER BY game_started ASC, updated_at DESC
        LIMIT 50`,
