@@ -5447,8 +5447,42 @@ def _parse_mysql_json_obj(value):
     return {}
 
 
+# What the bot last read from (or wrote to) game_reservations, per game: the
+# base of the three-way merge in _upsert_single_game_mysql, so a save made from
+# a stale copy keeps the website's newer reservations (2026-11-09: players
+# reserving on the map vanished for ~10 s when a bot save rewrote the table).
+_reservation_base: dict[str, dict[str, int]] = {}
+
+
+def _note_reservation_base(thread_id, reservations) -> None:
+    base = {}
+    for slot, uid in (reservations or {}).items():
+        try:
+            base[str(slot)] = int(uid)
+        except (TypeError, ValueError):
+            continue
+    _reservation_base[str(thread_id)] = base
+
+
+def _merge_reservations(db_rows: dict, base: dict, mine: dict) -> dict:
+    """The database's current reservations with only the bot's own changes
+    since `base` applied: slots it freed or gave someone else go (if still as
+    the bot left them), slots it set are set. Everything else stays as the
+    website wrote it."""
+    final = dict(db_rows)
+    for slot, uid in base.items():
+        if mine.get(slot) != uid and final.get(slot) == uid:
+            del final[slot]
+    for slot, uid in mine.items():
+        if base.get(slot) != uid:
+            final[slot] = uid
+    return final
+
+
 def _game_row_to_dict(row: dict, reservations: dict | None = None) -> dict:
     """Rebuild the legacy in-memory game dict from a MySQL games row."""
+    if row.get("thread_id") is not None and reservations is not None:
+        _note_reservation_base(row.get("thread_id"), reservations)
     game = _parse_mysql_json(row.get("game_data"))
     if not isinstance(game, dict):
         game = {}
@@ -5876,6 +5910,10 @@ def _save_all_games_mysql(games_dict: dict):
                 if tid in (games_dict or {}) and isinstance(games_dict[tid], dict):
                     games_dict[tid]["reservations"] = res
         conn.commit()
+        # What the database holds now, for the per-game save's merge.
+        for tid in thread_ids:
+            if tid in (games_dict or {}) and isinstance(games_dict[tid], dict):
+                _note_reservation_base(tid, games_dict[tid].get("reservations"))
     except Exception as e:
         if conn is not None:
             try:
@@ -7860,12 +7898,29 @@ def _upsert_single_game_mysql(thread_id: str, game: dict, rewrite_reservations: 
                 # what raises 1020 under concurrent GameFeedbackButton / archive writes.
                 conn.start_transaction()
                 cursor.execute(
-                    "SELECT game_data FROM games WHERE thread_id = %s FOR UPDATE",
+                    "SELECT game_data, reservations_rev FROM games WHERE thread_id = %s FOR UPDATE",
                     (tid,),
                 )
                 prev = cursor.fetchone()
                 if prev:
                     _preserve_sticky_game_fields(game, _parse_mysql_json(prev[0]))
+                db_rev = int(prev[1] or 0) if prev else 0
+                try:
+                    cache_rev = int(game.get("reservations_rev") or 0)
+                except (TypeError, ValueError):
+                    cache_rev = 0
+                if rewrite_reservations and prev and cache_rev < db_rev and tid in _reservation_base:
+                    # The website changed reservations since this copy was read:
+                    # keep its rows and apply only what the bot changed.
+                    cursor.execute("SELECT slot_key, user_id FROM game_reservations WHERE thread_id = %s", (tid,))
+                    db_rows = {str(r[0]): int(r[1]) for r in cursor.fetchall()}
+                    mine = {}
+                    for slot, uid in (game.get("reservations") or {}).items():
+                        try:
+                            mine[str(slot)] = int(uid)
+                        except (TypeError, ValueError):
+                            continue
+                    game["reservations"] = _merge_reservations(db_rows, _reservation_base[tid], mine)
                 row, res_rows = _split_game_for_mysql(tid, game)
                 cursor.execute(
                     """
@@ -7884,7 +7939,7 @@ def _upsert_single_game_mysql(thread_id: str, game: dict, rewrite_reservations: 
                         start_timestamp = VALUES(start_timestamp),
                         announcement_message_id = VALUES(announcement_message_id),
                         announcement_channel_id = VALUES(announcement_channel_id),
-                        reservations_rev = VALUES(reservations_rev),
+                        reservations_rev = GREATEST(reservations_rev, VALUES(reservations_rev)),
                         game_data = VALUES(game_data)
                     """,
                     row,
@@ -7935,6 +7990,8 @@ def _upsert_single_game_mysql(thread_id: str, game: dict, rewrite_reservations: 
                     if rev_row is not None:
                         game["reservations_rev"] = int(rev_row[0] or 0)
             conn.commit()
+            if rewrite_reservations:
+                _note_reservation_base(thread_id, game.get("reservations"))
     except Exception as e:
         if conn is not None:
             try:
@@ -28553,66 +28610,6 @@ def _delete_reservation_sync_rows_mysql(ids: list) -> None:
                 pass
 
 
-def _delete_reservation_rows_for_user_mysql(thread_id: str, user_id: int) -> None:
-    """Remove EVERY game_reservations row for this user/thread (web-initiated
-    unreserve). Called by reservation_sync_loop when a queued event carries
-    action='unreserve' or an empty slot_key."""
-    conn = None
-    cursor = None
-    try:
-        conn = _db_get_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            "DELETE FROM game_reservations "
-            "WHERE thread_id = %s AND user_id = %s",
-            (str(thread_id), int(user_id)),
-        )
-        conn.commit()
-    except Exception as e:
-        print(f"[WARN] reservation unreserve delete failed for {thread_id}/{user_id}: {e}")
-    finally:
-        if cursor is not None:
-            try:
-                cursor.close()
-            except Exception:
-                pass
-        if conn is not None:
-            try:
-                conn.close()
-            except Exception:
-                pass
-
-
-def _delete_reservation_rows_except_mysql(thread_id: str, user_id: int, keep_slot: str) -> None:
-    """Enforce 1 nation per user at the SOURCE: drop every game_reservations
-    row for this user/thread except the latest assigned slot (cleans up any
-    legacy duplicate assignments)."""
-    conn = None
-    cursor = None
-    try:
-        conn = _db_get_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            "DELETE FROM game_reservations "
-            "WHERE thread_id = %s AND user_id = %s AND slot_key != %s",
-            (str(thread_id), int(user_id), str(keep_slot)[:128]),
-        )
-        conn.commit()
-    except Exception as e:
-        print(f"[WARN] reservation dedupe failed for {thread_id}/{user_id}: {e}")
-    finally:
-        if cursor is not None:
-            try:
-                cursor.close()
-            except Exception:
-                pass
-        if conn is not None:
-            try:
-                conn.close()
-            except Exception:
-                pass
-
-
 @tasks.loop(seconds=RESERVATION_SYNC_INTERVAL_SEC)
 async def reservation_sync_loop():
     """Drain the web reservation sync queue → refresh Discord reservation embeds.
@@ -28691,19 +28688,11 @@ async def reservation_sync_loop():
                             k for k, v in existing.items() if v == uid
                         ]:
                             existing.pop(stale, None)
-                        if final_slot is None:
-                            # Web-initiated unreserve: drop the user's rows.
-                            await _run_mysql_io(
-                                _delete_reservation_rows_for_user_mysql,
-                                thread_id, uid,
-                                label="reservation unreserve delete",
-                            )
-                        else:
-                            await _run_mysql_io(
-                                _delete_reservation_rows_except_mysql,
-                                thread_id, uid, final_slot,
-                                label="reservation dedupe",
-                            )
+                        # The website already wrote these rows (unreserve,
+                        # one nation per player): deleting them again here
+                        # removed a reservation made after this batch was
+                        # read, until the next pass (2026-11-09).
+                        if final_slot is not None:
                             existing[final_slot] = uid
                         merged_count += 1
                     game["reservations"] = existing
@@ -32975,6 +32964,26 @@ async def _process_web_casino_grant(req: dict):
     return True, {"dm_sent": dm_sent}, None
 
 
+# Players the Host Tool places (adds, moves, swaps) can't undo it themselves on
+# the map: for 30 s by default, or until a host changes them again when the
+# Host Tool's "Keep players where I put them" is on (game["host_locks"]: user
+# id → until, 0 = until a host changes it). /api/reserve checks it.
+HOST_PLACE_LOCK_SEC = 30
+
+
+def _host_lock(game: dict, user_id, keep: bool) -> None:
+    locks = game.get("host_locks") if isinstance(game.get("host_locks"), dict) else {}
+    now = int(time.time())
+    locks = {uid: until for uid, until in locks.items() if int(until or 0) == 0 or int(until) > now}
+    locks[str(user_id)] = 0 if keep else now + HOST_PLACE_LOCK_SEC
+    game["host_locks"] = locks
+
+
+def _host_unlock(game: dict, user_id) -> None:
+    if isinstance(game.get("host_locks"), dict):
+        game["host_locks"].pop(str(user_id), None)
+
+
 async def _process_web_roster_assign(req: dict):
     """Put a player on a nation, co-op slot or filler (formerly /add,
     /add_coop, /add_filler). A taken nation needs occupied='swap' (the other
@@ -33146,6 +33155,13 @@ async def _process_web_roster_assign(req: dict):
             swapped_to = current_key
     res[key] = user_id
     game["reservations"] = res
+    # The player (and a swapped one) can't undo this on the map for a while.
+    keep = bool(payload.get("lock"))
+    _host_lock(game, user_id, keep)
+    if swapped_to and occupant is not None:
+        _host_lock(game, occupant, keep)
+    elif occupant is not None:
+        _host_unlock(game, occupant)
     # Draft games: a host placing a pooled player takes them out of the pool
     # (the host can place anyone at any time; captains' turns are unchanged).
     left_pool = _is_draft_game(game) and game["draft"].get("pool", {}).pop(str(user_id), None) is not None
@@ -33255,6 +33271,7 @@ async def _process_web_roster_remove(req: dict):
     for key in keys:
         del res[key]
     game["reservations"] = res
+    _host_unlock(game, user_id)
     await save_single_game(thread_id, game, rewrite_reservations=True)
     await _roster_after_change(thread_id)
     await _roster_drop_player_state(thread_id, user_id)
