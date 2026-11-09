@@ -1265,6 +1265,8 @@ export default function MapViewer({
     }
     return { selfTags: self, lockedTags: locked };
   }, [tagNations, reservationsOf, authUser, hostLockedTags]);
+  // One nation each: a player who has one (main, co-op or filler) only looks at the others.
+  const viewerHasNation = Boolean(authUser) && lobbyReservations.some((entry) => String(entry.user_id) === authUser?.discord_id);
 
   // Name pop-up for the nation under the cursor (just the name).
   const hoverName = useMemo(() => {
@@ -1324,7 +1326,9 @@ export default function MapViewer({
       ? liveSelections.find((entry) => entry.tag === selected.tag && entry.user_id !== authUser?.discord_id) ?? null
       : null;
   const sharedTag =
-    selectionKind === "pending" && selected && !dropTag && !gameStarted && !lobbyLock?.draft && !otherHold ? selected.tag : null;
+    selectionKind === "pending" && selected && !dropTag && !gameStarted && !lobbyLock?.draft && !otherHold && !viewerHasNation
+      ? selected.tag
+      : null;
   const ownHold = useShareSelection(selectedThread || null, sharedTag, Boolean(authUser));
   // A clock for the countdowns, ticking only while one is on screen.
   const [clock, setClock] = useState(() => Date.now());
@@ -1671,7 +1675,7 @@ export default function MapViewer({
         )}
         {selected && selectionKind && !lobbyLock?.draft && !lobbyLock?.casino && !gameRunning && (
           <div data-tour="map.reserve" className="absolute inset-x-4 bottom-5 z-[1010] flex flex-col items-center gap-2 sm:inset-x-auto sm:bottom-7 sm:left-1/2 sm:-translate-x-1/2">
-            {selectionKind === "pending" && blockedBy && (
+            {selectionKind === "pending" && !viewerHasNation && blockedBy && (
               <button
                 type="button"
                 disabled
@@ -1680,12 +1684,13 @@ export default function MapViewer({
                 🔒 {blockedBy.name} is picking this nation · {secondsLeft(blockedBy.until)}s
               </button>
             )}
-            {selectionKind === "pending" && !blockedBy && ownHold?.status === "cooldown" && (
+            {selectionKind === "pending" && !viewerHasNation && !blockedBy && ownHold?.status === "cooldown" && (
               <button type="button" disabled className="gm-btn h-12 w-full cursor-not-allowed bg-ink-950 px-6 text-ink-300 sm:w-auto">
                 Others get a turn: you can pick it again in {secondsLeft(ownHold.until)}s
               </button>
             )}
             {selectionKind === "pending" &&
+              !viewerHasNation &&
               !blockedBy &&
               ownHold?.status !== "cooldown" &&
               (authUser ? (
@@ -1731,7 +1736,7 @@ export default function MapViewer({
                 Reserved by {ownerLabelText(ownerLabel)}
               </button>
             )}
-            {selectionKind === "coop" && (
+            {selectionKind === "coop" && !viewerHasNation && (
               <button
                 type="button"
                 disabled
