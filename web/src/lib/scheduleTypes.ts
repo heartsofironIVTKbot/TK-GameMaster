@@ -149,6 +149,7 @@ export type RequestAction =
   | "create"
   | "update"
   | "cancel"
+  | "remove_slot"
   | "lock_day"
   | "unlock_day"
   | "roster_assign"

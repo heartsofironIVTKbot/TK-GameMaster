@@ -100,7 +100,7 @@ export default function DraftPickDialog({
           </p>
           <label className="gm-field mt-3">
             <Search aria-hidden className="h-4 w-4 shrink-0" />
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Find a nation" aria-label="Find a nation" />
+            <input maxLength={64} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Find a nation" aria-label="Find a nation" />
           </label>
         </div>
 

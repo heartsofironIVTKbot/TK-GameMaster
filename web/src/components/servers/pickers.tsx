@@ -83,7 +83,7 @@ function RoleMenu({
     <div
       className={`absolute left-0 z-30 w-72 min-w-full max-w-[85vw] gm-cut [--cut:9px] border border-ink-700 bg-ink-900 p-2 shadow-2xl shadow-black/60 ${menuPlacement(up)}`}
     >
-      <input
+      <input maxLength={64}
         autoFocus
         value={query}
         onChange={(event) => setQuery(event.target.value)}
@@ -456,7 +456,7 @@ export function ChannelPicker({
         <div
           className={`absolute left-0 z-30 w-72 min-w-full max-w-[85vw] gm-cut [--cut:9px] border border-ink-700 bg-ink-900 p-2 shadow-2xl shadow-black/60 ${menuPlacement(up)}`}
         >
-          <input
+          <input maxLength={64}
             autoFocus
             value={query}
             onChange={(event) => setQuery(event.target.value)}

@@ -311,6 +311,7 @@ function requestFromRow(row: RequestRow): ScheduleRequestStatus {
       "create",
       "update",
       "cancel",
+      "remove_slot",
       "lock_day",
       "unlock_day",
       "roster_assign",
@@ -908,6 +909,13 @@ function processDemoRequests(): void {
     }
 
     const slot = state.slots.find((entry) => entry.slot_id === request.slot_id);
+    if (request.action === "remove_slot") {
+      state.slots = state.slots.filter((entry) => entry.slot_id !== request.slot_id);
+      request.status = "done";
+      request.result = { slot_id: request.slot_id ?? undefined };
+      continue;
+    }
+
     if (request.action === "cancel") {
       if (slot?.announced) {
         fail(request, "❌ This game is already announced — cancel it from the Games page.");

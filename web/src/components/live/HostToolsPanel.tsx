@@ -293,7 +293,7 @@ export default function HostToolsPanel({
           <div data-tour="hosttool.search">
             <label className="gm-field">
               <Search aria-hidden className="h-4 w-4 shrink-0" />
-              <input
+              <input maxLength={64}
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Find a player (name, nickname or ID)"

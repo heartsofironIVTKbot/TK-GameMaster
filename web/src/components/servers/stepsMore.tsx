@@ -173,10 +173,17 @@ export function ChannelsStep({ ctx }: { ctx: StepContext }) {
             label="Add a lobby voice channel"
           />
         </Field>
-        <Callout tone="warn" title="This must be set up">
-          People sitting in these voice channels are <b>never counted as present</b> in a game&apos;s attendance snapshots — they
-          aren&apos;t logged as playing. Pick every waiting-room / lobby channel your server uses.
-        </Callout>
+        {draft.lobby_voices.length === 0 ? (
+          <Callout tone="warn" title="This must be set up">
+            People sitting in these voice channels are <b>never counted as present</b> in a game&apos;s attendance snapshots — they
+            aren&apos;t logged as playing. Pick every waiting-room / lobby channel your server uses.
+          </Callout>
+        ) : (
+          <Callout tone="ok">
+            People in {draft.lobby_voices.length === 1 ? "this channel" : `these ${draft.lobby_voices.length} channels`} are never counted as
+            present in a game&apos;s attendance. Add any other waiting-room channel your server uses.
+          </Callout>
+        )}
       </Card>
       <Card
         icon={Volume2}

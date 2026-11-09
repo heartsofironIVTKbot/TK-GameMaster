@@ -66,6 +66,8 @@ function homeOnlyRefusal(host: HostProfile, addOn: string | null | undefined): s
  *        before its announcement; only day/time/host afterwards).
  *        payload.new_host_id hands the game to another host.
  *   {action: "cancel", slot_id}                — remove an unannounced game
+ *   {action: "remove_slot", slot_id}           — Host Management: take any entry
+ *                                                off the calendar (past, ended, announced)
  *   {action: "lock_day" | "unlock_day", payload: {week, day, reason?}}
  *                                              — staff day locks
  *   {action: "roster_assign", payload: RosterAssignPayload}
@@ -210,6 +212,14 @@ export async function POST(request: Request) {
         payload: { ...validation.value },
       });
       if (validation.value.preset_id) await notePresetUsed(validation.value.preset_id, host.guild_id);
+      return Response.json({ request_id: requestId, slot_id: slotId }, { status: 202 });
+    }
+
+    if (body.action === "remove_slot") {
+      if (!host.is_staff) return jsonError("Only Host Management can remove games from the calendar.", 403);
+      const slotId = typeof body.slot_id === "string" ? body.slot_id : "";
+      if (!SLOT_ID_RE.test(slotId)) return jsonError("Invalid slot_id", 400);
+      await insertRequest({ requestId, action: "remove_slot", slotId, hostId: host.discord_id, payload: null });
       return Response.json({ request_id: requestId, slot_id: slotId }, { status: 202 });
     }
 

@@ -354,7 +354,7 @@ export default function NationsTab({
           <div className="mt-3">
             <label className="gm-field">
               <Search aria-hidden className="h-4 w-4 shrink-0" strokeWidth={1.75} />
-              <input
+              <input maxLength={64}
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Find a nation"

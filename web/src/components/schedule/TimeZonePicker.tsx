@@ -98,7 +98,7 @@ export default function TimeZonePicker({
           }`}
         >
           <div className="border-b border-white/10 p-2">
-            <input
+            <input maxLength={64}
               autoFocus
               value={query}
               onChange={(event) => setQuery(event.target.value)}

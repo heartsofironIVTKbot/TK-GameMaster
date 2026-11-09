@@ -47,13 +47,13 @@ export async function getHostStatus(): Promise<HostStatusResponse> {
     if (!entry) return { status: "not_host", username: session.username };
     // Same rule as the bot's _can_rate_hosts(): staff rate both branches, a
     // Senior Host rates the branch they're Senior in (with Senior switched
-    // off, a Full Host does when Full hosts take over Senior host powers).
+    // off, a Full Host does: Full hosts then have Senior host powers).
     const settings = await settingsOf(guildId);
     const ranks = entry.is_staff ? null : await hostRanksOf(await memberRoleIds(session.discord_id));
     const ratingRank = (branch: HostBranch) => {
       const config = settings?.branches[branch];
       if (!config || config.ranks_on.Senior) return "Senior";
-      return config.full_takes_senior ? "Full" : null;
+      return config.ranks_on.Full ? "Full" : null;
     };
     const rateBranches: HostBranch[] = entry.is_staff
       ? [...HOST_BRANCH_VALUES]

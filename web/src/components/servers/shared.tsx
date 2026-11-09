@@ -160,7 +160,7 @@ export function NumberField({
         >
           <Minus aria-hidden strokeWidth={2} />
         </button>
-        <input
+        <input maxLength={12}
           inputMode="decimal"
           aria-label={label}
           value={text}

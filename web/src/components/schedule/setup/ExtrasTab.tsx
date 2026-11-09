@@ -1,6 +1,6 @@
 "use client";
 
-import { BellRing, CircleOff, ClipboardCheck, Construction, Dices, Shuffle, Skull, Sparkles, Spade, Trophy, PartyPopper, Waves, type LucideIcon } from "lucide-react";
+import { BellRing, CircleOff, ClipboardCheck, Construction, Dices, Skull, Sparkles, Spade, Trophy, PartyPopper, Waves, type LucideIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import ResourceListEditor from "@/components/presets/ResourceListEditor";
 import { PRESET_LIMITS, type ModeDefaults } from "@/lib/presetTypes";
@@ -10,7 +10,7 @@ import { DRAFT_BLOCKED_ADDONS } from "@/lib/scheduleValidation";
 import { Segmented, SectionCard, Toggle } from "../ui";
 import CasinoSection, { CoHostsCard } from "./CasinoSection";
 import DraftSection from "./DraftSection";
-import { randomChecksum, type SetupForm } from "./model";
+import type { SetupForm } from "./model";
 
 /** Each add-on's line icon (the calendar shows add-on games purple). */
 const ADD_ON_ICON: Record<string, LucideIcon> = {
@@ -201,13 +201,6 @@ export default function ExtrasTab({
               className="gm-input w-28 text-center font-mono text-lg font-semibold tracking-[0.3em] text-brand-300"
               aria-label="Reminder code (4 letters or digits)"
             />
-            <button
-              type="button"
-              onClick={() => update({ checksum: randomChecksum() })}
-              className="gm-btn gm-btn-secondary h-9 px-3 text-xs"
-            >
-              <Shuffle aria-hidden strokeWidth={1.75} /> New
-            </button>
             <span className="text-[11px] text-ink-500">4 letters or digits</span>
           </div>
         )}

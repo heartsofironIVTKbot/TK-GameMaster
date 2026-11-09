@@ -14,21 +14,27 @@ export const BRANCH_INFO: Record<Branch, { label: string; long: string; games: s
 
 export type Rank = "Assistant" | "Full" | "Senior";
 export const RANKS: readonly Rank[] = ["Assistant", "Full", "Senior"];
-/** Ranks a server can switch off (Full host is always on). */
-export type OptionalRank = "Assistant" | "Senior";
-export const OPTIONAL_RANKS: readonly OptionalRank[] = ["Assistant", "Senior"];
+/** Ranks a server can switch off: any of the three, but Full or Senior stays on.
+ *  With Senior off, Full hosts have Senior host powers. */
+export type OptionalRank = Rank;
+export const OPTIONAL_RANKS: readonly OptionalRank[] = RANKS;
 export const RANK_INFO: Record<Rank, { label: string; hint: string; off: string; suggested: (branch: Branch) => string }> = {
   Assistant: {
     label: "Assistant (Trialist) host",
-    hint: "New hosts on trial. Promoted to Full after enough Acclamations.",
-    off: "Off: new hosts (and approved host applications) start as Full hosts.",
+    hint: "Tier I. New hosts on trial, promoted after enough Acclamations.",
+    off: "Off: new hosts (and approved host applications) start one rank up.",
     suggested: (b) => `${b} Assistant Host`,
   },
-  Full: { label: "Full host", hint: "Regular hosts. Always used.", off: "", suggested: (b) => `${b} Host` },
+  Full: {
+    label: "Full host",
+    hint: "Tier II. Regular hosts. With Senior hosts off, they also have Senior host powers.",
+    off: "Off: hosts go straight from Assistant to Senior.",
+    suggested: (b) => `${b} Host`,
+  },
   Senior: {
     label: "Senior host",
-    hint: "Can give Acclamations and Violations to hosts of their branch.",
-    off: "Off: promotions stop at Full. Full hosts can take over Senior host powers (the switch under Full host); otherwise only Host Management gives Acclamations and Violations.",
+    hint: "Tier III. Can give Acclamations and Violations to hosts of their branch.",
+    off: "Off: promotions stop at Full, and Full hosts get the Senior host powers.",
     suggested: (b) => `Senior ${b} Host`,
   },
 };
@@ -158,7 +164,7 @@ export interface ServerSettings {
       enabled: boolean;
       ranks: Record<Rank, string | null>;
       ranks_on: Record<OptionalRank, boolean>;
-      /** With Senior off: Full hosts get Senior host powers (rating the branch's hosts). */
+      /** Older setting, no longer used: with Senior off, Full hosts always get Senior host powers. */
       full_takes_senior: boolean;
     }
   >;
@@ -379,7 +385,7 @@ export function defaultSettings(name = ""): ServerSettings {
     branches: perBranch(() => ({
       enabled: true,
       ranks: { Assistant: null, Full: null, Senior: null },
-      ranks_on: { Assistant: true, Senior: true },
+      ranks_on: { Assistant: true, Full: true, Senior: true },
       full_takes_senior: true,
     })),
     roles: {
@@ -459,10 +465,16 @@ export function normalizeSettings(raw: unknown, name = ""): ServerSettings {
       ranks: { Assistant: sid(ranks.Assistant), Full: sid(ranks.Full), Senior: sid(ranks.Senior) },
       ranks_on: {
         Assistant: on.Assistant === undefined ? true : Boolean(on.Assistant),
+        Full: on.Full === undefined ? true : Boolean(on.Full),
         Senior: on.Senior === undefined ? true : Boolean(on.Senior),
       },
       full_takes_senior: entry.full_takes_senior === undefined ? true : Boolean(entry.full_takes_senior),
     };
+  }
+  // Some rank above Assistant has to exist (the bot does the same).
+  for (const branch of BRANCHES) {
+    const ranksOn = s.branches[branch].ranks_on;
+    if (!ranksOn.Full && !ranksOn.Senior) ranksOn.Full = true;
   }
   if (!BRANCHES.some((branch) => s.branches[branch].enabled)) s.branches.RP.enabled = true;
   const roles = obj(source.roles);
@@ -656,7 +668,7 @@ export function settingsIssues(s: ServerSettings, snap: GuildSnapshot | null, bo
   for (const branch of BRANCHES) {
     if (!s.branches[branch].enabled) continue;
     for (const rank of RANKS) {
-      if (rank !== "Full" && !s.branches[branch].ranks_on[rank]) continue;
+      if (!s.branches[branch].ranks_on[rank]) continue;
       const id = s.branches[branch].ranks[rank];
       givenRole("branches", `branches.${branch}.ranks.${rank}`, id, `${branch} ${RANK_INFO[rank].label}`, true);
       markUsed(id, `${branch} ${rank} host`);

@@ -25455,25 +25455,28 @@ def _host_rank_on(branch: str, rank: str) -> bool:
 
 
 def _lowest_host_rank(branch: str) -> str:
-    """Where a new host starts: Assistant, or Full when Assistant is switched off."""
-    return "Assistant" if _host_rank_on(branch, "Assistant") else "Full"
+    """Where a new host starts: the lowest rank the server uses."""
+    for rank in HOST_RANKS:
+        if _host_rank_on(branch, rank):
+            return rank
+    return "Full"
 
 
 def _rank_for_acclamations(branch: str, acclamations: int) -> str:
     """The rank a number of Acclamations earns in a branch."""
     if _host_rank_on(branch, "Senior") and acclamations >= HOST_PROMOTE_AT["Senior"]:
         return "Senior"
-    if acclamations >= HOST_PROMOTE_AT["Full"]:
+    if _host_rank_on(branch, "Full") and acclamations >= HOST_PROMOTE_AT["Full"]:
         return "Full"
     return _lowest_host_rank(branch)
 
 
 def _senior_powers_rank(branch: str) -> str | None:
     """The rank with Senior host powers in a branch: Senior, or Full when
-    Senior is switched off and Full hosts take over (None = nobody)."""
+    Senior is switched off (None = neither is set up)."""
     if _host_rank_on(branch, "Senior"):
         return "Senior"
-    return "Full" if (HOST_BRANCHES.get(branch) or {}).get("full_takes_senior", True) else None
+    return "Full" if _host_rank_on(branch, "Full") else None
 
 
 def _can_rate_hosts(member, branch: str | None = None) -> bool:
@@ -30273,6 +30276,36 @@ async def _process_web_schedule_cancel(req: dict) -> tuple[bool, dict | None, st
     return True, {"slot_id": slot_id}, None
 
 
+async def _process_web_schedule_remove(req: dict) -> tuple[bool, dict | None, str | None]:
+    """Host Management: take any entry off the calendar for good (past, ended,
+    cancelled or announced ones the normal cancel doesn't cover). Only the
+    calendar entry goes: an announced game is cancelled on the Games page."""
+    host_id = int(req.get("host_id") or 0)
+    slot_id = str(req.get("slot_id") or "").strip()
+    member = await _web_fetch_member(host_id)
+    if not _member_is_staff(member):
+        return False, None, "❌ Only Host Management can remove games from the calendar."
+    async with _schedule_slot_write_lock:
+        schedule_data = list(await read_json(SCHEDULE_FILE))
+        slot = next((s for s in schedule_data if str(s.get("slot_id") or "") == slot_id), None)
+        if slot is None:
+            return True, {"slot_id": slot_id}, None
+        await write_json(SCHEDULE_FILE, [s for s in schedule_data if str(s.get("slot_id") or "") != slot_id])
+    mode = str(slot.get("mode") or "Game")
+    ts = int(slot.get("game_timestamp") or 0)
+    when = datetime.datetime.fromtimestamp(ts, tz=datetime.timezone.utc).strftime("%Y-%m-%d %H:%M UTC") if ts else "no time"
+    _audit_log("INFO", f"web schedule remove slot={slot_id} by={host_id} host={slot.get('host_id')}")
+    audit_event(
+        "game", "slot_removed",
+        f"{member.display_name} removed a {mode} game ({when}) from the calendar",
+        actor_id=member.id, actor_name=member.display_name,
+        target_id=slot.get("host_id"), game_id=slot.get("thread_id") or slot_id,
+        details={"slot_id": slot_id, "mode": mode, "game_timestamp": ts, "announced": bool(slot.get("announced"))},
+        source="web",
+    )
+    return True, {"slot_id": slot_id}, None
+
+
 async def _process_web_day_lock(req: dict, lock: bool) -> tuple[bool, dict | None, str | None]:
     """Staff day lock / unlock from the calendar (formerly /lock_day, /unlock_day)."""
     payload = req.get("payload") or {}
@@ -31625,7 +31658,7 @@ async def audit_trail_retention_loop():
 _AUDIT_SELF_RECORDED = frozenset({
     # feedback_rate: who gave which rating stays private, so no audit row.
     "roster_assign", "roster_remove", "moderation", "dishonored", "host_rating", "member_roles", "feedback_rate",
-    "casino_emergency_unreserve", "fortunes_redraw", "fortunes_reset", "casino_fallback",
+    "casino_emergency_unreserve", "fortunes_redraw", "fortunes_reset", "casino_fallback", "remove_slot",
     *GAME_LIFECYCLE_ACTIONS,
 })
 # Request action → (audit category, audit action, what the actor did).
@@ -31746,6 +31779,8 @@ async def web_schedule_request_loop():
                 ok, result, err = await _process_web_schedule_update(req)
             elif action == "cancel":
                 ok, result, err = await _process_web_schedule_cancel(req)
+            elif action == "remove_slot":
+                ok, result, err = await _process_web_schedule_remove(req)
             elif action in ("lock_day", "unlock_day"):
                 ok, result, err = await _process_web_day_lock(req, action == "lock_day")
             elif action == "roster_assign":
@@ -34263,8 +34298,9 @@ SETTINGS_CHANNEL_KEYS = (
     "host_log", "staff_notices", "schedule_panel", "host_chatlogs_forum",
     "tickets", "crash_reports", "ticket_category",
 )
-# Host ranks a server can switch off (Full host is always on).
-OPTIONAL_HOST_RANKS = ("Assistant", "Senior")
+# Host ranks a server can switch off: any of the three, but Full or Senior
+# stays on. With Senior off, Full hosts have Senior host powers (_senior_powers_rank).
+OPTIONAL_HOST_RANKS = ("Assistant", "Full", "Senior")
 SETTINGS_RULE_DEFAULTS = {
     "trusted_commends": 5, "warnings_for_ban": 3, "host_full_at": 2, "host_senior_at": 4,
     "host_strip_at": 3, "valor_merit": 25, "valor_games": 50, "hosting_success_avg": 3.0,
@@ -34554,6 +34590,9 @@ def _normalize_guild_settings(raw, name: str = "") -> dict:
             "ranks_on": {rank: bool(ranks_on.get(rank, True)) for rank in OPTIONAL_HOST_RANKS},
             "full_takes_senior": bool(entry.get("full_takes_senior", True)),
         }
+        # Some rank above Assistant has to exist (it has Senior host powers).
+        if not s["branches"][b]["ranks_on"]["Full"] and not s["branches"][b]["ranks_on"]["Senior"]:
+            s["branches"][b]["ranks_on"]["Full"] = True
     if not any(s["branches"][b]["enabled"] for b in SETTINGS_BRANCHES):
         s["branches"]["RP"]["enabled"] = True
     roles = section("roles")

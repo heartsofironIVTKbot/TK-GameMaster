@@ -59,6 +59,7 @@ const REQUEST_LABELS: Record<RequestAction, string> = {
   create: "New game",
   update: "Edit",
   cancel: "Cancel",
+  remove_slot: "Removed from calendar",
   lock_day: "Day lock",
   unlock_day: "Day unlock",
   roster_assign: "Player move",
@@ -852,6 +853,8 @@ function GameRow({
     slot.status !== "ended" &&
     slot.game_timestamp > nowSec;
   const canCancel = canEdit && !slot.announced;
+  // Host Management: anything the normal cancel doesn't cover (announced, past, ended, cancelled).
+  const canRemove = host.is_staff && !canCancel;
   const cancelling = requestId !== null && (!status || status.status === "pending");
   const cancelError = status?.status === "error" ? status.error : error;
   const controls = slot.thread_id && slot.status !== "cancelled";
@@ -916,26 +919,32 @@ function GameRow({
         </p>
       ) : confirming ? (
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs text-ink-300">Remove this game from the board?</span>
+          <span className="text-xs text-ink-300">
+            {canRemove
+              ? slot.announced && slot.status !== "cancelled" && slot.status !== "ended"
+                ? "Remove this entry from the calendar for good? The announced game itself isn't cancelled: use Game controls for that."
+                : "Remove this entry from the calendar for good?"
+              : "Remove this game from the board?"}
+          </span>
           <button
             type="button"
             onClick={async () => {
               setError(null);
-              const result = await submitScheduleRequest({ action: "cancel", slot_id: slot.slot_id });
+              const result = await submitScheduleRequest({ action: canRemove ? "remove_slot" : "cancel", slot_id: slot.slot_id });
               if (result.ok) setRequestId(result.requestId);
               else setError(result.error);
               setConfirming(false);
             }}
             className="gm-btn ml-auto h-8 bg-rose-500 px-3 text-xs text-white hover:bg-rose-400"
           >
-            Yes, cancel it
+            {canRemove ? "Yes, remove it" : "Yes, cancel it"}
           </button>
           <button type="button" onClick={() => setConfirming(false)} className="gm-btn gm-btn-quiet h-8 px-3 text-xs">
             Keep
           </button>
         </div>
       ) : (
-        (canEdit || controls) && (
+        (canEdit || controls || canRemove) && (
           <div className="flex flex-wrap items-center gap-2">
             {canEdit && (
               <Link
@@ -960,6 +969,16 @@ function GameRow({
             {canCancel && (
               <button type="button" onClick={() => setConfirming(true)} className="gm-btn gm-btn-danger ml-auto h-8 px-3 text-[13px]">
                 Cancel game
+              </button>
+            )}
+            {canRemove && (
+              <button
+                type="button"
+                onClick={() => setConfirming(true)}
+                className="gm-btn gm-btn-danger ml-auto h-8 px-3 text-[13px]"
+                title="Host Management: take this entry off the calendar"
+              >
+                Remove from calendar
               </button>
             )}
           </div>

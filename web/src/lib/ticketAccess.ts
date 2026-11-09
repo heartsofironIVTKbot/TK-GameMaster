@@ -58,7 +58,7 @@ export function groupRoleIds(group: TicketGroup, settings: AccessSettings | null
         if (!branch.enabled) continue;
         const { ranks, ranks_on: on } = branch;
         if (ranks.Assistant && on.Assistant) ids.push(ranks.Assistant);
-        if (ranks.Full) ids.push(ranks.Full);
+        if (ranks.Full && on.Full !== false) ids.push(ranks.Full);
         if (ranks.Senior && on.Senior) ids.push(ranks.Senior);
       }
       return ids;

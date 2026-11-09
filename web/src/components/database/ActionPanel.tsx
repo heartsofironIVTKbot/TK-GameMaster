@@ -799,7 +799,7 @@ function DishonorForm({
               ))}
             </div>
           )}
-          <input
+          <input maxLength={64}
             value={minorQuery}
             onChange={(event) => setMinorQuery(event.target.value)}
             placeholder="Find a minor nation"

@@ -253,8 +253,10 @@ export function BranchesStep({ ctx }: { ctx: StepContext }) {
         >
           <div className="grid gap-4 md:grid-cols-3">
             {RANKS.map((rank) => {
-              const optional = rank !== "Full";
-              const on = !optional || draft.branches[branch].ranks_on[rank as OptionalRank];
+              const ranksOn = draft.branches[branch].ranks_on;
+              const on = ranksOn[rank as OptionalRank];
+              // Full or Senior stays on: the last of the two can't be switched off.
+              const lastTop = (rank === "Full" && !ranksOn.Senior) || (rank === "Senior" && !ranksOn.Full);
               return (
                 <Field
                   key={rank}
@@ -263,25 +265,19 @@ export function BranchesStep({ ctx }: { ctx: StepContext }) {
                   required={on}
                   issues={on ? issuesAt(ctx.issues, `branches.${branch}.ranks.${rank}`) : []}
                 >
-                  {optional ? (
-                    <Toggle
-                      checked={on}
-                      onChange={(checked) => ctx.update((s) => void (s.branches[branch].ranks_on[rank as OptionalRank] = checked))}
-                      label={`Use ${RANK_INFO[rank].label.toLowerCase()}s`}
-                    />
-                  ) : (
-                    <Toggle
-                      checked={!draft.branches[branch].ranks_on.Senior && draft.branches[branch].full_takes_senior}
-                      disabled={draft.branches[branch].ranks_on.Senior}
-                      onChange={(checked) => ctx.update((s) => void (s.branches[branch].full_takes_senior = checked))}
-                      label="Full hosts take over Senior host powers"
-                      description={
-                        draft.branches[branch].ranks_on.Senior
-                          ? "Only available when Senior hosts are switched off."
-                          : `Full ${branch} hosts can give Acclamations and Violations to ${branch} hosts, like Senior hosts.`
-                      }
-                    />
-                  )}
+                  <Toggle
+                    checked={on}
+                    disabled={on && lastTop}
+                    onChange={(checked) => ctx.update((s) => void (s.branches[branch].ranks_on[rank as OptionalRank] = checked))}
+                    label={`Use ${RANK_INFO[rank].label.toLowerCase()}s`}
+                    description={
+                      on && lastTop
+                        ? `Keep Full or Senior hosts: switch on ${rank === "Full" ? "Senior" : "Full"} hosts first to switch this off.`
+                        : rank === "Full" && on && !ranksOn.Senior
+                          ? `Senior hosts are off, so Full ${branch} hosts give Acclamations and Violations, like Senior hosts.`
+                          : undefined
+                    }
+                  />
                   {on && (
                     <RolePicker
                       ctx={ctx}
@@ -300,7 +296,7 @@ export function BranchesStep({ ctx }: { ctx: StepContext }) {
       ))}
       <Card icon={TrendingUp} title="Acclamations and Violations" subtitle="The same numbers apply in each branch, counted separately per branch.">
         <div className="grid gap-4 sm:grid-cols-3">
-          {BRANCHES.some((branch) => draft.branches[branch].enabled && draft.branches[branch].ranks_on.Assistant) && (
+          {BRANCHES.some((branch) => draft.branches[branch].enabled && draft.branches[branch].ranks_on.Assistant && draft.branches[branch].ranks_on.Full) && (
             <RuleNumber ctx={ctx} rule="host_full_at" />
           )}
           {BRANCHES.some((branch) => draft.branches[branch].enabled && draft.branches[branch].ranks_on.Senior) && (
@@ -309,7 +305,7 @@ export function BranchesStep({ ctx }: { ctx: StepContext }) {
           <RuleNumber ctx={ctx} rule="host_strip_at" />
         </div>
         <p className="text-[11px] text-ink-500">
-          They work exactly like commends and warnings. Senior hosts of a branch (or its Full hosts, when they take over Senior host powers) and Host Management give them on the Database page;
+          They work exactly like commends and warnings. Senior hosts of a branch (or its Full hosts, when Senior hosts are off) and Host Management give them on the Database page;
           Acclamations promote a host, Violations strip their rank. A Violation never removes an Acclamation (or the other way round) —
           only Host Management can take either back, and a host whose rank was stripped by Violations gets it back when they drop
           below the number again.

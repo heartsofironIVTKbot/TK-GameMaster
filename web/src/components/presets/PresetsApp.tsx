@@ -186,7 +186,7 @@ export default function PresetsApp({ host }: { host: HostProfile }) {
           </nav>
           <label className="gm-field min-w-0 flex-1 sm:w-[240px] sm:flex-none">
             <Search aria-hidden className="h-4 w-4 shrink-0" strokeWidth={1.75} />
-            <input
+            <input maxLength={64}
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder={view === "library" ? "Search presets or servers" : "Search presets"}
