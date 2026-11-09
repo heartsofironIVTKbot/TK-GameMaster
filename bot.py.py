@@ -16902,7 +16902,7 @@ WEB_SITE_URL = os.getenv("WEB_SITE_URL", HOST_CALENDAR_URL.rsplit("/schedule", 1
 
 def _map_game_url(thread_id) -> str:
     """The website map opened on one game — where players reserve and unreserve."""
-    return f"{WEB_SITE_URL}/?game={thread_id}"
+    return f"{WEB_SITE_URL}/map?game={thread_id}"
 
 
 def _casino_game_url(game_key) -> str:
@@ -26717,7 +26717,44 @@ SCHEDULE_CATEGORY_EMOJIS = {
 SCHEDULE_ANNOUNCE_EMOJI = "<a:TimeTicking:1458048543716671518>"
 # The animated yellow bell either side of "Game Announcement" (the website's
 # preview shows the same image: web/src/components/schedule/setup/AnnounceTab.tsx).
+# It's TommyKay's server emoji, which a bot can only show where it's allowed
+# to, so the bot keeps its own copy as an application emoji (works in every
+# server): _announce_bell() makes it on first use from the public image.
 ANNOUNCE_BELL_EMOJI = "<a:line:1480537685478084781>"
+ANNOUNCE_BELL_ID = 1480537685478084781
+ANNOUNCE_BELL_APP_NAME = "gm_bell"
+ANNOUNCE_BELL_FALLBACK = "🔔"
+_announce_bell_app: str | None = None  # None = not looked up yet, "" = none available
+
+
+async def _announce_bell(channel) -> str:
+    """The bell for an announcement in `channel`: the bot's own animated bell,
+    else TommyKay's emoji where the bot may use it, else a plain 🔔."""
+    global _announce_bell_app
+    if _announce_bell_app is None:
+        _announce_bell_app = ""
+        try:
+            emojis = await bot.fetch_application_emojis()
+            found = next((e for e in emojis if e.name == ANNOUNCE_BELL_APP_NAME), None)
+            if found is None:
+                session = await _get_log_session()
+                url = f"https://cdn.discordapp.com/emojis/{ANNOUNCE_BELL_ID}.gif"
+                async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as response:
+                    image = await response.read() if response.status == 200 else b""
+                if image:
+                    found = await bot.create_application_emoji(name=ANNOUNCE_BELL_APP_NAME, image=image)
+            if found is not None:
+                _announce_bell_app = str(found)
+        except Exception as e:
+            print(f"[WARN] announcement bell emoji not available, using {ANNOUNCE_BELL_FALLBACK}: {type(e).__name__}")
+    if _announce_bell_app:
+        return _announce_bell_app
+    emoji = bot.get_emoji(ANNOUNCE_BELL_ID)
+    guild = getattr(channel, "guild", None)
+    if emoji is not None and emoji.is_usable() and guild is not None:
+        if emoji.guild_id == guild.id or channel.permissions_for(guild.me).use_external_emojis:
+            return str(emoji)
+    return ANNOUNCE_BELL_FALLBACK
 SCHEDULE_EMBED_DESC_LIMIT = 4096
 SCHEDULE_EMBED_DESC_SAFE = 3950  # headroom below Discord's hard cap
 
@@ -27351,24 +27388,29 @@ async def _check_scheduled_announcements_for_guild():
                 else "Roll at the Casino" if randomizer_only
                 else "Reserve Here"
             )
+            bell = await _announce_bell(announce_channel)
             announcement_content = (
-                f"# {ANNOUNCE_BELL_EMOJI} Game Announcement {ANNOUNCE_BELL_EMOJI}\n"
+                f"# {bell} Game Announcement {bell}\n"
                 f"||{ping_mention}||{addon_line}\n"
                 f"**:clock4: <t:{game_timestamp}:F> (<t:{game_timestamp}:R>)**\n"
                 f"**:video_game: Host - {host.mention}**\n"
-                f"**:pencil: {reserve_label} - __MAP_LINK__**"
+                f"**:pencil: __MAP_LINK__**"
                 + await _ironlegion_announcement_line(item.get("require_ironlegion"))
             )
             # No reservation thread any more: the game is saved under the
             # announcement post's id, and players reserve on the website.
             anno_message = await announce_channel.send(
-                content=announcement_content.replace("__MAP_LINK__", "*(Creating link...)*")
+                content=announcement_content.replace("__MAP_LINK__", f"{reserve_label} *(creating link…)*")
             )
             game_key = str(anno_message.id)
             thread_name = f"{mode} Game - {day} - {date_str}"
             # Casino games: players roll on tkcasino.online, through GameMaster.
             reserve_url = _casino_game_url(game_key) if randomizer_only else _map_game_url(game_key)
-            await anno_message.edit(content=announcement_content.replace("__MAP_LINK__", reserve_url))
+            # The label is the link; <…> keeps Discord from adding a preview card.
+            await anno_message.edit(
+                content=announcement_content.replace("__MAP_LINK__", f"[{reserve_label}](<{reserve_url}>)"),
+                suppress=True,
+            )
 
             # Save to GAMES_FILE just like standard /announce_game
             games_data = await read_json(GAMES_FILE)
