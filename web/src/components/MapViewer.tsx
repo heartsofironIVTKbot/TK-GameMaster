@@ -24,6 +24,7 @@ import {
 } from "./nationHighlights";
 import CountryDetailsDrawer from "./CountryDetailsDrawer";
 import HotJoinBar from "./HotJoinBar";
+import { prettySlot } from "./live/hostTypes";
 import EmergencyUnreserveDialog from "./casino/EmergencyUnreserve";
 import CapitalAvatars, { type CapitalAvatarEntry } from "./CapitalAvatars";
 import PlayerProfilePopover, { reservationBadges } from "./PlayerProfilePopover";
@@ -824,6 +825,8 @@ export default function MapViewer({
   // the authenticated user is too, so /api/auth/me is fetched once in the
   // page and shared with the roster drawer).
   const [reserving, setReserving] = useState(false);
+  /** "Do you want to switch from A to B?" for a player who already has a nation. */
+  const [switchAsk, setSwitchAsk] = useState<{ from: string; to: string } | null>(null);
   /** Casino games: the Emergency Unreserve pop-up (kept open after the board changes). */
   const [emergency, setEmergency] = useState<{ threadId: string; nation: string } | null>(null);
   const [reserveMessage, setReserveMessage] = useState<{
@@ -1113,7 +1116,7 @@ export default function MapViewer({
     [clearHoverTimer, onSelectNation],
   );
 
-  const handleReserve = useCallback(async () => {
+  const handleReserve = useCallback(async (switching = false) => {
     if (!selected?.slot_key || !selectedThread) return;
     const slotKey = selected.slot_key;
     setReserving(true);
@@ -1126,6 +1129,7 @@ export default function MapViewer({
           thread_id: selectedThread,
           slot_key: slotKey,
           tag: selected.tag,
+          ...(switching ? { switch: true } : {}),
         }),
       });
       const result = (await response.json().catch(() => null)) as {
@@ -1135,7 +1139,7 @@ export default function MapViewer({
       if (response.ok) {
         setReserveMessage({
           kind: "success",
-          text: `Reserved ${slotKey}!`,
+          text: switching ? `Switched to ${slotKey}!` : `Reserved ${slotKey}!`,
         });
         await refreshLobbyReservations();
       } else {
@@ -1334,24 +1338,29 @@ export default function MapViewer({
   const [clock, setClock] = useState(() => Date.now());
   const timed = Boolean(ownHold || otherHold);
   const ownHoldRef = useRef(ownHold);
+  const onSelectRef = useRef(onSelectNation);
   useEffect(() => {
     ownHoldRef.current = ownHold;
-  }, [ownHold]);
+    onSelectRef.current = onSelectNation;
+  }, [ownHold, onSelectNation]);
+  // Only `timed` restarts it: the map redraws constantly (hover, live events),
+  // and restarting on every redraw meant it never ticked.
   useEffect(() => {
     if (!timed) return undefined;
-    const timer = window.setInterval(() => {
+    const tick = () => {
       const now = Date.now();
       setClock(now);
       // Time's up: the nation goes back for others to pick.
       const hold = ownHoldRef.current;
       if (hold?.status === "holding" && hold.until <= now) {
         ownHoldRef.current = null;
-        onSelectNation(null);
+        onSelectRef.current(null);
         setReserveMessage({ kind: "error", text: "Time's up: the nation is free for others to pick now." });
       }
-    }, 500);
+    };
+    const timer = window.setInterval(tick, 250);
     return () => window.clearInterval(timer);
-  }, [timed, onSelectNation]);
+  }, [timed]);
   const secondsLeft = (until: number) => Math.max(0, Math.ceil((until - clock) / 1000));
   const blockedBy =
     ownHold?.status === "held"
@@ -1635,6 +1644,39 @@ export default function MapViewer({
             )}
           </div>
         )}
+        {switchAsk && (
+          <div
+            className="fixed inset-0 z-[3000] flex items-center justify-center bg-black/70 p-4"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) setSwitchAsk(null);
+            }}
+          >
+            <div role="dialog" aria-modal="true" aria-labelledby="switch-title" className="gm-plate w-full max-w-sm bg-ink-950 p-5 [--cut:14px]">
+              <h2 id="switch-title" className="gm-title text-[24px]">
+                Switch nation?
+              </h2>
+              <p className="mt-2 text-sm text-ink-300">
+                Do you want to switch from <b className="text-ink-100">{switchAsk.from}</b> to <b className="text-ink-100">{switchAsk.to}</b>?{" "}
+                {switchAsk.from} becomes free for others straight away.
+              </p>
+              <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row">
+                <button type="button" autoFocus onClick={() => setSwitchAsk(null)} className="gm-btn gm-btn-secondary h-10 flex-1">
+                  Keep {switchAsk.from}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSwitchAsk(null);
+                    void handleReserve(true);
+                  }}
+                  className="gm-btn gm-btn-primary h-10 flex-1"
+                >
+                  Switch to {switchAsk.to}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         {emergency && (
           <EmergencyUnreserveDialog
             threadId={emergency.threadId}
@@ -1695,7 +1737,7 @@ export default function MapViewer({
               ownHold?.status !== "cooldown" &&
               (authUser ? (
                 <ReserveGlow>
-                  <button type="button" className={RESERVE_BUTTON} disabled={!selectedThread || reserving} onClick={handleReserve}>
+                  <button type="button" className={RESERVE_BUTTON} disabled={!selectedThread || reserving} onClick={() => void handleReserve()}>
                     {reserving
                       ? "Reserving…"
                       : ownHold?.status === "holding"
@@ -1734,6 +1776,21 @@ export default function MapViewer({
                 className="gm-btn h-12 w-full cursor-not-allowed bg-ink-950 px-6 text-rose-300/80 sm:w-auto"
               >
                 Reserved by {ownerLabelText(ownerLabel)}
+              </button>
+            )}
+            {selectionKind === "pending" && viewerHasNation && mySlot && !blockedBy && (
+              <button
+                type="button"
+                disabled={!selectedThread || reserving}
+                onClick={() => setSwitchAsk({ from: prettySlot(String(mySlot.slot_key)), to: selected.name })}
+                className="gm-btn gm-btn-secondary h-12 w-full bg-ink-950 px-6 text-ink-200 sm:w-auto"
+              >
+                {reserving ? "Switching…" : `Switch to ${selected.name}`}
+              </button>
+            )}
+            {selectionKind === "pending" && viewerHasNation && blockedBy && (
+              <button type="button" disabled className="gm-btn h-12 w-full cursor-not-allowed bg-ink-950 px-6 text-yellow-200 sm:w-auto">
+                🔒 {blockedBy.name} is picking this nation · {secondsLeft(blockedBy.until)}s
               </button>
             )}
             {selectionKind === "coop" && !viewerHasNation && (

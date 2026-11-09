@@ -27,7 +27,9 @@ const tagToSlot = tagToSlotJson as Record<string, string>;
  * /api/reserve
  *
  * GET  ?thread_id=<id>  — reservations + lobby metadata for one game thread.
- * POST {thread_id, slot_key, tag?} — atomically record a reservation. `tag`
+ * POST {thread_id, slot_key, tag?, switch?} — atomically record a reservation
+ *      (`switch: true`: leave the player's current nation for it in the same
+ *      step, as long as the host hasn't locked them on it). `tag`
  *      = the map nation's tag, so a lock on the bot's name for it ("Australia")
  *      also covers the map's ("Commonwealth of Australia").
  *
@@ -225,6 +227,7 @@ export async function POST(request: NextRequest) {
   const threadId = payload.thread_id;
   const slotKey = payload.slot_key;
   const mapTag = typeof payload.tag === "string" && /^[A-Z0-9]{2,4}$/.test(payload.tag) ? payload.tag : null;
+  const switching = payload.switch === true;
 
   if (typeof threadId !== "string" || !THREAD_ID_RE.test(threadId)) {
     return jsonError("thread_id must be a valid Discord thread id", 400);
@@ -397,9 +400,31 @@ export async function POST(request: NextRequest) {
       await connection.rollback();
       return jsonError(`${resolvedSlotKey} is already reserved`, 409);
     }
-    if ([...takenSlots.values()].includes(Number(session.discord_id))) {
+    const mine = [...takenSlots.entries()].filter(([, userId]) => userId === Number(session.discord_id)).map(([slot]) => slot);
+    if (mine.length > 0 && !switching) {
       await connection.rollback();
       return jsonError("You already have a reservation in this game", 409);
+    }
+    if (mine.length > 0) {
+      // Switching nation: leave the old one in the same step (unless the host placed them).
+      const locks = gameData.host_locks && typeof gameData.host_locks === "object" ? (gameData.host_locks as Record<string, unknown>) : {};
+      const lockUntil = Number(locks[session.discord_id] ?? -1);
+      const nowSec = Math.floor(Date.now() / 1000);
+      if (lockUntil === 0 || lockUntil > nowSec) {
+        await connection.rollback();
+        return jsonError(
+          lockUntil === 0
+            ? "The host placed you on your nation: ask a host if you need to change it."
+            : `The host just placed you on your nation: you can change it in ${lockUntil - nowSec}s.`,
+          409,
+        );
+      }
+      await connection.query("DELETE FROM game_reservations WHERE thread_id = ? AND user_id = ?", [threadId, session.discord_id]);
+      await connection.query(
+        `INSERT INTO reservation_sync_queue (thread_id, user_id, slot_key, action, created_at) VALUES (?, ?, '', 'unreserve', ?)`,
+        [threadId, session.discord_id, nowSec],
+      );
+      for (const slot of mine) takenSlots.delete(slot);
     }
     if (isCoopSlot(resolvedSlotKey)) {
       const mainNation = resolvedSlotKey.split("_coop", 1)[0];
