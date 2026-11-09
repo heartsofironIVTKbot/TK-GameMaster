@@ -2,9 +2,11 @@ import { liveHub } from "@/lib/live/hub";
 import { getSession } from "@/lib/session";
 
 /**
- * POST /api/live/select {thread_id, tag | null} — "I'm looking at this
+ * POST /api/live/select {thread_id, tag | null} — "I'm picking this
  * nation" (or no longer) on a game's map, shown to everyone else on it with
- * the player's name. Logged-in players only; memory only, never stored.
+ * the player's name: a 30-second hold (lib/live/hub.ts). Answers the
+ * SelectResult: holding (with the time left), held by someone else,
+ * cooldown, or cleared. Logged-in players only; memory only, never stored.
  * Also sent by navigator.sendBeacon when the page closes (text/plain body).
  */
 
@@ -28,10 +30,11 @@ export async function POST(request: Request) {
     return Response.json({ error: "thread_id and tag (a nation tag or null) are required" }, { status: 400 });
   }
 
-  const accepted = liveHub().select(threadId, {
+  const result = liveHub().select(threadId, {
     user_id: session.discord_id,
     name: session.ingame_nickname?.trim() || session.username,
     tag,
   });
-  return accepted ? new Response(null, { status: 204 }) : Response.json({ error: "Too many updates" }, { status: 429 });
+  if (result.status === "limited") return Response.json({ error: "Too many updates" }, { status: 429 });
+  return Response.json(result, { headers: { "Cache-Control": "no-store" } });
 }

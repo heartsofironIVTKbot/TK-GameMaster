@@ -1318,9 +1318,44 @@ export default function MapViewer({
 
   // Share this player's own pick (a free nation, reservable right now).
   const gameStarted = Boolean(selectedThread && games.find((game) => game.thread_id === selectedThread)?.game_started);
+  // Someone else picked this free nation first: it's theirs for 30 s (lib/live/hub.ts).
+  const otherHold =
+    selectionKind === "pending" && selected
+      ? liveSelections.find((entry) => entry.tag === selected.tag && entry.user_id !== authUser?.discord_id) ?? null
+      : null;
   const sharedTag =
-    selectionKind === "pending" && selected && !dropTag && !gameStarted && !lobbyLock?.draft ? selected.tag : null;
-  useShareSelection(selectedThread || null, sharedTag, Boolean(authUser));
+    selectionKind === "pending" && selected && !dropTag && !gameStarted && !lobbyLock?.draft && !otherHold ? selected.tag : null;
+  const ownHold = useShareSelection(selectedThread || null, sharedTag, Boolean(authUser));
+  // A clock for the countdowns, ticking only while one is on screen.
+  const [clock, setClock] = useState(() => Date.now());
+  const timed = Boolean(ownHold || otherHold);
+  const ownHoldRef = useRef(ownHold);
+  useEffect(() => {
+    ownHoldRef.current = ownHold;
+  }, [ownHold]);
+  useEffect(() => {
+    if (!timed) return undefined;
+    const timer = window.setInterval(() => {
+      const now = Date.now();
+      setClock(now);
+      // Time's up: the nation goes back for others to pick.
+      const hold = ownHoldRef.current;
+      if (hold?.status === "holding" && hold.until <= now) {
+        ownHoldRef.current = null;
+        onSelectNation(null);
+        setReserveMessage({ kind: "error", text: "Time's up: the nation is free for others to pick now." });
+      }
+    }, 500);
+    return () => window.clearInterval(timer);
+  }, [timed, onSelectNation]);
+  const secondsLeft = (until: number) => Math.max(0, Math.ceil((until - clock) / 1000));
+  const blockedBy =
+    ownHold?.status === "held"
+      ? { name: ownHold.name, until: ownHold.until }
+      : otherHold && otherHold.until > clock
+        ? { name: otherHold.name, until: otherHold.until }
+        : null;
+
 
   const highlightState = useMemo<HighlightState>(
     () => ({
@@ -1636,11 +1671,31 @@ export default function MapViewer({
         )}
         {selected && selectionKind && !lobbyLock?.draft && !lobbyLock?.casino && !gameRunning && (
           <div data-tour="map.reserve" className="absolute inset-x-4 bottom-5 z-[1010] flex flex-col items-center gap-2 sm:inset-x-auto sm:bottom-7 sm:left-1/2 sm:-translate-x-1/2">
+            {selectionKind === "pending" && blockedBy && (
+              <button
+                type="button"
+                disabled
+                className="gm-btn h-12 w-full cursor-not-allowed bg-ink-950 px-6 text-yellow-200 sm:w-auto"
+              >
+                🔒 {blockedBy.name} is picking this nation · {secondsLeft(blockedBy.until)}s
+              </button>
+            )}
+            {selectionKind === "pending" && !blockedBy && ownHold?.status === "cooldown" && (
+              <button type="button" disabled className="gm-btn h-12 w-full cursor-not-allowed bg-ink-950 px-6 text-ink-300 sm:w-auto">
+                Others get a turn: you can pick it again in {secondsLeft(ownHold.until)}s
+              </button>
+            )}
             {selectionKind === "pending" &&
+              !blockedBy &&
+              ownHold?.status !== "cooldown" &&
               (authUser ? (
                 <ReserveGlow>
                   <button type="button" className={RESERVE_BUTTON} disabled={!selectedThread || reserving} onClick={handleReserve}>
-                    {reserving ? "Reserving…" : "Reserve nation"}
+                    {reserving
+                      ? "Reserving…"
+                      : ownHold?.status === "holding"
+                        ? `Reserve nation · ${secondsLeft(ownHold.until)}s`
+                        : "Reserve nation"}
                   </button>
                 </ReserveGlow>
               ) : (

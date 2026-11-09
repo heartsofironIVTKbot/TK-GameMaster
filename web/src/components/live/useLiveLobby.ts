@@ -2,11 +2,19 @@
 
 import { useEffect, useRef, useState } from "react";
 
-/** Another player's selected nation on the same game's map (GET /api/live). */
+/** Another player's selected nation on the same game's map (GET /api/live): a 30-second hold. */
 export interface LiveSelection {
   user_id: string;
   name: string;
   tag: string;
+  /** When the hold ends, by this browser's clock (epoch ms). */
+  until: number;
+}
+
+/** The server sends the time left; turn it into a deadline on this browser's clock. */
+function localSelection(raw: unknown): LiveSelection {
+  const entry = raw as { user_id: string; name: string; tag: string; ends_in_ms?: number };
+  return { user_id: String(entry.user_id), name: String(entry.name), tag: String(entry.tag), until: Date.now() + Number(entry.ends_in_ms ?? 30_000) };
 }
 
 /** Apply a `selected` event ({set, gone}) to the current list. */
@@ -14,7 +22,10 @@ function mergeSelections(current: LiveSelection[], payload: unknown): LiveSelect
   const { set, gone } = (payload ?? {}) as { set?: unknown; gone?: unknown };
   const byUser = new Map(current.map((selection) => [selection.user_id, selection]));
   if (Array.isArray(gone)) for (const userId of gone) byUser.delete(String(userId));
-  if (Array.isArray(set)) for (const selection of set as LiveSelection[]) byUser.set(selection.user_id, selection);
+  if (Array.isArray(set)) for (const raw of set) {
+    const selection = localSelection(raw);
+    byUser.set(selection.user_id, selection);
+  }
   return [...byUser.values()];
 }
 
@@ -102,7 +113,7 @@ export function useLiveLobby(
       });
       next.addEventListener("selections", (event) => {
         const payload = parse(event as MessageEvent);
-        if (Array.isArray(payload)) update({ selections: payload as LiveSelection[] });
+        if (Array.isArray(payload)) update({ selections: payload.map(localSelection) });
       });
       next.addEventListener("selected", (event) => {
         const payload = parse(event as MessageEvent);
@@ -152,31 +163,55 @@ export function useLiveLobby(
   return state.threadId === threadId ? state.live : IDLE;
 }
 
-/** How often a held selection is refreshed (the server forgets it after 40 s). */
+/** Keeps the player counted as on the map (the hold itself never extends). */
 const KEEPALIVE_MS = 15_000;
 /** Quick clicks across nations send only the one the player settles on. */
 const SETTLE_MS = 120;
 
-function postSelection(threadId: string, tag: string | null, beacon = false): void {
+/** This player's own pick, as the server answered (lib/live/hub.ts SelectResult). */
+export type OwnHold =
+  | { tag: string; status: "holding"; until: number }
+  | { tag: string; status: "held"; name: string; until: number }
+  | { tag: string; status: "cooldown"; until: number };
+
+async function postSelection(threadId: string, tag: string | null, beacon = false): Promise<unknown> {
   const body = JSON.stringify({ thread_id: threadId, tag });
   if (beacon && typeof navigator.sendBeacon === "function") {
     navigator.sendBeacon("/api/live/select", new Blob([body], { type: "text/plain" }));
-    return;
+    return null;
   }
-  void fetch("/api/live/select", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body,
-    keepalive: true,
-  }).catch(() => {});
+  try {
+    const response = await fetch("/api/live/select", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body,
+      keepalive: true,
+    });
+    return response.ok ? await response.json().catch(() => null) : null;
+  } catch {
+    return null;
+  }
+}
+
+function ownHoldOf(tag: string, answer: unknown): OwnHold | null {
+  const result = (answer ?? {}) as { status?: string; name?: string; ends_in_ms?: number };
+  const until = Date.now() + Number(result.ends_in_ms ?? 0);
+  if (result.status === "holding") return { tag, status: "holding", until };
+  if (result.status === "held") return { tag, status: "held", name: String(result.name ?? "Another player"), until };
+  if (result.status === "cooldown") return { tag, status: "cooldown", until };
+  return null;
 }
 
 /**
  * Tell everyone on the game's map which free nation this (logged-in) player
- * has selected — the yellow glow with their name — and clear it when they
- * pick something else, leave the game or close the page.
+ * has picked: the yellow glow with their name, and a 30-second hold on it
+ * (nobody else can take it meanwhile). Clears it when they pick something
+ * else, leave the game or close the page. Returns the server's answer for
+ * the current pick: holding (with the deadline), held by someone else, or a
+ * short wait after their own hold ran out.
  */
-export function useShareSelection(threadId: string | null, tag: string | null, enabled: boolean): void {
+export function useShareSelection(threadId: string | null, tag: string | null, enabled: boolean): OwnHold | null {
+  const [hold, setHold] = useState<OwnHold | null>(null);
   // Moving straight to another nation replaces the selection; the "cleared"
   // update only goes out if nothing new follows (no flicker for the others).
   const pendingClear = useRef<{ threadId: string; timer: number } | null>(null);
@@ -186,21 +221,28 @@ export function useShareSelection(threadId: string | null, tag: string | null, e
       window.clearTimeout(pendingClear.current.timer);
       pendingClear.current = null;
     }
-    const settle = window.setTimeout(() => postSelection(threadId, tag), SETTLE_MS);
+    let live = true;
+    const send = () =>
+      void postSelection(threadId, tag).then((answer) => {
+        if (live) setHold(ownHoldOf(tag, answer));
+      });
+    const settle = window.setTimeout(send, SETTLE_MS);
     const keepalive = window.setInterval(() => {
-      if (!document.hidden) postSelection(threadId, tag);
+      if (!document.hidden) send();
     }, KEEPALIVE_MS);
-    const onPageHide = () => postSelection(threadId, null, true);
+    const onPageHide = () => void postSelection(threadId, null, true);
     window.addEventListener("pagehide", onPageHide);
     return () => {
+      live = false;
       window.clearTimeout(settle);
       window.clearInterval(keepalive);
       window.removeEventListener("pagehide", onPageHide);
       const timer = window.setTimeout(() => {
         if (pendingClear.current?.timer === timer) pendingClear.current = null;
-        postSelection(threadId, null);
+        void postSelection(threadId, null);
       }, SETTLE_MS + 50);
       pendingClear.current = { threadId, timer };
     };
   }, [threadId, tag, enabled]);
+  return enabled && hold && hold.tag === tag ? hold : null;
 }

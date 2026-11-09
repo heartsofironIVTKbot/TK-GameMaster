@@ -10,9 +10,13 @@ import { invalidateLobby, lobbySnapshot, lobbyVersion } from "@/lib/lobbySnapsho
  *    built once (shared snapshot cache) and pushed to everyone. Writes made
  *    by this website call `lobbyChanged` and go out at once; the bot's
  *    writes (Discord commands, Host Tool, drafts) land within a second.
- *  - Selections ("Ivan is looking at Germany") are memory only, never
- *    stored. Rate-limited per player, dropped when the player's last map
- *    closes or 40 s after their last refresh. A new map gets the full list
+ *  - Selections ("Ivan is picking Germany") are memory only, never
+ *    stored, and each one is a HOLD: for 30 s the nation is that player's to
+ *    reserve, nobody else can select or reserve it (/api/reserve asks
+ *    `holderOf`). Selecting it again doesn't restart the clock; when it runs
+ *    out the hold goes and that player waits 15 s before taking the same
+ *    nation again, so others get their chance. Rate-limited per player,
+ *    dropped when the player's last map closes. A new map gets the full list
  *    once; after that only changes go out, merged at most every 100 ms per
  *    room (250 ms with over 400 viewers). The full list to every viewer on
  *    every change grows with viewers × selections and swamps the server at
@@ -35,7 +39,25 @@ export interface LiveSelection {
   user_id: string;
   name: string;
   tag: string;
+  /** How long the hold has left when this was sent (ms). */
+  ends_in_ms: number;
 }
+
+/** A player's 30-second hold on a nation (their selection). */
+interface Hold {
+  user_id: string;
+  name: string;
+  tag: string;
+  until: number;
+}
+
+/** What selecting a nation did. */
+export type SelectResult =
+  | { status: "holding"; ends_in_ms: number }
+  | { status: "held"; name: string; ends_in_ms: number }
+  | { status: "cooldown"; ends_in_ms: number }
+  | { status: "cleared" | "ignored" }
+  | { status: "limited" };
 
 interface Room {
   threadId: string;
@@ -45,9 +67,12 @@ interface Room {
   version: string | null;
   /** The last lobby sent (JSON), so an unchanged rebuild isn't sent again. */
   content: string | null;
-  selections: Map<string, LiveSelection & { until: number }>;
+  /** Player id → their hold (one each). */
+  selections: Map<string, Hold>;
+  /** `${player}:${tag}` → when that player may take that nation again. */
+  cooldowns: Map<string, number>;
   /** Selections changed since the last flush: the new one, or null = gone. */
-  changed: Map<string, LiveSelection | null>;
+  changed: Map<string, Hold | null>;
   lastFlush: number;
   viewers: number;
   checking: boolean;
@@ -69,8 +94,10 @@ const FLUSH_MS = 100;
 const BIG_ROOM = 400;
 const BIG_ROOM_FLUSH_MS = 250;
 const PING_MS = 20_000;
-/** A safety net: closing the map already drops the selection. */
-const SELECTION_TTL_MS = 40_000;
+/** How long a selected nation is held for its player. */
+export const HOLD_MS = 30_000;
+/** After a hold runs out, the same player waits this long for that nation. */
+export const HOLD_COOLDOWN_MS = 15_000;
 /** Per player: a burst of 10 selection updates, then 5 per second. */
 const BUCKET_SIZE = 10;
 const BUCKET_REFILL_PER_MS = 5 / 1_000;
@@ -104,6 +131,7 @@ export class LiveHub {
         version: null,
         content: null,
         selections: new Map(),
+        cooldowns: new Map(),
         changed: new Map(),
         lastFlush: 0,
         viewers: 0,
@@ -132,22 +160,56 @@ export class LiveHub {
   }
 
   /**
-   * A logged-in player selected a nation (or cleared it with `tag: null`).
-   * Only players with the game's map open count. False when rate-limited.
+   * A logged-in player selected a nation (or cleared it with `tag: null`):
+   * a 30-second hold, unless someone else holds it or the player's own hold
+   * on it just ran out. Only players with the game's map open count.
    */
-  select(threadId: string, selection: Omit<LiveSelection, "tag"> & { tag: string | null }): boolean {
+  select(threadId: string, selection: { user_id: string; name: string; tag: string | null }): SelectResult {
     const room = this.rooms.get(threadId);
-    if (!room || !room.people.has(selection.user_id)) return true;
-    if (!this.take(selection.user_id)) return false;
+    if (!room || !room.people.has(selection.user_id)) return { status: "ignored" };
+    if (!this.take(selection.user_id)) return { status: "limited" };
+    const now = Date.now();
     const current = room.selections.get(selection.user_id);
     if (!selection.tag) {
       if (current) this.dropSelection(room, selection.user_id);
-      return true;
+      return { status: "cleared" };
     }
-    const next = { user_id: selection.user_id, name: selection.name, tag: selection.tag };
-    if (current?.tag !== next.tag || current.name !== next.name) room.changed.set(next.user_id, next);
-    room.selections.set(next.user_id, { ...next, until: Date.now() + SELECTION_TTL_MS });
-    return true;
+    // Their own hold on it: keep it (re-selecting never restarts the clock).
+    if (current?.tag === selection.tag && current.until > now) {
+      return { status: "holding", ends_in_ms: current.until - now };
+    }
+    const holder = this.activeHolder(room, selection.tag, now);
+    if (holder && holder.user_id !== selection.user_id) {
+      return { status: "held", name: holder.name, ends_in_ms: holder.until - now };
+    }
+    const waitUntil = room.cooldowns.get(`${selection.user_id}:${selection.tag}`) ?? 0;
+    if (waitUntil > now) return { status: "cooldown", ends_in_ms: waitUntil - now };
+    const next: Hold = { user_id: selection.user_id, name: selection.name, tag: selection.tag, until: now + HOLD_MS };
+    room.selections.set(next.user_id, next);
+    room.changed.set(next.user_id, next);
+    return { status: "holding", ends_in_ms: HOLD_MS };
+  }
+
+  /** Who holds this nation right now (null = nobody), for /api/reserve. */
+  holderOf(threadId: string, tag: string | null): { user_id: string; name: string; ends_in_ms: number } | null {
+    const room = this.rooms.get(threadId);
+    if (!room || !tag) return null;
+    const now = Date.now();
+    const holder = this.activeHolder(room, tag, now);
+    return holder ? { user_id: holder.user_id, name: holder.name, ends_in_ms: holder.until - now } : null;
+  }
+
+  /** A player reserved: their hold has done its job. */
+  release(threadId: string, userId: string): void {
+    const room = this.rooms.get(threadId);
+    if (room) this.dropSelection(room, userId);
+  }
+
+  private activeHolder(room: Room, tag: string, now: number): Hold | null {
+    for (const hold of room.selections.values()) {
+      if (hold.tag === tag && hold.until > now) return hold;
+    }
+    return null;
   }
 
   private dropSelection(room: Room, userId: string): void {
@@ -169,7 +231,7 @@ export class LiveHub {
     } catch (error) {
       console.error("[live] first lobby read failed:", error);
     }
-    client.send(sseFrame("selections", this.selectionList(room)));
+    client.send(sseFrame("selections", this.selectionList(room, Date.now())));
     // Everyone else hears about a changed count from the next tick.
     client.send(sseFrame("viewers", { count: room.people.size }));
   }
@@ -223,8 +285,14 @@ export class LiveHub {
     const now = Date.now();
     for (const room of this.rooms.values()) {
       void this.check(room);
-      for (const [userId, selection] of room.selections) {
-        if (selection.until < now) this.dropSelection(room, userId);
+      // Holds that ran out: free the nation, and that player waits a moment for it.
+      for (const [userId, hold] of room.selections) {
+        if (hold.until > now) continue;
+        this.dropSelection(room, userId);
+        room.cooldowns.set(`${userId}:${hold.tag}`, now + HOLD_COOLDOWN_MS);
+      }
+      for (const [key, until] of room.cooldowns) {
+        if (until <= now) room.cooldowns.delete(key);
       }
       // People, not tabs: one logged-in player with two tabs counts once.
       if (room.people.size !== room.viewers) {
@@ -251,7 +319,7 @@ export class LiveHub {
       const set: LiveSelection[] = [];
       const gone: string[] = [];
       for (const [userId, selection] of room.changed) {
-        if (selection) set.push(selection);
+        if (selection) set.push(this.wire(selection, now));
         else gone.push(userId);
       }
       room.changed.clear();
@@ -269,8 +337,13 @@ export class LiveHub {
     }
   }
 
-  private selectionList(room: Room): LiveSelection[] {
-    return [...room.selections.values()].map(({ user_id, name, tag }) => ({ user_id, name, tag }));
+  private selectionList(room: Room, now: number): LiveSelection[] {
+    return [...room.selections.values()].map((hold) => this.wire(hold, now));
+  }
+
+  /** Time left, not a clock time: the viewers' clocks needn't match the server's. */
+  private wire(hold: Hold, now: number): LiveSelection {
+    return { user_id: hold.user_id, name: hold.name, tag: hold.tag, ends_in_ms: Math.max(0, hold.until - now) };
   }
 
   private take(userId: string): boolean {

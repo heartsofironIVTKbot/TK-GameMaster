@@ -364,6 +364,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Someone else picked this nation first: it's theirs for 30 s (lib/live/hub.ts).
+    // Co-op and filler slots aren't held.
+    if (!isFillerSlot(resolvedSlotKey) && !isCoopSlot(resolvedSlotKey)) {
+      const holder = liveHub().holderOf(threadId, mapTag);
+      if (holder && holder.user_id !== session.discord_id) {
+        await connection.rollback();
+        const seconds = Math.max(1, Math.ceil(holder.ends_in_ms / 1000));
+        return jsonError(`${holder.name} is picking this nation right now. Try again in ${seconds}s if they don't take it.`, 409);
+      }
+    }
+
     const ironLegion = await ironLegionRefusal(connection, gameGuild, session.discord_id, gameData);
     if (ironLegion) {
       await connection.rollback();
@@ -435,6 +446,7 @@ export async function POST(request: NextRequest) {
     );
 
     await connection.commit();
+    liveHub().release(threadId, session.discord_id);
     liveHub().lobbyChanged(threadId);
     auditReservation(
       game,
