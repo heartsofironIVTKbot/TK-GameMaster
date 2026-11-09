@@ -2414,18 +2414,6 @@ async def is_user_authenticated(
     return await _ironlegion_member(member.guild.id, member.id)
 
 
-async def _ironlegion_announcement_line(game_switch) -> str:
-    """The announcement's note when the game requires IronLegion: where to authenticate.
-    Empty when it doesn't, or IronLegion isn't set up on the server (nobody is locked out)."""
-    required = bool(game_switch) if isinstance(game_switch, bool) else bool(SERVER_FEATURES.get("ironlegion", False))
-    row = await _ironlegion_server(cur_gid()) if required else None
-    if not _ironlegion_on(row):
-        return ""
-    channel_id = int(row.get("verify_channel_id") or 0)
-    where = f" in <#{channel_id}>" if channel_id else ""
-    return f"\n**:shield: Steam authentication required - press Authenticate{where} (IronLegion) before you reserve**"
-
-
 def ironlegion_unverified_message(guild_id: int, who: Optional[str] = None) -> str:
     """Why a reservation was refused, pointing at the server's authentication channel."""
     entry = _ironlegion_rows.get(int(guild_id or 0)) or {}
@@ -27395,7 +27383,8 @@ async def _check_scheduled_announcements_for_guild():
                 f"**:clock4: <t:{game_timestamp}:F> (<t:{game_timestamp}:R>)**\n"
                 f"**:video_game: Host - {host.mention}**\n"
                 f"**:pencil: __MAP_LINK__**"
-                + await _ironlegion_announcement_line(item.get("require_ironlegion"))
+                # (No IronLegion line, Niko 2026-11-09: the map tells players
+                # who must authenticate, with the link, when they try.)
             )
             # No reservation thread any more: the game is saved under the
             # announcement post's id, and players reserve on the website.
