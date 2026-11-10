@@ -16,6 +16,7 @@ import { GeoJSON, MapContainer, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { orientGeometryForClockwiseTravel, simplifyGeometryLossless } from "./nationGeometry";
 import { attachSmoothWheelZoom } from "./smoothWheelZoom";
+import { attachSmoothKeyboardPan } from "./smoothKeyboardPan";
 import {
   DRAW_PADDING,
   MAJOR_TAGS,
@@ -433,6 +434,8 @@ export function MapSetup({
   // Smooth, stepless wheel zoom in place of Leaflet's step-per-notch zoom.
   // It ignores the wheel during a pan (a zoom mid-drag made the pan leap).
   useEffect(() => attachSmoothWheelZoom(map), [map]);
+  // Smooth arrow-key panning in place of Leaflet's 80 px steps.
+  useEffect(() => attachSmoothKeyboardPan(map), [map]);
   return null;
 }
 
@@ -1791,8 +1794,14 @@ export default function MapViewer({
                 Do you want to switch from <b className="text-ink-100">{switchAsk.from}</b> to <b className="text-ink-100">{switchAsk.to}</b>?{" "}
                 {switchAsk.from} becomes free for others straight away.
               </p>
-              <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row">
-                <button type="button" autoFocus onClick={() => setSwitchAsk(null)} className="gm-btn gm-btn-secondary h-10 flex-1">
+              {/* Stacked, and the labels wrap: nation names can be long. */}
+              <div className="mt-5 flex flex-col-reverse gap-2">
+                <button
+                  type="button"
+                  autoFocus
+                  onClick={() => setSwitchAsk(null)}
+                  className="gm-btn gm-btn-secondary min-h-10 w-full whitespace-normal px-4 py-2 text-center leading-snug"
+                >
                   Keep {switchAsk.from}
                 </button>
                 <button
@@ -1801,7 +1810,7 @@ export default function MapViewer({
                     setSwitchAsk(null);
                     void handleReserve(true);
                   }}
-                  className="gm-btn gm-btn-primary h-10 flex-1"
+                  className="gm-btn gm-btn-primary min-h-10 w-full whitespace-normal px-4 py-2 text-center leading-snug"
                 >
                   Switch to {switchAsk.to}
                 </button>
@@ -1929,10 +1938,10 @@ export default function MapViewer({
               <button
                 type="button"
                 disabled={!selectedThread || reserving}
-                onClick={() => setSwitchAsk({ from: prettySlot(String(mySlot.slot_key)), to: selected.name })}
+                onClick={() => setSwitchAsk({ from: prettySlot(String(mySlot.slot_key)), to: boardDisplayName(scenarioId, selected.tag, selected.name) })}
                 className="gm-btn gm-btn-secondary h-12 w-full bg-ink-950 px-6 text-ink-200 sm:w-auto"
               >
-                {reserving ? "Switching…" : `Switch to ${selected.name}`}
+                {reserving ? "Switching…" : `Switch to ${boardDisplayName(scenarioId, selected.tag, selected.name)}`}
               </button>
             )}
             {pendingFree && viewerHasNation && blockedBy && (
