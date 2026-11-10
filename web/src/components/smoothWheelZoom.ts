@@ -23,14 +23,14 @@ type MapInternals = L.Map & {
   _animatingZoom?: boolean;
 };
 
-/** Zoom levels per wheel pixel: a mouse notch (~100 px) is about 0.4 of a level. */
-const ZOOM_PER_PX = 0.004;
+/** Zoom levels per wheel pixel: a mouse notch (~100 px) is about a quarter of a level. */
+const ZOOM_PER_PX = 0.0025;
 /** Trackpad pinch arrives as ctrl+wheel with small deltas: make it livelier. */
-const ZOOM_PER_PX_PINCH = 0.012;
+const ZOOM_PER_PX_PINCH = 0.008;
 /** One event can't jump further than this (fast-spinning wheels, page mode). */
-const MAX_EVENT_PX = 250;
+const MAX_EVENT_PX = 200;
 /** Glide time constant: about 95% of the way after 3× this. */
-const GLIDE_MS = 70;
+const GLIDE_MS = 120;
 /** Close enough to the target to stop. */
 const DONE_EPSILON = 0.001;
 /**
