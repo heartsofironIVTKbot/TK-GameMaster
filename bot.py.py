@@ -31469,6 +31469,258 @@ async def _web_hotjoin_decide(actor, key: str, game: dict, payload: dict):
     return True, {**(result or {}), "hotjoin": "approved"}, None
 
 
+# ————— Co-op requests from the map —————
+# A player picks a major someone already holds and presses Request co-op:
+#   coop_request — the bot checks it, keeps it on the game (game["coop_requests"],
+#       one per requester) and DMs the nation's player with Accept / Decline;
+#   coop_cancel — the requester withdraws it;
+#   coop_decide — the nation's player answers on the map (the DM buttons run the
+#       same check). Accepting puts the requester on the nation's next free
+#       co-op slot (the Host Tool's limit, WEB_ROSTER_MAX_COOP_SLOTS).
+COOP_WEB_ACTIONS = ("coop_request", "coop_cancel", "coop_decide")
+COOP_REQUEST_TTL_SEC = 24 * 3600
+
+
+def _coop_requests(game) -> dict:
+    requests = game.get("coop_requests")
+    return requests if isinstance(requests, dict) else {}
+
+
+def _coop_free_key(reservations: dict, nation: str):
+    keys = [f"{nation}_coop" if i == 1 else f"{nation}_coop_{i}" for i in range(1, WEB_ROSTER_MAX_COOP_SLOTS + 1)]
+    return next((key for key in keys if key not in reservations), None)
+
+
+def _coop_problem(game: dict, nation: str, uid: str, member) -> str | None:
+    """Why this player can't co-op this nation right now (None: they can).
+    "Already has" is reworded by the caller for the requester / the owner."""
+    if game.get("status") in ("ended", "cancelled"):
+        return "❌ This game has already ended."
+    if game.get("game_started"):
+        return "❌ The game has already started, so co-op requests are closed."
+    if game.get("lockdown"):
+        return "❌ Reservations are locked down by the host."
+    if _is_casino_game_dict(game) or _is_draft_game(game):
+        return "❌ Co-op requests aren't used in Casino or draft games."
+    mode = game.get("mode", "")
+    if mode == "Other" or nation not in get_major_nations_for_mode(mode):
+        return "❌ Co-op is only for major nations."
+    if is_locked_for_mode(nation, mode, game.get("locked_regions", [])) or nation in {
+        str(name) for name in game.get("layout_disabled_nations") or []
+    }:
+        return f"❌ **{nation}** is locked in this game."
+    res = game.get("reservations") or {}
+    owner = res.get(nation)
+    if owner is None:
+        return f"❌ **{nation}** has no player yet, so it can be reserved directly."
+    if str(owner) == str(uid):
+        return f"ℹ️ **{nation}** is already yours."
+    if any(str(holder) == str(uid) for holder in res.values()):
+        return "❌ Already has a nation in this game (unreserve it first)."
+    if _coop_free_key(res, nation) is None:
+        return f"❌ All {WEB_ROSTER_MAX_COOP_SLOTS} co-op slots for **{nation}** are taken."
+    level = game.get("major_lock_level", "Trusted")
+    if member is not None and not _member_meets_lock_level(member, level, MODE_CONFIG.get(mode, {})):
+        return f"❗ Majors (and their co-ops) in this game are for **{_lock_label(level)}** players."
+    return None
+
+
+def _coop_dm_view(gid: int, key: str, user_id: str) -> discord.ui.View:
+    view = discord.ui.View(timeout=None)
+    view.add_item(CoopRequestButton(gid, "accept", key, user_id))
+    view.add_item(CoopRequestButton(gid, "decline", key, user_id))
+    view.add_item(discord.ui.Button(label="Open the map", style=discord.ButtonStyle.link, url=_map_game_url(key)))
+    return view
+
+
+async def _process_web_coop(req: dict):
+    action = str(req.get("action") or "")
+    payload = req.get("payload") or {}
+    thread_id = str(payload.get("thread_id") or "").strip()
+    if not thread_id.isdigit():
+        return False, None, "❌ Invalid game."
+    actor = await _web_fetch_member(int(req.get("host_id") or 0))
+    if actor is None:
+        return False, None, "❌ You need to be in the server to do that."
+    if action == "coop_decide":
+        return await _coop_decide(actor, thread_id, str(payload.get("user_id") or ""), bool(payload.get("approve")))
+
+    games_data = await _read_games_fresh()
+    storage_key, game = _find_game_entry(games_data, thread_id)
+    if not game:
+        return False, None, "❌ This game no longer exists."
+    key = str(storage_key or thread_id)
+    uid = str(actor.id)
+    requests = _coop_requests(game)
+    now = int(time.time())
+
+    if action == "coop_cancel":
+        entry = requests.get(uid)
+        if not entry or entry.get("status") != "pending":
+            return True, {"coop": "none"}, None
+        entry.update(status="withdrawn", decided_at=now)
+        game["coop_requests"] = requests
+        await save_single_game(key, game, rewrite_reservations=False)
+        return True, {"coop": "withdrawn"}, None
+
+    mode = game.get("mode", "")
+    raw = str(payload.get("nation") or "").strip()
+    nation = next((n for n in get_major_nations_for_mode(mode) if n.lower() == raw.lower()), raw)
+    problem = _coop_problem(game, nation, uid, actor)
+    if problem:
+        return False, None, problem.replace("Already has", "You already have")
+    if not await is_user_authenticated(actor, int(key)):
+        return False, None, ironlegion_unverified_message(cur_gid())
+    owner_id = str((game.get("reservations") or {}).get(nation))
+    existing = requests.get(uid)
+    if existing and existing.get("status") == "pending" and existing.get("nation") == nation:
+        return True, {"coop": "pending", "nation": nation}, None
+    requests[uid] = {"nation": nation, "owner": owner_id, "name": actor.display_name, "status": "pending", "ts": now}
+    game["coop_requests"] = _trim_hotjoin_requests(requests)
+    await save_single_game(key, game, rewrite_reservations=False)
+
+    owner = await _web_fetch_member(int(owner_id))
+    if owner is not None:
+        await _dm_user_safe(
+            owner,
+            content=(
+                f"🤝 **Co-op request:** **{actor.display_name}** wants to co-op **{nation}** with you "
+                f"in the **{mode}** game. Accept or decline here, or on the map."
+            ),
+            view=_coop_dm_view(cur_gid(), key, uid),
+            label="co-op request",
+        )
+    _audit_log("INFO", f"web co-op request game={key} user={uid} nation={nation} owner={owner_id}")
+    return True, {"coop": "pending", "nation": nation}, None
+
+
+_coop_decision_locks: dict[str, asyncio.Lock] = {}
+
+
+async def _coop_decide(actor, thread_id: str, user_id: str, approve: bool):
+    """The nation's player answers a co-op request (map or DM)."""
+    if not user_id.isdigit():
+        return False, None, "❌ Invalid player."
+    lock = _coop_decision_locks.setdefault(f"{cur_gid()}:{thread_id}:{user_id}", asyncio.Lock())
+    async with lock:
+        games_data = await _read_games_fresh()
+        storage_key, game = _find_game_entry(games_data, thread_id)
+        if not game:
+            return False, None, "❌ This game no longer exists."
+        key = str(storage_key or thread_id)
+        requests = _coop_requests(game)
+        entry = requests.get(user_id)
+        if not entry or entry.get("status") != "pending":
+            return False, None, "ℹ️ This request isn't waiting any more: they may have withdrawn it."
+        nation = str(entry.get("nation") or "")
+        res = game.get("reservations") or {}
+        if str(res.get(nation)) != str(actor.id):
+            return False, None, f"❌ Only the player on **{nation}** can answer this request."
+        now = int(time.time())
+        target = await _web_fetch_member(int(user_id))
+        name = target.display_name if target is not None else "That player"
+
+        def mark(status: str) -> None:
+            entry.update(status=status, decided_at=now)
+            requests[user_id] = entry
+            game["coop_requests"] = requests
+
+        if now - int(entry.get("ts") or 0) > COOP_REQUEST_TTL_SEC:
+            mark("expired")
+            await save_single_game(key, game, rewrite_reservations=False)
+            return False, None, "ℹ️ This request is more than a day old, so it has expired."
+        if not approve:
+            mark("declined")
+            await save_single_game(key, game, rewrite_reservations=False)
+            if target is not None:
+                await _dm_user_safe(
+                    target,
+                    content=f"🚫 **{actor.display_name}** declined your co-op request for **{nation}**.",
+                    label="co-op declined",
+                )
+            return True, {"coop": "declined", "nation": nation}, None
+        if target is None:
+            mark("failed")
+            await save_single_game(key, game, rewrite_reservations=False)
+            return False, None, "❌ That player is no longer in the server."
+        problem = _coop_problem(game, nation, user_id, target)
+        if problem is None and not await is_user_authenticated(target, int(key)):
+            problem = "❌ They haven't authenticated with IronLegion, which this game requires."
+        if problem:
+            mark("failed")
+            await save_single_game(key, game, rewrite_reservations=False)
+            reason = problem.lstrip("❌❗ℹ️ ").replace("Already has", "They already have")
+            if target is not None:
+                await _dm_user_safe(
+                    target,
+                    content=f"⚠️ Your co-op request for **{nation}** couldn't go through: {reason}",
+                    label="co-op failed",
+                )
+            return False, None, f"❌ Couldn't add **{name}**: {reason}"
+        slot = _coop_free_key(res, nation)
+        res[slot] = int(user_id)
+        game["reservations"] = res
+        mark("approved")
+        await save_single_game(key, game, rewrite_reservations=True)
+        await _roster_after_change(key)
+        await _dm_user_safe(
+            target,
+            content=(
+                f"✅ **{actor.display_name}** accepted: you're on the **{nation}** co-op. "
+                f"See the lobby on the map: {_map_game_url(key)}"
+            ),
+            label="co-op accepted",
+        )
+        await _roster_send_mode_info_dm(target, game.get("mode", ""), nation)
+        audit_event(
+            "roster", "coop_accepted",
+            f"{actor.display_name} accepted {name} as co-op on {nation}"
+            + (f" in {game.get('thread_name')}" if game.get("thread_name") else ""),
+            actor_id=actor.id, actor_name=actor.display_name, target_id=int(user_id), target_name=name,
+            game_id=key, details={"slot": slot}, source="web",
+        )
+        return True, {"coop": "approved", "nation": nation, "slot_key": slot}, None
+
+
+class CoopRequestButton(discord.ui.DynamicItem[discord.ui.Button],
+                        template=r"gmcoop:(?P<gid>\d+):(?P<action>accept|decline):(?P<key>\d+):(?P<user>\d+)"):
+    """Restart-proof Accept / Decline on the co-op request DM."""
+
+    def __init__(self, gid: int, action: str, key: str, user_id: str):
+        self.gid = int(gid)
+        self.action = action
+        self.key = str(key)
+        self.user_id = str(user_id)
+        accept = action == "accept"
+        super().__init__(discord.ui.Button(
+            label="Accept" if accept else "Decline",
+            emoji="✅" if accept else "🚫",
+            style=discord.ButtonStyle.success if accept else discord.ButtonStyle.danger,
+            custom_id=f"gmcoop:{gid}:{action}:{key}:{user_id}",
+        ))
+
+    @classmethod
+    async def from_custom_id(cls, interaction, item, match, /):
+        return cls(int(match["gid"]), match["action"], match["key"], match["user"])
+
+    async def callback(self, interaction: discord.Interaction):
+        try:
+            await interaction.response.defer()
+        except Exception:
+            pass
+        with guild_scope(self.gid):
+            actor = await _web_fetch_member(interaction.user.id)
+            if actor is None:
+                ok, result, err = False, None, "❌ You need to be in the server to do that."
+            else:
+                ok, result, err = await _coop_decide(actor, self.key, self.user_id, self.action == "accept")
+        if ok:
+            note = "✅ Accepted: they're on your co-op." if (result or {}).get("coop") == "approved" else "🚫 Declined."
+        else:
+            note = err or "❌ Something went wrong."
+        await _disable_message_buttons(interaction.message, note=f"-# {note}")
+
+
 _CRASH_REPORTS_DDL = """
 CREATE TABLE IF NOT EXISTS crash_reports (
     report_id VARCHAR(32) NOT NULL PRIMARY KEY,
@@ -31703,6 +31955,9 @@ _AUDIT_WEB_ACTIONS = {
     "hotjoin_request": ("roster", "hotjoin_request", "asked to hot-join"),
     "hotjoin_cancel": ("roster", "hotjoin_cancelled", "withdrew a hot-join request"),
     "hotjoin_decide": ("roster", "hotjoin_decided", "answered a hot-join request"),
+    "coop_request": ("roster", "coop_request", "asked to co-op a nation"),
+    "coop_cancel": ("roster", "coop_cancelled", "withdrew a co-op request"),
+    "coop_decide": ("roster", "coop_decided", "answered a co-op request"),
     "crash_report": ("system", "crash_report", "sent a crash report"),
     "role_scan": ("roles", "role_scan", "ran the role check"),
     "server_setup": ("settings", "setup_finished", "changed the server setup"),
@@ -31833,6 +32088,8 @@ async def web_schedule_request_loop():
                 ok, result, err = await _process_web_draft(req)
             elif action in HOTJOIN_WEB_ACTIONS:
                 ok, result, err = await _process_web_hotjoin(req)
+            elif action in COOP_WEB_ACTIONS:
+                ok, result, err = await _process_web_coop(req)
             elif action == "crash_report":
                 ok, result, err = await _process_web_crash_report(req)
             elif action == "feedback_rate":
@@ -36103,6 +36360,7 @@ async def on_ready():
     # Restart-proof hot-join panel + host approve/decline buttons.
     try:
         bot.add_dynamic_items(HotJoinButton)
+        bot.add_dynamic_items(CoopRequestButton)
     except Exception as e:
         print(f"⚠️ Could not register hot-join buttons: {e}")
     # Old crash report panels (they now link to the website).
