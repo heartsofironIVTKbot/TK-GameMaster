@@ -26,7 +26,7 @@ import {
 } from "./nationHighlights";
 import CountryDetailsDrawer from "./CountryDetailsDrawer";
 import HotJoinBar from "./HotJoinBar";
-import { prettySlot } from "./live/hostTypes";
+import { prettySlot, reservationName } from "./live/hostTypes";
 import EmergencyUnreserveDialog from "./casino/EmergencyUnreserve";
 import CapitalAvatars, { type CapitalAvatarEntry } from "./CapitalAvatars";
 import PlayerProfilePopover, { reservationBadges } from "./PlayerProfilePopover";
@@ -1371,6 +1371,9 @@ export default function MapViewer({
     return () => window.clearTimeout(timer);
   }, [coopNotice]);
   const coopIncoming = coop.incoming[0] ?? null;
+  // Your own major: its co-op players, whom you can take off yourself.
+  const myCoops = selectionKind === "self" && selected ? reservationsOf.coops(selected) : [];
+  const [kickAsk, setKickAsk] = useState<{ user_id: string; name: string } | null>(null);
   const myCoopHere =
     coop.mine?.status === "pending" && selectedReservation && coop.mine.nation === selectedReservation.slot_key ? coop.mine : null;
 
@@ -1924,6 +1927,49 @@ export default function MapViewer({
               >
                 {reserving ? "Unreserving…" : "Unreserve nation"}
               </button>
+            )}
+            {myCoops.length > 0 && selectedThread && (
+              <div className="gm-plate flex w-full flex-col gap-1.5 bg-ink-950 px-3 py-2 sm:w-[340px]">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-400">Your co-op</p>
+                {myCoops.map((entry) => {
+                  const id = String(entry.user_id);
+                  const name = reservationName(entry);
+                  const asking = kickAsk?.user_id === id;
+                  return (
+                    <div key={id} className="flex items-center gap-2 text-sm">
+                      <span className="min-w-0 flex-1 truncate text-ink-100">{asking ? `Take ${name} off your co-op?` : name}</span>
+                      {asking ? (
+                        <>
+                          <button type="button" onClick={() => setKickAsk(null)} className="gm-btn gm-btn-secondary h-7 px-2.5 text-xs">
+                            Keep
+                          </button>
+                          <button
+                            type="button"
+                            disabled={coop.kick.busy}
+                            onClick={() => {
+                              setKickAsk(null);
+                              void coop.kick.submit("DELETE", { thread_id: selectedThread, user_id: id });
+                            }}
+                            className="gm-btn gm-btn-danger h-7 px-2.5 text-xs"
+                          >
+                            Remove
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={coop.kick.busy}
+                          onClick={() => setKickAsk({ user_id: id, name })}
+                          className="gm-btn gm-btn-secondary h-7 px-2.5 text-xs text-rose-200"
+                        >
+                          {coop.kick.busy ? "Removing…" : "Remove"}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+                {coop.kick.state.phase === "error" && <p className="text-xs text-rose-300">{coop.kick.state.message}</p>}
+              </div>
             )}
             {selectionKind === "locked" && (
               <button

@@ -199,6 +199,46 @@ STORE[GAME]["reservations"]["Germany"] = THIRD
 ok, _, err = run("coop_decide", OWNER, user_id=str(ASKER), approve=True)
 check("a former owner can't accept", not ok and "Only the player on" in err, err)
 
+# --- The nation's player removes a co-op (no host needed) ---
+gm._roster_drop_player_state = _nothing
+fresh_game()
+STORE[GAME]["reservations"]["Germany_coop"] = ASKER
+SAVES.clear()
+DMS.clear()
+ok, result, err = run("coop_kick", OWNER, user_id=str(ASKER))
+check("the nation's player can remove their co-op", ok and result.get("coop") == "removed", (ok, result, err))
+check("the co-op slot is free again", "Germany_coop" not in STORE[GAME]["reservations"], STORE[GAME]["reservations"])
+check("the removal rewrites the reservations", SAVES == [(GAME, True)], SAVES)
+check("the removed player gets a DM", any(uid == ASKER and "took you off" in text for uid, text, _ in DMS), DMS)
+check("the nation itself stays", STORE[GAME]["reservations"].get("Germany") == OWNER)
+
+fresh_game()
+STORE[GAME]["reservations"]["Germany_coop"] = ASKER
+ok, _, err = run("coop_kick", OTHER, user_id=str(ASKER))
+check("someone else can't remove them", not ok and "Only the player on" in err, err)
+ok, _, err = run("coop_kick", ASKER, user_id=str(OTHER))
+check("a non-co-op player can't be removed this way", not ok and "aren't on a co-op" in err, err)
+
+fresh_game(host_locks={str(ASKER): 0})
+STORE[GAME]["reservations"]["Germany_coop"] = ASKER
+ok, _, err = run("coop_kick", OWNER, user_id=str(ASKER))
+check("a co-op the host kept in place stays", not ok and "ask a host" in err and "Germany_coop" in STORE[GAME]["reservations"], err)
+
+fresh_game(host_locks={str(ASKER): int(time.time()) + 20})
+STORE[GAME]["reservations"]["Germany_coop"] = ASKER
+ok, _, err = run("coop_kick", OWNER, user_id=str(ASKER))
+check("a co-op the host just placed can be removed after the wait", not ok and "in " in err, err)
+
+fresh_game(host_locks={str(ASKER): int(time.time()) - 5})
+STORE[GAME]["reservations"]["Germany_coop"] = ASKER
+ok, _, _ = run("coop_kick", OWNER, user_id=str(ASKER))
+check("an expired host placement doesn't block it", ok)
+
+fresh_game(game_started=True)
+STORE[GAME]["reservations"]["Germany_coop"] = ASKER
+ok, _, err = run("coop_kick", OWNER, user_id=str(ASKER))
+check("not once the game has started", not ok and "started" in err, err)
+
 print("\n".join(results))
 failed = sum(1 for line in results if line.startswith("FAIL"))
 print(f"\n{len(results) - failed}/{len(results)} passed")

@@ -23,6 +23,7 @@ import tagToSlotJson from "@/lib/tag_to_slot.json";
  * GET    ?request_id=<id>          — how one of the viewer's queued requests went
  * POST   {thread_id, nation, tag?} — ask to co-op a major someone holds
  * DELETE {thread_id}               — withdraw the viewer's waiting request
+ * DELETE {thread_id, user_id}      — the nation's player takes that co-op player off
  * PATCH  {thread_id, user_id, approve} — the nation's player answers
  *
  * The bot checks and applies them (bot.py.py _process_web_coop) and DMs the
@@ -110,6 +111,8 @@ async function queue(request: NextRequest, method: "POST" | "DELETE" | "PATCH") 
   const rawNation = typeof body.nation === "string" ? body.nation.trim().slice(0, 140) : "";
   if (method === "POST" && !rawNation) return jsonError("Pick a nation first.", 400);
   const userId = typeof body.user_id === "string" ? body.user_id : "";
+  if (method === "DELETE" && userId && !USER_RE.test(userId)) return jsonError("Invalid player.", 400);
+  const kick = method === "DELETE" && Boolean(userId);
   if (method === "PATCH" && (!USER_RE.test(userId) || typeof body.approve !== "boolean")) {
     return jsonError("Say whose request and whether you accept it.", 400);
   }
@@ -136,13 +139,15 @@ async function queue(request: NextRequest, method: "POST" | "DELETE" | "PATCH") 
       payload = { thread_id: game.thread_id, nation: botNationName(options?.mode_nations?.[String(game.mode ?? "")], tag, slot) };
     } else if (method === "PATCH") {
       payload = { thread_id: game.thread_id, user_id: userId, approve: body.approve === true };
+    } else if (kick) {
+      payload = { thread_id: game.thread_id, user_id: userId };
     } else {
       payload = { thread_id: game.thread_id };
     }
     const requestId = crypto.randomUUID();
     await insertRequest({
       requestId,
-      action: method === "POST" ? "coop_request" : method === "PATCH" ? "coop_decide" : "coop_cancel",
+      action: method === "POST" ? "coop_request" : method === "PATCH" ? "coop_decide" : kick ? "coop_kick" : "coop_cancel",
       slotId: null,
       hostId: me.user_id,
       payload,

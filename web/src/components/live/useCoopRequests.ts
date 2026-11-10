@@ -73,6 +73,11 @@ export function useCoopRequests(
     if (result && (result as { coop?: string }).coop === "approved") callbacks.current.onRosterChanged();
   });
 
+  // The nation's player takes a co-op player off their nation.
+  const kick = usePlayerRequest("/api/coop", (result) => {
+    if (result && (result as { coop?: string }).coop === "removed") callbacks.current.onRosterChanged();
+  });
+
   const data = state?.threadId === threadId ? state.data : null;
-  return { mine: data?.mine ?? null, incoming: data?.incoming ?? [], ask, answer, reload: load };
+  return { mine: data?.mine ?? null, incoming: data?.incoming ?? [], ask, answer, kick, reload: load };
 }
