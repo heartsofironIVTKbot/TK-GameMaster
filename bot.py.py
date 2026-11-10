@@ -31477,7 +31477,10 @@ async def _web_hotjoin_decide(actor, key: str, game: dict, payload: dict):
 #   coop_decide — the nation's player answers on the map (the DM buttons run the
 #       same check). Accepting puts the requester on the nation's next free
 #       co-op slot (the Host Tool's limit, WEB_ROSTER_MAX_COOP_SLOTS).
-COOP_WEB_ACTIONS = ("coop_request", "coop_cancel", "coop_decide")
+#   coop_kick — the nation's player takes a co-op player off their nation
+#       (no host needed), before the game starts. A co-op the host placed
+#       with "Keep players where I put them" stays until a host moves them.
+COOP_WEB_ACTIONS = ("coop_request", "coop_cancel", "coop_decide", "coop_kick")
 COOP_REQUEST_TTL_SEC = 24 * 3600
 
 
@@ -31554,6 +31557,9 @@ async def _process_web_coop(req: dict):
     requests = _coop_requests(game)
     now = int(time.time())
 
+    if action == "coop_kick":
+        return await _coop_kick(actor, key, game, str(payload.get("user_id") or ""))
+
     if action == "coop_cancel":
         entry = requests.get(uid)
         if not entry or entry.get("status") != "pending":
@@ -31592,6 +31598,56 @@ async def _process_web_coop(req: dict):
         )
     _audit_log("INFO", f"web co-op request game={key} user={uid} nation={nation} owner={owner_id}")
     return True, {"coop": "pending", "nation": nation}, None
+
+
+async def _coop_kick(actor, key: str, game: dict, user_id: str):
+    """The player on a major takes one of its co-op players off (map → Remove)."""
+    if not user_id.isdigit():
+        return False, None, "❌ Invalid player."
+    if game.get("status") in ("ended", "cancelled"):
+        return False, None, "❌ This game has already ended."
+    if game.get("game_started"):
+        return False, None, "❌ The game has already started: ask a host to change the players."
+    res = game.get("reservations") or {}
+    slot = next((k for k, v in res.items() if str(v) == user_id and "_coop" in str(k)), None)
+    if slot is None:
+        return False, None, "ℹ️ They aren't on a co-op slot any more."
+    nation = str(slot).split("_coop", 1)[0]
+    if str(res.get(nation)) != str(actor.id):
+        return False, None, f"❌ Only the player on **{nation}** can remove its co-op players."
+    locks = game.get("host_locks") if isinstance(game.get("host_locks"), dict) else {}
+    if user_id in locks:
+        until = int(locks.get(user_id) or 0)
+        now = int(time.time())
+        if until == 0:
+            return False, None, "❌ The host placed them on your co-op: ask a host to move them."
+        if until > now:
+            return False, None, f"❌ The host just placed them on your co-op: you can remove them in {until - now}s."
+    del res[slot]
+    game["reservations"] = res
+    _host_unlock(game, user_id)
+    await save_single_game(key, game, rewrite_reservations=True)
+    await _roster_after_change(key)
+    await _roster_drop_player_state(key, int(user_id))
+    target = await _web_fetch_member(int(user_id))
+    name = target.display_name if target is not None else str(user_id)
+    if target is not None:
+        await _dm_user_safe(
+            target,
+            content=(
+                f"👋 **{actor.display_name}** took you off the **{nation}** co-op. "
+                f"You can reserve another nation on the map: {_map_game_url(key)}"
+            ),
+            label="co-op removed",
+        )
+    audit_event(
+        "roster", "coop_removed",
+        f"{actor.display_name} took {name} off the {nation} co-op"
+        + (f" in {game.get('thread_name')}" if game.get("thread_name") else ""),
+        actor_id=actor.id, actor_name=actor.display_name, target_id=int(user_id), target_name=name,
+        game_id=key, details={"slot": slot}, source="web",
+    )
+    return True, {"coop": "removed", "nation": nation, "slot_key": slot}, None
 
 
 _coop_decision_locks: dict[str, asyncio.Lock] = {}
@@ -31958,6 +32014,7 @@ _AUDIT_WEB_ACTIONS = {
     "coop_request": ("roster", "coop_request", "asked to co-op a nation"),
     "coop_cancel": ("roster", "coop_cancelled", "withdrew a co-op request"),
     "coop_decide": ("roster", "coop_decided", "answered a co-op request"),
+    "coop_kick": ("roster", "coop_kicked", "took a player off their co-op"),
     "crash_report": ("system", "crash_report", "sent a crash report"),
     "role_scan": ("roles", "role_scan", "ran the role check"),
     "server_setup": ("settings", "setup_finished", "changed the server setup"),
