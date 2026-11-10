@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { liveHub, type LiveClient } from "@/lib/live/hub";
-import { isSchedulerDemo } from "@/lib/scheduleStore";
+import { gameGuildOf, isSchedulerDemo } from "@/lib/scheduleStore";
+import { accessDenied, mapAccessFor } from "@/lib/mapAccess";
 import { getSession } from "@/lib/session";
 
 /**
@@ -28,6 +29,9 @@ export async function GET(request: NextRequest) {
   if (isSchedulerDemo()) return new Response(null, { status: 204 });
   const known = request.nextUrl.searchParams.get("known");
   const session = await getSession().catch(() => null);
+  // Only the game's server's members, signed in (lib/mapAccess.ts).
+  const access = await mapAccessFor(await gameGuildOf(threadId).catch(() => null)).catch(() => null);
+  if (access && !access.ok) return accessDenied(access);
 
   const hub = liveHub();
   const encoder = new TextEncoder();

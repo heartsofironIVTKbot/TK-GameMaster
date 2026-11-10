@@ -8,6 +8,7 @@ import { getSession } from "@/lib/session";
 import { canonicalName, nationMatchKeys } from "@/data/nationCategories";
 import { demoLobbyState } from "@/lib/liveDemo";
 import { liveHub } from "@/lib/live/hub";
+import { accessDenied, mapAccessFor } from "@/lib/mapAccess";
 import { recordAudit } from "@/lib/auditLog";
 import { lobbySnapshot, lobbyVersion, versionOf } from "@/lib/lobbySnapshot";
 import { memberRoleIds } from "@/lib/memberRoles";
@@ -15,7 +16,7 @@ import { ironLegionRequired, ironLegionVerifyUrl, parseRequireIronLegion } from 
 import { ironLegionMemberVerified } from "@/lib/ironlegionMember";
 import { settingsOf } from "@/lib/serverSettings";
 import { categoryOfMode } from "@/lib/scheduleOptions";
-import { getHostRosterEntry, isSchedulerDemo } from "@/lib/scheduleStore";
+import { gameGuildOf, getHostRosterEntry, isSchedulerDemo } from "@/lib/scheduleStore";
 import { botNationName } from "@/lib/botNation";
 import { moderationOptions } from "@/lib/playerIndex";
 import tagToSlotJson from "@/lib/tag_to_slot.json";
@@ -197,6 +198,9 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    // Only the game's server's members, signed in (lib/mapAccess.ts).
+    const access = await mapAccessFor(await gameGuildOf(threadId));
+    if (!access.ok) return accessDenied(access);
     const version = await lobbyVersion(threadId);
     if (known === version) return NextResponse.json({ unchanged: true, version });
     const snapshot = await lobbySnapshot(threadId, version);
@@ -244,6 +248,14 @@ export async function POST(request: NextRequest) {
   // posts a tag (e.g. "GER" -> "Germany").
   let resolvedSlotKey =
     tagToSlot[slotKey.trim().toUpperCase()] ?? slotKey.trim();
+
+  try {
+    const access = await mapAccessFor(await gameGuildOf(threadId));
+    if (!access.ok) return accessDenied(access);
+  } catch (error) {
+    console.error("[reserve] POST access check failed:", error);
+    return jsonError("Database unavailable", 503);
+  }
 
   let connection: PoolConnection;
   try {

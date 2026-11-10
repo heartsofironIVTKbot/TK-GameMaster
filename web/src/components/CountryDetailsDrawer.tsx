@@ -17,9 +17,6 @@ import {
 } from "@/data/scenarioData";
 import { getCountryData, useScenarioNations } from "@/data/scenarioNations";
 import type {
-  AuthUser,
-  GameLobby,
-  LobbyReservation,
   NationFeatureProps,
   SelectionKind,
 } from "@/lib/types";
@@ -30,15 +27,10 @@ interface CountryDetailsDrawerProps {
   /** Locked by the host or a preset (or the lobby is in lockdown): no one can reserve it. */
   nationLocked?: boolean;
   ownerLabel: string | null;
-  authUser: AuthUser | null;
-  mySlot: LobbyReservation | null;
-  games: GameLobby[];
-  selectedThread: string;
   /** Collapsed state, owned by the page so the top bar arrow can toggle it. */
   minimized: boolean;
   /** Active scenario id (drives the scraped country data lookup). */
   scenarioId: ScenarioId;
-  onSelectThread: (threadId: string) => void;
   onToggleMinimized: () => void;
   /** Close the panel (clears the selection). */
   onClose: () => void;
@@ -383,13 +375,8 @@ export default function CountryDetailsDrawer({
   selectionKind,
   nationLocked = false,
   ownerLabel,
-  authUser,
-  mySlot,
-  games,
-  selectedThread,
   minimized,
   scenarioId = DEFAULT_SCENARIO,
-  onSelectThread,
   onToggleMinimized,
   onClose,
 }: CountryDetailsDrawerProps) {
@@ -641,36 +628,6 @@ export default function CountryDetailsDrawer({
         )}
       </div>
 
-      {/* Signed in: which lobby the map shows. The reserve / unreserve
-          actions live in the glowing button MapViewer draws over the map. */}
-      {authUser && (
-        <div data-tour="map.gamePicker" className={`${expanded ? "block" : "hidden"} border-t border-ink-800 p-4 sm:block`}>
-          <label htmlFor="game-select" className="mb-1 block text-xs text-ink-400">
-            Game lobby
-          </label>
-          <div className="gm-field">
-            <select
-              id="game-select"
-              value={selectedThread}
-              onChange={(event) => onSelectThread(event.target.value)}
-              disabled={games.length === 0}
-            >
-              {games.length === 0 && <option value="">No active lobbies</option>}
-              {games.map((game) => (
-                <option key={game.thread_id} value={game.thread_id}>
-                  {game.game_started ? "In progress: " : ""}
-                  {game.thread_name ?? game.mode ?? game.thread_id}
-                </option>
-              ))}
-            </select>
-          </div>
-          {selectionKind === "self" && mySlot && (
-            <p className="mt-2 text-xs text-emerald-300">
-              You hold <span className="font-medium">{mySlot.slot_key}</span> in this lobby.
-            </p>
-          )}
-        </div>
-      )}
     </aside>
   );
 }

@@ -129,13 +129,6 @@ const MAP_PLAYER: Tour = {
         "In the top bar, **▶** folds this panel and **✕** closes it.",
     },
     {
-      target: "map.gamePicker",
-      placement: "left",
-      when: (facts) => Boolean(facts.loggedIn),
-      title: "More than one game?",
-      body: "Switch games here. The map changes to that game's mod.",
-    },
-    {
       target: "map.roster",
       placement: "right",
       title: "The roster",

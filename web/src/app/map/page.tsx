@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import TopBar from "@/components/TopBar";
 import ReservationDrawer from "@/components/ReservationDrawer";
 import NicknameModal from "@/components/NicknameModal";
@@ -80,6 +81,8 @@ export default function Home() {
   // and the map viewer (reservation picker). Falls back gracefully when the
   // database is unreachable or no active lobbies exist.
   const [games, setGames] = useState<GameLobby[]>([]);
+  /** The games list refused this viewer: not signed in, or not in the game's server (lib/mapAccess.ts). */
+  const [accessDenied, setAccessDenied] = useState<{ reason: "login" | "not_member"; message: string } | null>(null);
   const [selectedThread, setSelectedThread] = useState("");
   // The game named by ?game=<thread> (announcement / reminder links).
   const [linkedGame, setLinkedGame] = useState<string | null>(null);
@@ -162,7 +165,13 @@ export default function Home() {
     const wanted = new URLSearchParams(window.location.search).get("game");
     fetch(wanted ? `/api/games?game=${encodeURIComponent(wanted)}` : "/api/games", { cache: "no-store" })
       .then(async (response) => {
-        if (!response.ok) return null;
+        if (!response.ok) {
+          const body = (await response.json().catch(() => null)) as { access?: string; error?: string } | null;
+          if (!cancelled && (body?.access === "login" || body?.access === "not_member")) {
+            setAccessDenied({ reason: body.access, message: body.error ?? "" });
+          }
+          return null;
+        }
         return (await response.json()) as { games: GameLobby[] };
       })
       .then((result) => {
@@ -617,7 +626,6 @@ export default function Home() {
         scenarioId={scenarioId}
         games={games}
         selectedThread={selectedThread}
-        onSelectThread={setSelectedThread}
         selected={selected}
         onSelectNation={handleSelectNation}
         drawerMinimized={drawerMinimized}
@@ -786,6 +794,32 @@ export default function Home() {
             : null
         }
       />
+
+      {/* A shared link for someone who can't see this game: say why, and nothing else. */}
+      {accessDenied && (
+        <div className="absolute inset-0 z-[4000] flex items-center justify-center bg-ink-950/90 p-4 backdrop-blur-sm">
+          <div role="alert" className="gm-plate w-full max-w-md bg-ink-950 p-6 text-center [--cut:14px]">
+            <h1 className="gm-title text-[28px]">
+              {accessDenied.reason === "login" ? "Log in to see this game" : "Members only"}
+            </h1>
+            <p className="mt-3 text-sm text-ink-300">{accessDenied.message}</p>
+            {accessDenied.reason === "login" ? (
+              <a
+                href={`/api/auth/login?next=${encodeURIComponent(
+                  typeof window === "undefined" ? "/map" : window.location.pathname + window.location.search,
+                )}`}
+                className="gm-btn gm-btn-primary mt-5 inline-flex h-11 px-6"
+              >
+                Log in with Discord
+              </a>
+            ) : (
+              <Link href="/" className="gm-btn gm-btn-secondary mt-5 inline-flex h-11 px-6">
+                Back to GameMaster
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { HOME_GUILD_ID, currentGuildId } from "@/lib/currentGuild";
 import { getPool, DatabaseConfigError } from "@/lib/db";
 import { demoLobbies } from "@/lib/liveDemo";
 import { gameGuildOf, isSchedulerDemo } from "@/lib/scheduleStore";
+import { mapAccessFor } from "@/lib/mapAccess";
 
 /**
  * GET /api/games[?game=<thread id>]
@@ -15,6 +16,8 @@ import { gameGuildOf, isSchedulerDemo } from "@/lib/scheduleStore";
  *
  * One server's games (multi-server): the server of ?game= (the bot's
  * announcement / reminder links), else the one the viewer's host pages are on.
+ * Only for that server's members, signed in (lib/mapAccess.ts): anyone else
+ * gets no games and `access` ("login" / "not_member") with the reason.
  */
 
 const THREAD_RE = /^\d{10,25}$/;
@@ -41,6 +44,14 @@ export async function GET(request: NextRequest) {
     const guildId = (THREAD_RE.test(linked) ? await gameGuildOf(linked) : null) ?? (await currentGuildId());
     // The sample lobbies belong to the home server.
     if (isSchedulerDemo()) return NextResponse.json({ games: guildId === HOME_GUILD_ID ? demoLobbies(true) : [] });
+
+    const access = await mapAccessFor(guildId);
+    if (!access.ok) {
+      return NextResponse.json(
+        { games: [], access: access.reason, error: access.message },
+        { status: access.reason === "login" ? 401 : 403, headers: { "Cache-Control": "no-store" } },
+      );
+    }
 
     const pool = getPool();
     const startedSince = Math.floor(Date.now() / 1000) - STARTED_WINDOW_SEC;

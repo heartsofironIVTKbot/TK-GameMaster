@@ -68,7 +68,6 @@ interface MapViewerProps {
       and the reservation picker share the same live game info. */
   games: GameLobby[];
   selectedThread: string;
-  onSelectThread: (threadId: string) => void;
   /** Currently inspected nation — hoisted so the top bar can render the
       selection chip + drawer minimize/close controls above the drawer. */
   selected: NationFeatureProps | null;
@@ -834,7 +833,6 @@ export default function MapViewer({
   className,
   games,
   selectedThread,
-  onSelectThread,
   selected,
   onSelectNation,
   drawerMinimized,
@@ -1720,13 +1718,8 @@ export default function MapViewer({
             selectionKind={selectionKind}
             nationLocked={selectedLocked}
             ownerLabel={ownerLabel}
-            authUser={authUser}
-            mySlot={mySlot}
-            games={games}
-            selectedThread={selectedThread}
             minimized={drawerMinimized}
             scenarioId={scenarioId}
-            onSelectThread={onSelectThread}
             onToggleMinimized={onToggleDrawer}
             onClose={onCloseDrawer}
           />
