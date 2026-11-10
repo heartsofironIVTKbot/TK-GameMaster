@@ -25,6 +25,7 @@ import tagToSlotJson from "@/lib/tag_to_slot.json";
  * DELETE {thread_id}               — withdraw the viewer's waiting request
  * DELETE {thread_id, user_id}      — the nation's player takes that co-op player off
  * PATCH  {thread_id, user_id, approve} — the nation's player answers
+ * PUT    {thread_id, user_id}      — the main player hands the nation to that co-op player
  *
  * The bot checks and applies them (bot.py.py _process_web_coop) and DMs the
  * nation's player, who can also answer there.
@@ -98,7 +99,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-async function queue(request: NextRequest, method: "POST" | "DELETE" | "PATCH") {
+async function queue(request: NextRequest, method: "POST" | "DELETE" | "PATCH" | "PUT") {
   let body: Record<string, unknown>;
   try {
     const parsed: unknown = await request.json();
@@ -113,6 +114,7 @@ async function queue(request: NextRequest, method: "POST" | "DELETE" | "PATCH") 
   const userId = typeof body.user_id === "string" ? body.user_id : "";
   if (method === "DELETE" && userId && !USER_RE.test(userId)) return jsonError("Invalid player.", 400);
   const kick = method === "DELETE" && Boolean(userId);
+  if (method === "PUT" && !USER_RE.test(userId)) return jsonError("Invalid player.", 400);
   if (method === "PATCH" && (!USER_RE.test(userId) || typeof body.approve !== "boolean")) {
     return jsonError("Say whose request and whether you accept it.", 400);
   }
@@ -139,6 +141,8 @@ async function queue(request: NextRequest, method: "POST" | "DELETE" | "PATCH") 
       payload = { thread_id: game.thread_id, nation: botNationName(options?.mode_nations?.[String(game.mode ?? "")], tag, slot) };
     } else if (method === "PATCH") {
       payload = { thread_id: game.thread_id, user_id: userId, approve: body.approve === true };
+    } else if (method === "PUT") {
+      payload = { thread_id: game.thread_id, user_id: userId };
     } else if (kick) {
       payload = { thread_id: game.thread_id, user_id: userId };
     } else {
@@ -147,7 +151,16 @@ async function queue(request: NextRequest, method: "POST" | "DELETE" | "PATCH") 
     const requestId = crypto.randomUUID();
     await insertRequest({
       requestId,
-      action: method === "POST" ? "coop_request" : method === "PATCH" ? "coop_decide" : kick ? "coop_kick" : "coop_cancel",
+      action:
+        method === "POST"
+          ? "coop_request"
+          : method === "PATCH"
+            ? "coop_decide"
+            : method === "PUT"
+              ? "coop_promote"
+              : kick
+                ? "coop_kick"
+                : "coop_cancel",
       slotId: null,
       hostId: me.user_id,
       payload,
@@ -169,4 +182,8 @@ export function DELETE(request: NextRequest) {
 
 export function PATCH(request: NextRequest) {
   return queue(request, "PATCH");
+}
+
+export function PUT(request: NextRequest) {
+  return queue(request, "PUT");
 }

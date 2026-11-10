@@ -697,34 +697,38 @@ export default function ReservationDrawer({
             />
           )}
         </div>
-        {/* Co-op players of this nation. */}
+        {/* Co-op players of this nation: one line each, each with its own "Co-op" label. */}
         {coops.length > 0 && (
-          <div className="relative flex flex-wrap items-center gap-x-2 gap-y-1 py-1 pl-[42px] pr-2 text-xs text-ink-400">
-            <Users aria-hidden className="h-3.5 w-3.5 text-sky-300" />
-            Co-op
+          <div className="relative flex flex-col gap-y-1 py-1 pl-[42px] pr-2 text-xs text-ink-400">
             {coops.map((coop) => {
               const coopKey = `coop:${String(coop.user_id)}`;
-              return manageTools ? (
-                <HostPlayerTag
-                  key={coop.slot_key}
-                  reservation={coop}
-                  label={reservationName(coop)}
-                  held={manageTools.heldPlayer?.user_id === String(coop.user_id)}
-                  hostTools={manageTools}
-                />
-              ) : (
-                <button
-                  key={coop.slot_key}
-                  type="button"
-                  aria-label={`Open ${reservationName(coop)}'s Discord profile`}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setPopoverKey((current) => (current === coopKey ? null : coopKey));
-                  }}
-                  className="font-semibold text-ink-300 transition-colors hover:text-ink-100"
-                >
-                  {reservationName(coop)}
-                </button>
+              return (
+                <div key={coop.slot_key} className="flex items-center gap-x-2">
+                  <Users aria-hidden className="h-3.5 w-3.5 shrink-0 text-sky-300" />
+                  Co-op
+                  {manageTools ? (
+                    <HostPlayerTag
+                      key={coop.slot_key}
+                      reservation={coop}
+                      label={reservationName(coop)}
+                      held={manageTools.heldPlayer?.user_id === String(coop.user_id)}
+                      hostTools={manageTools}
+                    />
+                  ) : (
+                    <button
+                      key={coop.slot_key}
+                      type="button"
+                      aria-label={`Open ${reservationName(coop)}'s Discord profile`}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setPopoverKey((current) => (current === coopKey ? null : coopKey));
+                      }}
+                      className="font-semibold text-ink-300 transition-colors hover:text-ink-100"
+                    >
+                      {reservationName(coop)}
+                    </button>
+                  )}
+                </div>
               );
             })}
             {popoverInfo &&

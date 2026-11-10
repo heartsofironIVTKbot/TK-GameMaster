@@ -1371,7 +1371,14 @@ export default function MapViewer({
   const coopIncoming = coop.incoming[0] ?? null;
   // Your own major: its co-op players, whom you can take off yourself.
   const myCoops = selectionKind === "self" && selected ? reservationsOf.coops(selected) : [];
-  const [kickAsk, setKickAsk] = useState<{ user_id: string; name: string } | null>(null);
+  const [kickAsk, setKickAsk] = useState<{ user_id: string; name: string; action: "remove" | "main" } | null>(null);
+  // You're a co-op player on the selected major: you can leave it (never take the main's place).
+  const myCoopOfSelected = Boolean(
+    mySlot &&
+      selectedReservation &&
+      String(mySlot.slot_key).includes("_coop") &&
+      String(mySlot.slot_key).split("_coop", 1)[0] === String(selectedReservation.slot_key),
+  );
   const myCoopHere =
     coop.mine?.status === "pending" && selectedReservation && coop.mine.nation === selectedReservation.slot_key ? coop.mine : null;
 
@@ -1927,42 +1934,73 @@ export default function MapViewer({
                 {myCoops.map((entry) => {
                   const id = String(entry.user_id);
                   const name = reservationName(entry);
-                  const asking = kickAsk?.user_id === id;
+                  const asking = kickAsk?.user_id === id ? kickAsk.action : null;
+                  const busy = coop.kick.busy || coop.makeMain.busy;
                   return (
                     <div key={id} className="flex items-center gap-2 text-sm">
-                      <span className="min-w-0 flex-1 truncate text-ink-100">{asking ? `Take ${name} off your co-op?` : name}</span>
+                      <span className="min-w-0 flex-1 truncate text-ink-100">
+                        {asking === "remove" ? `Take ${name} off your co-op?` : asking === "main" ? `Make ${name} the main player?` : name}
+                      </span>
                       {asking ? (
                         <>
                           <button type="button" onClick={() => setKickAsk(null)} className="gm-btn gm-btn-secondary h-7 px-2.5 text-xs">
-                            Keep
+                            {asking === "remove" ? "Keep" : "Cancel"}
                           </button>
                           <button
                             type="button"
-                            disabled={coop.kick.busy}
+                            disabled={busy}
                             onClick={() => {
                               setKickAsk(null);
-                              void coop.kick.submit("DELETE", { thread_id: selectedThread, user_id: id });
+                              if (asking === "remove") void coop.kick.submit("DELETE", { thread_id: selectedThread, user_id: id });
+                              else void coop.makeMain.submit("PUT", { thread_id: selectedThread, user_id: id });
                             }}
-                            className="gm-btn gm-btn-danger h-7 px-2.5 text-xs"
+                            className={`gm-btn h-7 px-2.5 text-xs ${asking === "remove" ? "gm-btn-danger" : "gm-btn-primary"}`}
                           >
-                            Remove
+                            {asking === "remove" ? "Remove" : "Make main"}
                           </button>
                         </>
                       ) : (
-                        <button
-                          type="button"
-                          disabled={coop.kick.busy}
-                          onClick={() => setKickAsk({ user_id: id, name })}
-                          className="gm-btn gm-btn-secondary h-7 px-2.5 text-xs text-rose-200"
-                        >
-                          {coop.kick.busy ? "Removing…" : "Remove"}
-                        </button>
+                        <>
+                          <button
+                            type="button"
+                            disabled={busy}
+                            title="Hand your nation to them: you become their co-op"
+                            onClick={() => setKickAsk({ user_id: id, name, action: "main" })}
+                            className="gm-btn gm-btn-secondary h-7 px-2.5 text-xs"
+                          >
+                            {coop.makeMain.busy ? "Saving…" : "Make main"}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => setKickAsk({ user_id: id, name, action: "remove" })}
+                            className="gm-btn gm-btn-secondary h-7 px-2.5 text-xs text-rose-200"
+                          >
+                            {coop.kick.busy ? "Removing…" : "Remove"}
+                          </button>
+                        </>
                       )}
                     </div>
                   );
                 })}
+                {coop.makeMain.state.phase === "error" && <p className="text-xs text-rose-300">{coop.makeMain.state.message}</p>}
                 {coop.kick.state.phase === "error" && <p className="text-xs text-rose-300">{coop.kick.state.message}</p>}
               </div>
+            )}
+            {myCoopOfSelected && (
+              <>
+                <p className="gm-plate bg-ink-950 px-4 py-2 text-center text-xs font-semibold text-sky-100">
+                  You&apos;re on the {boardDisplayName(scenarioId, selected.tag, selected.name)} co-op with {ownerLabelText(ownerLabel)}.
+                </p>
+                <button
+                  type="button"
+                  className="gm-btn gm-btn-danger h-12 w-full bg-ink-950 px-8 font-display text-xl font-extrabold uppercase tracking-[0.03em] sm:w-auto"
+                  disabled={reserving}
+                  onClick={handleUnreserve}
+                >
+                  {reserving ? "Leaving…" : "Leave co-op"}
+                </button>
+              </>
             )}
             {selectionKind === "locked" && (
               <button

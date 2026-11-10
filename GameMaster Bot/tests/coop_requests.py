@@ -74,6 +74,7 @@ async def _nothing(*args, **kwargs):
     return None
 
 
+REAL_SAVE = gm.save_single_game
 gm._read_games_fresh = _read_games_fresh
 gm.save_single_game = save_single_game
 gm._web_fetch_member = _web_fetch_member
@@ -238,6 +239,78 @@ fresh_game(game_started=True)
 STORE[GAME]["reservations"]["Germany_coop"] = ASKER
 ok, _, err = run("coop_kick", OWNER, user_id=str(ASKER))
 check("not once the game has started", not ok and "started" in err, err)
+
+# --- The first co-op becomes main when the main leaves ---
+promote = gm._promote_coops
+res = {"Germany_coop": ASKER, "Germany_coop_2": THIRD, "France": OTHER}
+check("main gone: first co-op becomes main, the second moves up",
+      promote(res) == [(ASKER, "Germany")] and res == {"Germany": ASKER, "Germany_coop": THIRD, "France": OTHER}, res)
+res = {"Germany": OWNER, "Germany_coop_2": THIRD}
+check("a gap in the co-op slots closes, no one promoted",
+      promote(res) == [] and res == {"Germany": OWNER, "Germany_coop": THIRD}, res)
+res = {"Germany": OWNER, "Germany_coop": ASKER, "Germany_coop_2": THIRD}
+check("a full nation is left as it is", promote(res) == [] and res == {"Germany": OWNER, "Germany_coop": ASKER, "Germany_coop_2": THIRD}, res)
+res = {"Germany_coop": ASKER}
+check("a lone co-op becomes main", promote(res) == [(ASKER, "Germany")] and res == {"Germany": ASKER}, res)
+res = {"_FILL_Spare": ASKER, "Italy": OTHER}
+check("fillers and plain nations are untouched", promote(res) == [] and res == {"_FILL_Spare": ASKER, "Italy": OTHER}, res)
+
+
+# --- The main hands the nation to a co-op ---
+fresh_game()
+STORE[GAME]["reservations"]["Germany_coop"] = ASKER
+DMS.clear()
+ok, result, err = run("coop_promote", OWNER, user_id=str(ASKER))
+check("the main can hand the nation to their co-op",
+      ok and STORE[GAME]["reservations"].get("Germany") == ASKER and STORE[GAME]["reservations"].get("Germany_coop") == OWNER,
+      (ok, err, STORE[GAME]["reservations"]))
+check("the new main hears about it", any(uid == ASKER and "made you the main" in text for uid, text, _ in DMS), DMS)
+
+fresh_game()
+STORE[GAME]["reservations"]["Germany_coop"] = ASKER
+ok, _, err = run("coop_promote", ASKER, user_id=str(ASKER))
+check("a co-op can never take the main's place", not ok and "Only the main player" in err and STORE[GAME]["reservations"]["Germany"] == OWNER, err)
+ok, _, err = run("coop_promote", OTHER, user_id=str(ASKER))
+check("nor can anyone else", not ok and "Only the main player" in err, err)
+
+fresh_game(host_locks={str(OWNER): 0})
+STORE[GAME]["reservations"]["Germany_coop"] = ASKER
+ok, _, err = run("coop_promote", OWNER, user_id=str(ASKER))
+check("a main the host kept in place can't hand it over", not ok and "ask a host" in err, err)
+
+# The rule runs inside the bot's real save (e.g. the host moved the main away).
+WRITTEN = []
+
+
+async def _fake_mysql_io(fn, *args, label=""):
+    WRITTEN.append(copy.deepcopy(args[1]["reservations"]) if len(args) > 1 and isinstance(args[1], dict) else None)
+
+
+async def _real_save_check():
+    real_io, real_dm = gm._run_mysql_io, gm._dm_coop_promoted
+    promoted_dms = []
+
+    async def dm(tid, game, uid, nation):
+        promoted_dms.append((uid, nation))
+
+    gm._run_mysql_io, gm._dm_coop_promoted = _fake_mysql_io, dm
+    try:
+        game = {"mode": "Roleplay", "reservations": {"Germany_coop": ASKER, "Germany_coop_2": THIRD, "France": OTHER}}
+        await REAL_SAVE(GAME, game, rewrite_reservations=True)
+        await asyncio.sleep(0)
+        draft = {"mode": "Roleplay", "is_draft": True, "draft": {"pool": {}}, "reservations": {"Germany_coop": ASKER}}
+        await REAL_SAVE("900000000000000002", draft, rewrite_reservations=True)
+        await asyncio.sleep(0)
+        return promoted_dms, draft
+    finally:
+        gm._run_mysql_io, gm._dm_coop_promoted = real_io, real_dm
+
+
+dms, draft = asyncio.run(_real_save_check())
+check("the real save writes the first co-op as main",
+      WRITTEN and WRITTEN[0] == {"Germany": ASKER, "Germany_coop": THIRD, "France": OTHER}, WRITTEN)
+check("and DMs the promoted player", dms == [(ASKER, "Germany")], dms)
+check("draft games are left to the captains", draft["reservations"] == {"Germany_coop": ASKER}, draft)
 
 print("\n".join(results))
 failed = sum(1 for line in results if line.startswith("FAIL"))

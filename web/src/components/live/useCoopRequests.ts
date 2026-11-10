@@ -78,6 +78,11 @@ export function useCoopRequests(
     if (result && (result as { coop?: string }).coop === "removed") callbacks.current.onRosterChanged();
   });
 
+  // The main player hands the nation to one of its co-op players.
+  const makeMain = usePlayerRequest("/api/coop", (result) => {
+    if (result && (result as { coop?: string }).coop === "made_main") callbacks.current.onRosterChanged();
+  });
+
   const data = state?.threadId === threadId ? state.data : null;
-  return { mine: data?.mine ?? null, incoming: data?.incoming ?? [], ask, answer, kick, reload: load };
+  return { mine: data?.mine ?? null, incoming: data?.incoming ?? [], ask, answer, kick, makeMain, reload: load };
 }

@@ -99,6 +99,7 @@ const REQUEST_LABELS: Record<RequestAction, string> = {
   coop_cancel: "Co-op withdrawal",
   coop_decide: "Co-op answer",
   coop_kick: "Co-op removal",
+  coop_promote: "Co-op made main",
   crash_report: "Crash report",
   feedback_rate: "Game rating",
   server_setup: "Server setup",

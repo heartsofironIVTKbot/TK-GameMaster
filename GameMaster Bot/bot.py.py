@@ -8002,6 +8002,59 @@ def _upsert_single_game_mysql(thread_id: str, game: dict, rewrite_reservations: 
         raise
 
 
+def _coop_index(key: str) -> int:
+    rest = str(key).split("_coop", 1)[1].strip("_")
+    return int(rest) if rest.isdigit() else 1
+
+
+def _promote_coops(reservations: dict) -> list:
+    """A major's co-op players move up when its main player is gone: the first
+    co-op becomes the main player and the others close the gap ("_coop",
+    "_coop_2", ...). Changes `reservations` in place; returns [(user_id,
+    nation)] for each player promoted to main (website: lib/coopPromote.ts)."""
+    promoted = []
+    bases = {str(k).split("_coop", 1)[0] for k in reservations if "_coop" in str(k)}
+    for base in bases:
+        if not base or base.startswith("_FILL_"):
+            continue
+        keys = sorted(
+            (k for k in reservations if "_coop" in str(k) and str(k).split("_coop", 1)[0] == base),
+            key=_coop_index,
+        )
+        holders = [reservations[k] for k in keys]
+        main_missing = base not in reservations
+        wanted = [f"{base}_coop" if i == 1 else f"{base}_coop_{i}" for i in range(1, len(holders) + (0 if main_missing else 1))]
+        if not main_missing and keys == wanted:
+            continue
+        for key in keys:
+            del reservations[key]
+        if main_missing:
+            reservations[base] = holders[0]
+            promoted.append((holders[0], base))
+            holders = holders[1:]
+        for index, holder in enumerate(holders, 1):
+            reservations[f"{base}_coop" if index == 1 else f"{base}_coop_{index}"] = holder
+    return promoted
+
+
+async def _dm_coop_promoted(thread_id: str, game: dict, user_id, nation: str) -> None:
+    try:
+        member = await _web_fetch_member(int(user_id))
+        if member is None:
+            return
+        mode = str((game or {}).get("mode") or "game")
+        await _dm_user_safe(
+            member,
+            content=(
+                f"⬆️ The main player left **{nation}**, so you're its main player now "
+                f"in the **{mode}** game. See the lobby on the map: {_map_game_url(thread_id)}"
+            ),
+            label="co-op promoted",
+        )
+    except Exception as e:
+        print(f"[WARN] co-op promotion DM failed: {e}")
+
+
 async def save_single_game(thread_id: str, game: dict, rewrite_reservations: bool = False):
     """Update one game in MySQL + keep the in-memory cache coherent.
 
@@ -8013,10 +8066,18 @@ async def save_single_game(thread_id: str, game: dict, rewrite_reservations: boo
     cached_game = cache.get(tid)
     if cached_game is not None and cached_game is not game and isinstance(cached_game, dict):
         _preserve_sticky_game_fields(game, cached_game)
+    # A major whose main player left: its first co-op takes over (not in drafts,
+    # where the captains place everyone).
+    promoted = []
+    if rewrite_reservations and isinstance(game.get("reservations"), dict) and not _is_draft_game(game):
+        promoted = _promote_coops(game["reservations"])
     # Hard-timeout guarded (like every other MySQL write) so a dead/slow
     # connection can't hang the calling command (and the entire caller's flow,
     # e.g. /give, /take DMs) forever — see _run_mysql_io.
     await _run_mysql_io(_upsert_single_game_mysql, tid, game, rewrite_reservations, label=f"save_single_game({tid})")
+    if promoted:
+        for uid, nation in promoted:
+            asyncio.create_task(_dm_coop_promoted(tid, game, uid, nation))
     cache = _games_cache if isinstance(_games_cache, dict) else {}
     cache[tid] = game
     _set_games_cache(cache)
@@ -28679,6 +28740,12 @@ async def reservation_sync_loop():
                     existing = game.get("reservations") or {}
                     if not isinstance(existing, dict):
                         existing = {}
+                    # The website moved a co-op player up to main (its main left): DM them.
+                    held_before = {v: k for k, v in existing.items()} if isinstance(existing, dict) else {}
+                    for uid, final_slot in final_slot_by_uid.items():
+                        before = str(held_before.get(uid) or "")
+                        if final_slot and "_coop" not in final_slot and before.split("_coop", 1)[0] == final_slot and "_coop" in before:
+                            asyncio.create_task(_dm_coop_promoted(thread_id, game, uid, final_slot))
                     # Purge stale dict keys held by the same user, then apply
                     # the final assignment (or removal) — the embed can never
                     # show one player under two nations.
@@ -31480,7 +31547,7 @@ async def _web_hotjoin_decide(actor, key: str, game: dict, payload: dict):
 #   coop_kick — the nation's player takes a co-op player off their nation
 #       (no host needed), before the game starts. A co-op the host placed
 #       with "Keep players where I put them" stays until a host moves them.
-COOP_WEB_ACTIONS = ("coop_request", "coop_cancel", "coop_decide", "coop_kick")
+COOP_WEB_ACTIONS = ("coop_request", "coop_cancel", "coop_decide", "coop_kick", "coop_promote")
 COOP_REQUEST_TTL_SEC = 24 * 3600
 
 
@@ -31557,6 +31624,8 @@ async def _process_web_coop(req: dict):
     requests = _coop_requests(game)
     now = int(time.time())
 
+    if action == "coop_promote":
+        return await _coop_make_main(actor, key, game, str(payload.get("user_id") or ""))
     if action == "coop_kick":
         return await _coop_kick(actor, key, game, str(payload.get("user_id") or ""))
 
@@ -31598,6 +31667,50 @@ async def _process_web_coop(req: dict):
         )
     _audit_log("INFO", f"web co-op request game={key} user={uid} nation={nation} owner={owner_id}")
     return True, {"coop": "pending", "nation": nation}, None
+
+
+async def _coop_make_main(actor, key: str, game: dict, user_id: str):
+    """The main player hands their nation to one of its co-op players: they
+    swap places (the old main takes that co-op slot). Only the main can."""
+    if not user_id.isdigit():
+        return False, None, "❌ Invalid player."
+    if game.get("status") in ("ended", "cancelled"):
+        return False, None, "❌ This game has already ended."
+    if game.get("game_started"):
+        return False, None, "❌ The game has already started: ask a host to change the players."
+    res = game.get("reservations") or {}
+    slot = next((k for k, v in res.items() if str(v) == user_id and "_coop" in str(k)), None)
+    if slot is None:
+        return False, None, "ℹ️ They aren't on a co-op slot any more."
+    nation = str(slot).split("_coop", 1)[0]
+    if str(res.get(nation)) != str(actor.id):
+        return False, None, f"❌ Only the main player on **{nation}** can hand it over."
+    locks = game.get("host_locks") if isinstance(game.get("host_locks"), dict) else {}
+    if str(actor.id) in locks and int(locks.get(str(actor.id)) or 0) == 0:
+        return False, None, "❌ The host placed you on this nation: ask a host to change it."
+    res[nation], res[slot] = int(user_id), res[nation]
+    game["reservations"] = res
+    await save_single_game(key, game, rewrite_reservations=True)
+    await _roster_after_change(key)
+    target = await _web_fetch_member(int(user_id))
+    name = target.display_name if target is not None else str(user_id)
+    if target is not None:
+        await _dm_user_safe(
+            target,
+            content=(
+                f"⬆️ **{actor.display_name}** made you the main player on **{nation}**; "
+                f"they're your co-op now. Map: {_map_game_url(key)}"
+            ),
+            label="co-op made main",
+        )
+    audit_event(
+        "roster", "coop_made_main",
+        f"{actor.display_name} handed {nation} to {name} and became their co-op"
+        + (f" in {game.get('thread_name')}" if game.get("thread_name") else ""),
+        actor_id=actor.id, actor_name=actor.display_name, target_id=int(user_id), target_name=name,
+        game_id=key, details={"slot": slot}, source="web",
+    )
+    return True, {"coop": "made_main", "nation": nation}, None
 
 
 async def _coop_kick(actor, key: str, game: dict, user_id: str):
@@ -32015,6 +32128,7 @@ _AUDIT_WEB_ACTIONS = {
     "coop_cancel": ("roster", "coop_cancelled", "withdrew a co-op request"),
     "coop_decide": ("roster", "coop_decided", "answered a co-op request"),
     "coop_kick": ("roster", "coop_kicked", "took a player off their co-op"),
+    "coop_promote": ("roster", "coop_made_main", "handed their nation to their co-op"),
     "crash_report": ("system", "crash_report", "sent a crash report"),
     "role_scan": ("roles", "role_scan", "ran the role check"),
     "server_setup": ("settings", "setup_finished", "changed the server setup"),

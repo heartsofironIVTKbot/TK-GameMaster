@@ -9,6 +9,7 @@ import { canonicalName, nationMatchKeys } from "@/data/nationCategories";
 import { demoLobbyState } from "@/lib/liveDemo";
 import { liveHub } from "@/lib/live/hub";
 import { accessDenied, mapAccessFor } from "@/lib/mapAccess";
+import { coopPromotions } from "@/lib/coopPromote";
 import { recordAudit } from "@/lib/auditLog";
 import { lobbySnapshot, lobbyVersion, versionOf } from "@/lib/lobbySnapshot";
 import { memberRoleIds } from "@/lib/memberRoles";
@@ -134,6 +135,31 @@ function isCoopSlot(slotKey: string): boolean {
 
 function isFillerSlot(slotKey: string): boolean {
   return slotKey.startsWith("_FILL_");
+}
+
+/**
+ * The main player left these slots: move their nations' co-op players up
+ * (the first co-op becomes main, lib/coopPromote.ts) in the same transaction,
+ * and queue each move for the bot (which DMs the new main).
+ */
+async function promoteCoops(connection: PoolConnection, threadId: string, leftSlots: string[], nowSec: number): Promise<void> {
+  const mains = leftSlots.filter((slot) => !isCoopSlot(slot) && !isFillerSlot(slot));
+  if (mains.length === 0) return;
+  const [rows] = await connection.query<SlotRow[]>(
+    "SELECT slot_key, user_id FROM game_reservations WHERE thread_id = ? FOR UPDATE",
+    [threadId],
+  );
+  const moves = coopPromotions(new Map(rows.map((row) => [String(row.slot_key), String(row.user_id)])), mains);
+  for (const move of moves) {
+    await connection.query("DELETE FROM game_reservations WHERE thread_id = ? AND slot_key = ?", [threadId, move.from]);
+  }
+  for (const move of moves) {
+    await connection.query("INSERT INTO game_reservations (thread_id, slot_key, user_id) VALUES (?, ?, ?)", [threadId, move.to, move.user_id]);
+    await connection.query(
+      "INSERT INTO reservation_sync_queue (thread_id, user_id, slot_key, created_at) VALUES (?, ?, ?, ?)",
+      [threadId, move.user_id, move.to, nowSec],
+    );
+  }
 }
 
 function jsonError(message: string, status: number): NextResponse {
@@ -437,6 +463,8 @@ export async function POST(request: NextRequest) {
         [threadId, session.discord_id, nowSec],
       );
       for (const slot of mine) takenSlots.delete(slot);
+      // Leaving a major: its first co-op takes over.
+      await promoteCoops(connection, threadId, mine, nowSec);
     }
     if (isCoopSlot(resolvedSlotKey)) {
       const mainNation = resolvedSlotKey.split("_coop", 1)[0];
@@ -595,6 +623,10 @@ export async function DELETE(request: NextRequest) {
     if (result.affectedRows === 0) {
       await connection.rollback();
       return jsonError("You have no reservation in this game", 404);
+    }
+    // Leaving a major: its first co-op takes over (drafts: the captains decide).
+    if (!lockedData.is_draft) {
+      await promoteCoops(connection, threadId, heldRows.map((row) => String(row.slot_key)), nowSec);
     }
 
     // Bump the optimistic-lock revision and queue the unreserve so the bot's
