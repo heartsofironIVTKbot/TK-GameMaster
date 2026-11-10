@@ -10,7 +10,7 @@ import {
   type ReactNode,
   type RefObject,
 } from "react";
-import { MousePointerClick } from "lucide-react";
+import { Lock, MousePointerClick } from "lucide-react";
 import L from "leaflet";
 import { GeoJSON, MapContainer, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
@@ -1310,15 +1310,25 @@ export default function MapViewer({
     return labels;
   }, [othersByTag, geoJsonUrl]);
 
+  // Locked by the host or a preset (the roster's "Locked Nations" and the
+  // preset's not-playable ones, greyed on the map), or the whole lobby in
+  // lockdown: no one can reserve it (the reserve route refuses too).
+  const selectedLocked =
+    selectionKind === "pending" &&
+    Boolean(selected) &&
+    (Boolean(lobbyLock?.lockdown) || (hostLockedTags ?? []).includes(selected?.tag ?? ""));
+  // A free nation the viewer could reserve or switch to.
+  const pendingFree = selectionKind === "pending" && !selectedLocked;
+
   // Share this player's own pick (a free nation, reservable right now).
   const gameStarted = Boolean(selectedThread && games.find((game) => game.thread_id === selectedThread)?.game_started);
   // Someone else picked this free nation first: it's theirs for 30 s (lib/live/hub.ts).
   const otherHold =
-    selectionKind === "pending" && selected
+    pendingFree && selected
       ? liveSelections.find((entry) => entry.tag === selected.tag && entry.user_id !== authUser?.discord_id) ?? null
       : null;
   const sharedTag =
-    selectionKind === "pending" && selected && !dropTag && !gameStarted && !lobbyLock?.draft && !otherHold && !viewerHasNation
+    pendingFree && selected && !dropTag && !gameStarted && !lobbyLock?.draft && !otherHold && !viewerHasNation
       ? selected.tag
       : null;
   const ownHold = useShareSelection(selectedThread || null, sharedTag, Boolean(authUser));
@@ -1569,6 +1579,7 @@ export default function MapViewer({
           <CountryDetailsDrawer
             selected={selected}
             selectionKind={selectionKind}
+            nationLocked={selectedLocked}
             ownerLabel={ownerLabel}
             authUser={authUser}
             mySlot={mySlot}
@@ -1705,7 +1716,18 @@ export default function MapViewer({
         )}
         {selected && selectionKind && !lobbyLock?.draft && !lobbyLock?.casino && !gameRunning && (
           <div data-tour="map.reserve" className="absolute inset-x-4 bottom-5 z-[1010] flex flex-col items-center gap-2 sm:inset-x-auto sm:bottom-7 sm:left-1/2 sm:-translate-x-1/2">
-            {selectionKind === "pending" && !viewerHasNation && blockedBy && (
+            {selectedLocked && (
+              <button
+                type="button"
+                disabled
+                title={lobbyLock?.lockdown ? "Reservations are closed for this game" : "This nation is locked in this game"}
+                className="gm-btn h-[58px] w-full cursor-not-allowed gap-2 bg-ink-900 disabled:opacity-100 px-0 font-display text-[26px] font-extrabold uppercase tracking-[0.03em] text-ink-500 sm:h-[70px] sm:w-auto sm:px-[52px] sm:text-[32px]"
+              >
+                <Lock aria-hidden className="h-6 w-6" />
+                Locked
+              </button>
+            )}
+            {pendingFree && !viewerHasNation && blockedBy && (
               <button
                 type="button"
                 disabled
@@ -1714,25 +1736,29 @@ export default function MapViewer({
                 🔒 {blockedBy.name} is picking this nation · {secondsLeft(blockedBy.until)}s
               </button>
             )}
-            {selectionKind === "pending" && !viewerHasNation && !blockedBy && ownHold?.status === "cooldown" && (
+            {pendingFree && !viewerHasNation && !blockedBy && ownHold?.status === "cooldown" && (
               <button type="button" disabled className="gm-btn h-12 w-full cursor-not-allowed bg-ink-950 px-6 text-ink-300 sm:w-auto">
                 Others get a turn: you can pick it again in {secondsLeft(ownHold.until)}s
               </button>
             )}
-            {selectionKind === "pending" &&
+            {pendingFree &&
               !viewerHasNation &&
               !blockedBy &&
               ownHold?.status !== "cooldown" &&
               (authUser ? (
-                <ReserveGlow>
-                  <button type="button" className={RESERVE_BUTTON} disabled={!selectedThread || reserving} onClick={() => void handleReserve()}>
-                    {reserving
-                      ? "Reserving…"
-                      : ownHold?.status === "holding"
-                        ? `Reserve nation · ${secondsLeft(ownHold.until)}s`
-                        : "Reserve nation"}
-                  </button>
-                </ReserveGlow>
+                <>
+                  <ReserveGlow>
+                    <button type="button" className={RESERVE_BUTTON} disabled={!selectedThread || reserving} onClick={() => void handleReserve()}>
+                      {reserving ? "Reserving…" : "Reserve nation"}
+                    </button>
+                  </ReserveGlow>
+                  {ownHold?.status === "holding" && !reserving && (
+                    <p role="timer" aria-live="off" className="gm-plate max-w-[340px] bg-ink-950 px-3 py-1.5 text-center text-xs text-ink-300">
+                      You have <b className="tabular-nums text-yellow-200">{secondsLeft(ownHold.until)}</b>{" "}
+                      {secondsLeft(ownHold.until) === 1 ? "second" : "seconds"} left. If you don&apos;t reserve in time, someone else will get a chance.
+                    </p>
+                  )}
+                </>
               ) : (
                 <ReserveGlow>
                   <a href={`/api/auth/login?next=${encodeURIComponent(selectedThread ? `/map?game=${selectedThread}` : "/map")}`} className={RESERVE_BUTTON}>
@@ -1766,7 +1792,7 @@ export default function MapViewer({
                 Reserved by {ownerLabelText(ownerLabel)}
               </button>
             )}
-            {selectionKind === "pending" && viewerHasNation && mySlot && !blockedBy && (
+            {pendingFree && viewerHasNation && mySlot && !blockedBy && (
               <button
                 type="button"
                 disabled={!selectedThread || reserving}
@@ -1776,7 +1802,7 @@ export default function MapViewer({
                 {reserving ? "Switching…" : `Switch to ${selected.name}`}
               </button>
             )}
-            {selectionKind === "pending" && viewerHasNation && blockedBy && (
+            {pendingFree && viewerHasNation && blockedBy && (
               <button type="button" disabled className="gm-btn h-12 w-full cursor-not-allowed bg-ink-950 px-6 text-yellow-200 sm:w-auto">
                 🔒 {blockedBy.name} is picking this nation · {secondsLeft(blockedBy.until)}s
               </button>

@@ -27,6 +27,8 @@ import type {
 interface CountryDetailsDrawerProps {
   selected: NationFeatureProps;
   selectionKind: SelectionKind;
+  /** Locked by the host or a preset (or the lobby is in lockdown): no one can reserve it. */
+  nationLocked?: boolean;
   ownerLabel: string | null;
   authUser: AuthUser | null;
   mySlot: LobbyReservation | null;
@@ -379,6 +381,7 @@ function StatBar({ label, value, barClass }: { label: string; value: number; bar
 export default function CountryDetailsDrawer({
   selected,
   selectionKind,
+  nationLocked = false,
   ownerLabel,
   authUser,
   mySlot,
@@ -429,7 +432,10 @@ export default function CountryDetailsDrawer({
     label: meta.label,
   }));
 
-  const status = SELECTION_TAGS[selectionKind];
+  const status =
+    nationLocked && selectionKind === "pending"
+      ? { label: "Locked", className: "bg-ink-800 text-ink-300" }
+      : SELECTION_TAGS[selectionKind];
   const flag = (
     <img
       src={scenario.flagUrl || `/assets/flags/${scenario.tag}.png`}
