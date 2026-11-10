@@ -108,7 +108,12 @@ const MAP_CAPITALS: Record<string, Record<string, number[]>> = mapCapitalsData;
 
 /** "/maps/road_to_56.geojson" → "road_to_56". */
 function mapNameOf(url: string): string {
-  return url.replace(/^.*\//, "").replace(/\.geojson$/, "");
+  return url.replace(/[?#].*$/, "").replace(/^.*\//, "").replace(/\.geojson$/, "");
+}
+
+/** Capital positions ([x, y] in map pixels) of one map's nations. */
+export function capitalsForMap(url: string): Record<string, number[]> {
+  return MAP_CAPITALS[mapNameOf(url)] ?? {};
 }
 
 /** What the map needs from the page's host tools. */
@@ -523,6 +528,41 @@ function largestPartBounds(
   return best;
 }
 
+/** Bounds of the part of a nation that holds this point (the capital's homeland), or null. */
+function partBoundsContaining(
+  geometry: GeoJSON.Polygon | GeoJSON.MultiPolygon,
+  x: number,
+  y: number,
+): [[number, number], [number, number]] | null {
+  const polygons = geometry.type === "Polygon" ? [geometry.coordinates] : geometry.coordinates;
+  for (const polygon of polygons) {
+    const ring = polygon[0] ?? [];
+    if (ring.length < 3) continue;
+    // Ray casting on the outer ring.
+    let inside = false;
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (let index = 0, prev = ring.length - 1; index < ring.length; prev = index, index += 1) {
+      const [xi, yi] = ring[index];
+      const [xj, yj] = ring[prev];
+      if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+      minX = Math.min(minX, xi);
+      minY = Math.min(minY, yi);
+      maxX = Math.max(maxX, xi);
+      maxY = Math.max(maxY, yi);
+    }
+    if (inside) {
+      return [
+        [minY, minX],
+        [maxY, maxX],
+      ];
+    }
+  }
+  return null;
+}
+
 /**
  * Pans/zooms the camera to a requested nation (roster row click). The page
  * bumps ``nonce`` on every request, so clicking the same nation twice still
@@ -531,9 +571,12 @@ function largestPartBounds(
 export function FocusController({
   request,
   geoJsonRef,
+  capitals,
 }: {
   request: { tag: string; nonce: number } | null;
   geoJsonRef: RefObject<L.GeoJSON | null>;
+  /** The map's capital positions (capitalsForMap): the camera centres on the capital. */
+  capitals?: Record<string, number[]>;
 }) {
   const map = useMap();
 
@@ -564,11 +607,19 @@ export function FocusController({
     // would zoom the camera back out to the world view. Fit to the largest
     // part (the homeland) instead. The original smooth fitBounds behaviour
     // and MAX_ZOOM cap are otherwise unchanged.
-    const partBounds =
-      geometry &&
-      (geometry.type === "Polygon" || geometry.type === "MultiPolygon")
-        ? largestPartBounds(geometry)
-        : null;
+    const polygonal = geometry && (geometry.type === "Polygon" || geometry.type === "MultiPolygon") ? geometry : null;
+    // Centre on the capital, zoomed to the land it's on (mainland France, not
+    // French West Africa, which is bigger and pulled the old centre to Africa).
+    const capital = capitals?.[request.tag];
+    if (capital && capital.length >= 2) {
+      const [x, y] = capital;
+      const home = (polygonal && (partBoundsContaining(polygonal, x, y) ?? largestPartBounds(polygonal))) || null;
+      const bounds = home ? L.latLngBounds(home) : polygon.getBounds();
+      const zoom = Math.min(map.getBoundsZoom(bounds, false, L.point(96, 96)), MAX_ZOOM);
+      map.setView(L.latLng(y, x), zoom, { animate: true });
+      return;
+    }
+    const partBounds = polygonal ? largestPartBounds(polygonal) : null;
     map.fitBounds(
       partBounds ? L.latLngBounds(partBounds) : polygon.getBounds(),
       {
@@ -576,7 +627,7 @@ export function FocusController({
         maxZoom: MAX_ZOOM,
       },
     );
-  }, [request, map, geoJsonRef]);
+  }, [request, map, geoJsonRef, capitals]);
 
   return null;
 }
@@ -1549,7 +1600,7 @@ export default function MapViewer({
             initialViewRef={viewIntentRef}
             onViewportChange={handleViewportChange}
           />
-          <FocusController request={focusRequest} geoJsonRef={geoJsonRef} />
+          <FocusController request={focusRequest} geoJsonRef={geoJsonRef} capitals={capitalsForMap(geoJsonUrl)} />
           <GeoJSON
             ref={geoJsonRef}
             key={geoJsonUrl}

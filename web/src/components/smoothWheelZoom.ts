@@ -50,6 +50,19 @@ export function attachSmoothWheelZoom(map: L.Map): () => void {
   let anchorLatLng = L.latLng(0, 0);
   let drawnZoom = 0;
 
+  // Leaflet scales the drawn map with a 3D transform, which the browser
+  // treats as a picture: stretched while zooming in, it went soft until the
+  // glide ended. The same move as a 2D transform keeps the outlines vector,
+  // redrawn sharp each frame.
+  const sharpen = () => {
+    for (const svg of container.querySelectorAll<SVGElement>("svg.leaflet-zoom-animated")) {
+      const value = svg.style.transform;
+      if (value.startsWith("translate3d(")) {
+        svg.style.transform = value.replace(/translate3d\(([^,]+),\s*([^,]+),\s*[^)]+\)/, "translate($1, $2)");
+      }
+    }
+  };
+
   const finish = () => {
     if (frame) cancelAnimationFrame(frame);
     frame = 0;
@@ -72,6 +85,7 @@ export function attachSmoothWheelZoom(map: L.Map): () => void {
     const centerPoint = map.project(anchorLatLng, next).subtract(anchorPoint.subtract(viewHalf));
     const center = m._limitCenter(map.unproject(centerPoint, next), next, map.options.maxBounds as L.LatLngBounds | undefined);
     m._move(center, next);
+    sharpen();
 
     if (next === target) {
       finish();

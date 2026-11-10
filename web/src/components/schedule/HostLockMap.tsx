@@ -12,6 +12,7 @@ import {
   MapSetup,
   OCEAN,
   buildRosterNations,
+  capitalsForMap,
   computePixelWorld,
   createPaddedRenderer,
   createWorldCrs,
@@ -259,7 +260,7 @@ export default function HostLockMap({
       style={{ background: OCEAN, cursor: "pointer" }}
     >
       <MapSetup world={world} initialViewRef={viewIntentRef} onViewportChange={handleViewportChange} />
-      <FocusController request={focusRequest} geoJsonRef={geoJsonRef} />
+      <FocusController request={focusRequest} geoJsonRef={geoJsonRef} capitals={capitalsForMap(url)} />
       <GeoJSON
         ref={geoJsonRef}
         key={url}
