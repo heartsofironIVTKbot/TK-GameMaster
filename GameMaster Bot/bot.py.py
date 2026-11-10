@@ -32380,16 +32380,21 @@ def _roster_notify_on(payload: dict) -> bool:
 async def _roster_notify_player(member, game: dict, game_key, actor, *, title: str, text: str,
                                 color: discord.Color, label: str) -> bool:
     """One Host Tool change, as a DM: what happened, which game, who did it,
-    and a button to the map. Hosts aren't DMed about their own moves."""
-    if member is None or (actor is not None and getattr(member, "id", None) == getattr(actor, "id", None)):
+    and a button to the map. A host who moves themselves gets it too
+    ("Changed by you"), so a move is always confirmed."""
+    if member is None:
         return False
+    yourself = actor is not None and getattr(member, "id", None) == getattr(actor, "id", None)
     mode = str((game or {}).get("mode") or "Game")
     embed = discord.Embed(title=title, description=text, color=color)
     ts = int((game or {}).get("start_timestamp") or 0)
     when = f" · <t:{ts}:F>" if ts > 0 else ""
     embed.add_field(name="Game", value=f"{MODE_THREAD_LABELS.get(mode, mode)}{when}", inline=False)
     who = getattr(actor, "display_name", None)
-    embed.set_footer(text=f"Changed by {who} with the Host Tool" if who else "Changed by the host")
+    if yourself:
+        embed.set_footer(text="Changed by you with the Host Tool")
+    else:
+        embed.set_footer(text=f"Changed by {who} with the Host Tool" if who else "Changed by the host")
     view = discord.ui.View()
     view.add_item(discord.ui.Button(label="Open the map", url=_map_game_url(game_key), style=discord.ButtonStyle.link))
     return await _dm_user_safe(member, embed=embed, view=view, label=label)
