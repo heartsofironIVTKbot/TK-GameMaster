@@ -622,10 +622,13 @@ export class NationHighlightController {
    * view now, mid-drag.
    */
   private redrawIfNearEdge(): void {
-    const base = this.baseRenderer as (L.Renderer & { _bounds?: L.Bounds; _update?: () => void }) | null;
+    const base = this.baseRenderer as (L.Renderer & { _bounds?: L.Bounds; _update?: () => void; _zoom?: number }) | null;
     const map = this.map as L.Map & { _animatingZoom?: boolean };
     const drawn = base?._bounds;
     if (!base?._update || !drawn?.min || !drawn.max || map._animatingZoom) return;
+    // Mid-zoom (wheel glide, pinch) the drawn paths belong to the old zoom:
+    // redrawing now would misplace them. The zoom settles them itself.
+    if (base._zoom !== undefined && base._zoom !== map.getZoom()) return;
     const size = map.getSize();
     const margin = Math.min(size.x, size.y) * REDRAW_MARGIN;
     const topLeft = map.containerPointToLayerPoint([0, 0]);

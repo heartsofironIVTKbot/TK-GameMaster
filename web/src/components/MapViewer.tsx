@@ -15,6 +15,7 @@ import L from "leaflet";
 import { GeoJSON, MapContainer, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { orientGeometryForClockwiseTravel } from "./nationGeometry";
+import { attachSmoothWheelZoom } from "./smoothWheelZoom";
 import {
   DRAW_PADDING,
   MAJOR_TAGS,
@@ -422,22 +423,9 @@ export function MapSetup({
     };
   }, [map, world, onViewportChange]);
 
-  // Disable scroll-wheel zoom for the duration of an active pan. Leaflet's
-  // drag handler re-anchors to the container origin, so a wheel zoom that
-  // fires mid-drag re-projects the map and makes the pan leap/flicker.
-  // ``dragstart`` only fires once a real drag begins (after the move
-  // threshold); ``dragend`` restores the wheel handler on pointer release.
-  useEffect(() => {
-    const disableWheel = () => map.scrollWheelZoom.disable();
-    const enableWheel = () => map.scrollWheelZoom.enable();
-    map.on("dragstart", disableWheel);
-    map.on("dragend", enableWheel);
-    return () => {
-      map.off("dragstart", disableWheel);
-      map.off("dragend", enableWheel);
-      enableWheel();
-    };
-  }, [map]);
+  // Smooth, stepless wheel zoom in place of Leaflet's step-per-notch zoom.
+  // It ignores the wheel during a pan (a zoom mid-drag made the pan leap).
+  useEffect(() => attachSmoothWheelZoom(map), [map]);
   return null;
 }
 
@@ -1503,12 +1491,12 @@ export default function MapViewer({
           zoomControl={false}
           maxBoundsViscosity={1.0}
           worldCopyJump={true}
-          zoomSnap={0.01}
+          zoomSnap={0}
           zoomDelta={0.1}
           zoomAnimation={true}
           inertia={true}
-          wheelPxPerZoomLevel={150}
-          wheelDebounceTime={10}
+          // Double-click does nothing (it used to zoom).
+          doubleClickZoom={false}
           attributionControl={false}
           className="h-full w-full"
           style={{ background: OCEAN }}

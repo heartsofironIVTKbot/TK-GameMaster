@@ -250,10 +250,9 @@ export default function HostLockMap({
       // cap): further than the drawn area around the view and, zoomed in,
       // half the map blinks out until it's redrawn.
       inertiaMaxSpeed={INERTIA_MAX_SPEED}
-      zoomSnap={0.01}
+      zoomSnap={0}
       zoomDelta={0.1}
-      wheelPxPerZoomLevel={150}
-      wheelDebounceTime={10}
+      doubleClickZoom={false}
       attributionControl={false}
       zoomControl={false}
       className="h-full w-full"
