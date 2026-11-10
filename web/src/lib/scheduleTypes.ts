@@ -185,6 +185,9 @@ export type RequestAction =
   | "hotjoin_request"
   | "hotjoin_cancel"
   | "hotjoin_decide"
+  | "coop_request"
+  | "coop_cancel"
+  | "coop_decide"
   | "crash_report"
   | "feedback_rate"
   | "server_setup";

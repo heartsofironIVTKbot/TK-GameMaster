@@ -67,9 +67,9 @@ export function usePlayerRequest(url: string, onDone: (result: ScheduleRequestSt
     };
   }, [waitingId, url]);
 
-  /** JSON body → POST / DELETE; a FormData body is sent as is (uploads). */
+  /** JSON body → POST / DELETE / PATCH; a FormData body is sent as is (uploads). */
   const submit = useCallback(
-    async (method: "POST" | "DELETE", body: Record<string, unknown> | FormData) => {
+    async (method: "POST" | "DELETE" | "PATCH", body: Record<string, unknown> | FormData) => {
       setState({ phase: "sending" });
       try {
         const response = await fetch(url, {

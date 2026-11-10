@@ -40,6 +40,7 @@ import { boardDisplayName, classifyRegions } from "@/data/nationCategories";
 import { reservationLookup } from "@/lib/reservationMatch";
 import { versionedMapUrl } from "@/lib/mapVersion";
 import { useLiveLobby, useShareSelection } from "./live/useLiveLobby";
+import { useCoopRequests } from "./live/useCoopRequests";
 import LiveSelectionLabels, { type LiveSelectionLabel } from "./live/LiveSelectionLabels";
 import { useTutorialActions } from "./tutorial/TutorialProvider";
 import {
@@ -1286,6 +1287,38 @@ export default function MapViewer({
       `Discord user ${selectedReservation.user_id}`)
     : null;
 
+  // Co-op requests (lib/coopRequests.ts): ask to co-op a major someone holds,
+  // or answer the requests for your own major. Polled only while it matters.
+  const viewerHoldsMajor = selfTags.some((tag) => MAJOR_TAGS.has(tag));
+  const [coopNotice, setCoopNotice] = useState<{ kind: "success" | "error"; text: string } | null>(null);
+  const coop = useCoopRequests(selectedThread || null, {
+    loggedIn: Boolean(authUser),
+    watch: viewerHoldsMajor,
+    onOutcome: ({ status, nation }) =>
+      setCoopNotice(
+        status === "approved"
+          ? { kind: "success", text: `Accepted: you're on the ${nation} co-op.` }
+          : {
+              kind: "error",
+              text:
+                status === "declined"
+                  ? `Your co-op request for ${nation} was declined.`
+                  : status === "expired"
+                    ? `Your co-op request for ${nation} expired.`
+                    : `Your co-op request for ${nation} couldn't go through.`,
+            },
+      ),
+    onRosterChanged: () => void refreshLobbyReservations(),
+  });
+  useEffect(() => {
+    if (!coopNotice) return undefined;
+    const timer = window.setTimeout(() => setCoopNotice(null), 8000);
+    return () => window.clearTimeout(timer);
+  }, [coopNotice]);
+  const coopIncoming = coop.incoming[0] ?? null;
+  const myCoopHere =
+    coop.mine?.status === "pending" && selectedReservation && coop.mine.nation === selectedReservation.slot_key ? coop.mine : null;
+
   // Other players' live selections: free nations only (a nation that just got
   // taken drops its glow), never the viewer's own.
   const liveSelections = live.selections;
@@ -1539,6 +1572,54 @@ export default function MapViewer({
           />
           <LiveSelectionLabels labels={selectionLabels} worldWidth={worldWidth} />
         </MapContainer>
+
+        {/* A co-op request for the viewer's nation, or how theirs went. */}
+        {coopIncoming && !gameRunning ? (
+          <div
+            role="dialog"
+            aria-label="Co-op request"
+            className="gm-plate absolute left-1/2 top-[76px] z-[1300] w-[min(92vw,380px)] -translate-x-1/2 bg-ink-950 p-4 [--cut:12px]"
+          >
+            <p className="text-sm text-ink-100">
+              🤝 <b>{coopIncoming.name ?? "A player"}</b> wants to co-op <b>{coopIncoming.nation}</b> with you.
+            </p>
+            {coop.incoming.length > 1 && (
+              <p className="mt-1 text-[11px] text-ink-400">
+                {coop.incoming.length - 1} more {coop.incoming.length === 2 ? "request" : "requests"} waiting after this one.
+              </p>
+            )}
+            <div className="mt-3 flex gap-2">
+              <button
+                type="button"
+                disabled={coop.answer.busy}
+                onClick={() => void coop.answer.submit("PATCH", { thread_id: selectedThread, user_id: coopIncoming.user_id, approve: false })}
+                className="gm-btn gm-btn-secondary h-9 flex-1"
+              >
+                Decline
+              </button>
+              <button
+                type="button"
+                disabled={coop.answer.busy}
+                onClick={() => void coop.answer.submit("PATCH", { thread_id: selectedThread, user_id: coopIncoming.user_id, approve: true })}
+                className="gm-btn gm-btn-primary h-9 flex-1"
+              >
+                {coop.answer.busy ? "Saving…" : "Accept"}
+              </button>
+            </div>
+            {coop.answer.state.phase === "error" && <p className="mt-2 text-xs text-rose-300">{coop.answer.state.message}</p>}
+          </div>
+        ) : (
+          coopNotice && (
+            <p
+              role="status"
+              className={`gm-plate absolute left-1/2 top-[76px] z-[1300] w-max max-w-[92vw] -translate-x-1/2 bg-ink-950 px-4 py-2 text-sm font-semibold ${
+                coopNotice.kind === "success" ? "text-emerald-300" : "text-rose-300"
+              }`}
+            >
+              {coopNotice.text}
+            </p>
+          )
+        )}
 
         {/* Live: how many people have this game's map open right now. */}
         {live.connected && live.viewers !== null && live.viewers > 1 && (
@@ -1807,15 +1888,48 @@ export default function MapViewer({
                 🔒 {blockedBy.name} is picking this nation · {secondsLeft(blockedBy.until)}s
               </button>
             )}
-            {selectionKind === "coop" && !viewerHasNation && (
-              <button
-                type="button"
-                disabled
-                title="Co-op requests are coming soon"
-                className="gm-btn h-12 w-full cursor-not-allowed bg-ink-950 px-6 text-sky-200/70 sm:w-auto"
-              >
-                Request co-op
-              </button>
+            {selectionKind === "coop" && !viewerHasNation && myCoopHere && (
+              <div className="gm-plate flex w-full flex-col items-center gap-2 bg-ink-950 px-4 py-3 text-center sm:w-auto">
+                <p className="text-sm font-semibold text-sky-100">
+                  Request sent to {ownerLabelText(ownerLabel)}. Waiting for them to accept.
+                </p>
+                <p className="text-[11px] text-ink-400">They got a Discord DM too. You&apos;ll see the answer here.</p>
+                <button
+                  type="button"
+                  disabled={coop.ask.busy}
+                  onClick={() => void coop.ask.submit("DELETE", { thread_id: selectedThread })}
+                  className="gm-btn gm-btn-secondary h-8 px-3 text-xs"
+                >
+                  {coop.ask.busy ? "Withdrawing…" : "Withdraw request"}
+                </button>
+              </div>
+            )}
+            {selectionKind === "coop" && !viewerHasNation && !myCoopHere &&
+              (authUser ? (
+                <button
+                  type="button"
+                  disabled={!selectedThread || coop.ask.busy}
+                  onClick={() =>
+                    void coop.ask.submit("POST", {
+                      thread_id: selectedThread,
+                      nation: selectedReservation?.slot_key ?? selected.name,
+                      tag: selected.tag,
+                    })
+                  }
+                  className="gm-btn h-12 w-full bg-ink-950 px-6 text-sky-200 hover:text-white sm:w-auto"
+                >
+                  {coop.ask.busy ? "Sending…" : `Request co-op with ${ownerLabelText(ownerLabel)}`}
+                </button>
+              ) : (
+                <a
+                  href={`/api/auth/login?next=${encodeURIComponent(selectedThread ? `/map?game=${selectedThread}` : "/map")}`}
+                  className="gm-btn h-12 w-full bg-ink-950 px-6 text-sky-200 hover:text-white sm:w-auto"
+                >
+                  Log in to request co-op
+                </a>
+              ))}
+            {selectionKind === "coop" && coop.ask.state.phase === "error" && (
+              <p className="gm-cut max-w-[360px] bg-ink-950 px-3 py-1.5 text-center text-xs text-rose-300 [--cut:6px]">{coop.ask.state.message}</p>
             )}
             {reserveMessage && (
               <p
