@@ -39,6 +39,52 @@ export function orientPolygonForClockwiseTravel(polygon: Polygon): Polygon {
   });
 }
 
+/**
+ * Drop the points that lie exactly on the straight line between their
+ * neighbours. HOI4 borders come from a pixel grid, so ~43% of every map's
+ * points sit in the middle of a straight run: they change nothing about the
+ * shape, but every zoom re-projects each of them (three world copies), so
+ * dropping them makes each redraw that much cheaper. The outline is identical.
+ * A closed ring (last point = first) stays closed; a ring never drops below
+ * three corners.
+ */
+export function dropCollinearPoints(ring: Ring): Ring {
+  const closed =
+    ring.length > 1 && ring[0][0] === ring[ring.length - 1][0] && ring[0][1] === ring[ring.length - 1][1];
+  const open = closed ? ring.slice(0, -1) : ring;
+  if (open.length < 4) return ring;
+  const straight = (a: number[], b: number[], c: number[]) => {
+    const cross = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+    const scale = Math.abs(c[0] - a[0]) + Math.abs(c[1] - a[1]) + 1;
+    // Same direction (b between a and c), not a spike that doubles back.
+    const forward = (b[0] - a[0]) * (c[0] - b[0]) + (b[1] - a[1]) * (c[1] - b[1]) >= 0;
+    return Math.abs(cross) <= 1e-9 * scale * scale && forward;
+  };
+  const kept: Ring = [];
+  for (let index = 0; index < open.length; index += 1) {
+    const prev = kept.length > 0 ? kept[kept.length - 1] : open[open.length - 1];
+    const next = open[(index + 1) % open.length];
+    if (!straight(prev, open[index], next)) kept.push(open[index]);
+  }
+  // The first point was checked against the original last one: re-check it
+  // against the last point that was kept.
+  while (kept.length > 3 && straight(kept[kept.length - 1], kept[0], kept[1])) kept.shift();
+  if (kept.length < 3) return ring;
+  if (closed) kept.push(kept[0]);
+  return kept;
+}
+
+/** `dropCollinearPoints` on every ring of a geometry. */
+export function simplifyGeometryLossless<G extends PolygonalGeometry>(geometry: G): G {
+  if (geometry.type === "Polygon") {
+    return { ...geometry, coordinates: geometry.coordinates.map(dropCollinearPoints) };
+  }
+  return {
+    ...geometry,
+    coordinates: geometry.coordinates.map((polygon) => polygon.map(dropCollinearPoints)),
+  };
+}
+
 type PolygonalGeometry =
   | { type: "Polygon"; coordinates: number[][][] }
   | { type: "MultiPolygon"; coordinates: number[][][][] };

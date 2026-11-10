@@ -14,7 +14,7 @@ import { Lock, MousePointerClick } from "lucide-react";
 import L from "leaflet";
 import { GeoJSON, MapContainer, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import { orientGeometryForClockwiseTravel } from "./nationGeometry";
+import { orientGeometryForClockwiseTravel, simplifyGeometryLossless } from "./nationGeometry";
 import { attachSmoothWheelZoom } from "./smoothWheelZoom";
 import {
   DRAW_PADDING,
@@ -288,7 +288,8 @@ export function withWorldCopies(
   const width = world.maxX - world.minX;
   const oriented = collection.features.map((feature) => ({
     ...feature,
-    geometry: orientGeometryForClockwiseTravel(feature.geometry),
+    // Lossless: drops points in the middle of straight border runs (cheaper redraws).
+    geometry: orientGeometryForClockwiseTravel(simplifyGeometryLossless(feature.geometry)),
   }));
   return {
     type: "FeatureCollection",
