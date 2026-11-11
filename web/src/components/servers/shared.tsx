@@ -312,7 +312,10 @@ export function useDismiss(open: boolean, close: () => void) {
   useEffect(() => {
     if (!open) return undefined;
     const onDown = (event: MouseEvent) => {
-      if (ref.current && !ref.current.contains(event.target as Node)) close();
+      const target = event.target as Element | null;
+      // Picker menus float in a layer of their own (outside `ref`); clicks there count as inside.
+      if (target?.closest?.("[data-floating-menu]")) return;
+      if (ref.current && !ref.current.contains(target)) close();
     };
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") close();

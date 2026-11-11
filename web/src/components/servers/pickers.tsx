@@ -2,7 +2,8 @@
 
 import { Hash } from "lucide-react";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useLayoutEffect, useMemo, useState, type ReactNode, type RefObject } from "react";
+import { createPortal } from "react-dom";
 import { hasPermission, type SnapshotChannel, type SnapshotRole } from "@/lib/serverSettingsTypes";
 import { Spinner } from "@/components/schedule/ui";
 import { CHANNEL_ICON, channelById, inputClass, roleById, useCreateItem, useDismiss, type StepContext } from "./shared";
@@ -40,7 +41,47 @@ function opensUp(element: Element | null): boolean {
   return below < MENU_HEIGHT && rect.top > below;
 }
 
-const menuPlacement = (up: boolean) => (up ? "bottom-full mb-1" : "top-full mt-1");
+const MENU_WIDTH = 288;
+
+type MenuSpot = { left: number; width: number; top?: number; bottom?: number };
+
+/**
+ * A picker's menu, floating over the page (a layer of its own on <body>):
+ * inside the settings panels it got trimmed by their cut corners (clip-path
+ * clips everything that sticks out — the "very tiny" role list). It follows
+ * its picker as the page scrolls.
+ */
+function FloatingMenu({ anchorRef, up, children }: { anchorRef: RefObject<HTMLElement | null>; up: boolean; children: ReactNode }) {
+  const [spot, setSpot] = useState<MenuSpot | null>(null);
+  useLayoutEffect(() => {
+    const place = () => {
+      const anchor = anchorRef.current;
+      if (!anchor) return;
+      const rect = anchor.getBoundingClientRect();
+      const width = Math.min(Math.max(MENU_WIDTH, rect.width), window.innerWidth * 0.85);
+      const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
+      setSpot(up ? { left, width, bottom: window.innerHeight - rect.top + 4 } : { left, width, top: rect.bottom + 4 });
+    };
+    place();
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => {
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+    };
+  }, [anchorRef, up]);
+  if (!spot) return null;
+  return createPortal(
+    <div
+      data-floating-menu
+      style={{ position: "fixed", left: spot.left, width: spot.width, top: spot.top, bottom: spot.bottom }}
+      className="z-50 gm-cut [--cut:9px] border border-ink-700 bg-ink-900 p-2 shadow-2xl shadow-black/60"
+    >
+      {children}
+    </div>,
+    document.body,
+  );
+}
 
 function RoleMenu({
   ctx,
@@ -49,6 +90,7 @@ function RoleMenu({
   exclude = [],
   suggestedName,
   up,
+  anchorRef,
   onPick,
   onClose,
 }: {
@@ -58,6 +100,7 @@ function RoleMenu({
   exclude?: string[];
   suggestedName?: string;
   up: boolean;
+  anchorRef: RefObject<HTMLElement | null>;
   onPick: (id: string | null) => void;
   onClose: () => void;
 }) {
@@ -80,9 +123,7 @@ function RoleMenu({
     (role) => !role.everyone && !exclude.includes(role.id) && role.name.toLowerCase().includes(query.trim().toLowerCase()),
   );
   return (
-    <div
-      className={`absolute left-0 z-30 w-72 min-w-full max-w-[85vw] gm-cut [--cut:9px] border border-ink-700 bg-ink-900 p-2 shadow-2xl shadow-black/60 ${menuPlacement(up)}`}
-    >
+    <FloatingMenu anchorRef={anchorRef} up={up}>
       <input maxLength={64}
         autoFocus
         value={query}
@@ -183,7 +224,7 @@ function RoleMenu({
           </div>
         )}
       </div>
-    </div>
+    </FloatingMenu>
   );
 }
 
@@ -232,7 +273,7 @@ export function RolePicker({
         )}
         <span className="text-[10px] text-ink-500">▾</span>
       </button>
-      {open && <RoleMenu ctx={ctx} purpose={purpose} selected={value} suggestedName={suggestedName} up={up} onPick={onChange} onClose={close} />}
+      {open && <RoleMenu ctx={ctx} purpose={purpose} selected={value} suggestedName={suggestedName} up={up} anchorRef={ref} onPick={onChange} onClose={close} />}
     </div>
   );
 }
@@ -299,6 +340,7 @@ export function RoleMultiPicker({
           exclude={value}
           suggestedName={suggestedName}
           up={up}
+          anchorRef={ref}
           onPick={(id) => {
             if (id) onChange([...value, id]);
           }}
@@ -453,9 +495,7 @@ export function ChannelPicker({
         <span className="text-[10px] text-ink-500">▾</span>
       </button>
       {open && (
-        <div
-          className={`absolute left-0 z-30 w-72 min-w-full max-w-[85vw] gm-cut [--cut:9px] border border-ink-700 bg-ink-900 p-2 shadow-2xl shadow-black/60 ${menuPlacement(up)}`}
-        >
+        <FloatingMenu anchorRef={ref} up={up}>
           <input maxLength={64}
             autoFocus
             value={query}
@@ -573,7 +613,7 @@ export function ChannelPicker({
               </div>
             )}
           </div>
-        </div>
+        </FloatingMenu>
       )}
     </div>
   );
