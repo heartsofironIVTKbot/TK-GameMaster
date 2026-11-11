@@ -18697,13 +18697,13 @@ CASINO_PANEL_KEY = "casino_panel"  # bot_config: {"channel_id", "message_id"}
 
 async def _post_casino_panel_in_settings_channel(guild) -> str:
     """The website's "Post or re-post the Casino panel" (Server settings →
-    Channels → Casino; TommyKay's server only): posts the panel in the Casino
+    Channels → Casino; the Casino servers only): posts the panel in the Casino
     panel channel and removes the previous one. Its button hands out the
     Singleplayer (Offline) link, minted in this bot's database, which the
     Casino reads. Run inside the server's scope. Raises ModerationError."""
-    if guild.id != GUILD_ID:
+    if guild.id not in CASINO_GUILD_IDS:
         raise ModerationError("❌ The Casino is only on TommyKay's server.")
-    channel_id = int(CASINO_PANEL_CHANNEL_ID or 0)
+    channel_id = int(G.CASINO_PANEL_CHANNEL_ID or 0)
     channel = guild.get_channel(channel_id) if channel_id else None
     if channel is None:
         raise ModerationError("❌ Pick the Casino panel channel (and save) first.")
@@ -28521,7 +28521,7 @@ async def _build_web_schedule_fields(payload: dict, keep_day: tuple | None = Non
         return None, f"❌ Unknown add-on: {add_on}."
     if add_on in _UNAVAILABLE_ADDONS and not staff:
         return None, "❌ The Casino is currently unavailable."
-    if add_on in HOME_ONLY_ADDONS and cur_gid() != GUILD_ID:
+    if add_on in HOME_ONLY_ADDONS and cur_gid() not in CASINO_GUILD_IDS:
         return None, "❌ The Casino add-on is only available on TommyKay's server."
 
     major_level = payload.get("major_lock_level") or "Trusted"
@@ -33759,6 +33759,10 @@ def _apply_settings(rt: GuildRuntime, settings: dict) -> None:
         d["GAME_VOICE_ANCHORS"][b] = (_iid(s["voice"][b]["after_category"]), _iid(s["voice"][b]["before_category"]))
     if rt.gid == GUILD_ID and rt.gid in CASINO_GUILD_IDS:
         CASINO_PANEL_CHANNEL_ID = _iid(s["addons"]["casino_panel_channel"])
+    # Per server too: the test server keeps its Casino when TommyKay is home.
+    sc["CASINO_PANEL_CHANNEL_ID"] = (
+        _iid((s.get("addons") or {}).get("casino_panel_channel")) if rt.gid in CASINO_GUILD_IDS else 0
+    )
 
     # Game modes (in place: "Historical" and the old names share these dicts).
     for key, branch in BUILTIN_MODES:
@@ -33792,7 +33796,7 @@ def _apply_settings(rt: GuildRuntime, settings: dict) -> None:
     rt.settings = s
 
 
-# Add-ons that need the home server's casino.
+# Add-ons only the Casino servers (CASINO_GUILD_IDS: TommyKay and its test server) have.
 HOME_ONLY_ADDONS = {"randomizer"}
 
 

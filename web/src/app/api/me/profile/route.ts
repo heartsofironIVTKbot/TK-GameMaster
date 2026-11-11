@@ -38,6 +38,35 @@ async function knownOn(userId: string, guildId: string): Promise<boolean> {
   }
 }
 
+/**
+ * Every server the player is on, for the switcher: a member (the bot's
+ * directory) or with a record there, among the servers GameMaster has set up.
+ * The home server counts when they have a record in `users`.
+ */
+async function serversOf(userId: string): Promise<{ id: string; name: string }[]> {
+  if (isSchedulerDemo()) {
+    return [...demoServers().values()]
+      .filter((server) => server.is_home || (server.bot_present && server.status === "active"))
+      .map((server) => ({ id: server.id, name: server.name }));
+  }
+  try {
+    const [rows] = await getPool().query<RowDataPacket[]>(
+      `SELECT s.guild_id, s.guild_name FROM guild_settings s
+        WHERE s.guild_id IN (
+                SELECT guild_id FROM web_member_directory WHERE user_id = CAST(? AS UNSIGNED)
+                UNION SELECT guild_id FROM guild_users WHERE discord_id = ?
+              )
+           OR (s.guild_id = ? AND EXISTS (SELECT 1 FROM users WHERE discord_id = ?))`,
+      [userId, userId, HOME_GUILD_ID, userId],
+    );
+    return rows
+      .map((row) => ({ id: String(row.guild_id), name: String(row.guild_name || `Server ${row.guild_id}`) }))
+      .sort((a, b) => Number(b.id === HOME_GUILD_ID) - Number(a.id === HOME_GUILD_ID) || a.name.localeCompare(b.name));
+  } catch {
+    return [];
+  }
+}
+
 async function serverName(guildId: string): Promise<string | null> {
   if (isSchedulerDemo()) return demoServers().get(guildId)?.name ?? null;
   try {
@@ -73,9 +102,13 @@ export async function GET(request: NextRequest) {
 
   try {
     const wanted = request.nextUrl.searchParams.get("guild") ?? "";
+    const servers = await serversOf(viewer.discord_id);
     let guildId = await currentGuildId();
     if (ID_RE.test(wanted) && wanted !== guildId && (isSchedulerDemo() ? demoServers().has(wanted) : await knownOn(viewer.discord_id, wanted))) {
       guildId = wanted;
+    } else if (!wanted && servers.length > 0 && !servers.some((server) => server.id === guildId)) {
+      // Not on the default server (a test server's player): their own server, not the home server's records.
+      guildId = servers[0].id;
     }
     const [profile, portfolio, name, aiResults] = await Promise.all([
       getPlayerProfile(viewer.discord_id, guildId),
@@ -87,6 +120,7 @@ export async function GET(request: NextRequest) {
       profile,
       portfolio: forPlayer(portfolio),
       server: { id: guildId, name },
+      servers,
       viewer,
       ai_results: aiResults,
     };

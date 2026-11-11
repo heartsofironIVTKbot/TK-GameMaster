@@ -10,6 +10,7 @@ import { boardDisplayName, canonicalName, nationMatchKeys } from "@/data/nationC
 import { usePresetDefaults } from "@/components/presets/usePresetDefaults";
 import { notPlayableNations, type GamePreset } from "@/lib/presetTypes";
 import { lockLevelLabel, modeOption } from "@/lib/scheduleOptions";
+import { hasCasino } from "@/lib/serverSettingsTypes";
 import { lastBookableDay } from "@/lib/bookingWindow";
 import type {
   CalendarDayLock,
@@ -654,7 +655,7 @@ export default function GameSetupApp({
               form={form}
               update={update}
               modeDefaults={modeDefaults}
-              homeServer={host.home_server}
+              homeServer={hasCasino(host.guild_id)}
               isStaff={host.is_staff}
               hosts={hosts}
               hostId={editing ? (form.handoverTo ?? editing.hostId) : host.discord_id}

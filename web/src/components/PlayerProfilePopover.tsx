@@ -58,6 +58,8 @@ interface PlayerProfilePopoverProps {
   canViewPortfolio?: boolean;
   /** A Casino game whose host / co-host / staff is looking: the "View receipt" button (that game's key). */
   receiptGame?: string | null;
+  /** The game the card is opened from: its server's records are shown (never another server's). */
+  game?: string | null;
   /** Open beside this screen box (a map avatar) instead of the parent row. */
   anchorRect?: { left: number; top: number; right: number; bottom: number } | null;
 }
@@ -67,21 +69,25 @@ interface PlayerProfilePopoverProps {
 const profileCache = new Map<string, PlayerProfile | null>();
 const profileRequests = new Map<string, Promise<PlayerProfile | null>>();
 
-function loadProfile(userId: string): Promise<PlayerProfile | null> {
-  let request = profileRequests.get(userId);
+/** One card per player and server (the game's): `key` = "<game>:<user>". */
+const cardKey = (userId: string, game: string | null) => `${game ?? ""}:${userId}`;
+
+function loadProfile(userId: string, game: string | null): Promise<PlayerProfile | null> {
+  const key = cardKey(userId, game);
+  let request = profileRequests.get(key);
   if (!request) {
-    request = fetch(`/api/players/${userId}`)
+    request = fetch(`/api/players/${userId}${game ? `?game=${encodeURIComponent(game)}` : ""}`)
       .then((response) => (response.ok ? response.json() : null))
       .then((body: { profile?: PlayerProfile } | null) => {
         const loaded = body?.profile ?? null;
-        profileCache.set(userId, loaded);
+        profileCache.set(key, loaded);
         return loaded;
       })
       .catch(() => {
-        profileRequests.delete(userId); // let a later open retry
+        profileRequests.delete(key); // let a later open retry
         return null;
       });
-    profileRequests.set(userId, request);
+    profileRequests.set(key, request);
   }
   return request;
 }
@@ -110,6 +116,7 @@ export default function PlayerProfilePopover({
   onClose,
   canViewPortfolio = false,
   receiptGame = null,
+  game = null,
   anchorRect = null,
 }: PlayerProfilePopoverProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -118,7 +125,7 @@ export default function PlayerProfilePopover({
   const anchorRef = useRef<HTMLSpanElement | null>(null);
   const [position, setPosition] = useState<{ left: number; top: number } | null>(null);
   const [copied, setCopied] = useState(false);
-  const [profile, setProfile] = useState<PlayerProfile | null>(() => profileCache.get(userId) ?? null);
+  const [profile, setProfile] = useState<PlayerProfile | null>(() => profileCache.get(cardKey(userId, game)) ?? null);
   const [portfolioOpen, setPortfolioOpen] = useState(false);
   const portfolioOpenRef = useRef(false);
   useEffect(() => {
@@ -126,16 +133,16 @@ export default function PlayerProfilePopover({
   }, [portfolioOpen]);
 
   useEffect(() => {
-    if (profileCache.has(userId)) return undefined;
+    if (profileCache.has(cardKey(userId, game))) return undefined;
     let cancelled = false;
     // Best effort: on failure the quick card simply stays.
-    void loadProfile(userId).then((loaded) => {
+    void loadProfile(userId, game).then((loaded) => {
       if (!cancelled && loaded) setProfile(loaded);
     });
     return () => {
       cancelled = true;
     };
-  }, [userId]);
+  }, [userId, game]);
 
   // Beside the row, kept inside the window; follows the row while the roster
   // scrolls and re-clamps once the full card (roles) has loaded.
@@ -329,6 +336,7 @@ export default function PlayerProfilePopover({
           name={name}
           handle={handle && !/^\d+$/.test(handle) ? handle : null}
           avatarUrl={avatar}
+          game={game}
           onClose={() => setPortfolioOpen(false)}
         />
       )}

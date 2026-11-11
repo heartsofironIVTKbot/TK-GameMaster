@@ -100,7 +100,29 @@ export default function ProfileApp() {
 
   return (
     <div className="min-h-screen w-full text-ink-100">
-      <SiteHeader page="profile" title="My profile" subtitle={server.name ? `Your record on ${server.name}` : "Your record"} />
+      <SiteHeader page="profile" title="My profile" subtitle={server.name ? `Your record on ${server.name}` : "Your record"}>
+        {/* Records are kept per server: pick whose to see. */}
+        {state.data.servers.length > 1 && (
+          <div className="gm-field">
+            <select
+              aria-label="Server"
+              value={server.id}
+              onChange={(event) => {
+                // A full reload: the page reads ?guild= once, when it loads.
+                // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+                window.location.href = `/profile?guild=${encodeURIComponent(event.target.value)}`;
+              }}
+            >
+              {state.data.servers.map((entry) => (
+                <option key={entry.id} value={entry.id}>
+                  {entry.name}
+                </option>
+              ))}
+              {!state.data.servers.some((entry) => entry.id === server.id) && <option value={server.id}>{server.name ?? "This server"}</option>}
+            </select>
+          </div>
+        )}
+      </SiteHeader>
 
       <main className="mx-auto max-w-[1300px] space-y-4 px-4 py-5 sm:px-6">
         <section

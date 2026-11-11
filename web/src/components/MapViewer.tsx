@@ -1713,6 +1713,7 @@ export default function MapViewer({
             onClose={() => setAvatarProfile(null)}
             canViewPortfolio={viewerIsHost}
             receiptGame={receiptGame}
+            game={selectedThread || null}
             anchorRect={avatarProfile.rect}
           />
         )}

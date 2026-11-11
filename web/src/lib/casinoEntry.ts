@@ -2,7 +2,8 @@ import { isCasinoGame } from "@/lib/casinoSettings";
 import { CASINO_DOWN_MESSAGE, CASINO_URL, casinoUp } from "@/lib/casinoStatus";
 import crypto from "node:crypto";
 import type { RowDataPacket } from "mysql2";
-import { HOME_GUILD_ID, isHomeGuild, playerRecords } from "@/lib/currentGuild";
+import { HOME_GUILD_ID, playerRecords } from "@/lib/currentGuild";
+import { hasCasino } from "@/lib/serverSettingsTypes";
 import type { Pool } from "mysql2/promise";
 import { getPool } from "@/lib/db";
 import { ironLegionRequired, ironLegionVerifyUrl, parseRequireIronLegion } from "@/lib/ironlegion";
@@ -78,7 +79,8 @@ export async function casinoEntry(gameKey: string, userId: string, username: str
   const data = json(game.game_data);
   if (!isCasinoGame(data)) return { status: "not_casino", map_url: map };
   const guildId = game.guild_id ? String(game.guild_id) : HOME_GUILD_ID;
-  if (!isHomeGuild(guildId)) {
+  // The Casino servers (TommyKay and its test server), whichever is home.
+  if (!hasCasino(guildId)) {
     return { status: "denied", title: "Not a Casino server", message: "The Casino is only for TommyKay's server.", map_url: map };
   }
 

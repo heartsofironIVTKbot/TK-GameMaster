@@ -694,6 +694,7 @@ export default function ReservationDrawer({
               onClose={() => setPopoverKey(null)}
               canViewPortfolio={canViewPortfolio}
               receiptGame={receiptGame}
+              game={selectedThread || null}
             />
           )}
         </div>
@@ -744,6 +745,7 @@ export default function ReservationDrawer({
                   onClose={() => setPopoverKey(null)}
                   canViewPortfolio={canViewPortfolio}
                   receiptGame={receiptGame}
+                  game={selectedThread || null}
                 />
               )}
           </div>

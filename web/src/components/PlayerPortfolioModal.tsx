@@ -58,12 +58,15 @@ export default function PlayerPortfolioModal({
   name,
   handle,
   avatarUrl,
+  game = null,
   onClose,
 }: {
   userId: string;
   name: string;
   handle: string | null;
   avatarUrl: string | null;
+  /** The game it's opened from: that game's server's record (else the host pages' server). */
+  game?: string | null;
   onClose: () => void;
 }) {
   const [portfolio, setPortfolio] = useState<PlayerPortfolio | null>(null);
@@ -71,7 +74,7 @@ export default function PlayerPortfolioModal({
 
   useEffect(() => {
     let cancelled = false;
-    fetch(`/api/players/${userId}/portfolio`, { cache: "no-store" })
+    fetch(`/api/players/${userId}/portfolio${game ? `?game=${encodeURIComponent(game)}` : ""}`, { cache: "no-store" })
       .then(async (response) => {
         const body = (await response.json().catch(() => null)) as
           | { portfolio?: PlayerPortfolio; error?: string }
@@ -86,7 +89,7 @@ export default function PlayerPortfolioModal({
     return () => {
       cancelled = true;
     };
-  }, [userId]);
+  }, [userId, game]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {

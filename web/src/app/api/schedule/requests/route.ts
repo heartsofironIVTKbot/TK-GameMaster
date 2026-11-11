@@ -50,6 +50,7 @@ import {
 } from "@/lib/gameControlValidation";
 import { notePresetUsed } from "@/lib/presetStore";
 import { HOME_ONLY_ADD_ONS, addOnLocked } from "@/lib/scheduleOptions";
+import { hasCasino } from "@/lib/serverSettingsTypes";
 import { botNationName } from "@/lib/botNation";
 import { moderationOptions } from "@/lib/playerIndex";
 import { getPool } from "@/lib/db";
@@ -62,10 +63,10 @@ async function gameModeOf(threadId: string): Promise<string | null> {
   return rows[0]?.mode ?? null;
 }
 
-/** The Casino is TommyKay's server's only (the bot checks too). */
+/** The Casino is the Casino servers' only (TommyKay and its test server; the bot checks too). */
 function homeOnlyRefusal(host: HostProfile, addOn: string | null | undefined): string | null {
   if (!addOn || !HOME_ONLY_ADD_ONS.has(addOn)) return null;
-  if (!host.home_server) return "The Casino add-on is only available on TommyKay's server.";
+  if (!hasCasino(host.guild_id)) return "The Casino add-on is only available on TommyKay's server.";
   // Not switched on yet: Host Management only (a test game).
   return addOnLocked(addOn, host.is_staff) ? "The Casino is currently unavailable." : null;
 }

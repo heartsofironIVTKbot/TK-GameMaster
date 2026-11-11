@@ -12,6 +12,8 @@ export interface MyProfileResponse {
   portfolio: PlayerPortfolio;
   /** Whose records these are (stats are kept per server). */
   server: { id: string; name: string | null };
+  /** Every server the player is on (member, or a record there), for the switcher. */
+  servers: { id: string; name: string }[];
   viewer: { discord_id: string; username: string; avatar_url: string | null };
   /** The AI's verdict on their recent analyzed games (newest first). */
   ai_results: ProfileAiResult[];
