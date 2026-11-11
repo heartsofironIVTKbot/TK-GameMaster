@@ -267,6 +267,10 @@ class GuildRuntime:
 
 
 _RUNTIMES: dict[int, GuildRuntime] = {}
+# Set once every server's settings have been read at startup. Until then each
+# server looks "not set up", so the website-request loop waits (a request
+# right after a restart failed with "isn't switched on" — 2026-11-11).
+_SERVER_SETTINGS_READY = False
 _RUNTIME_INSTALLED = False
 
 
@@ -30872,6 +30876,10 @@ def _audit_web_request(req: dict, action: str, result) -> None:
 async def web_schedule_request_loop():
     """Drain pending web calendar requests (oldest first)."""
     await bot.wait_until_ready()
+    # Right after a restart the servers' settings aren't read yet: every server
+    # would look "not set up". Leave requests pending until they are.
+    if not _SERVER_SETTINGS_READY:
+        return
     global _web_stale_lifecycle_checked
     if not _web_stale_lifecycle_checked:
         # A start / end / cancel cut off by a restart would stay "running"
@@ -34259,11 +34267,14 @@ async def _bootstrap_server_settings() -> None:
     except Exception as e:
         print(f"[WARN] guild presence sweep failed: {e}")
 
+    global _SERVER_SETTINGS_READY
+    settings_read = True
     try:
         rows = await _run_mysql_io(_load_all_guild_settings_mysql, label="guild settings read")
     except Exception as e:
         print(f"⚠️ Loading server settings failed — servers stay off until it works: {e}")
         rows = {}
+        settings_read = False
     home_row = rows.get(str(GUILD_ID))
     seeded = bool(home_row and home_row.get("settings"))
     for guild in list(bot.guilds):
@@ -34271,6 +34282,8 @@ async def _bootstrap_server_settings() -> None:
             _load_runtime_from_row(guild, rows.get(str(guild.id)))
         except Exception as e:
             print(f"⚠️ Settings for {guild.id} could not be applied: {e}")
+    if settings_read:
+        _SERVER_SETTINGS_READY = True
 
     # Hist Verified and the website's role ids for the home server; VIPs get Hist Verified once.
     with guild_scope(GUILD_ID):
@@ -34348,7 +34361,7 @@ async def guild_settings_loop():
     runtime, post what changed to its host log, and switch servers on when
     their setup is finished. Also refresh every server's snapshot now and
     then (Host Management membership decides who may edit settings)."""
-    global _last_snapshot_sweep
+    global _last_snapshot_sweep, _SERVER_SETTINGS_READY
     await bot.wait_until_ready()
     try:
         rows = await _run_mysql_io(_settings_versions_mysql, label="guild settings versions")
@@ -34398,6 +34411,8 @@ async def guild_settings_loop():
                         print(f"[WARN] settings change notice failed: {e}")
         except Exception as e:
             print(f"⚠️ Applying new settings for {guild.id} failed: {e}")
+    # Every server's settings are applied now (catches up a failed startup read).
+    _SERVER_SETTINGS_READY = True
     if time.time() - _last_snapshot_sweep > GUILD_SNAPSHOT_REFRESH_MIN * 60:
         _last_snapshot_sweep = time.time()
         for guild in list(bot.guilds):
