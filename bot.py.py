@@ -387,10 +387,12 @@ RECEIPT_VIEW_TOKEN_TTL_SEC = 60 * 60 * 24 * 3  # 3 days (Niko, 2026-11-11; was 2
 # Production web-app origin. All generated access links use the format
 # `{BASE_URL}/?token=<TOKEN>` (override via the BASE_URL env var).
 BASE_URL = os.getenv("BASE_URL", "https://tkcasino.online").rstrip("/")
-# Web Host Calendar (the map web app's /schedule page) — where /schedule and
-# the pinned schedule board send hosts. Set HOST_CALENDAR_URL when the map
-# site is not hosted on BASE_URL.
-HOST_CALENDAR_URL = os.getenv("HOST_CALENDAR_URL", f"{BASE_URL}/schedule").rstrip("/")
+# The GameMaster website (map, calendar, games, database, attendance). Not
+# BASE_URL: that's the Casino site (tkcasino.online).
+WEB_SITE_URL = os.getenv("WEB_SITE_URL", "https://hoi4gamemaster.online").rstrip("/")
+# Web Host Calendar — where the Host Panel sends hosts (2026-11-11: it used to
+# default to the Casino site's /schedule, which doesn't exist).
+HOST_CALENDAR_URL = os.getenv("HOST_CALENDAR_URL", f"{WEB_SITE_URL}/schedule").rstrip("/")
 _web_access_tokens: Dict[str, Tuple[int, float]] = {}
 
 # Casino Access Panel channel — /spawn_panel refuses to spawn the casino panel
@@ -15593,8 +15595,7 @@ ATTENDANCE_REQUIRED_PRESENT = 2
 # only gets a link — no Participation Tracker, Multi-Snapshot Complete or
 # Advanced Log Tracker messages. Set False to bring the thread panels back.
 ATTENDANCE_WEB_ONLY = True
-# The map web app (it hosts /schedule, /database and /attendance).
-WEB_SITE_URL = os.getenv("WEB_SITE_URL", HOST_CALENDAR_URL.rsplit("/schedule", 1)[0]).rstrip("/")
+# The map web app (it hosts /schedule, /database and /attendance): WEB_SITE_URL, near BASE_URL.
 
 
 def _map_game_url(thread_id) -> str:
@@ -25746,7 +25747,7 @@ _SCHEDULE_STATUS_EMOJI = {
 # settings ("Post / re-post the panel"), which removes the old one.
 SCHEDULE_PANEL_KEY = "schedule_panel"  # bot_config: {"channel_id", "message_id", "version"}
 # Raise when the panel's text or buttons change: older panels are re-posted on start.
-SCHEDULE_PANEL_VERSION = 2
+SCHEDULE_PANEL_VERSION = 3  # 3: the Calendar button went to the Casino site
 
 
 def _schedule_panel_embed() -> discord.Embed:
