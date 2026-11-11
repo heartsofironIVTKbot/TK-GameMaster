@@ -77,6 +77,8 @@ export interface SetupForm {
   date: string;
   time: string;
   loggingMode: LoggingMode;
+  /** The host's note under the announcement's map link ("" = none). */
+  description: string;
   addOn: string | null;
   majorLevel: LockLevel;
   minorLevel: LockLevel;
@@ -173,6 +175,7 @@ export function initialForm(date: string): SetupForm {
     date,
     time: "20:00",
     loggingMode: "Strict",
+    description: "",
     addOn: null,
     majorLevel: "Trusted",
     minorLevel: "All Users",
@@ -250,6 +253,7 @@ export function formFromSettings(settings: SlotSettings, timeZone: string): Setu
   form.mode = settings.mode;
   form.time = timeInZone(gameSec * 1000, timeZone);
   form.loggingMode = settings.logging_mode === "Casual" ? "Casual" : "Strict";
+  form.description = settings.description ?? "";
   // (A switched-off add-on only arrives here on Host Management's test game: currentAddOn.)
   form.addOn = settings.add_on && ADD_ON_VALUES.has(settings.add_on) ? settings.add_on : null;
   form.majorLevel = isLockLevel(settings.major_lock_level) ? settings.major_lock_level : "Trusted";
@@ -410,6 +414,7 @@ export function deriveSetup(form: SetupForm, context: SetupContext): DerivedSetu
     ...timeFields,
     mode: form.mode,
     logging_mode: form.loggingMode,
+    description: form.description.trim(),
     add_on: form.addOn,
     major_lock_level: form.majorLevel,
     minor_lock_level: form.minorLevel,

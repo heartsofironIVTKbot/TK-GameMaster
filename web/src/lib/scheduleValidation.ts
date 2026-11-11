@@ -187,6 +187,14 @@ export function validateSchedulePayload(raw: unknown, nowSec: number): Validatio
 
   const { game_timestamp: gameTs, day, week, timezone } = checkTime(input, nowSec, issue);
 
+  // The host's note under the announcement's map link (the bot cleans it the same way).
+  const rawDescription = typeof input.description === "string" ? input.description.replace(/\r\n?/g, "\n").trim() : "";
+  if (rawDescription.length > GAME_DESCRIPTION_MAX) {
+    issue("announce", `The description can be at most ${GAME_DESCRIPTION_MAX} characters.`);
+  }
+  if (rawDescription.split("\n").length > GAME_DESCRIPTION_MAX_LINES) {
+    issue("announce", `The description can be at most ${GAME_DESCRIPTION_MAX_LINES} lines.`);
+  }
   const loggingMode = input.logging_mode;
   if (loggingMode !== "Strict" && loggingMode !== "Casual") {
     issue("extras", "Pick a logging mode.");
@@ -352,6 +360,7 @@ export function validateSchedulePayload(raw: unknown, nowSec: number): Validatio
       week,
       timezone,
       logging_mode: loggingMode as SchedulePayload["logging_mode"],
+      description: rawDescription,
       add_on: addOn as string | null,
       major_lock_level: majorLevel as LockLevel,
       minor_lock_level: minorLevel as LockLevel,
@@ -373,6 +382,10 @@ export function validateSchedulePayload(raw: unknown, nowSec: number): Validatio
     },
   };
 }
+
+/** The host's note under the announcement (bot: GAME_DESCRIPTION_MAX / _MAX_LINES). */
+export const GAME_DESCRIPTION_MAX = 400;
+export const GAME_DESCRIPTION_MAX_LINES = 6;
 
 /** Add-ons that hand out nations by luck — they can't be drafts (bot: DRAFT_BLOCKED_ADDONS). */
 export const DRAFT_BLOCKED_ADDONS = new Set(["randomizer"]);

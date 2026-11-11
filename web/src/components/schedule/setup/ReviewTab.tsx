@@ -223,6 +223,8 @@ export default function ReviewTab({
           <dd className="text-ink-200">{form.loggingMode}</dd>
           <dt className="text-ink-500">Reminder</dt>
           <dd className="text-ink-200">{form.autoReminder ? `On, code ${form.checksum}` : "Off"}</dd>
+          <dt className="text-ink-500">Description</dt>
+          <dd className="whitespace-pre-wrap break-words text-ink-200">{form.description.trim() || "None"}</dd>
         </dl>
       </SectionCard>}
     </div>

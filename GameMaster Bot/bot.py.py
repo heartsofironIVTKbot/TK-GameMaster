@@ -26118,12 +26118,14 @@ async def _check_scheduled_announcements_for_guild():
             bell = await _announce_bell(announce_channel)
             announcement_content = (
                 f"# {bell} Game Announcement {bell}\n"
-                f"||{ping_mention}||{addon_line}\n"
+                f"||{ping_mention}||{addon_line}\n\n"
                 f"**:clock4: <t:{game_timestamp}:F> (<t:{game_timestamp}:R>)**\n"
                 f"**:video_game: Host - {host.mention}**\n"
                 f"**:pencil: __MAP_LINK__**"
                 # (No IronLegion line, Niko 2026-11-09: the map tells players
                 # who must authenticate, with the link, when they try.)
+                # The host's note (game setup → Description), after one empty line.
+                f"{_announcement_description_block(item.get('description'))}"
             )
             # No reservation thread any more: the game is saved under the
             # announcement post's id, and players reserve on the website.
@@ -26185,6 +26187,7 @@ async def _check_scheduled_announcements_for_guild():
                 "randomizer_reroll_count": {},
                 "submod": addon_value if submod else None,
                 "logging_mode": item.get("logging_mode", "Strict"),
+                "description": _clean_game_description(item.get("description")),
                 "start_timestamp": game_timestamp,
                 "automatic_reminder": bool(item.get("automatic_reminder")),
                 "scheduled_checksum": item.get("scheduled_checksum"),
@@ -28624,6 +28627,7 @@ async def _build_web_schedule_fields(payload: dict, keep_day: tuple | None = Non
         "week": week_key,
         "game_timestamp": g_time,
         "logging_mode": logging_mode,
+        "description": _clean_game_description(payload.get("description")),
         "automated_unlock": automated_unlock,
         "automated_unlocks": automated_unlocks,
         "add_on": add_on,
@@ -28760,13 +28764,58 @@ def _shift_pending_unlocks(container: dict, delta: int) -> None:
             group["release_timestamp"] = int(group["release_timestamp"]) + delta
 
 
+# A host's note for the announcement (game setup → Description), shown under
+# the map link. Plain text; @everyone / @here / user and role mentions are
+# defused so a note can never ping anyone.
+GAME_DESCRIPTION_MAX = 400
+GAME_DESCRIPTION_MAX_LINES = 6
+
+
+def _clean_game_description(raw) -> str:
+    text = str(raw or "").replace("\r\n", "\n").replace("\r", "\n")
+    lines = [line.strip() for line in text.split("\n")]
+    # No runs of empty lines, none at the ends.
+    out = []
+    for line in lines:
+        if not line and (not out or not out[-1]):
+            continue
+        out.append(line)
+    while out and not out[-1]:
+        out.pop()
+    text = "\n".join(out[:GAME_DESCRIPTION_MAX_LINES])[:GAME_DESCRIPTION_MAX].strip()
+    text = re.sub(r"@(everyone|here)", "@\u200b\\1", text)
+    return re.sub(r"<@([!&]?\d+)>", "<@\u200b\\1>", text)
+
+
+def _announcement_description_block(description) -> str:
+    """The note under the map link: one empty line, then a ❗ quote."""
+    text = _clean_game_description(description)
+    if not text:
+        return ""
+    lines = text.split("\n")
+    return "\n\n" + "\n".join(("> ❗ " if i == 0 else "> ") + line for i, line in enumerate(lines))
+
+
+def _replace_announcement_description(content: str, description) -> str:
+    """Swap the note after the map-link line ("**:pencil: …**") for this one."""
+    marker = content.find("**:pencil:")
+    if marker < 0:
+        return content
+    end = content.find("\n", marker)
+    head = content if end < 0 else content[:end]
+    # The Casino-down line (_switch_announcement_to_map) stays at the end.
+    down = "\n⚠️ *The Casino is down: reserve on the map instead.*"
+    tail = down if down in content[len(head):] else ""
+    return head + _announcement_description_block(description) + tail
+
+
 async def _refresh_announcement_after_edit(game: dict, thread_id: str, changes: dict, day: str) -> None:
     """Rewrite the public announcement + thread name after a day/time/host
     change (what /edit_announcement used to do)."""
     mode = game.get("mode", "Game")
     message_id = game.get("announcement_message_id")
     channel_id = game.get("announcement_channel_id") or (MODE_CONFIG.get(mode) or {}).get("announcement_channel_id")
-    if message_id and channel_id and ("time" in changes or "host" in changes):
+    if message_id and channel_id and ("time" in changes or "host" in changes or "description" in changes):
         try:
             channel = bot.get_channel(int(channel_id)) or await bot.fetch_channel(int(channel_id))
             message = await channel.fetch_message(int(message_id))
@@ -28775,8 +28824,10 @@ async def _refresh_announcement_after_edit(game: dict, thread_id: str, changes: 
                 content = re.sub(r"<t:\d+:", f"<t:{changes['time']['new']}:", content)
             if "host" in changes:
                 content = content.replace(f"<@{changes['host']['old']}>", f"<@{changes['host']['new']}>")
+            if "description" in changes:
+                content = _replace_announcement_description(content, changes["description"]["new"])
             if content != message.content:
-                await message.edit(content=content)
+                await message.edit(content=content, suppress=True)
         except Exception as e:
             print(f"[WARN] web edit: could not update announcement for {thread_id}: {e}")
     if "time" in changes or "day" in changes:
@@ -28832,6 +28883,11 @@ async def _web_edit_announced_slot(slot: dict, payload: dict, requester, new_hos
         changes["day"] = {"old": old_day, "new": new_day}
     if new_host is not None and new_host.id != old_host_id:
         changes["host"] = {"old": old_host_id, "new": new_host.id}
+    if "description" in payload:
+        new_description = _clean_game_description(payload.get("description"))
+        old_description = _clean_game_description(game.get("description", slot.get("description")))
+        if new_description != old_description:
+            changes["description"] = {"old": old_description, "new": new_description}
     if not changes:
         return True, {"slot_id": slot_id}, None
     if "time" in changes:
@@ -28848,6 +28904,8 @@ async def _web_edit_announced_slot(slot: dict, payload: dict, requester, new_hos
     _shift_pending_unlocks(game, delta)
     if "host" in changes:
         game["host_id"] = new_host.id
+    if "description" in changes:
+        game["description"] = changes["description"]["new"]
     await _refresh_announcement_after_edit(game, thread_id, changes, new_day)
     await write_json(GAMES_FILE, games_data)
 
@@ -28861,12 +28919,16 @@ async def _web_edit_announced_slot(slot: dict, payload: dict, requester, new_hos
                 if "host" in changes:
                     item["host_id"] = new_host.id
                     item["host_username"] = new_host.name or str(new_host.id)
+                if "description" in changes:
+                    item["description"] = changes["description"]["new"]
                 break
         await write_json(SCHEDULE_FILE, schedule_data)
 
     schedule_reservation_update(int(thread_id))
     guild = bot.get_guild(cur_gid())
-    notified = await _dm_reservation_schedule_changes(guild, game, thread_id, changes) if guild else 0
+    # Players hear about a new day, time or host; a changed note isn't worth a DM.
+    dm_changes = {key: value for key, value in changes.items() if key != "description"}
+    notified = await _dm_reservation_schedule_changes(guild, game, thread_id, dm_changes) if guild and dm_changes else 0
     _audit_log(
         "INFO",
         f"web edit (announced) slot={slot_id} thread={thread_id} by={requester.id} "

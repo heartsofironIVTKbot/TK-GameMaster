@@ -264,6 +264,8 @@ export interface SlotSettings {
   game_timestamp: number;
   announce_timestamp: number | null;
   logging_mode: string;
+  /** The host's note under the announcement's map link (bot: _announcement_description_block). */
+  description: string | null;
   add_on: string | null;
   major_lock_level: string;
   minor_lock_level: string;
@@ -320,6 +322,8 @@ export interface SchedulePayload {
   /** Host's IANA zone (audit trail only — the timestamp is already UTC). */
   timezone: string;
   logging_mode: LoggingMode;
+  /** The host's note under the announcement's map link ("" = none; at most 400 characters, 6 lines). */
+  description: string;
   add_on: string | null;
   major_lock_level: LockLevel;
   minor_lock_level: LockLevel;

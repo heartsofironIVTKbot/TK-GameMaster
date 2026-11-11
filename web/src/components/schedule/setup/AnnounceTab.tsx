@@ -1,7 +1,8 @@
 "use client";
 
-import { CalendarClock, Eye, Info, Megaphone, Timer, Zap, type LucideIcon } from "lucide-react";
+import { CalendarClock, Eye, Info, Megaphone, StickyNote, Timer, Zap, type LucideIcon } from "lucide-react";
 import { HOURS_BEFORE_PRESETS, addOnOption, modeOption } from "@/lib/scheduleOptions";
+import { GAME_DESCRIPTION_MAX, GAME_DESCRIPTION_MAX_LINES } from "@/lib/scheduleValidation";
 import type { HostProfile } from "@/lib/scheduleTypes";
 import {
   formatDurationMinutes,
@@ -35,6 +36,7 @@ export default function AnnounceTab({
   host: HostProfile;
 }) {
   const maxHours = Math.max(1, Math.min(72, Math.floor((derived.gameSec - nowSec) / 3600)));
+  const descriptionTooLong = form.description.trim().split("\n").length > GAME_DESCRIPTION_MAX_LINES;
   return (
     <div className="space-y-3">
       <SectionCard icon={Megaphone} title="Announcement" subtitle="When the bot posts the game in Discord.">
@@ -128,6 +130,32 @@ export default function AnnounceTab({
         </p>
       </SectionCard>
 
+      <SectionCard
+        icon={StickyNote}
+        title="Description"
+        subtitle="Optional. A note or disclaimer under Reserve Here in the announcement."
+      >
+        <textarea
+          value={form.description}
+          onChange={(event) => update({ description: event.target.value.slice(0, GAME_DESCRIPTION_MAX) })}
+          maxLength={GAME_DESCRIPTION_MAX}
+          rows={3}
+          placeholder="e.g. Mods updated: re-download before joining."
+          aria-label="Announcement description"
+          className="gm-input w-full resize-y text-sm"
+        />
+        <p className={`mt-1 flex justify-between text-[11px] ${descriptionTooLong ? "text-rose-300" : "text-ink-500"}`}>
+          <span>
+            {descriptionTooLong
+              ? `At most ${GAME_DESCRIPTION_MAX_LINES} lines.`
+              : "Shown with a ❗ after an empty line. @everyone, @here and mentions won't ping."}
+          </span>
+          <span className="tabular-nums">
+            {form.description.length}/{GAME_DESCRIPTION_MAX}
+          </span>
+        </p>
+      </SectionCard>
+
       <DiscordPreview form={form} derived={derived} timeZone={timeZone} host={host} />
     </div>
   );
@@ -180,7 +208,8 @@ function DiscordPreview({
           </p>
           {form.addOn && <p className="font-bold">{addOn.emoji} {addOn.label.toUpperCase()}</p>}
           {form.draft && <p className="font-bold">🎯 DRAFT GAME</p>}
-          <p className="font-bold">
+          {/* An empty line between the ping and the time (bot: "\n\n"). */}
+          <p className="mt-[1.6em] font-bold">
             🕓{" "}
             <span className="rounded bg-[#3f4147] px-1">
               {formatInZone(gameMs, timeZone, {
@@ -207,6 +236,21 @@ function DiscordPreview({
               {form.draft ? "Join the Draft Here" : form.addOn === "randomizer" ? "Roll at the Casino" : "Reserve Here"}
             </span>
           </p>
+          {/* The host's note: an empty line, then a ❗ quote (bot: _announcement_description_block). */}
+          {form.description.trim() && (
+            <div className="mt-[1.6em] border-l-4 border-[#4e5058] pl-3">
+              {form.description
+                .trim()
+                .split("\n")
+                .slice(0, GAME_DESCRIPTION_MAX_LINES)
+                .map((line, index) => (
+                  <p key={index} className="min-h-[1.6em] whitespace-pre-wrap break-words">
+                    {index === 0 ? "❗ " : ""}
+                    {line}
+                  </p>
+                ))}
+            </div>
+          )}
           {!mode && <p className="mt-1 text-[#949ba4]">Pick a game mode</p>}
         </div>
       </div>
