@@ -28090,17 +28090,29 @@ def _replace_web_host_roster_mysql(rows: list) -> None:
                 pass
 
 
-def _fetch_pending_web_schedule_requests_mysql(limit: int = 20) -> list:
+def _fetch_pending_web_schedule_requests_mysql(guild_ids=None, limit: int = 20) -> list:
+    """The oldest waiting requests, only for the servers GameMaster is in
+    (`guild_ids`; None = any): requests for a server it isn't in (yet) stay
+    pending and never block the others. Rows without a server are the home
+    server's."""
     conn = None
     cursor = None
     try:
         conn = _db_get_connection()
         cursor = conn.cursor(dictionary=True)
+        where, params = "status = 'pending'", []
+        if guild_ids is not None:
+            ids = [str(g) for g in guild_ids]
+            if not ids:
+                return []
+            where += f" AND (guild_id IN ({', '.join(['%s'] * len(ids))})"
+            where += " OR guild_id IS NULL)" if str(GUILD_ID) in ids else ")"
+            params.extend(ids)
         cursor.execute(
             "SELECT request_id, action, slot_id, host_id, payload, created_at, guild_id "
-            "FROM web_schedule_requests WHERE status = 'pending' "
+            f"FROM web_schedule_requests WHERE {where} "
             "ORDER BY created_at ASC LIMIT %s",
-            (int(limit),),
+            (*params, int(limit)),
         )
         rows = cursor.fetchall()
         for row in rows:
@@ -30860,9 +30872,6 @@ def _audit_web_request(req: dict, action: str, result) -> None:
 async def web_schedule_request_loop():
     """Drain pending web calendar requests (oldest first)."""
     await bot.wait_until_ready()
-    # Without the guild every host check would fail — leave requests pending.
-    if bot.get_guild(cur_gid()) is None:
-        return
     global _web_stale_lifecycle_checked
     if not _web_stale_lifecycle_checked:
         # A start / end / cancel cut off by a restart would stay "running"
@@ -30876,13 +30885,19 @@ async def web_schedule_request_loop():
             print(f"⚠️ stale web lifecycle check failed: {e}")
     try:
         pending = await _run_mysql_io(
-            _fetch_pending_web_schedule_requests_mysql, label="web schedule requests read"
+            _fetch_pending_web_schedule_requests_mysql, [g.id for g in bot.guilds], label="web schedule requests read"
         )
     except Exception as e:
         print(f"⚠️ web_schedule_request_loop read error: {e}")
         return
     for req in pending or []:
         action = str(req.get("action") or "")
+        # Without the request's server every host check would fail: leave it
+        # pending until GameMaster is in that server. (This used to check the
+        # home server once for everything, so no request ran at all while the
+        # bot wasn't in its home server — 2026-11-11.)
+        if bot.get_guild(_as_gid(req.get("guild_id"))) is None:
+            continue
         # Each request is for one server (the column; older rows: the home server).
         scope_token = _CURRENT_GUILD.set(_as_gid(req.get("guild_id")))
         web_token = _AUDIT_IN_WEB_REQUEST.set(True)
@@ -32499,6 +32514,9 @@ async def host_override_sync_loop():
             action = str(row.get("action") or "none")
             if not request_id:
                 continue
+            # The game's own server (its players are looked up there), not the home server.
+            _, scope_game = _find_game_entry(_all_games(), str(row.get("game_id") or ""))
+            scope_token = _CURRENT_GUILD.set(_game_guild_id(scope_game) if scope_game else GUILD_ID)
             try:
                 if action == "dm":
                     await _handle_override_dm_request(row)
@@ -32507,6 +32525,7 @@ async def host_override_sync_loop():
             except Exception as handler_err:
                 print(f"[WARN] host override handler failed ({action}): {handler_err}")
             finally:
+                _CURRENT_GUILD.reset(scope_token)
                 try:
                     await _run_mysql_io(
                         _mark_override_request_processed, request_id,

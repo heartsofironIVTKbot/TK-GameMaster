@@ -5,6 +5,7 @@ import { getPool, DatabaseConfigError } from "@/lib/db";
 import { demoLobbies } from "@/lib/liveDemo";
 import { gameGuildOf, isSchedulerDemo } from "@/lib/scheduleStore";
 import { mapAccessFor } from "@/lib/mapAccess";
+import { UNSTARTED_GAME_CLOSES_AFTER_SEC } from "@/lib/gameWindow";
 
 /**
  * GET /api/games[?game=<thread id>]
@@ -54,16 +55,22 @@ export async function GET(request: NextRequest) {
     }
 
     const pool = getPool();
-    const startedSince = Math.floor(Date.now() / 1000) - STARTED_WINDOW_SEC;
+    const nowSec = Math.floor(Date.now() / 1000);
+    const startedSince = nowSec - STARTED_WINDOW_SEC;
+    // Never started and its time long gone: closed (lib/gameWindow.ts).
+    const unstartedSince = nowSec - UNSTARTED_GAME_CLOSES_AFTER_SEC;
     const [rows] = await pool.query<GameRow[]>(
       // host_id as text: snowflakes exceed 2^53 and would be rounded.
       `SELECT thread_id, mode, status, thread_name, game_started, CAST(host_id AS CHAR) AS host_id, start_timestamp
        FROM games
        WHERE guild_id = ? AND (status IS NULL OR status NOT IN ('ended', 'cancelled'))
-         AND (game_started = 0 OR COALESCE(start_timestamp, 0) >= ?)
+         AND (
+           (game_started = 0 AND (start_timestamp IS NULL OR start_timestamp = 0 OR start_timestamp >= ?))
+           OR (game_started <> 0 AND COALESCE(start_timestamp, 0) >= ?)
+         )
        ORDER BY game_started ASC, updated_at DESC
        LIMIT 50`,
-      [guildId, startedSince],
+      [guildId, unstartedSince, startedSince],
     );
     return NextResponse.json({ games: rows });
   } catch (error) {

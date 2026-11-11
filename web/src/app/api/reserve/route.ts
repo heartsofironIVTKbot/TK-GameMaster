@@ -10,6 +10,7 @@ import { demoLobbyState } from "@/lib/liveDemo";
 import { liveHub } from "@/lib/live/hub";
 import { accessDenied, mapAccessFor } from "@/lib/mapAccess";
 import { coopPromotions } from "@/lib/coopPromote";
+import { unstartedGamePassed } from "@/lib/gameWindow";
 import { recordAudit } from "@/lib/auditLog";
 import { lobbySnapshot, lobbyVersion, versionOf } from "@/lib/lobbySnapshot";
 import { memberRoleIds } from "@/lib/memberRoles";
@@ -65,6 +66,7 @@ interface GamesRow extends RowDataPacket {
   mode: string | null;
   status: string | null;
   game_started: number | boolean;
+  start_timestamp?: number | null;
   game_data: unknown;
 }
 
@@ -316,6 +318,11 @@ export async function POST(request: NextRequest) {
     if (game.game_started || ["ended", "cancelled"].includes(game.status ?? "")) {
       await connection.rollback();
       return jsonError("Reservations are closed — this game has started or ended", 409);
+    }
+    // Announced, never started, and its time long gone (lib/gameWindow.ts).
+    if (unstartedGamePassed(game.start_timestamp)) {
+      await connection.rollback();
+      return jsonError("Reservations are closed — this game's time has passed", 409);
     }
     if (gameData.lockdown) {
       await connection.rollback();
