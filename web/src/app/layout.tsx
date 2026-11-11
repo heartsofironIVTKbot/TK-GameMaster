@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Big_Shoulders, Big_Shoulders_Stencil, Geist_Mono, Public_Sans } from "next/font/google";
 import { Suspense } from "react";
 import SkyBackground from "@/components/site/SkyBackground";
+import DiscordAppLinks from "@/components/site/DiscordAppLinks";
 import TutorialProvider from "@/components/tutorial/TutorialProvider";
 import "./globals.css";
 
@@ -46,6 +47,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <SkyBackground />
         </Suspense>
         <TutorialProvider>{children}</TutorialProvider>
+        {/* discord.com message / channel links open the Discord app. */}
+        <DiscordAppLinks />
       </body>
     </html>
   );
