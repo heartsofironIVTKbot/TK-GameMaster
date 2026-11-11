@@ -31,7 +31,7 @@ export interface HostProfile {
   booking_days: Record<HostBranch, number | null> | null;
   /** The server the host pages are on (header server switcher). */
   guild_id: string;
-  /** That server is TommyKay's (the home server): the Casino and Fortunes of War add-ons. */
+  /** That server is TommyKay's (the home server): the Casino add-on. */
   home_server: boolean;
   /** Every server the viewer hosts in (the switcher's list). */
   servers: HostServer[];
@@ -157,8 +157,6 @@ export type RequestAction =
   | "casino_roll"
   | "casino_extra"
   | "casino_emergency_unreserve"
-  | "fortunes_redraw"
-  | "fortunes_reset"
   | "casino_fallback"
   | "moderation"
   | "dishonored"
@@ -267,7 +265,6 @@ export interface SlotSettings {
   announce_timestamp: number | null;
   logging_mode: string;
   add_on: string | null;
-  fortunes_mode: string | null;
   major_lock_level: string;
   minor_lock_level: string;
   automated_unlock: boolean;
@@ -324,7 +321,6 @@ export interface SchedulePayload {
   timezone: string;
   logging_mode: LoggingMode;
   add_on: string | null;
-  fortunes_mode: "casual" | "competitive" | null;
   major_lock_level: LockLevel;
   minor_lock_level: LockLevel;
   /** When the bot announces it (required for new games; null only on older games). */
@@ -350,7 +346,7 @@ export interface SchedulePayload {
   draft: DraftSettings | null;
   /** Casino games: the rooms, re-rolls and step-down, in the Casino's format; null for other games. */
   casino_settings: CasinoConfig | null;
-  /** Casino / Fortunes games: hosts who help run it (Discord ids); empty for other games. */
+  /** Casino games: hosts who help run it (Discord ids); empty for other games. */
   co_hosts: string[];
 }
 

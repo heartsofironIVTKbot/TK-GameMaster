@@ -8,7 +8,7 @@ import { CardTitle } from "./labels";
 import { useBotRequest } from "./useBotRequest";
 
 /**
- * Casino and Fortunes of War games, before they start (docs/casino-integration.md,
+ * Casino games, before they start (docs/casino-integration.md,
  * step 8): is tkcasino.online answering, and, for the game's host or Host
  * Management, the way out if it stays down: switch the game to normal
  * reserving on the map. Nations already picked stay.
@@ -17,7 +17,7 @@ export default function CasinoFallbackCard({ game, onChanged }: { game: GameCont
   const [up, setUp] = useState<boolean | null>(null);
   const [confirming, setConfirming] = useState(false);
   const request = useBotRequest(onChanged);
-  const label = game.add_on === "fortunes" ? "Fortunes of War" : "Casino";
+  const label = "Casino";
 
   const check = useCallback(async () => {
     const response = await fetch("/api/casino/status", { cache: "no-store" }).catch(() => null);
@@ -52,9 +52,7 @@ export default function CasinoFallbackCard({ game, onChanged }: { game: GameCont
         )}
       </CardTitle>
       <p className="text-xs text-ink-400">
-        {game.add_on === "fortunes"
-          ? "Players reserve on the map, then draw their card on tkcasino.online."
-          : "Players roll their nation on tkcasino.online; each pick shows on the map at once."}{" "}
+        Players roll their nation on tkcasino.online; each pick shows on the map at once.{" "}
         {up === false && "Players who open it now are told it's down and to try again soon."}
       </p>
       {done ? (

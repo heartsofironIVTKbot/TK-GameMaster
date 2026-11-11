@@ -199,11 +199,6 @@ export function validateSchedulePayload(raw: unknown, nowSec: number): Validatio
   // Not-yet-live add-ons: the route refuses them for anyone but Host Management (addOnLocked).
   const casino = typeof addOn === "string" && Boolean(addOnOption(addOn).casino);
 
-  let fortunesMode: SchedulePayload["fortunes_mode"] = null;
-  if (addOn === "fortunes") {
-    fortunesMode = input.fortunes_mode === "competitive" ? "competitive" : "casual";
-  }
-
   const majorLevel = input.major_lock_level;
   const minorLevel = input.minor_lock_level;
   if (!isLockLevel(majorLevel) || !isLockLevel(minorLevel)) {
@@ -340,9 +335,9 @@ export function validateSchedulePayload(raw: unknown, nowSec: number): Validatio
       issue("extras", "The Casino's access step-down can be at most 30 days before the game.");
     }
   }
-  // Casino and Fortunes games can have co-hosts.
+  // Casino games can have co-hosts.
   const coHosts =
-    addOn === "randomizer" || addOn === "fortunes"
+    addOn === "randomizer"
       ? [...new Set((Array.isArray(input.co_hosts) ? input.co_hosts : []).map(String).filter((id) => /^\d{15,25}$/.test(id)))]
       : [];
   if (coHosts.length > MAX_CO_HOSTS) issue("extras", `A game can have at most ${MAX_CO_HOSTS} co-hosts.`);
@@ -358,7 +353,6 @@ export function validateSchedulePayload(raw: unknown, nowSec: number): Validatio
       timezone,
       logging_mode: loggingMode as SchedulePayload["logging_mode"],
       add_on: addOn as string | null,
-      fortunes_mode: fortunesMode,
       major_lock_level: majorLevel as LockLevel,
       minor_lock_level: minorLevel as LockLevel,
       announce_timestamp: announceTs,
@@ -381,7 +375,7 @@ export function validateSchedulePayload(raw: unknown, nowSec: number): Validatio
 }
 
 /** Add-ons that hand out nations by luck — they can't be drafts (bot: DRAFT_BLOCKED_ADDONS). */
-export const DRAFT_BLOCKED_ADDONS = new Set(["randomizer", "fortunes"]);
+export const DRAFT_BLOCKED_ADDONS = new Set(["randomizer"]);
 
 /** Draft settings of a scheduled game (null = a normal game). */
 export function validateDraftSettings(
@@ -391,7 +385,7 @@ export function validateDraftSettings(
   if (raw === null || raw === undefined || raw === false) return { ok: true, value: null };
   const input = asRecord(raw);
   if (addOn && DRAFT_BLOCKED_ADDONS.has(addOn)) {
-    return { ok: false, error: "Draft games can't use the Casino, Fortunes of War or All Add-ons add-ons." };
+    return { ok: false, error: "Draft games can't use the Casino add-on." };
   }
   const rawTeams = Array.isArray(input.teams) ? input.teams : [];
   if (rawTeams.length !== 2) return { ok: false, error: "A draft needs exactly two teams." };

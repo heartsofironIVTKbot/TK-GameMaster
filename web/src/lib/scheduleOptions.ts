@@ -105,16 +105,16 @@ export interface AddOnOption {
 }
 
 /**
- * The Casino and Fortunes of War (TommyKay only; docs/casino-integration.md).
+ * The Casino (TommyKay only; docs/casino-integration.md).
  * Switch on for every host here and with CASINO_ADDONS_LIVE in the bot. Until
- * then Host Management can still schedule them (a test game; ExtrasTab), and
- * the local dev server can always pick them.
+ * then Host Management can still schedule it (a test game; ExtrasTab), and
+ * the local dev server can always pick it.
  */
 export const CASINO_ADDONS_LIVE = false;
 const CASINO_READY = CASINO_ADDONS_LIVE || process.env.NODE_ENV === "development";
 
 /** Add-ons only TommyKay's server (the home server) can use. */
-export const HOME_ONLY_ADD_ONS = new Set(["randomizer", "fortunes"]);
+export const HOME_ONLY_ADD_ONS = new Set(["randomizer"]);
 
 export const ADD_ONS: AddOnOption[] = [
   { value: null, label: "No add-on", emoji: "✨", description: "Standard game — players reserve on the map." },
@@ -126,13 +126,6 @@ export const ADD_ONS: AddOnOption[] = [
     casino: true,
     unavailable: !CASINO_READY,
   },
-  {
-    value: "fortunes",
-    label: "Fortunes of War",
-    emoji: "🃏",
-    description: CASINO_READY ? "Players draw power-up cards on tkcasino.online." : "Currently unavailable.",
-    unavailable: !CASINO_READY,
-  },
   { value: "zombies", label: "Zombies", emoji: "🧟", description: "Submod required." },
   { value: "leviathan", label: "Leviathan", emoji: "🔱", description: "Submod required." },
 ];
@@ -140,13 +133,14 @@ export const ADD_ONS: AddOnOption[] = [
 /**
  * Removed add-ons (bot.py.py _RETIRED_ADDONS): games scheduled with them keep
  * their slot. All Add-ons becomes Casino (its reserving part); Tommy's
- * Lootboxes and Star Wars become plain games.
+ * Lootboxes, Star Wars and Fortunes of War (the mods randomize it themselves)
+ * become plain games.
  */
-const RETIRED_ADD_ONS: Record<string, string | null> = { all: "randomizer", lootbox: null, starwars: null };
+const RETIRED_ADD_ONS: Record<string, string | null> = { all: "randomizer", lootbox: null, starwars: null, fortunes: null };
 
 /**
  * A saved slot's add-on, with a removed one swapped for what replaced it.
- * Unavailable add-ons (Casino, Fortunes of War) read as none, as the bot
+ * An unavailable add-on (the Casino) reads as none, as the bot
  * announces those games as normal map games, unless the slot is Host
  * Management's test game (`addon_test`).
  */

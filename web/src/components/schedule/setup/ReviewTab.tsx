@@ -198,7 +198,6 @@ export default function ReviewTab({
           <dt className="text-ink-500">Add-on</dt>
           <dd className="text-ink-200">
             {addOn.label}
-            {form.addOn === "fortunes" && ` (${form.fortunesMode})`}
           </dd>
           {form.addOn === "randomizer" && (
             <>
@@ -212,7 +211,7 @@ export default function ReviewTab({
               </dd>
             </>
           )}
-          {(form.addOn === "randomizer" || form.addOn === "fortunes") && (
+          {form.addOn === "randomizer" && (
             <>
               <dt className="text-ink-500">Co-hosts</dt>
               <dd className="text-ink-200">

@@ -235,7 +235,7 @@ function Counter({ label, value, onChange }: { label: string; value: number; onC
   );
 }
 
-/** Casino / Fortunes games: hosts who help run it (host tools on its map and Games page; never start, end or cancel). */
+/** Casino games: hosts who help run it (host tools on its map and Games page; never start, end or cancel). */
 export function CoHostsCard({
   form,
   update,

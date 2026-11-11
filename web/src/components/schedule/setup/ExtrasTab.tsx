@@ -1,13 +1,13 @@
 "use client";
 
-import { BellRing, CircleOff, ClipboardCheck, Construction, Dices, Skull, Sparkles, Spade, Trophy, PartyPopper, Waves, type LucideIcon } from "lucide-react";
+import { BellRing, CircleOff, ClipboardCheck, Construction, Dices, Skull, Sparkles, Waves, type LucideIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import ResourceListEditor from "@/components/presets/ResourceListEditor";
 import { PRESET_LIMITS, type ModeDefaults } from "@/lib/presetTypes";
 import { ADD_ONS, HOME_ONLY_ADD_ONS, LOGGING_MODES, addOnLocked, addOnOption } from "@/lib/scheduleOptions";
 import type { HostOption } from "@/lib/scheduleTypes";
 import { DRAFT_BLOCKED_ADDONS } from "@/lib/scheduleValidation";
-import { Segmented, SectionCard, Toggle } from "../ui";
+import { SectionCard, Toggle } from "../ui";
 import CasinoSection, { CoHostsCard } from "./CasinoSection";
 import DraftSection from "./DraftSection";
 import type { SetupForm } from "./model";
@@ -16,7 +16,6 @@ import type { SetupForm } from "./model";
 const ADD_ON_ICON: Record<string, LucideIcon> = {
   none: CircleOff,
   randomizer: Dices,
-  fortunes: Spade,
   zombies: Skull,
   leviathan: Waves,
 };
@@ -35,7 +34,7 @@ export default function ExtrasTab({
   update: (patch: Partial<SetupForm>) => void;
   /** The mode's standard rules and mods (from the bot). */
   modeDefaults?: ModeDefaults;
-  /** TommyKay's server: the only one with the Casino and Fortunes of War. */
+  /** TommyKay's server: the only one with the Casino. */
   homeServer: boolean;
   /** Host Management: can pick the Casino add-ons before they're switched on (a test game). */
   isStaff?: boolean;
@@ -53,7 +52,7 @@ export default function ExtrasTab({
     form.addOn && DRAFT_BLOCKED_ADDONS.has(form.addOn)
       ? `${addOnOption(form.addOn).label} games hand out nations by luck — they can't be drafts.`
       : null;
-  // Casino / Fortunes of War: shown but not pickable yet — a click explains why.
+  // The Casino: shown but not pickable yet — a click explains why.
   const [unavailable, setUnavailable] = useState<string | null>(null);
   useEffect(() => {
     if (!unavailable) return undefined;
@@ -136,20 +135,6 @@ export default function ExtrasTab({
                 OK
               </button>
             </div>
-          </div>
-        )}
-        {form.addOn === "fortunes" && (
-          <div className="gm-fade-up mt-3">
-            <p className="mb-1.5 text-xs font-semibold text-ink-500">Fortunes of War mode</p>
-            <Segmented
-              ariaLabel="Fortunes of War mode"
-              value={form.fortunesMode}
-              onChange={(fortunesMode) => update({ fortunesMode })}
-              options={[
-                { value: "casual", label: <span className="inline-flex items-center gap-1.5"><PartyPopper aria-hidden className="h-3.5 w-3.5" />Casual</span> },
-                { value: "competitive", label: <span className="inline-flex items-center gap-1.5"><Trophy aria-hidden className="h-3.5 w-3.5" />Competitive</span> },
-              ]}
-            />
           </div>
         )}
       </SectionCard>
@@ -236,7 +221,7 @@ export default function ExtrasTab({
 
       {/* Casino settings come last, under everything (Niko, 2026-11-08). */}
       {form.addOn === "randomizer" && <CasinoSection form={form} update={update} gameSec={gameSec} />}
-      {(form.addOn === "randomizer" || form.addOn === "fortunes") && <CoHostsCard form={form} update={update} hosts={hosts} hostId={hostId} />}
+      {form.addOn === "randomizer" && <CoHostsCard form={form} update={update} hosts={hosts} hostId={hostId} />}
     </div>
   );
 }

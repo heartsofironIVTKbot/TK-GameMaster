@@ -67,8 +67,6 @@ const REQUEST_LABELS: Record<RequestAction, string> = {
   casino_roll: "Casino roll",
   casino_extra: "Casino extra rolls",
   casino_emergency_unreserve: "Emergency Unreserve",
-  fortunes_redraw: "Fortunes redraw",
-  fortunes_reset: "Fortunes card reset",
   casino_fallback: "Casino switched off",
   moderation: "Moderation",
   dishonored: "Dishonored",

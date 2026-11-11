@@ -39,7 +39,6 @@ import AccessCard from "./AccessCard";
 import ChatLogCard from "./ChatLogCard";
 import DraftCard from "./DraftCard";
 import HotJoinCard from "./HotJoinCard";
-import FortunesCard from "./FortunesCard";
 import CasinoFallbackCard from "./CasinoFallbackCard";
 import LateJoinCard from "./LateJoinCard";
 import MessagePlayersCard from "./MessagePlayersCard";
@@ -319,7 +318,7 @@ export default function GameControlPanel({
 
       {current === "overview" && (
         <>
-          {game.phase === "announced" && (game.add_on === "randomizer" || game.add_on === "fortunes") && (
+          {game.phase === "announced" && game.add_on === "randomizer" && (
             <CasinoFallbackCard game={game} onChanged={refreshAll} />
           )}
           {game.phase === "announced" && (
@@ -388,7 +387,6 @@ export default function GameControlPanel({
           busyNote
         ) : (
           <>
-            {game.add_on === "fortunes" && <FortunesCard game={game} />}
             {game.draft && game.phase === "announced" && <DraftCard game={game} now={now} onChanged={refreshAll} />}
             {game.phase === "live" && <HotJoinCard game={game} onChanged={refreshAll} />}
             {game.phase === "live" && showControls && <LateJoinCard game={game} onChanged={refreshAll} />}

@@ -167,7 +167,7 @@ class EmbedColor:
     DANGER = 0xEF4444     # refused, removed, bans, errors
     WARNING = 0xF97316    # needs a look, reminders
     INFO = 0x38BDF8       # neutral news: mods, logs, requests
-    ROLEPLAY = 0xA855F7   # roleplay, Fortunes, the AI
+    ROLEPLAY = 0xA855F7   # roleplay, the AI
     NEUTRAL = 0x6A726C    # finished, archived (website ink-500)
     INK = 0x1A1F1B        # dark cards: the casino panel (website ink-800)
 
@@ -851,34 +851,6 @@ CREATE TABLE IF NOT EXISTS receipt_dm_queue (
 # Web-initiated unreserves (Phase 5 web panel) enqueue rows with
 # action='unreserve' (or an empty slot_key) — the loop removes the user's
 # reservation for that thread.
-# Fortunes of War (docs/casino-integration.md, step 7): one row per player in
-# a Fortunes game. The bot keeps nation / HOI4 tag / major / allowance in step
-# with the reservations (fortunes_sync_loop); GameMaster's /casino/<game> sets
-# the access key; tkcasino.online's Fortunes room deals the deck and records
-# the card (state: new → dealt → pending → locked). The card stays with the
-# player when they change nation.
-_FORTUNES_DRAWS_DDL = """
-CREATE TABLE IF NOT EXISTS fortunes_draws (
-    game_id VARCHAR(64) NOT NULL,
-    user_id BIGINT NOT NULL,
-    nation VARCHAR(128) NULL,
-    hoi4_tag VARCHAR(8) NULL,
-    slot_priority TINYINT NOT NULL DEFAULT 0,
-    is_major TINYINT(1) NOT NULL DEFAULT 0,
-    max_redraws INT NOT NULL DEFAULT 0,
-    redraws_used INT NOT NULL DEFAULT 0,
-    deck TEXT NULL,
-    card VARCHAR(80) NULL,
-    card_name VARCHAR(80) NULL,
-    state VARCHAR(12) NOT NULL DEFAULT 'new',
-    access_key CHAR(32) NULL,
-    key_expires_at BIGINT NULL,
-    created_at BIGINT NOT NULL,
-    updated_at BIGINT NOT NULL,
-    PRIMARY KEY (game_id, user_id),
-    UNIQUE KEY uq_fortunes_access_key (access_key)
-)
-"""
 
 _RESERVATION_SYNC_QUEUE_DDL = """
 CREATE TABLE IF NOT EXISTS reservation_sync_queue (
@@ -1572,8 +1544,6 @@ def _ensure_users_schema_mysql() -> list[str]:
         cursor.execute(_TICKET_RECORDS_DDL)
         cursor.execute(_TICKET_MESSAGES_DDL)
         cursor.execute(_TICKET_FILES_DDL)
-        # Fortunes of War cards (shared with the website and tkcasino.online).
-        cursor.execute(_FORTUNES_DRAWS_DDL)
 
         # House Receipt logging (Phase 3): game_reservations gains an optional
         # log_message_id column (self-healed for tables created before it).
@@ -5213,9 +5183,6 @@ class RandomizerUnreserveModal(discord.ui.Modal, title="Emergency Unreserve"):
 
         user_id = interaction.user.id
 
-        if game.get("fortunes_only", False):
-            _clear_fortunes_player_state(game, user_id)
-
         # Emergency Unreserve always permanently blocks re-reserving — for randomizer
         # games, a player who just wants a different roll should use the "Do you wish to
         # re-roll?" Yes/No buttons attached to their /gamble result instead (governed by
@@ -5253,14 +5220,8 @@ class RandomizerUnreserveModal(discord.ui.Modal, title="Emergency Unreserve"):
             label="web session purge (emergency unreserve)",
         )
 
-        if game.get("fortunes_only", False):
-            try:
-                await _update_fortunes_script_message(str(self.thread_id))
-            except Exception:
-                pass
-
-        # --- LOG THE REASON TO HOST CHANNEL (route to add-on's channel) ---
-        log_channel_id = FORTUNES_LOG_CHANNEL_ID if game.get("fortunes_only", False) else RANDOMIZER_LOG_CHANNEL_ID
+        # --- LOG THE REASON TO HOST CHANNEL ---
+        log_channel_id = RANDOMIZER_LOG_CHANNEL_ID
         log_channel = interaction.client.get_channel(log_channel_id)
         if not log_channel:
             try: log_channel = await interaction.client.fetch_channel(log_channel_id)
@@ -12196,8 +12157,8 @@ DRAFT_HISTORY_MAX = 80
 DRAFT_TEAM_KEYS = ("A", "B")
 # A coin-flip winner opens with this many picks; after that teams alternate 1 by 1.
 DRAFT_COIN_FLIP_OPENING_PICKS = 3
-# Casino / Fortunes games hand out nations by luck — they can't be drafts.
-DRAFT_BLOCKED_ADDONS = ("randomizer", "fortunes")
+# Casino games hand out nations by luck — they can't be drafts.
+DRAFT_BLOCKED_ADDONS = ("randomizer",)
 
 
 def get_draft_pool_capacity(mode: str, not_playable: int = 0, *, hidden_majors: int = 0) -> int:
@@ -13102,27 +13063,10 @@ async def _perform_reservation(interaction: discord.Interaction, nation: str, ga
     return True, nation, milestone_message
 
 
-# =====================================================================
-# FORTUNES OF WAR — Faked card-flipping power-up add-on (/draw)
-# Works in any active game thread for players who hold a reservation.
-# =====================================================================
-FORTUNES_LOG_CHANNEL_ID = 0
-FORTUNE_CARD_BACK = "🎴"
-
-# Custom card-back emojis for the Fortunes of War buttons. They are scattered at
-# random across the buttons each time the deck is shown.
-FORTUNE_BUTTON_EMOJI_IDS = [
-    1518535844300853308,
-    1518535826089185381,
-    1518535804388114553,
-    1518535784527826997,
-    1518535765468905624,
-    1518535736943444038,
-]
 
 # HEARTS OF IRON 4 NATION TAG REFERENCE DATA
-# Used to translate a player's reserved nation into its HOI4 country tag when
-# generating the submod-sync script below (see _hoi4_tag_for_nation).
+# Used to translate a player's reserved nation into its HOI4 country tag
+# (AI chat-log analysis, live posts: see _hoi4_tag_for_nation).
 HOI4_TAGS = {
     # Major Nations
     "GER": "Germany", "FRA": "France", "ENG": "United Kingdom", "ITA": "Italy",
@@ -13213,1359 +13157,6 @@ def _hoi4_tag_for_nation(nation: str) -> str | None:
     if key in HOI4_NATION_ALIASES:
         key = HOI4_NATION_ALIASES[key].lower()
     return _HOI4_NAME_TO_TAG.get(key)
-
-
-FORTUNES_DECK = [
-    {
-        "name": "No Step Back",
-        "code_name": "fortunes_of_war_no_step_back",
-        "emoji": "🛡️",
-        "color": 0xc0392b,
-        "lore": "Not a single step backward shall be tolerated. Rooted in absolute determination, military high command has decreed that retreat is treason and the defense of core territory is sacred. Through ruthless field discipline, rapid entrenchment, and incinerating shock tactics, your armies transform into an immovable wall on home soil.",
-        "effects": [
-            "+10% Division HP", "+20% Max Entrenchment", "+40% Entrenchment speed",
-            "+10% Core Attack", "+10% Core Defense", "-10% Air Support",
-            "+20% Surrender Limit", "-40% Org Loss When Moving", "-5% Off-Core Attack",
-            "-10% Off-Core Defense", "+3 (off-map) Military Factories",
-        ],
-        "unlocks": ["Research: The Ends", "Special Project: 1943 Super-Heavy Tank Hull"],
-    },
-    {
-        "name": "For King and Country",
-        "code_name": "fortunes_of_war_for_king_and_country",
-        "emoji": "🚩",
-        "color": 0xe74c3c,
-        "lore": "When total war threatens our nation's very existence, every citizen becomes a shield. Driven by patriotic fervor and sweeping mass mobilization, Every man, child or woman must take up arms. With massive railway guns bombard enemy positions from afar, a victory is only a matter of time. The cost in military experience and command overhead is steep, but the unstoppable wave of human resolve will preserve the nation at any price.",
-        "effects": [
-            "+0.1 Weekly War Support", "+10% Org", "+15% Recruitable Population",
-            "+10% Recover Rate", "+1000 Weekly Manpower", "-0.2 Combat Width for Infantry",
-            "+5% Core Defense", "-25% Division Training Time", "-10% Experience Gain",
-            "-0.3 Daily Command Power Gain", "+3 (off-map) Military Factories",
-        ],
-        "unlocks": ["Technology: Field Hospitals", "Special Project: Super-Heavy Railway Gun"],
-    },
-    {
-        "name": "Legacy Of Maginot",
-        "code_name": "fortunes_of_war_legacy_of_maginot",
-        "emoji": "🏰",
-        "color": 0x34495e,
-        "lore": "An unbroken shield of concrete, steel, and anti-aircraft emplacements designed to make our borders totally impassable. By pouring massive industrial power into static defenses and subterranean bunker networks, the nation trades grand offensive ambition and tactical flexibility for absolute defensive security behind an unyielding fortress line.",
-        "effects": [
-            "+10% Defense", "+10% Max Organization", "+50% Entrenchment speed",
-            "-50% Org Loss When Moving", "+20% Construction Speed on Forts",
-            "+20% Construction Speed on Coastal Forts", "+20% Construction Speed on Anti-Air",
-            "+20% Land Fort Effectiveness", "+15% Doctrine Cost",
-            "-5% Attack", "+3 (off-map) Military Factories",
-        ],
-        "unlocks": ["Technology: Basic Fortification", "Special Project: Stronghold Networks"],
-    },
-    {
-        "name": "Legacy Of Rome",
-        "code_name": "fortunes_of_war_legacy_of_rome",
-        "emoji": "🏛️",
-        "color": 0xb8860b,
-        "lore": "The martial legacy of the ancient legions lives on in modern warfare. By prioritizing sweeping infrastructure projects, rapid industrial construction, and disciplined tactical coordination, your armies march forward with the engineering prowess and iron discipline of an empire reborn. However, rigid doctrine leaves troops vulnerable to enemy air interdiction and operational attrition on extended marches.",
-        "effects": [
-            "+10% Division Attack", "+10% Division Organization", "+10% Reinforce Rate",
-            "-25% C.A.S Damage Reduction", "+20% Infrastructure Construction Speed",
-            "+10% Military Factory Construction Speed", "+10% War Support",
-            "+10% Army Experience Gain", "-10% Political Power Gain", "-10% Attrition",
-            "+3 (off-map) Civilian Factories",
-        ],
-        "unlocks": [
-            "Technology: 1936 Medium Tank Hull",
-            "Special Project: Flame Tanks",
-            "Sub-Special-Project: Anti-Tank Rifle Grenade",
-        ],
-    },
-    {
-        "name": "Blitzkrieg",
-        "code_name": "fortunes_of_war_blitzkrieg",
-        "emoji": "⚡",
-        "color": 0xf39c12,
-        "lore": "Speed, surprise, and overwhelming armored violence. By fusing heavy armored spearheads, motorized infantry, and deep aerial recon into a single aggressive doctrine, enemy frontlines crumble before hostile command can even react. Yet, driving complex war machines at such relentless velocity places severe mechanical strain on vehicle reliability and drains national fuel reserves at an alarming rate.",
-        "effects": [
-            "+10% Division Attack", "+10% Max Planning", "+10% Reinforce Rate",
-            "+20% Division Speed", "+10% Air Support", "+10% Initiative",
-            "-5% Production Cost on all Tank & Motorized/Mechanized Types",
-            "+20% Daily Command Power Gain", "+20% Supply Consumption",
-            "-20% Reliability", "+3 (off-map) Civilian Factories",
-        ],
-        "unlocks": [
-            "Technology: 1934 Heavy Tank Hull",
-            "Special Project: Military Engineering Vehicles",
-            "Sub-Special-Project: Heavy Tank Studies",
-        ],
-    },
-    {
-        "name": "Napoleonic Heritage",
-        "code_name": "fortunes_of_war_napoleonic_heritage",
-        "emoji": "🧨",
-        "color": 0x922b21,
-        "lore": "Artillery is the king of battle, and decisive offense is its crown. Drawing from the legacy of the La Grande Armée, high command emphasizes massive artillery concentrations, rapid operational initiative, and deep supply lines to shatter enemy armies in decisive engagements. Maintaining such grand militarization taxes the civilian economy and breeds domestic unrest, but victory belongs to the bold.",
-        "effects": [
-            "+10% Infantry Attack", "+15% Cavalry Attack", "+15% Artillery Attack",
-            "+15% Max Planning", "+10% Coordination", "+10% Initiative",
-            "+20% Mastery Gain", "+10% Army Experience Gain", "-10% Supply Range",
-            "+10% Consumer Goods", "-20% Stability", "+3 (off-map) Civilian Factories",
-        ],
-        "unlocks": [
-            "Technology: 1943 Super-Heavy Tank Hull",
-            "Special Project: Super-Heavy Howitzer",
-            "Sub-Special-Project: Self-Propelled Super-Heavy Howitzer",
-        ],
-    },
-    {
-        "name": "Supply Is King",
-        "code_name": "fortunes_of_war_supply_is_king",
-        "emoji": "📦",
-        "color": 0x27ae60,
-        "lore": "By completely overhauling the national supply chain, standardizing rail networks, and decentralizing industrial production, your military machine transforms into an unstoppable logistical juggernaut. Your troops can hold out in the most brutal of encirclements, and your factories hum with peak efficiency. The sheer bureaucratic weight of this system, however, slows down dynamic tactical command decisions at the front.",
-        "effects": [
-            "-20% Supply & Fuel Consumption", "-20% Electricity Consumption",
-            "+50% Supply Hub Construction Speed", "+40% Railway Construction Speed",
-            "+30% Supply Range", "-40% Encircled Penalty & Attrition",
-            "+10% Civilian Factory Construction Speed", "+10% Production Efficiency Cap",
-            "-10% Production Efficiency Gain", "-5% Factory Output",
-            "+3 (off-map) Civilian Factories", "+3 (off-map) Military Factories",
-        ],
-        "unlocks": [
-            "Technology: Logistics Company",
-            "Special Project: Nuclear Reactor",
-            "Sub-Special-Project: Underway Replenishment",
-        ],
-    },
-    {
-        "name": "Legacy of the Vietcong",
-        "code_name": "fortunes_of_war_legacy_of_the_vietcong",
-        "emoji": "⛰️",
-        "color": 0x117864,
-        "lore": "When the drumbeat of war echoes at the borders, conventional infantry will not suffice. This doctrine focuses entirely on elite vanguard forces—marines, mountaineers, and jungle commandos—trained to ignore harsh climates and bypass brutal terrain. While these specialized warfighters excel at rapid naval invasions and asymmetrical warfare, standard home defense and the recruitment of non-core occupational forces are severely neglected.",
-        "effects": [
-            "+5% Attack on Special Forces Battalions",
-            "+10% Attack on Jaegar/Jungle/Desert Battalions",
-            "-25% Air Support", "-50% Factory Coal Consumption",
-            "-20% Special Forces Division Training Time", "+10% Max Planning",
-            "-20% Penalty on Terrain", "-40% Winter/Heat Attrition", "+10% Core Defense",
-            "-10% Division Organization", "-10% Division HP",
-            "+3 (off-map) Civilian Factories",
-        ],
-        "unlocks": [
-            "Technology: Recon Company",
-            "Special Project: Helicopter",
-            "Sub-Special-Project: Proximity Fuse",
-        ],
-    },
-    {
-        "name": "Red Baron Doctrine",
-        "code_name": "fortunes_of_war_red_baron_doctrine",
-        "emoji": "✈️",
-        "color": 0x3498db,
-        "lore": "Commanding the skies requires more than just machines; it requires legendary aviators. Invoking the spirit of the chivalric aerial duelist, this doctrine pours resources into agile fighter wings, advanced detection, and elite airborne infantry. Your paratroopers drop with lethal precision while your fighter aces sweep the heavens clear of enemy resistance—though sustaining this relentless sortie rate demands a staggering supply of aviation fuel.",
-        "effects": [
-            "+20% Air Superiority", "+15% Agility", "+25% Fighter Detection",
-            "+50% Ace Generation Chance", "-40% Air Accident Chance",
-            "-5% Production Cost on all Fighter Aircraft", "+25% Air Base Construction Speed",
-            "+0.1 Daily Air Experience Gain", "+20% Paratrooper Attack",
-            "+50% Organization after Paradropping", "+20% Max Organization",
-            "+20% HP on Paratroopers", "+25% Air Fuel Consumption",
-            "+3 (off-map) Civilian Factory", "+3 (off-map) Military Factory",
-        ],
-        "unlocks": [
-            "Technology: Paratroopers",
-            "Technology: Transport Aircraft",
-            "Special Project: Radar",
-            "Special Project: Mothership Aircraft",
-            "Sub-Special-Project: High-Frequency Radio Direction",
-            "Sub-Special-Project: Adaptable Grenades",
-        ],
-    },
-    {
-        "name": "Scorched Skies",
-        "code_name": "fortunes_of_war_scorched_skies",
-        "emoji": "💣",
-        "color": 0xd35400,
-        "lore": "Total war demands total destruction. Shifting focus away from honorable dogfights, the air force is rebuilt into an apocalyptic armada of strategic bombers and close-air-support wings designed to obliterate enemy industry and shatter frontline defenses. Experimental payloads and flying bombs will darken the skies and break the enemy's will to fight, even as the aggressive operational tempo leads to high aircraft wear and tear.",
-        "effects": [
-            "+10% Strategic Bombing", "+10% Mission Efficiency", "-20% Enemy Air Superiority",
-            "+20% Ground Support", "-45% Air Accidents Chance", "+30% Bomber Defense",
-            "+35% Air Base Construction Speed", "+10% Paratrooper Attack",
-            "+35% Organization after Paradropping", "+10% Max Organization",
-            "+20% Entrenchment speed", "+0.1 Daily Air XP Gain", "+30% Air Accident Chance",
-            "+3 (off-map) Civilian Factory", "+3 (off-map) Military Factory",
-        ],
-        "unlocks": [
-            "Technology: Paratroopers",
-            "Technology: Transport Aircraft",
-            "Special Project: Intercontinental Bomber",
-            "Special Project: Flying Bomb",
-            "Sub-Special-Project: Earthshaker Bomb",
-            "Sub-Special-Project: Fog Intense Dispersal Device",
-        ],
-    },
-    {
-        "name": "Maritime Heritage",
-        "code_name": "fortunes_of_war_maritime_heritage",
-        "emoji": "⚓",
-        "color": 0x2980b9,
-        "lore": "Forged through centuries of seafaring prowess, our naval tradition commands respect across the high seas. By doubling down on majestic capital ships, lethal submarine screens, and battle-hardened marine contingents, the fleet projects formidable power to shatter enemy coasts and dictate naval engagements. However, fueling such a massive, heavy surface armada places an immense strain on national oil refineries.",
-        "effects": [
-            "+20% Capital Ship Armor", "+10% Capital Ship Attack", "+10% Capital Ship Defense",
-            "+20% Capital Ship Organization", "+50% Shore Bombardment Bonus", "+10% Dockyard Output",
-            "+10% Naval Range", "+10% Attack on Marines", "+15% Defense on Marines",
-            "+10 Naval Invasion Plan Capacity", "+0.1 Daily Navy XP Gain",
-            "+15% Naval Dockyard Construction Speed", "-10% Civilian Factory Construction Speed",
-            "+3 (off-map) Military Factory", "+3 (off-map) Civilian Factory", "+5 (off-map) Naval Dockyard",
-        ],
-        "unlocks": [
-            "Technology: Radio",
-            "Technology: Signal Company",
-            "Special Project: Fleet Submarine",
-            "Special Project: Super Heavy Battleship",
-            "Sub-Special-Project: Anechoic Tiles",
-            "Sub-Special-Project: Support Ships",
-        ],
-    },
-    {
-        "name": "The New School",
-        "code_name": "fortunes_of_war_the_new_school",
-        "emoji": "🛳️",
-        "color": 0x1b4f72,
-        "lore": "Total mastery of the oceans is not merely claimed—it is seized through aggressive carrier doctrine, lethal screen integration, and specialized amphibious assault forces. With superior high-frequency tracking, coordinated carrier sorties, and unrelenting escort screening, enemy fleets are hunted down with zero room to maneuver. Yet, this relentless operational doctrine expects escort crews to hold the line at all costs, severely restricting retreat orders.",
-        "effects": [
-            "+10% Light Attack on Screens", "+10% Torpedo Attack", "+30% Carrier Organization",
-            "+20% Carrier Sortie Efficiency", "-10% Carrier IC Cost", "-10% Destroyer IC Cost",
-            "+20% Positioning", "+25% Fleet Coordination", "+40% Shore Bombardment Bonus",
-            "-40% Bad Weather Penalty", "+20% Attack on Amtrac Battalions",
-            "+20% Dockyard Construction Speed", "-10% Attack on Capital Ships",
-            "+5 (off-map) Civilian Factory", "+5 (off-map) Military Factory", "+15 (off-map) Naval Dockyard",
-        ],
-        "unlocks": [
-            "Technology: Mechanized",
-            "Technology: Amphibious Tank",
-            "Special Project: Ice Aircraft Carrier",
-            "Special Project: Submarine Carrier",
-            "Sub-Special-Project: Torpedo Cruiser",
-            "Sub-Special-Project: Naval High-Frequency Location Finder",
-        ],
-    },
-    {
-        "name": "Technocratic Empire",
-        "code_name": "fortunes_of_war_technocratic_empire",
-        "emoji": "🔬",
-        "color": 0x16a085,
-        "lore": "Guided by scientific rigor, advanced automation, and industrial rationalization, state power is entrusted to engineers, scientists, and master planners. By accelerating theoretical research, expanding atomic projects, and optimizing resource extraction, the nation leaps decades ahead into a modern technological era. However, strict central planning limits regional factory density, and a pragmatic populace shows little tolerance for unprovoked offensive wars.",
-        "effects": [
-            "+20% Research Speed", "+25% Facility Construction Speed (on all 4)",
-            "+20% MIO Funds Gain", "+10% Production Efficiency Gain", "+20% Conversion Speed",
-            "+10% Resource Gain Efficiency", "+10% Coordination", "+10% Initiative",
-            "-10% Max Factories in a State", "-20% Offensive War Stability Modifier",
-            "+5 (off-map) Civilian Factory", "+10 (off-map) Military Factory",
-        ],
-        "unlocks": [
-            "Technology: Electronic Mechanical Engineering",
-            "Special Project: Nuclear Reactor",
-            "Special Project: Commercial Nuclear Reactor",
-        ],
-    },
-    {
-        "name": "Political Mastermind",
-        "code_name": "fortunes_of_war_political_mastermind",
-        "emoji": "🕵️",
-        "color": 0x2c3e50,
-        "lore": "Mastery of statecraft, shadow networks, and political patronage allows the regime to exert absolute control over the nation. By installing loyalists across the government, expanding counter-intelligence apparatuses, and enforcing strict wartime labor directives, state efficiency and espionage reach unprecedented heights. However, constant political oversight stifles independent academic research and creates friction when re-tooling industrial assembly lines.",
-        "effects": [
-            "+10% Political Power Gain", "-35% Political Advisor Cost", "-30% Military Staff Cost",
-            "+5 Counter Intelligence", "+2 Operative Slots", "+10% Efficiency Cap",
-            "+20% Ruling Party Stability Modifier", "+10% Military Factory Construction Speed",
-            "-5% Research Speed", "-10% Production Efficiency Retention",
-            "+2 (off-map) Civilian Factory", "+2 (off-map) Military Factory",
-        ],
-        "unlocks": ["Technology: Spy Agency", "Special Project: Jet Engines"],
-    },
-    {
-        "name": "Colonial Rule",
-        "code_name": "fortunes_of_war_colonial_rule",
-        "emoji": "🌍",
-        "color": 0x935116,
-        "lore": "An expansive global order built on subduing foreign territories and channeling raw wealth back to the homeland. Through firm administration, imperial trade networks, and heavy exploitation of overseas possessions, the regime extracts massive resource yields and levies foreign manpower. Yet, prioritizing overseas expansion and puppet integration leaves the home core territory neglected and vulnerable to decisive mainland collapse.",
-        "effects": [
-            "+0.20% Daily Compliance Gain",
-            "+20% Puppet to Overlord Modifier for Puppets on Resources and Factories",
-            "+10% Extra Trade to Overlord", "+25% Non-Core Manpower", "+20% Resource Gain Efficiency",
-            "+10% Attack on Non-Core Territory", "+15% Defense on Non-Core Territory",
-            "+20% Technology Sharing (have to make a group for this)",
-            "-10% Defense on Core Territory", "-10% Surrender Limit",
-            "+1 (off-map) Civilian Factories", "+1 (off-map) Military Factories",
-            "+1 (off-map) Dockyard Factories",
-        ],
-        "unlocks": ["Technology: Construction", "Special Project: Multi-Charge Large Caliber Gun"],
-    },
-]
-
-# Old display names / code names still resolve after the Idea II / VIII / XII renames.
-_FORTUNES_CARD_ALIASES = {
-    "for the motherland": "For King and Country",
-    "fortunes_of_war_for_the_motherland": "For King and Country",
-    "thunder at our gates": "Legacy of the Vietcong",
-    "fortunes_of_war_thunder_at_our_gates": "Legacy of the Vietcong",
-    "absolute naval dominance": "The New School",
-    "fortunes_of_war_absolute_naval_dominance": "The New School",
-}
-_FORTUNES_CARD_BY_NAME = {c["name"].lower(): c for c in FORTUNES_DECK}
-_FORTUNES_CARD_BY_CODE = {c["code_name"].lower(): c for c in FORTUNES_DECK}
-for _alias, _canonical in _FORTUNES_CARD_ALIASES.items():
-    _target = _FORTUNES_CARD_BY_NAME.get(_canonical.lower())
-    if _target is not None:
-        _FORTUNES_CARD_BY_NAME[_alias] = _target
-        _FORTUNES_CARD_BY_CODE[_alias] = _target
-
-
-def _fortunes_card_for(stored: str | None):
-    """Resolve a stored draw name or code name, including pre-rename aliases."""
-    if not stored:
-        return None
-    key = stored.strip().lower()
-    return _FORTUNES_CARD_BY_NAME.get(key) or _FORTUNES_CARD_BY_CODE.get(key)
-
-
-# Cards at indices 8–11 (ideas 9–12) are major-only; minors still see 15 buttons but
-# only draw from the remaining 11-card pool.
-FORTUNES_MAJOR_ONLY_INDICES = frozenset({8, 9, 10, 11})
-FORTUNES_MAJOR_ONLY_NAMES = frozenset(
-    FORTUNES_DECK[i]["name"] for i in FORTUNES_MAJOR_ONLY_INDICES
-)
-FORTUNES_MINOR_POOL = [
-    c for i, c in enumerate(FORTUNES_DECK) if i not in FORTUNES_MAJOR_ONLY_INDICES
-]
-
-
-def _build_fortunes_shuffled_deck(is_major_player: bool) -> list:
-    """15 face-down slots. Majors shuffle the full deck; minors sample from the 11-card pool."""
-    if is_major_player:
-        return random.sample(FORTUNES_DECK, len(FORTUNES_DECK))
-    return [random.choice(FORTUNES_MINOR_POOL) for _ in range(len(FORTUNES_DECK))]
-
-
-def _fortunes_player_is_major(game: dict, user_id) -> bool:
-    reservations = game.get("reservations", {}) if game else {}
-    nation = next((n for n, uid in reservations.items() if str(uid) == str(user_id)), None)
-    if not nation:
-        return False
-    base = nation.replace("_coop", "").replace("_FILL_", "")
-    return is_major(base, game.get("mode", ""))
-
-
-def _fortunes_redraw_count(game: dict, user_id) -> int:
-    raw = game.get("fortunes_redraw_count", {})
-    if isinstance(raw, dict):
-        return int(raw.get(str(user_id), 0))
-    used = game.get("fortunes_redraw_used", [])
-    if isinstance(used, list) and (user_id in used or str(user_id) in {str(x) for x in used}):
-        return 1
-    return 0
-
-
-def _fortunes_max_redraws(game: dict, is_major_player: bool) -> int:
-    """How many times a player may click No before their next pick auto-locks."""
-    mode = game.get("fortunes_mode", "casual")
-    if mode == "competitive":
-        return 1 if is_major_player else 0
-    return 2 if is_major_player else 1
-
-
-def _fortunes_redraw_intro(game: dict, is_major_player: bool) -> str:
-    max_redraws = _fortunes_max_redraws(game, is_major_player)
-    if max_redraws == 0:
-        return "⚠️ *Your pick locks in immediately — choose wisely, Commander!*"
-    if max_redraws == 1:
-        return "⚠️ *You may review your pick and redraw **once** before locking in.*"
-    return "⚠️ *You may review your pick and redraw up to **twice** before locking in.*"
-
-
-def _fortunes_redraw_remaining_text(remaining: int) -> str:
-    if remaining <= 0:
-        return "this pick locks in automatically."
-    if remaining == 1:
-        return "you may redraw **once** more after this pick."
-    return f"you may redraw **{remaining}** more time(s) after this pick."
-
-
-def _clear_fortunes_player_state(game: dict, user_id) -> None:
-    uid = str(user_id)
-    for key in ("fortunes_drawn", "fortunes_pending", "fortunes_drawn_nations",
-                "fortunes_pending_nations", "fortunes_decks"):
-        bucket = game.get(key)
-        if isinstance(bucket, dict) and uid in bucket:
-            del bucket[uid]
-    counts = game.get("fortunes_redraw_count")
-    if isinstance(counts, dict) and uid in counts:
-        del counts[uid]
-    used = game.get("fortunes_redraw_used")
-    if isinstance(used, list):
-        game["fortunes_redraw_used"] = [x for x in used if str(x) != uid and x != user_id]
-
-
-def _fortune_live_reservation_key(game: dict, user_id) -> str | None:
-    """Live reservation key for a player (prefers main nation over coop/filler)."""
-    reservations = game.get("reservations", {}) or {}
-    held = [n for n, uid in reservations.items() if str(uid) == str(user_id)]
-    if not held:
-        return None
-    primary = next(
-        (k for k in held if is_capacity_slot(k) and "_coop" not in k and not k.startswith("_FILL_")),
-        None,
-    )
-    if primary is None:
-        primary = next((k for k in held if is_capacity_slot(k)), held[0])
-    return primary
-
-
-def _fortune_nation_for_user(game: dict, user_id) -> str | None:
-    """Nation tied to a locked fortunes draw — prefers stored snapshot over live reservations."""
-    nations = game.get("fortunes_drawn_nations", {})
-    if isinstance(nations, dict):
-        stored = nations.get(str(user_id))
-        if stored:
-            return stored
-    pending_nations = game.get("fortunes_pending_nations", {})
-    if isinstance(pending_nations, dict):
-        pending = pending_nations.get(str(user_id))
-        if pending:
-            return pending
-    primary = _fortune_live_reservation_key(game, user_id)
-    if not primary:
-        return None
-    return primary.replace("_coop", "").replace("_FILL_", "").strip() or None
-
-
-def _clear_fortunes_card_only(game: dict, user_id) -> None:
-    """Clear locked/pending card + deck for a player, keeping redraw counts intact."""
-    uid = str(user_id)
-    for key in ("fortunes_drawn", "fortunes_pending", "fortunes_drawn_nations",
-                "fortunes_pending_nations", "fortunes_decks"):
-        bucket = game.get(key)
-        if isinstance(bucket, dict) and uid in bucket:
-            del bucket[uid]
-
-
-class DrawForRedrawConfirmView(discord.ui.View):
-    """Green Yes / red No when a host /draw_for would exceed the player's redraw limit."""
-
-    def __init__(self, author_id: int, on_confirm):
-        super().__init__(timeout=120)
-        self.author_id = author_id
-        self.on_confirm = on_confirm
-
-    async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        if interaction.user.id != self.author_id:
-            await interaction.response.send_message("This confirmation isn't for you.", ephemeral=True)
-            return False
-        return True
-
-    @discord.ui.button(label="Yes, redraw anyway", style=discord.ButtonStyle.success, emoji="✅")
-    async def yes(self, interaction: discord.Interaction, button: discord.ui.Button):
-        for child in self.children:
-            child.disabled = True
-        try:
-            await interaction.response.edit_message(
-                content="✅ Confirmed — redrawing past the legal limit…", view=self
-            )
-        except Exception:
-            pass
-        await self.on_confirm(interaction)
-
-    @discord.ui.button(label="No, cancel", style=discord.ButtonStyle.danger, emoji="❌")
-    async def no(self, interaction: discord.Interaction, button: discord.ui.Button):
-        for child in self.children:
-            child.disabled = True
-        await interaction.response.edit_message(
-            content="❌ Cancelled — no card was redrawn.", view=self
-        )
-
-
-def _record_fortune_lock(game: dict, user_id, card_name: str, nation: str | None = None) -> None:
-    if not isinstance(game.get("fortunes_drawn"), dict):
-        game["fortunes_drawn"] = {}
-    game["fortunes_drawn"][str(user_id)] = card_name
-    resolved = (nation or "").strip() or _fortune_nation_for_user(game, user_id)
-    if resolved:
-        if not isinstance(game.get("fortunes_drawn_nations"), dict):
-            game["fortunes_drawn_nations"] = {}
-        game["fortunes_drawn_nations"][str(user_id)] = resolved
-    # Clear any pending confirmation / deck once locked.
-    for key in ("fortunes_pending", "fortunes_pending_nations", "fortunes_decks"):
-        bucket = game.get(key)
-        if isinstance(bucket, dict):
-            bucket.pop(str(user_id), None)
-
-
-def _record_fortune_pending(game: dict, user_id, card_name: str, nation: str | None = None) -> None:
-    if not isinstance(game.get("fortunes_pending"), dict):
-        game["fortunes_pending"] = {}
-    game["fortunes_pending"][str(user_id)] = card_name
-    resolved = (nation or "").strip() or _fortune_nation_for_user(game, user_id)
-    if resolved:
-        if not isinstance(game.get("fortunes_pending_nations"), dict):
-            game["fortunes_pending_nations"] = {}
-        game["fortunes_pending_nations"][str(user_id)] = resolved
-
-
-async def _persist_fortunes_deck(thread_id, user_id, deck_card_names: list[str]) -> None:
-    """Store the face-down deck order so DynamicItem card buttons survive restarts."""
-    try:
-        games_data = await read_json(GAMES_FILE)
-        game = games_data.get(str(thread_id))
-        if not game:
-            return
-        if not isinstance(game.get("fortunes_decks"), dict):
-            game["fortunes_decks"] = {}
-        game["fortunes_decks"][str(user_id)] = list(deck_card_names)
-        games_data[str(thread_id)] = game
-        await write_json(GAMES_FILE, games_data)
-    except Exception as e:
-        print(f"[WARN] Could not persist Fortunes deck: {e}")
-
-
-async def _host_force_fortunes_reservation(game: dict, games_data: dict, thread_id,
-                                           player: discord.Member, nation: str):
-    """Host override: assign a nation to a player, displacing any prior holders."""
-    mode = game.get("mode", "")
-    if not await is_user_authenticated(player, thread_id):
-        return False, None, ironlegion_unverified_message(cur_gid())
-
-    reservations = game.get("reservations", {})
-
-    for nat, uid in list(reservations.items()):
-        if str(uid) == str(player.id):
-            del reservations[nat]
-
-    all_nations = get_all_nations_for_mode(mode)
-    correct_nation = next((n for n in all_nations if n.lower() == nation.strip().lower()), None)
-    if not correct_nation:
-        return False, None, f"❌ '{nation}' is not a valid nation for this mode."
-
-    if correct_nation in reservations:
-        displaced_user_id = reservations[correct_nation]
-        if str(displaced_user_id) != str(player.id):
-            _clear_fortunes_player_state(game, displaced_user_id)
-        del reservations[correct_nation]
-
-    reservations[correct_nation] = player.id
-    game["reservations"] = reservations
-    games_data[str(thread_id)] = game
-    await write_json(GAMES_FILE, games_data)
-    schedule_reservation_update(thread_id)
-    return True, correct_nation, None
-
-
-def _fortune_effects_block(card: dict) -> str:
-    return "\n".join(f"> {e}" for e in card.get("effects", [])) or "—"
-
-
-def _fortune_unlock_icon(text: str) -> str:
-    lower = text.lower()
-    if lower.startswith("sub-special-project"):
-        return "🔧"
-    if lower.startswith("special project"):
-        return "🚀"
-    return "🧪"  # Technology / Research
-
-
-def _fortune_unlocks_block(card: dict) -> str | None:
-    lines = card.get("unlocks") or []
-    if not lines:
-        return None
-    return "\n".join(f"{_fortune_unlock_icon(u)} {u}" for u in lines)
-
-
-def _fortunes_script_lines_for_game(game: dict) -> tuple[list[str], list[str]]:
-    """Returns (clean add_ideas lines, skipped nation labels) for locked draws.
-
-    Script body stays paste-ready HOI4 only — no Discord mentions / card lore.
-    """
-    drawn = game.get("fortunes_drawn", {})
-    if not isinstance(drawn, dict) or not drawn:
-        return [], []
-
-    skipped = []
-    tag_entries = {}
-    for user_id_str, card_name in drawn.items():
-        base_nation = _fortune_nation_for_user(game, user_id_str)
-        card = _fortunes_card_for(card_name)
-        if not base_nation:
-            skipped.append(f"user {user_id_str} ({card_name or '?'})")
-            continue
-        tag = _hoi4_tag_for_nation(base_nation)
-        if tag and card:
-            live_key = _fortune_live_reservation_key(game, user_id_str)
-            live_tag = _hoi4_tag_for_nation(live_key) if live_key else None
-            priority = 0
-            if live_tag == tag:
-                if str(live_key).startswith("_FILL_"):
-                    priority = 1
-                elif "_coop" in str(live_key):
-                    priority = 2
-                else:
-                    priority = 3
-            line = f"        {tag} = {{ add_ideas = {card['code_name']} }}"
-            existing = tag_entries.get(tag)
-            if existing:
-                existing_priority, _existing_line, existing_nation = existing
-                if priority > existing_priority:
-                    skipped.append(
-                        f"{existing_nation} (duplicate tag {tag}; current main reservation preferred)"
-                    )
-                    tag_entries[tag] = (priority, line, base_nation)
-                else:
-                    skipped.append(
-                        f"{base_nation} (duplicate tag {tag}; higher-priority reservation kept)"
-                    )
-                continue
-            tag_entries[tag] = (priority, line, base_nation)
-        else:
-            reason = "unknown tag" if not tag else "unknown card"
-            skipped.append(f"{base_nation} ({reason})")
-    lines = [entry[1] for entry in tag_entries.values()]
-    return lines, skipped
-
-
-def _build_fortunes_script(game: dict) -> str | None:
-    """Builds the on_startup effect block for a single game's locked draws."""
-    lines, skipped = _fortunes_script_lines_for_game(game)
-    if not lines:
-        return None
-
-    script = "on_startup = {\n    effect = {\n" + "\n".join(lines) + "\n    }\n}"
-    if skipped:
-        script += "\n\n# ⚠️ Skipped Fortunes entries: " + ", ".join(sorted(set(skipped)))
-    return script
-
-
-def _build_global_fortunes_script(games_data: dict) -> str | None:
-    """One combined on_startup block for every active Fortunes game with locked draws."""
-    all_lines = []
-    all_skipped = []
-    seen_tags = set()
-    for _thread_id, game in games_data.items():
-        if not game.get("fortunes_only", False):
-            continue
-        if game.get("status") in ("ended", "cancelled"):
-            continue
-        lines, skipped = _fortunes_script_lines_for_game(game)
-        for line in lines:
-            match = re.match(r"\s*([A-Z0-9]{3})\s*=", line)
-            tag = match.group(1) if match else None
-            if tag and tag in seen_tags:
-                all_skipped.append(f"{tag} (duplicate across active games; first entry kept)")
-                continue
-            if tag:
-                seen_tags.add(tag)
-            all_lines.append(line)
-        all_skipped.extend(skipped)
-
-    if not all_lines:
-        return None
-
-    script = "on_startup = {\n    effect = {\n" + "\n".join(all_lines) + "\n    }\n}"
-    if all_skipped:
-        script += "\n\n# ⚠️ Skipped Fortunes entries: " + ", ".join(sorted(set(all_skipped)))
-    return script
-
-
-def _chunk_fortunes_sync_messages(script: str | None) -> list[str]:
-    """Split the submod-sync post into Discord-safe <=2000-char messages.
-
-    Never mid-line truncate (no ``# …truncated…``). If a TAG / add_ideas line
-    would not fit in the current part, the *entire* line moves to the next part.
-    """
-    header = (
-        "🔒 **Fortunes of War — Submod Sync**\n"
-        "Paste this into the submod's `on_startup` effect block "
-        "(all active games combined):\n"
-    )
-    cont_header = "🔒 **Fortunes of War — Submod Sync** (cont.)\n"
-    if not script:
-        return [
-            "🔒 **Fortunes of War — Submod Sync**\n"
-            "_No locked card draws in active games yet._"
-        ]
-
-    fence_open = "```\n"
-    fence_close = "\n```"
-    # Budget for "**Part 99/99**\n" so packing never needs mid-line cuts later.
-    part_budget = len("**Part 99/99**\n")
-    max_body = (
-        2000
-        - max(len(header), len(cont_header))
-        - part_budget
-        - len(fence_open)
-        - len(fence_close)
-    )
-    if max_body < 200:
-        max_body = 1800
-
-    lines = script.split("\n")
-    bodies: list[str] = []
-    current: list[str] = []
-
-    def _flush():
-        if current:
-            bodies.append("\n".join(current))
-            current.clear()
-
-    for line in lines:
-        if not current:
-            # Keep an oversized line whole — never hard-split HOI4 code mid-token.
-            if len(line) > max_body:
-                bodies.append(line)
-            else:
-                current.append(line)
-            continue
-        tentative = "\n".join(current + [line])
-        if len(tentative) <= max_body:
-            current.append(line)
-        else:
-            _flush()
-            if len(line) > max_body:
-                bodies.append(line)
-            else:
-                current.append(line)
-    _flush()
-
-    def _build_chunk(idx: int, total: int, body: str) -> str:
-        part = f"**Part {idx}/{total}**\n" if total > 1 else ""
-        prefix = header if idx == 1 else cont_header
-        return f"{prefix}{part}{fence_open}{body}{fence_close}"
-
-    # If part labels somehow push a chunk over 2000, move trailing *complete*
-    # lines into the next body — never cut inside a line.
-    safety = 0
-    while safety < 50:
-        safety += 1
-        total = max(1, len(bodies))
-        overflow_idx = None
-        for i, body in enumerate(bodies):
-            if len(_build_chunk(i + 1, total, body)) > 2000:
-                overflow_idx = i
-                break
-        if overflow_idx is None:
-            break
-        body_lines = bodies[overflow_idx].split("\n")
-        if len(body_lines) <= 1:
-            # Truly oversized single line — cannot split cleanly; leave as-is.
-            break
-        moved = body_lines.pop()
-        bodies[overflow_idx] = "\n".join(body_lines)
-        if overflow_idx + 1 < len(bodies):
-            bodies[overflow_idx + 1] = moved + "\n" + bodies[overflow_idx + 1]
-        else:
-            bodies.append(moved)
-
-    total = len(bodies)
-    chunks = [_build_chunk(i + 1, total, body) for i, body in enumerate(bodies)]
-    return chunks or [header + "_Empty script._"]
-
-
-async def _pin_fortunes_sync_message(msg) -> None:
-    """Pin a Submod Sync part if it isn't pinned yet."""
-    if msg is None:
-        return
-    try:
-        if getattr(msg, "pinned", False):
-            return
-        await msg.pin()
-    except Exception as pin_err:
-        print(f"[WARN] Could not pin Fortunes sync message {getattr(msg, 'id', '?')}: {pin_err}")
-
-
-async def _update_fortunes_script_message(thread_id: str = None, *, force_repost: bool = False):
-    """Creates/edits the global submod-sync message(s) in the Fortunes channel.
-
-    Chunks across multiple messages when needed (Discord 2000-char limit).
-    With force_repost=True: delete old
-    panel(s), repost fresh, and pin **every** part.
-    """
-    del thread_id  # kept for call-site compatibility; one post covers all games
-    try:
-        games_data = await read_json(GAMES_FILE)
-        bot_config = await read_json(BOT_CONFIG_FILE)
-        script = _build_global_fortunes_script(games_data)
-
-        channel = bot.get_channel(FORTUNES_LOG_CHANNEL_ID)
-        if not channel:
-            try:
-                channel = await bot.fetch_channel(FORTUNES_LOG_CHANNEL_ID)
-            except Exception:
-                return
-
-        chunks = _chunk_fortunes_sync_messages(script)
-
-        edit_count = int(bot_config.get("fortunes_sync_edit_count", 0) or 0) + 1
-        bot_config["fortunes_sync_edit_count"] = edit_count
-        do_repost = bool(force_repost)
-
-        raw_ids = bot_config.get("fortunes_global_sync_msg_ids")
-        if not isinstance(raw_ids, list):
-            raw_ids = []
-        legacy = bot_config.get("fortunes_global_sync_msg_id")
-        if legacy and int(legacy) not in {int(x) for x in raw_ids if str(x).isdigit()}:
-            raw_ids = [legacy] + list(raw_ids)
-
-        existing_msgs = []
-        if not do_repost:
-            for mid in raw_ids:
-                try:
-                    existing_msgs.append(await channel.fetch_message(int(mid)))
-                except Exception:
-                    pass
-        else:
-            # Wipe old panels, then repost + pin all parts.
-            for mid in raw_ids:
-                try:
-                    old = await channel.fetch_message(int(mid))
-                    try:
-                        await old.unpin()
-                    except Exception:
-                        pass
-                    await old.delete()
-                except Exception:
-                    pass
-            existing_msgs = []
-            why = "forced" if force_repost else f"edit #{edit_count}"
-            print(f"🔒 Fortunes submod-sync: repost+pin cycle ({why}).")
-
-        new_ids = []
-        for i, chunk in enumerate(chunks):
-            if i < len(existing_msgs):
-                try:
-                    await _safe_message_edit(existing_msgs[i], content=chunk)
-                    new_ids.append(existing_msgs[i].id)
-                    await _pin_fortunes_sync_message(existing_msgs[i])
-                    continue
-                except Exception as e:
-                    print(f"[WARN] Fortunes sync edit failed (msg {i}): {e}")
-            try:
-                msg = await channel.send(chunk)
-                new_ids.append(msg.id)
-                await _pin_fortunes_sync_message(msg)
-            except Exception as e:
-                print(f"[WARN] Could not post Fortunes global submod-sync message: {e}")
-
-        for extra in existing_msgs[len(chunks):]:
-            try:
-                try:
-                    await extra.unpin()
-                except Exception:
-                    pass
-                await extra.delete()
-            except Exception:
-                pass
-
-        if new_ids:
-            bot_config["fortunes_global_sync_msg_ids"] = new_ids
-            bot_config["fortunes_global_sync_msg_id"] = new_ids[0]
-            await write_json(BOT_CONFIG_FILE, bot_config)
-    except Exception as e:
-        print(f"[WARN] _update_fortunes_script_message failed: {e}")
-
-
-async def _auto_lock_pending_fortunes_draws() -> int:
-    """Treat every still-pending Yes/No confirmation as Yes (satisfied).
-
-    Used once on startup so players who already drew a card but never clicked
-    the (broken) satisfaction buttons still get locked into the submod script.
-    Returns how many pending draws were auto-locked.
-    """
-    try:
-        games_data = await read_json(GAMES_FILE)
-    except Exception as e:
-        print(f"[WARN] auto-lock fortunes: could not load games: {e}")
-        return 0
-
-    locked = 0
-    changed = False
-    for key, game in list((games_data or {}).items()):
-        if not isinstance(game, dict):
-            continue
-        if not game.get("fortunes_only", False):
-            continue
-        if game.get("status") in ("ended", "cancelled"):
-            continue
-        pending = game.get("fortunes_pending")
-        if not isinstance(pending, dict) or not pending:
-            continue
-        for uid_str, card_name in list(pending.items()):
-            if not card_name:
-                continue
-            # Only auto-lock people still on the reservation list (or with a
-            # stored nation snapshot) — matches "on reservation lists but not
-            # yet in the locked code panel".
-            nation = _fortune_nation_for_user(game, uid_str)
-            reservations = game.get("reservations") or {}
-            still_reserved = any(str(v) == str(uid_str) for v in reservations.values())
-            if not still_reserved and not nation:
-                continue
-            _record_fortune_lock(game, uid_str, card_name, nation)
-            locked += 1
-            changed = True
-            print(
-                f"🔒 Auto-locked pending Fortunes draw: user={uid_str} "
-                f"nation={nation or '?'} card={card_name} game={key}"
-            )
-        games_data[key] = game
-
-    if changed:
-        await write_json(GAMES_FILE, games_data)
-        # Do not PATCH the Fortunes panel on boot — draws/locks refresh it.
-    return locked
-
-
-async def handle_fortunes_satisfaction(interaction: discord.Interaction, thread_id: int,
-                                     user_id: int, action: str):
-    """Yes = lock card · No = redraw (if redraws remain). Robust to DM edits."""
-    if interaction.user.id != int(user_id):
-        return await interaction.response.send_message(
-            "❌ This isn't your pick to confirm!", ephemeral=True)
-
-    # Acknowledge ASAP so Discord doesn't mark the button as failed.
-    try:
-        if not interaction.response.is_done():
-            await interaction.response.defer()
-    except Exception:
-        pass
-
-    async def _reply(content: str, *, embed=None, clear_view: bool = False, ephemeral: bool = False):
-        view = None if clear_view else discord.utils.MISSING
-        try:
-            if interaction.message is not None and not ephemeral:
-                await interaction.message.edit(
-                    content=content,
-                    embed=embed if embed is not None else discord.utils.MISSING,
-                    view=view,
-                )
-                return
-        except Exception as e:
-            print(f"[WARN] Fortunes satisfaction message.edit failed: {e}")
-        try:
-            await interaction.followup.send(content, embed=embed, ephemeral=True)
-        except Exception as e2:
-            print(f"[WARN] Fortunes satisfaction followup failed: {e2}")
-
-    games_data = await read_json(GAMES_FILE)
-    storage_key, game = _find_game_entry(games_data, thread_id)
-    if not game:
-        game = games_data.get(str(thread_id))
-        storage_key = str(thread_id) if game else None
-    if not game:
-        return await _reply("❌ Game not found.", ephemeral=True)
-
-    pending = game.get("fortunes_pending", {})
-    if not isinstance(pending, dict) or str(user_id) not in pending:
-        # Already locked (e.g. auto-lock on restart) — treat as success.
-        drawn = game.get("fortunes_drawn") or {}
-        if str(user_id) in drawn:
-            return await _reply(
-                f"✅ Your pick is already locked in: **{drawn[str(user_id)]}**.",
-                clear_view=True,
-            )
-        return await _reply(
-            "❌ No pending card to confirm. Ask the host if you need a new deck.",
-            ephemeral=True,
-        )
-
-    card_name = pending[str(user_id)]
-
-    if action == "yes":
-        nation = _fortune_nation_for_user(game, user_id)
-        _record_fortune_lock(game, user_id, card_name, nation)
-        games_data[storage_key or str(thread_id)] = game
-        await write_json(GAMES_FILE, games_data)
-
-        embed = None
-        try:
-            if interaction.message and interaction.message.embeds:
-                embed = interaction.message.embeds[0]
-                embed.set_footer(text="Fortunes of War • Your fate is sealed for this game.")
-        except Exception:
-            embed = None
-        await _reply("✅ **Locked in!** Your pick is confirmed.", embed=embed, clear_view=True)
-        await _update_fortunes_script_message(str(thread_id))
-        return
-
-    # --- No / redraw ---
-    redraws_used = _fortunes_redraw_count(game, user_id)
-    is_major_player = _fortunes_player_is_major(game, user_id)
-    max_redraws = _fortunes_max_redraws(game, is_major_player)
-    if redraws_used >= max_redraws:
-        return await _reply(
-            "❌ You've used all your redraws. Click **Yes** to lock in your current card.",
-            ephemeral=True,
-        )
-
-    pending.pop(str(user_id), None)
-    game["fortunes_pending"] = pending
-    pn = game.get("fortunes_pending_nations")
-    if isinstance(pn, dict):
-        pn.pop(str(user_id), None)
-    redraws_used += 1
-    if not isinstance(game.get("fortunes_redraw_count"), dict):
-        game["fortunes_redraw_count"] = {}
-    game["fortunes_redraw_count"][str(user_id)] = redraws_used
-    games_data[storage_key or str(thread_id)] = game
-    await write_json(GAMES_FILE, games_data)
-
-    await _reply(
-        "🔄 **Redraw chosen!** Check your DMs for a fresh deck — this pick is discarded.",
-        embed=None,
-        clear_view=True,
-    )
-
-    remaining = max(0, max_redraws - redraws_used)
-    try:
-        user = interaction.client.get_user(int(user_id)) or await interaction.client.fetch_user(int(user_id))
-        intro = discord.Embed(
-            title="🎴 Fortunes of War — Redraw 🎴",
-            description=(
-                "Your next chance awaits.\n\n"
-                f"**15 cards** rest face-down. Choose **one** — "
-                f"{_fortunes_redraw_remaining_text(remaining)}"
-            ),
-            color=EmbedColor.ROLEPLAY,
-        )
-        view = FortunesView(int(user_id), int(thread_id),
-                            is_major_player=is_major_player, redraws_used=redraws_used)
-        view.message = await user.send(embed=intro, view=view)
-        await _persist_fortunes_deck(
-            thread_id, user_id, [c["name"] for c in view.shuffled_deck]
-        )
-    except Exception as e:
-        print(f"[WARN] Could not DM Fortunes redraw deck: {e}")
-
-
-class FortunesSatisfactionButton(discord.ui.DynamicItem[discord.ui.Button],
-                                  template=r"(?:fortunes|fsat):(?P<action>yes|no):(?P<thread>\d+):(?P<user>\d+)"):
-    """Restart-proof Yes/No buttons for Fortunes card confirmation.
-
-    Accepts both legacy `fortunes:yes:…` custom_ids and the newer `fsat:yes:…`
-    prefix so old DMs keep working after deploy.
-    """
-
-    def __init__(self, action: str, thread_id: int, user_id: int):
-        self.action = action
-        self.thread_id = int(thread_id)
-        self.user_id = int(user_id)
-        # Prefer unambiguous prefix so this never collides with card buttons.
-        cid = f"fsat:{action}:{thread_id}:{user_id}"
-        if action == "yes":
-            button = discord.ui.Button(
-                label="Yes, I'm satisfied", style=discord.ButtonStyle.success, emoji="✅",
-                custom_id=cid,
-            )
-        else:
-            button = discord.ui.Button(
-                label="No, redraw", style=discord.ButtonStyle.danger, emoji="❌",
-                custom_id=cid,
-            )
-        super().__init__(button)
-
-    @classmethod
-    async def from_custom_id(cls, interaction, item, match, /):
-        return cls(match["action"], int(match["thread"]), int(match["user"]))
-
-    async def callback(self, interaction: discord.Interaction):
-        try:
-            await handle_fortunes_satisfaction(
-                interaction, self.thread_id, self.user_id, self.action)
-        except Exception as e:
-            print(f"[ERROR] FortunesSatisfactionButton callback: {e}")
-            import traceback
-            traceback.print_exc()
-            try:
-                if interaction.response.is_done():
-                    await interaction.followup.send(
-                        "❌ Something went wrong confirming your card. Try again or ask the host.",
-                        ephemeral=True,
-                    )
-                else:
-                    await interaction.response.send_message(
-                        "❌ Something went wrong confirming your card. Try again or ask the host.",
-                        ephemeral=True,
-                    )
-            except Exception:
-                pass
-
-
-def build_fortunes_satisfaction_view(thread_id: int, user_id: int) -> discord.ui.View:
-    view = discord.ui.View(timeout=None)
-    view.add_item(FortunesSatisfactionButton("yes", thread_id, user_id))
-    view.add_item(FortunesSatisfactionButton("no", thread_id, user_id))
-    return view
-
-
-class FortuneCardButton(discord.ui.DynamicItem[discord.ui.Button],
-                        template=r"fortunes:card:(?P<thread>\d+):(?P<user>\d+):(?P<pos>\d+):(?P<major>[01]):(?P<redraws>\d+)"):
-    """Restart-proof face-down card button (survives tab switches + bot restarts)."""
-
-    def __init__(self, thread_id: int, user_id: int, position: int,
-                 is_major_player: bool, redraws_used: int, emoji_id: int, row: int = 0):
-        self.thread_id = int(thread_id)
-        self.user_id = int(user_id)
-        self.position = int(position)
-        self.is_major_player = bool(is_major_player)
-        self.redraws_used = int(redraws_used)
-        button = discord.ui.Button(
-            emoji=discord.PartialEmoji(name="card", id=int(emoji_id)),
-            style=discord.ButtonStyle.secondary,
-            custom_id=(
-                f"fortunes:card:{thread_id}:{user_id}:{position}:"
-                f"{1 if is_major_player else 0}:{redraws_used}"
-            ),
-            row=row,
-        )
-        super().__init__(button)
-
-    @classmethod
-    async def from_custom_id(cls, interaction, item, match, /):
-        # Emoji is already on the component Discord sends back.
-        emoji = getattr(item, "emoji", None)
-        emoji_id = getattr(emoji, "id", None) or FORTUNE_BUTTON_EMOJI_IDS[0]
-        return cls(
-            int(match["thread"]),
-            int(match["user"]),
-            int(match["pos"]),
-            match["major"] == "1",
-            int(match["redraws"]),
-            int(emoji_id),
-            row=0,
-        )
-
-    async def callback(self, interaction: discord.Interaction):
-        await handle_fortunes_card_draw(
-            interaction,
-            thread_id=self.thread_id,
-            user_id=self.user_id,
-            position=self.position,
-            is_major_player=self.is_major_player,
-            redraws_used=self.redraws_used,
-        )
-
-
-class FortunesView(discord.ui.View):
-    """3x5 deck of face-down cards bound to a single player (sent via DM).
-
-    timeout=None + DynamicItem buttons: cards stay clickable after switching
-    Discord tabs / bot restarts (previously timed out after 5 minutes).
-    """
-
-    def __init__(self, user_id: int, thread_id: int, is_major_player: bool = True,
-                 redraws_used: int = 0):
-        super().__init__(timeout=None)
-        self.user_id = user_id
-        self.thread_id = thread_id
-        self.is_major_player = is_major_player
-        self.redraws_used = redraws_used
-        self.message = None
-        self.shuffled_deck = _build_fortunes_shuffled_deck(is_major_player)
-        count = len(self.shuffled_deck)
-        for i in range(count):
-            emoji_id = random.choice(FORTUNE_BUTTON_EMOJI_IDS)
-            self.add_item(FortuneCardButton(
-                thread_id, user_id, i, is_major_player, redraws_used, emoji_id, row=i // 5,
-            ))
-
-
-async def handle_fortunes_card_draw(interaction: discord.Interaction, *,
-                                    thread_id: int, user_id: int, position: int,
-                                    is_major_player: bool, redraws_used: int):
-    """Shared flip handler for Fortunes face-down card buttons."""
-    if interaction.user.id != user_id:
-        return await interaction.response.send_message(
-            "❌ This deck of fate isn't yours to draw from!", ephemeral=True)
-
-    games_data = await read_json(GAMES_FILE)
-    _, game = _find_game_entry(games_data, thread_id)
-    if not game:
-        return await interaction.response.edit_message(
-            embed=discord.Embed(title="❌ Game Not Found",
-                                description="This game session no longer exists.", color=EmbedColor.DANGER),
-            view=None,
-        )
-
-    drawn = game.get("fortunes_drawn", {})
-    if isinstance(drawn, dict) and str(user_id) in drawn:
-        return await interaction.response.edit_message(
-            embed=discord.Embed(title="❌ Already Drawn",
-                                description="You have already drawn your fate for this game!", color=EmbedColor.DANGER),
-            view=None,
-        )
-
-    pending = game.get("fortunes_pending", {})
-    if isinstance(pending, dict) and str(user_id) in pending:
-        return await interaction.response.edit_message(
-            embed=discord.Embed(
-                title="❌ Awaiting Confirmation",
-                description="You already have a card waiting — check above and click **Yes** or **No**.",
-                color=EmbedColor.DANGER),
-            view=None,
-        )
-
-    # Resolve the card from the persisted deck (same order the DM was dealt).
-    decks = game.get("fortunes_decks", {}) if isinstance(game.get("fortunes_decks"), dict) else {}
-    stored_names = decks.get(str(user_id))
-    card = None
-    if isinstance(stored_names, list) and 0 <= position < len(stored_names):
-        card = _fortunes_card_for(stored_names[position])
-    if card is None:
-        # Fallback: rebuild a fresh shuffle (legacy DMs before deck persistence).
-        fallback_deck = _build_fortunes_shuffled_deck(is_major_player)
-        if 0 <= position < len(fallback_deck):
-            card = fallback_deck[position]
-    if card is None:
-        return await interaction.response.send_message(
-            "❌ That card slot is invalid. Ask the host for a fresh deck.", ephemeral=True)
-
-    nation = _fortune_nation_for_user(game, user_id)
-
-    # --- PHASE 1: Suspense (disable current message buttons temporarily) ---
-    disabled_view = discord.ui.View(timeout=None)
-    suspense = discord.Embed(
-        title="🎴 Fortunes of War 🎴",
-        description=(f"✨ {FORTUNE_CARD_BACK} A card is being pulled from the deck... ✨\n\n"
-                     "🔄 Flipping card... ⚡"),
-        color=EmbedColor.ROLEPLAY,
-    )
-    await interaction.response.edit_message(embed=suspense, view=disabled_view)
-    await asyncio.sleep(1.5)
-
-    # --- PERSIST (re-read to avoid clobbering concurrent writes) ---
-    games_data = await read_json(GAMES_FILE)
-    storage_key, game = _find_game_entry(games_data, thread_id)
-    if game is None:
-        return await interaction.edit_original_response(
-            embed=discord.Embed(title="❌ Game Not Found",
-                                description="This game session no longer exists.", color=EmbedColor.DANGER),
-            view=None,
-        )
-    if not isinstance(game.get("fortunes_drawn"), dict):
-        game["fortunes_drawn"] = {}
-    if str(user_id) in game["fortunes_drawn"]:
-        return await interaction.edit_original_response(
-            embed=discord.Embed(title="❌ Already Drawn",
-                                description="You have already drawn your fate for this game!", color=EmbedColor.DANGER),
-            view=None,
-        )
-    pending = game.get("fortunes_pending", {})
-    if isinstance(pending, dict) and str(user_id) in pending:
-        return await interaction.edit_original_response(
-            embed=discord.Embed(
-                title="❌ Awaiting Confirmation",
-                description="You already have a card waiting — check above and click **Yes** or **No**.",
-                color=EmbedColor.DANGER),
-            view=None,
-        )
-
-    # Refresh nation from latest reservations if it was missing earlier.
-    nation = nation or _fortune_nation_for_user(game, user_id)
-
-    lock_now = redraws_used >= _fortunes_max_redraws(game, is_major_player)
-    if lock_now:
-        _record_fortune_lock(game, user_id, card["name"], nation)
-    else:
-        _record_fortune_pending(game, user_id, card["name"], nation)
-    await save_single_game(storage_key or str(thread_id), game, rewrite_reservations=False)
-
-    # --- PHASE 2: Cinematic Reveal ---
-    reveal = discord.Embed(
-        title=f"{card['emoji']} {card['name']}",
-        description=f"*{card['lore']}*",
-        color=card.get("color", 0xf1c40f),
-    )
-    if nation:
-        reveal.insert_field_at(0, name="🏳️ Nation", value=nation, inline=False)
-    reveal.add_field(name="⚡ Modifiers", value=_fortune_effects_block(card), inline=False)
-    unlocks_block = _fortune_unlocks_block(card)
-    if unlocks_block:
-        reveal.add_field(name="🔓 Unlocks", value=unlocks_block, inline=False)
-
-    if lock_now:
-        reveal.set_footer(text="Fortunes of War • Your fate is sealed for this game.")
-        await interaction.edit_original_response(embed=reveal, view=None)
-        await _log_fortunes_draw(interaction.client, thread_id, user_id, card, nation=nation)
-        await _update_fortunes_script_message(str(thread_id))
-    else:
-        reveal.set_footer(text="Fortunes of War • Confirm below to lock in, or redraw once.")
-        satisfaction_view = build_fortunes_satisfaction_view(thread_id, user_id)
-        await interaction.edit_original_response(
-            content="**Are you satisfied with your pick?**",
-            embed=reveal,
-            view=satisfaction_view,
-        )
-        await _log_fortunes_draw(interaction.client, thread_id, user_id, card, nation=nation)
-
-
-async def _log_fortunes_draw(client, thread_id, user_id, card: dict, *,
-                             nation: str | None = None, host_id: int | None = None):
-    channel = client.get_channel(FORTUNES_LOG_CHANNEL_ID)
-    if not channel:
-        try:
-            channel = await client.fetch_channel(FORTUNES_LOG_CHANNEL_ID)
-        except Exception:
-            channel = None
-    if not channel:
-        return
-    nation_line = nation or "*(unknown — check reservations)*"
-    forced = f"\n**Drawn by host:** <@{host_id}>" if host_id else ""
-    log_content = (
-        f"🃏 **Fortunes of War — Card Drawn{' (Host Forced)' if host_id else ''}**\n"
-        f"**Player:** <@{user_id}>\n"
-        f"**Nation:** {nation_line}\n"
-        f"**Card:** {card['emoji']} {card['name']}\n"
-        f"**Game:** <#{thread_id}>{forced}"
-    )
-    try:
-        await channel.send(log_content)
-    except Exception:
-        pass
-
-
-async def send_fortunes_dm(interaction: discord.Interaction, thread_id: int, flavor: str = None,
-                           redraws_used: int = 0) -> bool:
-    """DMs the Fortunes of War card grid to the user. Returns True if delivered."""
-    games_data, game = await _get_game_data(str(thread_id))
-    is_major_player = _fortunes_player_is_major(game, interaction.user.id) if game else True
-    draw_rule = _fortunes_redraw_intro(game, is_major_player) if game else (
-        "⚠️ *You may only draw **once** per game — choose wisely, Commander!*"
-    )
-
-    intro = discord.Embed(
-        title="🎴 Fortunes of War 🎴",
-        description=((flavor + "\n\n" if flavor else "The deck of fate lies before you.\n\n") +
-                     "**15 cards** rest face-down. Choose **one** to reveal your power-up for this game.\n\n"
-                     + draw_rule),
-        color=EmbedColor.ROLEPLAY,
-    )
-    view = FortunesView(
-        interaction.user.id, thread_id,
-        is_major_player=is_major_player,
-        redraws_used=redraws_used,
-    )
-    try:
-        view.message = await interaction.user.send(embed=intro, view=view)
-        await _persist_fortunes_deck(
-            thread_id, interaction.user.id, [c["name"] for c in view.shuffled_deck]
-        )
-        return True
-    except discord.Forbidden:
-        return False
-    except Exception as e:
-        print(f"[WARN] Could not DM Fortunes grid: {e}")
-        return False
-
-
-
-
-
 
 
 RANDOMIZER_TYPE_LABELS = {
@@ -15627,8 +14218,8 @@ async def _deliver_self_randomizer_result(
 
 
 async def handle_randomizer_reroll(interaction: discord.Interaction, thread_id: int, user_id: int, action: str):
-    """Yes/No reroll confirmation attached to a /gamble result — mirrors the
-    Fortunes of War 'Are you satisfied?' flow. Yes = consume a re-roll and roll again
+    """Yes/No reroll confirmation attached to a /gamble result.
+    Yes = consume a re-roll and roll again
     (same nation if Nation isn't randomized for this game). No = lock the roll in."""
     if interaction.user.id != user_id:
         return await interaction.response.send_message("❌ This roll isn't yours to confirm!", ephemeral=True)
@@ -20470,7 +19061,7 @@ class PlayerSelectView(discord.ui.View):
         self.add_item(PlayerSelect(game_id, action_type))
 
 
-# Rebuild prompt string from the canonical HOI4_TAGS dict (defined near Fortunes).
+# Rebuild prompt string from the canonical HOI4_TAGS dict.
 TAGS_PROMPT_STRING = "\n".join([f"- {tag}: {country}" for tag, country in HOI4_TAGS.items()])
 
 
@@ -27219,24 +25810,24 @@ SCHEDULE_MODE_CHOICES = [
 
 SCHEDULE_ADDON_CHOICES = [
     app_commands.Choice(name="🎲 Casino (currently unavailable)", value="randomizer"),
-    app_commands.Choice(name="🃏 Fortunes of War (currently unavailable)", value="fortunes"),
     app_commands.Choice(name="🧟 Zombies (submod required)", value="zombies"),
     app_commands.Choice(name="🔱 Leviathan (submod required)", value="leviathan"),
 ]
 
 # Add-ons that were removed: games scheduled with them keep their slot.
-# All Add-ons becomes a Casino game (its reserving part, /gamble); Lootboxes
-# and Star Wars become plain games.
-_RETIRED_ADDONS = {"all": "randomizer", "lootbox": None, "starwars": None}
+# All Add-ons becomes a Casino game (its reserving part, /gamble); Lootboxes,
+# Star Wars and Fortunes of War (2026-11-11: the mods randomize it themselves)
+# become plain games.
+_RETIRED_ADDONS = {"all": "randomizer", "lootbox": None, "starwars": None, "fortunes": None}
 
 
-# The Casino and Fortunes of War (TommyKay only; docs/casino-integration.md).
+# The Casino (TommyKay only; docs/casino-integration.md).
 # Until CASINO_ADDONS_LIVE is True only Host Management can schedule them (a
 # test game: the slot gets `addon_test`); other hosts see them as unavailable,
 # and older slots that still carry them are announced as normal map games.
 # Switch on together with CASINO_ADDONS_LIVE in web/src/lib/scheduleOptions.ts.
 CASINO_ADDONS_LIVE = False
-_UNAVAILABLE_ADDONS = set() if CASINO_ADDONS_LIVE else {"randomizer", "fortunes"}
+_UNAVAILABLE_ADDONS = set() if CASINO_ADDONS_LIVE else {"randomizer"}
 
 
 def _current_addon(value):
@@ -27439,7 +26030,6 @@ async def _check_scheduled_announcements_for_guild():
             if addon_value in _UNAVAILABLE_ADDONS and not item.get("addon_test"):
                 addon_value = "none"
             randomizer_only = (addon_value == "randomizer")
-            fortunes_only = (addon_value == "fortunes")
             submod = SUBMOD_ADDONS.get(addon_value)
             randomizer_mode = item.get("randomizer_mode", "casual") if randomizer_only else None
             randomizer_type = (
@@ -27470,10 +26060,6 @@ async def _check_scheduled_announcements_for_guild():
                 rm_label = "Competitive" if randomizer_mode == "competitive" else "Casual"
                 addon_line = f"\n🎲 **CASINO PROTOCOL{rtype_label}** ({rm_label})"
                 reserve_cmd = "/gamble"
-            elif fortunes_only:
-                fm_label = "Competitive" if item.get("fortunes_mode") == "competitive" else "Casual"
-                addon_line = f"\n🃏 **FORTUNES OF WAR** ({fm_label})"
-                reserve_cmd = "/draw"
             elif submod:
                 addon_line = f"\n{submod['emoji']} **{submod['label'].upper()} SUBMOD**"
                 reserve_cmd = None
@@ -27544,8 +26130,8 @@ async def _check_scheduled_announcements_for_guild():
                 "preset_id": item.get("preset_id"),
                 "preset_name": item.get("preset_name"),
                 "require_ironlegion": item.get("require_ironlegion"),
-                # The add-on by name (the website reads it), and Casino /
-                # Fortunes co-hosts as strings: JavaScript rounds 19-digit ids.
+                # The add-on by name (the website reads it), and Casino
+                # co-hosts as strings: JavaScript rounds 19-digit ids.
                 "add_on": addon_value if addon_value != "none" else None,
                 "co_hosts": [str(uid) for uid in item.get("co_hosts") or []],
                 "casino_settings": item.get("casino_settings") if randomizer_only else None,
@@ -27558,13 +26144,7 @@ async def _check_scheduled_announcements_for_guild():
                 "coops_unlocked_by_host": False,
                 "fillers_unlocked_by_host": False,
                 "lockdown": False,
-                "fortunes_drawn": {},
-                "fortunes_drawn_nations": {},
-                "fortunes_pending": {},
-                "fortunes_redraw_count": {},
-                "fortunes_mode": item.get("fortunes_mode", "casual") if fortunes_only else None,
                 "randomizer_only": randomizer_only,
-                "fortunes_only": fortunes_only,
                 "randomizer_type": randomizer_type,
                 "randomizer_mode": randomizer_mode,
                 "randomizer_reroll_count": {},
@@ -29658,7 +28238,7 @@ def _web_parse_draft(raw, mode: str, add_on, nation_layout):
     if not isinstance(raw, dict):
         return None, "❌ Invalid draft settings."
     if add_on in DRAFT_BLOCKED_ADDONS:
-        return None, "❌ Draft games can't use the Casino, Fortunes of War or All Add-ons add-ons."
+        return None, "❌ Draft games can't use the Casino add-on."
     teams = raw.get("teams")
     if not isinstance(teams, list) or len(teams) != 2:
         return None, "❌ A draft needs exactly two teams."
@@ -29856,8 +28436,8 @@ def _sanitize_casino_settings(raw, major_level: str, minor_level: str) -> dict:
 
 
 def _web_co_hosts(payload: dict, add_on) -> list:
-    """Casino / Fortunes games' co-hosts (Discord ids); none for other games."""
-    if add_on not in ("randomizer", "fortunes"):
+    """Casino games' co-hosts (Discord ids); none for other games."""
+    if add_on != "randomizer":
         return []
     ids = []
     for raw in payload.get("co_hosts") or []:
@@ -29902,9 +28482,9 @@ async def _build_web_schedule_fields(payload: dict, keep_day: tuple | None = Non
     if add_on is not None and add_on not in _WEB_SCHEDULE_ADDON_VALUES:
         return None, f"❌ Unknown add-on: {add_on}."
     if add_on in _UNAVAILABLE_ADDONS and not staff:
-        return None, "❌ Casino and Fortunes of War are currently unavailable."
+        return None, "❌ The Casino is currently unavailable."
     if add_on in HOME_ONLY_ADDONS and cur_gid() != GUILD_ID:
-        return None, "❌ The Casino and Fortunes of War add-ons are only available on TommyKay's server."
+        return None, "❌ The Casino add-on is only available on TommyKay's server."
 
     major_level = payload.get("major_lock_level") or "Trusted"
     minor_level = payload.get("minor_lock_level") or "All Users"
@@ -30030,10 +28610,6 @@ async def _build_web_schedule_fields(payload: dict, keep_day: tuple | None = Non
         "rules": rules,
         "mods": mods,
         **draft_fields,
-        "fortunes_mode": (
-            ("competitive" if payload.get("fortunes_mode") == "competitive" else "casual")
-            if add_on == "fortunes" else None
-        ),
         "casino_settings": (
             _sanitize_casino_settings(payload.get("casino_settings"), major_level, minor_level)
             if add_on == "randomizer" else None
@@ -30117,8 +28693,6 @@ async def _process_web_schedule_create(req: dict) -> tuple[bool, dict | None, st
         "source": "web",
         **fields,
     }
-    if slot["fortunes_mode"] is None:
-        del slot["fortunes_mode"]
     _audit_log(
         "INFO",
         f"web schedule create slot={slot_id} timestamp={slot['game_timestamp']} host={host_id} "
@@ -30316,8 +28890,8 @@ async def _process_web_schedule_update(req: dict) -> tuple[bool, dict | None, st
         if target.get("announced") or target.get("thread_id"):
             return False, None, "❌ This game was just announced — open it again to edit the time."
         target.update(fields)
-        if fields.get("fortunes_mode") is None:
-            target.pop("fortunes_mode", None)
+        # Fortunes of War is gone: an older slot drops its setting when edited.
+        target.pop("fortunes_mode", None)
         if new_host is not None and new_host.id != owner_id:
             target["host_id"] = new_host.id
             target["host_username"] = new_host.name or str(new_host.id)
@@ -32099,7 +30673,7 @@ async def audit_trail_retention_loop():
 _AUDIT_SELF_RECORDED = frozenset({
     # feedback_rate: who gave which rating stays private, so no audit row.
     "roster_assign", "roster_remove", "moderation", "dishonored", "host_rating", "member_roles", "feedback_rate",
-    "casino_emergency_unreserve", "fortunes_redraw", "fortunes_reset", "casino_fallback", "remove_slot",
+    "casino_emergency_unreserve", "casino_fallback", "remove_slot",
     *GAME_LIFECYCLE_ACTIONS,
 })
 # Request action → (audit category, audit action, what the actor did).
@@ -32237,8 +30811,6 @@ async def web_schedule_request_loop():
                 ok, result, err = await _process_web_casino_grant(req)
             elif action == "casino_emergency_unreserve":
                 ok, result, err = await _process_web_casino_emergency_unreserve(req)
-            elif action in ("fortunes_redraw", "fortunes_reset"):
-                ok, result, err = await _process_web_fortunes_tool(req)
             elif action == "casino_fallback":
                 ok, result, err = await _process_web_casino_fallback(req)
             elif action in ("moderation", "dishonored"):
@@ -32914,7 +31486,7 @@ async def _web_casino_remove(payload: dict, actor, game: dict, thread_id: str, u
 
 # ————— Casino down: switch to normal reserving (docs/casino-integration.md, step 8) —————
 # When tkcasino.online stays down, the game's host (or Host Management) can
-# turn a Casino / Fortunes game into a normal map game from the Games page.
+# turn a Casino game into a normal map game from the Games page.
 # Nations already picked stay; everyone else reserves on the map. Can't be undone.
 
 
@@ -32952,21 +31524,19 @@ async def _process_web_casino_fallback(req: dict):
     if not isinstance(game, dict):
         return False, None, "❌ This game no longer exists."
     key = str(storage_key or thread_id)
-    fortunes = _is_fortunes_game_dict(game)
-    if not fortunes and not _is_casino_game_dict(game):
+    if not _is_casino_game_dict(game):
         return False, None, "❌ This game doesn't use the Casino."
     if not _can_end_assigned_game(actor, game):
         return False, None, "❌ Only the game's host or Host Management can switch it."
     if game.get("game_started") or game.get("status") in ("ended", "cancelled"):
         return False, None, "❌ This game has started or ended."
-    was = "Fortunes of War" if fortunes else "Casino"
+    was = "Casino"
     game["casino_fallback"] = {
-        "add_on": "fortunes" if fortunes else "randomizer",
+        "add_on": "randomizer",
         "by": str(actor.id),
         "at": int(time.time()),
     }
     game["randomizer_only"] = False
-    game["fortunes_only"] = False
     game["add_on"] = None
     await save_single_game(key, game, rewrite_reservations=False)
     await _roster_after_change(key)
@@ -32984,234 +31554,6 @@ async def _process_web_casino_fallback(req: dict):
         summary += " The announcement couldn't be updated: its link still points to the Casino."
     return True, {"access": {"title": f"Switched to normal reserving (was {was})", "summary": summary, "notes": [], "stats": {}, "log_url": None}}, None
 
-
-# ————— Fortunes of War (docs/casino-integration.md, step 7) —————
-# Players reserve on the map as usual, then draw one of 15 face-down cards in
-# the Fortunes room on tkcasino.online (via GameMaster's /casino/<game>).
-# The bot keeps each player's fortunes_draws row in step with their nation,
-# and runs the host's Redraw / Reset from the map's Host Tool.
-
-FORTUNES_SYNC_INTERVAL_SEC = 10
-_fortunes_sync_sig: dict = {}
-
-
-def _is_fortunes_game_dict(game) -> bool:
-    return isinstance(game, dict) and (bool(game.get("fortunes_only")) or game.get("add_on") == "fortunes")
-
-
-def _fortunes_base_redraws(fortunes_mode: str, major: bool) -> int:
-    """Casual: majors 2, minors 1. Competitive: majors 1, minors 0 (as /draw had)."""
-    if fortunes_mode == "competitive":
-        return 1 if major else 0
-    return 2 if major else 1
-
-
-def _fortunes_players(game: dict) -> dict:
-    """Who holds a nation in a Fortunes game: user id → nation, HOI4 tag, slot priority, major."""
-    mode = str(game.get("mode") or "")
-    players = {}
-    for uid in sorted({str(v) for v in (game.get("reservations") or {}).values()}):
-        if not uid.isdigit():
-            continue
-        key = _fortune_live_reservation_key(game, uid)
-        if not key or str(key).startswith("_FILL_"):
-            continue
-        base = str(key).split("_coop", 1)[0].strip()
-        try:
-            major = bool(is_major(base, mode))
-        except Exception:
-            major = False
-        players[uid] = {
-            "nation": base,
-            "tag": _hoi4_tag_for_nation(base),
-            # The main holder's card wins over a co-op's in the host's script.
-            "priority": 2 if "_coop" in str(key) else 3,
-            "major": major,
-        }
-    return players
-
-
-def _sync_fortunes_draws_sync(game_id: str, players: dict, fortunes_mode: str) -> None:
-    conn = None
-    cur = None
-    try:
-        conn = _db_get_connection()
-        cur = conn.cursor()
-        now = int(time.time())
-        for uid, entry in players.items():
-            cur.execute(
-                "INSERT INTO fortunes_draws (game_id, user_id, nation, hoi4_tag, slot_priority, is_major, max_redraws, created_at, updated_at) "
-                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) "
-                "ON DUPLICATE KEY UPDATE nation = VALUES(nation), hoi4_tag = VALUES(hoi4_tag), "
-                "slot_priority = VALUES(slot_priority), is_major = VALUES(is_major), updated_at = VALUES(updated_at)",
-                (
-                    str(game_id), int(uid), entry["nation"][:128], entry["tag"], int(entry["priority"]),
-                    1 if entry["major"] else 0, _fortunes_base_redraws(fortunes_mode, entry["major"]), now, now,
-                ),
-            )
-        # Off the board: the card stays with them, but no nation means no line in the script.
-        if players:
-            marks = ",".join(["%s"] * len(players))
-            cur.execute(
-                f"UPDATE fortunes_draws SET nation = NULL, hoi4_tag = NULL, slot_priority = 0, updated_at = %s "
-                f"WHERE game_id = %s AND nation IS NOT NULL AND user_id NOT IN ({marks})",
-                (now, str(game_id), *[int(uid) for uid in players]),
-            )
-        else:
-            cur.execute(
-                "UPDATE fortunes_draws SET nation = NULL, hoi4_tag = NULL, slot_priority = 0, updated_at = %s "
-                "WHERE game_id = %s AND nation IS NOT NULL",
-                (now, str(game_id)),
-            )
-        conn.commit()
-    finally:
-        if cur is not None:
-            try:
-                cur.close()
-            except Exception:
-                pass
-        if conn is not None:
-            try:
-                conn.close()
-            except Exception:
-                pass
-
-
-@tasks.loop(seconds=FORTUNES_SYNC_INTERVAL_SEC)
-async def fortunes_sync_loop():
-    """Keeps fortunes_draws in step with who holds which nation in Fortunes games."""
-    try:
-        for key, game in list(_all_games().items()):
-            key = str(key)
-            if not _is_fortunes_game_dict(game) or game.get("status") in ("ended", "cancelled"):
-                _fortunes_sync_sig.pop(key, None)
-                continue
-            with guild_scope(game.get("guild_id")):
-                players = _fortunes_players(game)
-            fortunes_mode = "competitive" if game.get("fortunes_mode") == "competitive" else "casual"
-            sig = json.dumps([players, fortunes_mode], sort_keys=True)
-            if _fortunes_sync_sig.get(key) == sig:
-                continue
-            await _run_mysql_io(_sync_fortunes_draws_sync, key, players, fortunes_mode, label="fortunes sync")
-            _fortunes_sync_sig[key] = sig
-    except Exception as e:
-        print(f"Error in fortunes_sync_loop: {e}")
-
-
-def _fortunes_row_sync(game_id: str, user_id: int):
-    conn = None
-    cur = None
-    try:
-        conn = _db_get_connection()
-        cur = conn.cursor(dictionary=True)
-        cur.execute(
-            "SELECT nation, state, card_name, max_redraws, redraws_used FROM fortunes_draws WHERE game_id = %s AND user_id = %s",
-            (str(game_id), int(user_id)),
-        )
-        row = cur.fetchone()
-        return dict(row) if row else None
-    finally:
-        if cur is not None:
-            try:
-                cur.close()
-            except Exception:
-                pass
-        if conn is not None:
-            try:
-                conn.close()
-            except Exception:
-                pass
-
-
-def _fortunes_tool_update_sync(game_id: str, user_id: int, op: str) -> None:
-    conn = None
-    cur = None
-    try:
-        conn = _db_get_connection()
-        cur = conn.cursor()
-        now = int(time.time())
-        if op == "redraw":
-            # One more redraw; a locked card opens again (keep it or redraw).
-            cur.execute(
-                "UPDATE fortunes_draws SET max_redraws = max_redraws + 1, "
-                "state = IF(state = 'locked', 'pending', state), updated_at = %s "
-                "WHERE game_id = %s AND user_id = %s",
-                (now, str(game_id), int(user_id)),
-            )
-        else:
-            # A fresh deck with their usual redraws; old links stop working.
-            cur.execute(
-                "UPDATE fortunes_draws SET deck = NULL, card = NULL, card_name = NULL, state = 'new', "
-                "redraws_used = 0, access_key = NULL, key_expires_at = NULL, updated_at = %s "
-                "WHERE game_id = %s AND user_id = %s",
-                (now, str(game_id), int(user_id)),
-            )
-        conn.commit()
-    finally:
-        if cur is not None:
-            try:
-                cur.close()
-            except Exception:
-                pass
-        if conn is not None:
-            try:
-                conn.close()
-            except Exception:
-                pass
-
-
-async def _process_web_fortunes_tool(req: dict):
-    """Host Tool on a Fortunes game: "fortunes_redraw" (one extra redraw) or
-    "fortunes_reset" (a fresh deck). The player gets a DM with the link."""
-    action = str(req.get("action") or "")
-    payload = req.get("payload") or {}
-    actor = await _web_fetch_member(int(req.get("host_id") or 0))
-    if not _member_is_host(actor):
-        return False, None, "❌ Only members with a Host role can manage players."
-    thread_id, user_id, err = _roster_payload_ids(payload)
-    if err:
-        return False, None, err
-    games_data = await _read_games_fresh()
-    storage_key, game = _find_game_entry(games_data, thread_id)
-    if not _is_fortunes_game_dict(game):
-        return False, None, "❌ This isn't a Fortunes of War game."
-    key = str(storage_key or thread_id)
-    if not _can_manage_casino_game(actor, game):
-        return False, None, "❌ Only this game's host, its co-hosts and Host Management can change players' cards."
-    if game.get("game_started") or game.get("status") in ("ended", "cancelled"):
-        return False, None, "❌ This game has started, so the cards are sealed."
-    target = await _web_fetch_member(user_id)
-    name = getattr(target, "display_name", None) or _audit_who(user_id) or str(user_id)
-    row = await _run_mysql_io(_fortunes_row_sync, key, user_id, label="fortunes row")
-    if not row or not row.get("nation"):
-        return False, None, f"❌ {name} has no nation in this game, so there's no card to change."
-    op = "redraw" if action == "fortunes_redraw" else "reset"
-    await _run_mysql_io(_fortunes_tool_update_sync, key, user_id, op, label=f"fortunes {op}")
-
-    dm_sent = False
-    if target is not None:
-        text = (
-            f"**{actor.display_name}** gave you an extra redraw for your Fortunes of War card."
-            if op == "redraw"
-            else f"**{actor.display_name}** reset your Fortunes of War card. Draw a fresh one."
-        )
-        embed = discord.Embed(title="🎴 Fortunes of War", description=text, color=EmbedColor.ROLEPLAY)
-        mode = str(game.get("mode") or "Game")
-        ts = int(game.get("start_timestamp") or 0)
-        embed.add_field(name="Game", value=MODE_THREAD_LABELS.get(mode, mode) + (f" · <t:{ts}:F>" if ts > 0 else ""), inline=False)
-        view = discord.ui.View()
-        view.add_item(discord.ui.Button(label="Open Fortunes of War", style=discord.ButtonStyle.link, url=f"{WEB_SITE_URL}/casino/{key}", emoji="🎴"))
-        dm_sent = bool(await _dm_user_safe(target, embed=embed, view=view, label=f"fortunes {op}"))
-    _audit_log("INFO", f"web fortunes {op} thread={key} by={actor.id} user={user_id} dm={dm_sent}")
-    audit_event(
-        "roster", f"fortunes_{op}",
-        f"{actor.display_name} {'gave ' + name + ' an extra Fortunes redraw' if op == 'redraw' else 'reset ' + name + chr(39) + 's Fortunes card'}"
-        + (f" ({game['thread_name']})" if game.get("thread_name") else ""),
-        actor_id=actor.id, actor_name=actor.display_name,
-        target_id=user_id, target_name=name, game_id=key,
-        details={"card": row.get("card_name"), "state": row.get("state"), "dm_sent": dm_sent}, source="web",
-    )
-    return True, {"dm_sent": dm_sent}, None
 
 
 # ————— Casino games: Emergency Unreserve (docs/casino-integration.md, step 6) —————
@@ -33268,8 +31610,6 @@ async def _process_web_casino_emergency_unreserve(req: dict):
     for field in ("randomizer_last_roll", "web_override_rolls"):
         if isinstance(game.get(field), dict):
             game[field].pop(str(user_id), None)
-    if game.get("fortunes_only"):
-        _clear_fortunes_player_state(game, user_id)
     await save_single_game(key, game, rewrite_reservations=True)
     await _roster_after_change(key)
     # Purges their web run (the receipt disappears) and flips the receipt log.
@@ -35355,8 +33695,8 @@ def _apply_settings(rt: GuildRuntime, settings: dict) -> None:
     rt.settings = s
 
 
-# Add-ons that need the home server's casino / Fortunes commands.
-HOME_ONLY_ADDONS = {"randomizer", "fortunes"}
+# Add-ons that need the home server's casino.
+HOME_ONLY_ADDONS = {"randomizer"}
 
 
 def _community_name() -> str:
@@ -36514,14 +34854,6 @@ async def on_ready():
         bot.add_view(CasinoPanelView())
     except Exception as e:
         print(f"⚠️ Could not register casino panel buttons: {e}")
-    try:
-        bot.add_dynamic_items(FortunesSatisfactionButton)
-    except Exception as e:
-        print(f"⚠️ Could not register Fortunes satisfaction buttons: {e}")
-    try:
-        bot.add_dynamic_items(FortuneCardButton)
-    except Exception as e:
-        print(f"⚠️ Could not register Fortunes card buttons: {e}")
 
     # Restart-proof participation Yes/No buttons on game-start DMs.
     try:
@@ -36583,15 +34915,6 @@ async def on_ready():
             await read_json(PLAYER_STATS_FILE)
     except Exception as e:
         print(f"❌ Error initializing files: {e}")
-
-    # Auto-lock any still-pending Yes/No confirmations as "Yes, satisfied"
-    # (covers players stuck after the broken-button window).
-    try:
-        n = await _auto_lock_pending_fortunes_draws()
-        if n:
-            print(f"🔒 Auto-locked {n} pending Fortunes confirmation(s) as Yes.")
-    except Exception as e:
-        print(f"⚠️ Fortunes pending auto-lock failed: {e}")
 
     # 2. Start Background Tasks
     try:
@@ -36669,11 +34992,6 @@ async def on_ready():
         # SELECTION time and re-renders the public reservation embeds.
         if not reservation_sync_loop.is_running():
             reservation_sync_loop.start()
-            loops_started += 1
-
-        # Fortunes of War: keeps fortunes_draws in step with the reservations.
-        if not fortunes_sync_loop.is_running():
-            fortunes_sync_loop.start()
             loops_started += 1
 
         # Web run FINALIZED → receipt DM delivery: drains receipt_dm_queue

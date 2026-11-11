@@ -448,19 +448,6 @@ export default function Home() {
     [reservations, scenarioId, selectedThread, sendAssign, isPoolPlayer, handleDraftDrop, toolsActive, draftBotName, failDraft, gameLock?.casino],
   );
 
-  // Fortunes games: an extra redraw, or a fresh deck, for a player (the bot DMs them the link).
-  const sendFortunesTool = useCallback(
-    (player: HostPlayer, action: "fortunes_redraw" | "fortunes_reset") => {
-      if (!selectedThread) return;
-      void host.send(
-        { action, payload: { thread_id: selectedThread, user_id: player.user_id, notify: true } },
-        action === "fortunes_redraw" ? `${player.name}: an extra Fortunes redraw` : `${player.name}: Fortunes card reset`,
-        player.from_slot ?? null,
-      );
-    },
-    [host, selectedThread],
-  );
-
   // Casino games: a roll, or extra rolls, for a player (the bot DMs them the Casino link).
   const sendCasinoGrant = useCallback(
     (player: HostPlayer, action: "casino_roll" | "casino_extra", rooms: string[], count: number) => {
@@ -745,8 +732,6 @@ export default function Home() {
           slotLabel={slotLabel}
           casino={gameLock?.casino ? { rooms: gameLock.casino_rooms ?? [], nationRoll: gameLock.casino_nation_roll !== false } : null}
           onCasinoGrant={sendCasinoGrant}
-          fortunes={Boolean(gameLock?.fortunes)}
-          onFortunesTool={sendFortunesTool}
           onClose={() => {
             host.setEnabled(false);
             setHeldPlayer(null);

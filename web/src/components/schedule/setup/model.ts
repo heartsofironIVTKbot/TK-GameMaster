@@ -78,7 +78,6 @@ export interface SetupForm {
   time: string;
   loggingMode: LoggingMode;
   addOn: string | null;
-  fortunesMode: "casual" | "competitive";
   majorLevel: LockLevel;
   minorLevel: LockLevel;
   announceMode: AnnounceMode;
@@ -106,7 +105,7 @@ export interface SetupForm {
   draft: DraftForm | null;
   /** Casino games: rooms, re-rolls and the step-down (Extras → Casino). */
   casino: CasinoConfig;
-  /** Casino / Fortunes games: co-hosts' Discord ids. */
+  /** Casino games: co-hosts' Discord ids. */
   coHosts: string[];
 }
 
@@ -175,7 +174,6 @@ export function initialForm(date: string): SetupForm {
     time: "20:00",
     loggingMode: "Strict",
     addOn: null,
-    fortunesMode: "casual",
     majorLevel: "Trusted",
     minorLevel: "All Users",
     announceMode: "before",
@@ -254,7 +252,6 @@ export function formFromSettings(settings: SlotSettings, timeZone: string): Setu
   form.loggingMode = settings.logging_mode === "Casual" ? "Casual" : "Strict";
   // (A switched-off add-on only arrives here on Host Management's test game: currentAddOn.)
   form.addOn = settings.add_on && ADD_ON_VALUES.has(settings.add_on) ? settings.add_on : null;
-  form.fortunesMode = settings.fortunes_mode === "competitive" ? "competitive" : "casual";
   form.majorLevel = isLockLevel(settings.major_lock_level) ? settings.major_lock_level : "Trusted";
   form.minorLevel = isLockLevel(settings.minor_lock_level) ? settings.minor_lock_level : "All Users";
 
@@ -414,7 +411,6 @@ export function deriveSetup(form: SetupForm, context: SetupContext): DerivedSetu
     mode: form.mode,
     logging_mode: form.loggingMode,
     add_on: form.addOn,
-    fortunes_mode: form.addOn === "fortunes" ? form.fortunesMode : null,
     major_lock_level: form.majorLevel,
     minor_lock_level: form.minorLevel,
     announce_timestamp: announceSec,
@@ -443,7 +439,7 @@ export function deriveSetup(form: SetupForm, context: SetupContext): DerivedSetu
         }
       : null,
     casino_settings: form.addOn === "randomizer" ? form.casino : null,
-    co_hosts: form.addOn === "randomizer" || form.addOn === "fortunes" ? form.coHosts : [],
+    co_hosts: form.addOn === "randomizer" ? form.coHosts : [],
   };
 
   const validation = timeOnly

@@ -29,8 +29,7 @@ export interface HostAction {
   payload:
     | { action: "roster_assign"; payload: RosterAssignPayload }
     | { action: "roster_remove"; payload: RosterRemovePayload }
-    | { action: "casino_roll" | "casino_extra"; payload: CasinoGrantPayload }
-    | { action: "fortunes_redraw" | "fortunes_reset"; payload: RosterRemovePayload };
+    | { action: "casino_roll" | "casino_extra"; payload: CasinoGrantPayload };
 }
 
 const STORAGE_KEY = "gm_host_tools";

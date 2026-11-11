@@ -1,7 +1,14 @@
 # Casino integration rework
 
 *Started 2026-11-08.* Brings the Casino and Fortunes of War add-ons back for
-TommyKay's server. Replaces Phase 6 of `infrastructure-plan.md`. The design
+TommyKay's server.
+
+> **2026-11-11: Fortunes of War was removed everywhere** (bot, GameMaster
+> website, Casino site). The HOI4 mod developers randomize it inside their
+> mods, so it needs neither Discord nor the web. Games scheduled with it
+> become plain games (`_RETIRED_ADDONS` / `RETIRED_ADD_ONS`). The old
+> `fortunes_draws` table is no longer created or used and can be dropped.
+> Step 7 below is kept as history. Replaces Phase 6 of `infrastructure-plan.md`. The design
 is Niko's (2026-11-08); the earlier "hosts work on the Casino site" plan was
 dropped in its favour.
 

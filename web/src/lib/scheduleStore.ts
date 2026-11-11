@@ -142,7 +142,6 @@ function settingsFromSlotData(data: Record<string, unknown>, fallbackTs: number)
     announce_timestamp: toInt(data.announce_timestamp),
     logging_mode: str(data.logging_mode) ?? "Strict",
     add_on: currentAddOn(str(data.add_on), data.addon_test === true),
-    fortunes_mode: str(data.fortunes_mode),
     major_lock_level: str(data.major_lock_level) ?? "Trusted",
     minor_lock_level: str(data.minor_lock_level) ?? "All Users",
     automated_unlock: Boolean(data.automated_unlock),
@@ -319,8 +318,6 @@ function requestFromRow(row: RequestRow): ScheduleRequestStatus {
       "casino_roll",
       "casino_extra",
       "casino_emergency_unreserve",
-      "fortunes_redraw",
-      "fortunes_reset",
       "casino_fallback",
       "moderation",
       "dishonored",
@@ -808,7 +805,7 @@ function processDemoRequests(): void {
       continue;
     }
 
-    if (request.action === "casino_roll" || request.action === "casino_extra" || request.action === "fortunes_redraw" || request.action === "fortunes_reset") {
+    if (request.action === "casino_roll" || request.action === "casino_extra") {
       // Preview: there's no bot to DM the link; say it went out.
       request.status = "done";
       request.result = { dm_sent: true };

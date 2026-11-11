@@ -122,7 +122,7 @@ function tommyKaySnapshot(now: number): GuildSnapshot {
     chan("900000000000000104", "CASINO", "category", null, 6),
     chan("880000000000000042", "casino-access", "text", "900000000000000104", 1),
     chan("880000000000000037", "randomizer-log", "text", "900000000000000104", 2),
-    chan("880000000000000038", "fortunes-log", "text", "900000000000000104", 3),
+    chan("880000000000000038", "casino-receipts", "text", "900000000000000104", 3),
     chan("880000000000000004", "RP GAME VOICE", "category", null, 7),
     chan("880000000000000003", "Game Lobby", "voice", "880000000000000004", 1),
     chan("880000000000000047", "HISTORICAL GAME VOICE", "category", null, 8),
