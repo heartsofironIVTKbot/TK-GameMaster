@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useRef, useState } from "react";
-import { Map as MapIcon } from "lucide-react";
+import { ServerCog } from "lucide-react";
 import AuthNotice from "../AuthNotice";
 import type { GlobeEvent } from "../globeEngine";
 import LandingHero from "../LandingHero";
@@ -59,9 +59,10 @@ export default function FrontHero() {
             <a href={inviteUrl()} className="gm-btn gm-btn-primary h-12 justify-center px-7 text-[15px] [--cut:10px]">
               Add to Discord
             </a>
-            <Link href="/map" className="gm-btn gm-btn-secondary h-12 justify-center bg-black/40 px-7 text-[15px] [--cut:10px]">
-              <MapIcon aria-hidden strokeWidth={1.75} />
-              Open the live map
+            {/* Your Discord servers with GameMaster: set it up, change its settings (logs in first when needed). */}
+            <Link href="/servers" className="gm-btn gm-btn-secondary h-12 justify-center bg-black/40 px-7 text-[15px] [--cut:10px]">
+              <ServerCog aria-hidden strokeWidth={1.75} />
+              Your servers
             </Link>
           </div>
           <p className="mt-4 text-xs text-ink-500">No Administrator permission needed. Set up in a few minutes.</p>

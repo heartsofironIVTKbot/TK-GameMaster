@@ -4,6 +4,7 @@ import Link from "next/link";
 import {
   Archive,
   Activity,
+  Globe,
   CalendarDays,
   ClipboardCheck,
   Database,
@@ -51,7 +52,8 @@ export type SitePage =
   | "invite"
   | "crash"
   | "privacy"
-  | "terms";
+  | "terms"
+  | "system";
 
 /** Every page's icon: one line-icon set, one colour (green on the page you're on). */
 export const PAGE_ICONS: Record<SitePage, LucideIcon> = {
@@ -72,6 +74,7 @@ export const PAGE_ICONS: Record<SitePage, LucideIcon> = {
   crash: TriangleAlert,
   privacy: ShieldCheck,
   terms: FileText,
+  system: Globe,
 };
 
 export interface SiteLink {
@@ -106,11 +109,14 @@ const SERVER_LINKS: SiteLink[] = [
   { page: "terms", href: "/terms", label: "Terms of Service", hint: "The rules for using GameMaster" },
 ];
 
+/** GameMaster's owners only (lib/systemAdmin.ts). */
+const SYSTEM_LINKS: SiteLink[] = [{ page: "system", href: "/system", label: "All servers", hint: "Every server using GameMaster" }];
+
 /** The menu's groups for this viewer. */
 export function menuGroups(viewer: Viewer | null): { title: string; links: SiteLink[] }[] {
   const groups = [{ title: "Play", links: PLAYER_LINKS }];
   if (viewer?.isHost) groups.push({ title: "Host", links: [...HOST_LINKS, ...(viewer.isStaff ? STAFF_LINKS : [])] });
-  groups.push({ title: "Servers", links: SERVER_LINKS });
+  groups.push({ title: "Servers", links: [...(viewer?.isSystemAdmin ? SYSTEM_LINKS : []), ...SERVER_LINKS] });
   return groups;
 }
 

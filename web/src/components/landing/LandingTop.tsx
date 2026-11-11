@@ -5,19 +5,19 @@ import { BrandMark, MenuButton, ViewerAvatar } from "@/components/site/SiteMenu"
 import { useViewer } from "@/components/site/viewer";
 
 /**
- * The front page's top bar, over the globe: the name, My Profile, Status and
- * the two policies, log in and the menu (which has every other page).
+ * The front page's top bar, over the globe: the name, My Profile, Status,
+ * log in and the menu (which has every other page). The Privacy Policy and
+ * Terms of Service are in the footer.
  */
 
 export default function LandingTop() {
   const viewer = useViewer();
   // Logged out, My Profile signs in first and comes back to the profile.
   const profile = viewer && !viewer.loggedIn ? "/api/auth/login?next=%2Fprofile" : "/profile";
+  // The two policies are in the footer (Niko, 2026-11-11).
   const links = [
     { href: profile, label: "My Profile" },
     { href: "/status", label: "Status" },
-    { href: "/privacy", label: "Privacy Policy" },
-    { href: "/terms", label: "Terms of Service" },
   ];
   return (
     <header className="pointer-events-auto mx-auto flex w-full max-w-[1400px] items-center gap-4 px-4 py-4 sm:px-8">

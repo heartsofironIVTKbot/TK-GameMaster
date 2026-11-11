@@ -34421,6 +34421,8 @@ async def _publish_member_role_ids() -> None:
 @bot.event
 async def on_guild_join(guild: discord.Guild):
     print(f"➕ Joined server {guild.name} ({guild.id})")
+    if await _leave_if_blocked(guild):
+        return
     try:
         await _record_guild(guild)
         row = await _run_mysql_io(_load_guild_settings_row_mysql, guild.id, label="guild settings read")
@@ -34910,12 +34912,120 @@ async def _bot_status_started() -> None:
             kind = await _run_mysql_io(lambda: _bot_started_mysql(int(time.time())), label="bot status start")
         except Exception as e:
             print(f"[WARN] bot status start failed: {e}")
+    await _system_startup()
     if not bot_heartbeat_loop.is_running():
         bot_heartbeat_loop.start()
     if not ticket_inactivity_loop.is_running():
         ticket_inactivity_loop.start()
     for guild in _active_guilds():
         await _ensure_schedule_panel(guild)
+
+
+# ————— System admin and banned servers —————
+# The GameMaster application's owners (from Discord: the app's owner, or its
+# team's members) are the website's system admins: they see every server
+# using the bot and can ban servers (web /system). A banned server is left at
+# once when GameMaster is added to it, and within a minute if it's already in.
+# The home server can never be banned.
+_SYSTEM_DDL = (
+    """CREATE TABLE IF NOT EXISTS bot_owners (
+        user_id VARCHAR(32) NOT NULL PRIMARY KEY,
+        updated_at BIGINT NOT NULL
+    )""",
+    """CREATE TABLE IF NOT EXISTS guild_blocklist (
+        guild_id VARCHAR(32) NOT NULL PRIMARY KEY,
+        reason VARCHAR(200) NULL,
+        added_by VARCHAR(32) NULL,
+        added_at BIGINT NOT NULL
+    )""",
+)
+# Banned once, the first time this code runs (Niko, 2026-11-11). After that
+# the list is the website's: unbanning there sticks.
+SEEDED_BLOCKED_GUILDS = (684826492571615262, 1444724820771209332)
+_BLOCKLIST_SEEDED_KEY = "guild_blocklist_seeded"
+
+
+def _system_tables_mysql() -> None:
+    for ddl in _SYSTEM_DDL:
+        _guild_settings_query_mysql(ddl, commit=True)
+
+
+def _publish_bot_owners_mysql(owner_ids: list) -> None:
+    _system_tables_mysql()
+    now = int(time.time())
+    _guild_settings_query_mysql("DELETE FROM bot_owners", commit=True)
+    for uid in owner_ids:
+        _guild_settings_query_mysql(
+            "INSERT INTO bot_owners (user_id, updated_at) VALUES (%s, %s)", (str(uid), now), commit=True,
+        )
+
+
+def _seed_blocklist_mysql(guild_ids) -> None:
+    _system_tables_mysql()
+    now = int(time.time())
+    for gid in guild_ids:
+        _guild_settings_query_mysql(
+            "INSERT IGNORE INTO guild_blocklist (guild_id, reason, added_by, added_at) VALUES (%s, %s, NULL, %s)",
+            (str(gid), "Banned by the GameMaster owner", now), commit=True,
+        )
+
+
+def _blocked_guild_ids_mysql() -> set:
+    _system_tables_mysql()
+    rows = _guild_settings_query_mysql("SELECT guild_id FROM guild_blocklist", fetch="all") or []
+    return {int(row["guild_id"]) for row in rows if str(row.get("guild_id") or "").isdigit()}
+
+
+async def _blocked_guild_ids() -> set:
+    try:
+        return await _run_mysql_io(_blocked_guild_ids_mysql, label="guild blocklist read")
+    except Exception as e:
+        print(f"[WARN] guild blocklist read failed: {e}")
+        return set()
+
+
+async def _leave_if_blocked(guild, blocked: set | None = None) -> bool:
+    """Leave a banned server (never the home server). True when it left."""
+    if guild is None or guild.id == GUILD_ID:
+        return False
+    if blocked is None:
+        blocked = await _blocked_guild_ids()
+    if guild.id not in blocked:
+        return False
+    try:
+        await guild.leave()
+        print(f"⛔ Left banned server {guild.name} ({guild.id})")
+        audit_event(
+            "settings", "server_banned_left",
+            f"GameMaster left the banned server {guild.name}",
+            details={"guild_id": str(guild.id), "guild_name": guild.name},
+        )
+        return True
+    except Exception as e:
+        print(f"[WARN] could not leave banned server {guild.id}: {e}")
+        return False
+
+
+async def _system_startup() -> None:
+    """Startup: publish the app's owners, seed the first bans once, leave banned servers."""
+    try:
+        app = await bot.application_info()
+        team = getattr(app, "team", None)
+        owners = [member.id for member in team.members] if team and team.members else [app.owner.id]
+        await _run_mysql_io(lambda: _publish_bot_owners_mysql(owners), label="bot owners publish")
+    except Exception as e:
+        print(f"[WARN] publishing the bot's owners failed: {e}")
+    try:
+        config = await read_json(BOT_CONFIG_FILE)
+        if not config.get(_BLOCKLIST_SEEDED_KEY):
+            await _run_mysql_io(lambda: _seed_blocklist_mysql(SEEDED_BLOCKED_GUILDS), label="guild blocklist seed")
+            config[_BLOCKLIST_SEEDED_KEY] = True
+            await write_json(BOT_CONFIG_FILE, config)
+    except Exception as e:
+        print(f"[WARN] seeding the guild blocklist failed: {e}")
+    blocked = await _blocked_guild_ids()
+    for guild in list(bot.guilds):
+        await _leave_if_blocked(guild, blocked)
 
 
 @tasks.loop(seconds=BOT_HEARTBEAT_SEC)
@@ -34928,6 +35038,10 @@ async def bot_heartbeat_loop():
         )
     except Exception as e:
         print(f"[WARN] heartbeat failed: {e}")
+    blocked = await _blocked_guild_ids()
+    if blocked:
+        for guild in list(bot.guilds):
+            await _leave_if_blocked(guild, blocked)
 
 
 @bot.event

@@ -122,7 +122,7 @@ async function viewer(): Promise<{ session: SessionUser; demo: boolean } | null>
   return session ? { session, demo: false } : null;
 }
 
-function demoSummary(server: DemoServer): ServerSummary {
+export function demoSummary(server: DemoServer): ServerSummary {
   return {
     id: server.id,
     name: server.name,

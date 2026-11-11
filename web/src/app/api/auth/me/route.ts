@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { RowDataPacket } from "mysql2";
 import { getSession, publicSessionUser, renewSession } from "@/lib/session";
 import { getPool } from "@/lib/db";
+import { isSystemAdmin } from "@/lib/systemAdmin";
 
 /**
  * GET /api/auth/me
@@ -68,6 +69,8 @@ export async function GET() {
 
   return NextResponse.json({
     authenticated: true,
+    // One of GameMaster's owners (the bot's bot_owners): the /system page.
+    system_admin: await isSystemAdmin(session.discord_id),
     user: {
       ...publicSessionUser(session),
       ingame_nickname: ingameNickname,
