@@ -383,7 +383,7 @@ WEB_ACCESS_TOKEN_TTL_SEC = 60
 # Receipt-view tokens (locked-reservation redirects from /gamble) are MULTI-
 # USE and long-lived: the player must be able to re-open their locked receipt
 # repeatedly without the token burning or expiring on the second visit.
-RECEIPT_VIEW_TOKEN_TTL_SEC = 60 * 60 * 24  # 24 hours
+RECEIPT_VIEW_TOKEN_TTL_SEC = 60 * 60 * 24 * 3  # 3 days (Niko, 2026-11-11; was 24 hours)
 # Production web-app origin. All generated access links use the format
 # `{BASE_URL}/?token=<TOKEN>` (override via the BASE_URL env var).
 BASE_URL = os.getenv("BASE_URL", "https://tkcasino.online").rstrip("/")
@@ -829,7 +829,7 @@ CREATE TABLE IF NOT EXISTS web_sessions (
 
 # Web → Discord receipt DM queue: POST /api/session enqueues a row the moment
 # a player's run transitions to FINALIZED (Stage 5). receipt_dm_loop drains
-# it, DMs the player a receipt embed + 24h multi-use receipt link, and logs
+# it, DMs the player a receipt embed + 3-day multi-use receipt link, and logs
 # the dispatch (SUCCESS / DM_CLOSED / FAILED) to the audit channel.
 _RECEIPT_DM_QUEUE_DDL = """
 CREATE TABLE IF NOT EXISTS receipt_dm_queue (
@@ -18692,6 +18692,41 @@ async def _post_casino_panel(channel) -> discord.Message:
     return await channel.send(embed=build_casino_panel_embed(), view=CasinoPanelView())
 
 
+CASINO_PANEL_KEY = "casino_panel"  # bot_config: {"channel_id", "message_id"}
+
+
+async def _post_casino_panel_in_settings_channel(guild) -> str:
+    """The website's "Post or re-post the Casino panel" (Server settings →
+    Channels → Casino; TommyKay's server only): posts the panel in the Casino
+    panel channel and removes the previous one. Its button hands out the
+    Singleplayer (Offline) link, minted in this bot's database, which the
+    Casino reads. Run inside the server's scope. Raises ModerationError."""
+    if guild.id != GUILD_ID:
+        raise ModerationError("❌ The Casino is only on TommyKay's server.")
+    channel_id = int(CASINO_PANEL_CHANNEL_ID or 0)
+    channel = guild.get_channel(channel_id) if channel_id else None
+    if channel is None:
+        raise ModerationError("❌ Pick the Casino panel channel (and save) first.")
+    try:
+        message = await _post_casino_panel(channel)
+    except discord.Forbidden:
+        raise ModerationError(f"❌ GameMaster can't post in #{channel.name} — give it View Channel and Send Messages there.")
+    except discord.HTTPException as e:
+        raise ModerationError(f"❌ Couldn't post the Casino panel in #{channel.name}: {e}")
+    config = await read_json(BOT_CONFIG_FILE)
+    old = config.get(CASINO_PANEL_KEY) or {}
+    if old.get("message_id") and int(old.get("message_id")) != message.id:
+        try:
+            old_channel = guild.get_channel(int(old.get("channel_id") or 0))
+            if old_channel is not None:
+                await (await old_channel.fetch_message(int(old["message_id"]))).delete()
+        except Exception:
+            pass  # already gone
+    config[CASINO_PANEL_KEY] = {"channel_id": channel.id, "message_id": message.id}
+    await write_json(BOT_CONFIG_FILE, config)
+    return f"Posted the Casino panel in #{channel.name}."
+
+
 async def _resolve_active_panel_slot(caller_id: int) -> dict | None:
     """Resolve the schedule slot the Host Config Panel should be spawned for.
 
@@ -27541,7 +27576,7 @@ async def _post_receipt_dm_audit(
 @tasks.loop(seconds=RECEIPT_DM_INTERVAL_SEC)
 async def receipt_dm_loop():
     """Drain the receipt-DM queue: DM each finalized player their receipt
-    embed + 24h multi-use receipt link, then audit-log the dispatch.
+    embed + 3-day multi-use receipt link, then audit-log the dispatch.
 
     SILENT ON EMPTY TICKS — logging happens ONLY when a queue item is
     dequeued, during active DM dispatch ([DM] ...), or on real exceptions."""
@@ -27647,7 +27682,7 @@ async def receipt_dm_loop():
                 receipt_note = (
                     "*This DM is your receipt record — good luck, Commander!*"
                     if offline
-                    else "*This link stays valid for 24 hours and can be reopened anytime.*"
+                    else "*This link stays valid for 3 days and can be reopened anytime.*"
                 )
                 dm_embed = discord.Embed(
                     title="🧾 House Receipt — Casino Run Complete",
@@ -34557,7 +34592,7 @@ async def _run_for_active_guilds(func, label: str) -> None:
 
 
 # ————— Website requests: create a role / channel during setup —————
-SERVER_SETUP_OPS = ("create_role", "create_channel", "refresh", "sync_commands", "resend_welcome", "test_post", "schedule_panel", "ticket_panel")
+SERVER_SETUP_OPS = ("create_role", "create_channel", "refresh", "sync_commands", "resend_welcome", "test_post", "schedule_panel", "ticket_panel", "casino_panel")
 SERVER_SETUP_CHANNEL_KINDS = ("text", "voice", "category", "forum")
 
 
@@ -34612,6 +34647,12 @@ async def _process_web_server_setup(req: dict):
             try:
                 with guild_scope(guild.id):
                     done = await _post_ticket_panel(guild)
+            except ModerationError as e:
+                return False, None, str(e)
+        elif op == "casino_panel":
+            try:
+                with guild_scope(guild.id):
+                    done = await _post_casino_panel_in_settings_channel(guild)
             except ModerationError as e:
                 return False, None, str(e)
         elif op == "resend_welcome":
@@ -34996,7 +35037,7 @@ async def on_ready():
 
         # Web run FINALIZED → receipt DM delivery: drains receipt_dm_queue
         # (written by POST /api/session at Stage 5) and DMs the player their
-        # receipt + 24h multi-use link, then audit-logs the dispatch.
+        # receipt + 3-day multi-use link, then audit-logs the dispatch.
         if not receipt_dm_loop.is_running():
             receipt_dm_loop.start()
             loops_started += 1

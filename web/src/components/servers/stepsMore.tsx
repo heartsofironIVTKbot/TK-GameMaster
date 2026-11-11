@@ -233,6 +233,20 @@ export function ChannelsStep({ ctx }: { ctx: StepContext }) {
                 kind="text"
                 label="Casino panel"
               />
+              {ctx.setupDone && (
+                <div className="space-y-1.5">
+                  <button
+                    type="button"
+                    disabled={fix.op !== null || !draft.addons.casino_panel_channel}
+                    onClick={() => void fix.run("casino_panel")}
+                    className="flex items-center gap-1.5 gm-cut [--cut:7px] border border-ink-800 bg-ink-800 px-2.5 py-1.5 text-xs font-bold text-ink-200 hover:border-brand-300/40 hover:text-ink-100 disabled:opacity-50"
+                  >
+                    {fix.op === "casino_panel" ? <Spinner className="h-3 w-3 text-brand-300" /> : <Dices aria-hidden className="h-3.5 w-3.5" strokeWidth={1.75} />} Post or re-post the Casino panel
+                  </button>
+                  <p className="text-[11px] text-ink-500">Save a new channel first. The old panel is removed.</p>
+                  {fix.message && <Callout tone={fix.message.tone === "ok" ? "ok" : "error"}>{fix.message.text}</Callout>}
+                </div>
+              )}
             </Field>
           </div>
         </Card>

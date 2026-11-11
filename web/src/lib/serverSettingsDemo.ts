@@ -328,6 +328,7 @@ export function applyDemoServerSetup(payload: Record<string, unknown>): DemoOutc
     resend_welcome: "Sent the setup welcome again (to the owner's DMs, else the system channel)",
     schedule_panel: "Posted and pinned the Host Panel",
     ticket_panel: "Posted the ticket panel",
+    casino_panel: "Posted the Casino panel",
   };
   if (payload.op === "schedule_panel" && !server.settings?.channels.schedule_panel) {
     return refuse("❌ Pick the Host Panel channel and save first.");

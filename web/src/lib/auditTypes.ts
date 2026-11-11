@@ -10,6 +10,7 @@ export const AUDIT_CATEGORIES = [
   "roles",
   "message",
   "settings",
+  "casino",
   "system",
 ] as const;
 
@@ -25,10 +26,12 @@ export const AUDIT_CATEGORY_LABELS: Record<AuditCategory, string> = {
   roles: "Roles",
   message: "Messages",
   settings: "Settings",
+  casino: "Casino",
   system: "System",
 };
 
-export type AuditSource = "web" | "bot" | "discord";
+/** "casino": written by tkcasino.online (hoi4-casino lib/discordWebhook.ts). */
+export type AuditSource = "web" | "bot" | "discord" | "casino";
 
 export interface AuditEvent {
   id: number;

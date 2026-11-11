@@ -40,7 +40,7 @@ export const CATEGORY_ICON: Record<string, { icon: LucideIcon; tone: string }> =
 };
 const FALLBACK_ICON = { icon: Dot, tone: "text-ink-500" };
 
-const SOURCE_LABEL: Record<string, string> = { web: "Website", bot: "Bot", discord: "Discord" };
+const SOURCE_LABEL: Record<string, string> = { web: "Website", bot: "Bot", discord: "Discord", casino: "Casino site" };
 
 interface Feed {
   key: string;

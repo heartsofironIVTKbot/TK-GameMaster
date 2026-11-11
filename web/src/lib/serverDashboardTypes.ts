@@ -7,7 +7,7 @@ import type { StepId } from "@/lib/serverSettingsTypes";
  */
 
 /** One-click repairs the bot runs (POST /api/servers/<id>/fix). */
-export type FixOp = "refresh" | "sync_commands" | "resend_welcome" | "test_post" | "schedule_panel" | "ticket_panel";
+export type FixOp = "refresh" | "sync_commands" | "resend_welcome" | "test_post" | "schedule_panel" | "ticket_panel" | "casino_panel";
 
 export const FIX_ACTIONS: readonly { op: FixOp; label: string; icon: string; hint: string }[] = [
   { op: "refresh", label: "Re-check now", icon: "refresh", hint: "GameMaster re-reads this server's roles, channels and its own permissions." },
@@ -24,6 +24,13 @@ export const FIX_ACTIONS: readonly { op: FixOp; label: string; icon: string; hin
     label: "Re-post ticket panel",
     icon: "ticket",
     hint: "Posts the ticket panel (the buttons players press to open a ticket) in its channel and removes the old one.",
+  },
+  {
+    // TommyKay's server only: shown on the Casino card (Channels), not with the dashboard's buttons.
+    op: "casino_panel",
+    label: "Re-post Casino panel",
+    icon: "panel",
+    hint: "Posts the Casino panel (its Singleplayer / Offline button) in its channel and removes the old one.",
   },
   { op: "resend_welcome", label: "Re-send welcome", icon: "welcome", hint: "Sends the setup welcome again (owner's DMs, else the system channel)." },
 ];

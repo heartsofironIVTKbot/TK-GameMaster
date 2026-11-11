@@ -115,7 +115,7 @@ export function FixToolbar({ fix, setupDone, reinvite }: { fix: ReturnType<typeo
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap gap-1.5">
-        {FIX_ACTIONS.filter((action) => setupDone || action.op !== "sync_commands").map((action) => (
+        {FIX_ACTIONS.filter((action) => action.op !== "casino_panel" && (setupDone || action.op !== "sync_commands")).map((action) => (
           <button
             key={action.op}
             type="button"

@@ -24,8 +24,8 @@ import { settingsOf } from "@/lib/serverSettings";
 export { CASINO_URL };
 /** A fresh link works once, for a minute (the bot's WEB_ACCESS_TOKEN_TTL_SEC). */
 const NEW_LINK_SEC = 60;
-/** Resume / receipt links can be opened again for a day (RECEIPT_VIEW_TOKEN_TTL_SEC). */
-const RECEIPT_LINK_SEC = 24 * 3600;
+/** Resume / receipt links can be opened again for 3 days (the bot's RECEIPT_VIEW_TOKEN_TTL_SEC). */
+const RECEIPT_LINK_SEC = 3 * 24 * 3600;
 /** The bot's numeric tiers: lower = more privileged. */
 const TIER = { vip: 0, trusted: 1, verified: 2, none: 3 } as const;
 
@@ -255,7 +255,7 @@ function staticReceiptUrl(gameKey: string, userId: string, nation: string, mode:
  * A player's Casino receipt for the game's host, its co-hosts and Host
  * Management (the map's player cards; docs/casino-integration.md, step 4).
  * A finished run: a read-only link straight to their full receipt (the kind
- * the player gets, 24 hours). Still rolling: the static receipt so far.
+ * the player gets, 3 days). Still rolling: the static receipt so far.
  */
 export async function casinoReceipt(
   gameKey: string,
