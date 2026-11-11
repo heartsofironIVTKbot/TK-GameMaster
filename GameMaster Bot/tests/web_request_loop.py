@@ -107,6 +107,12 @@ gm._web_stale_lifecycle_checked = True
 gm._audit_web_request = lambda *a, **k: None
 gm.audit_event = lambda *a, **k: None
 
+# Right after a restart, before the servers' settings are read: nothing runs (no false "not switched on").
+gm._SERVER_SETTINGS_READY = False
+asyncio.run(gm.web_schedule_request_loop.coro())
+check("before settings are loaded, requests wait", not fetched_with and not handled and not finished, (fetched_with, handled, finished))
+
+gm._SERVER_SETTINGS_READY = True
 asyncio.run(gm.web_schedule_request_loop.coro())
 check("the loop runs although the bot isn't in its home server", ("a", TEST) in handled, handled)
 check("it asked only for its own servers", fetched_with == [[TEST]], fetched_with)

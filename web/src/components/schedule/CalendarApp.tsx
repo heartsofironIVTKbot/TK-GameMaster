@@ -1012,7 +1012,19 @@ function OverviewPanel({
         slot.mine && state !== "cancelled" && state !== "ended" && (state === "live" || slot.game_timestamp > nowSec - 3600),
     )
     .sort((a, b) => a.slot.game_timestamp - b.slot.game_timestamp);
-  const failed = (data?.requests ?? []).filter((request) => request.status === "error");
+  // A failure the same action on the same game later fixed (a retry that went through) isn't shown.
+  const requests = data?.requests ?? [];
+  const failed = requests.filter(
+    (request) =>
+      request.status === "error" &&
+      !requests.some(
+        (later) =>
+          later.status === "done" &&
+          later.action === request.action &&
+          later.slot_id === request.slot_id &&
+          later.created_at > request.created_at,
+      ),
+  );
   return (
     <div data-tour="calendar.overview" className="gm-plate p-4 sm:p-[18px]">
       <p className="text-xs text-ink-400">Your schedule</p>
