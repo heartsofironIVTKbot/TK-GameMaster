@@ -68,26 +68,55 @@ const HostLockMap = dynamic(() => import("./HostLockMap"), {
  * With `editSlotId` it edits an existing game instead: every setting before
  * the announcement, only the day/time/host after it.
  */
+/** The half-filled game, kept in the browser tab while you visit the preset pages (lib/returnTo.ts). */
+const DRAFT_KEY = "gm_setup_draft_v1";
+const DRAFT_MAX_AGE_MS = 6 * 3600 * 1000;
+
+interface SetupDraft {
+  key: string;
+  at: number;
+  form: SetupForm;
+  tab: TabId;
+}
+
+function readDraft(key: string): SetupDraft | null {
+  try {
+    const parsed = JSON.parse(window.sessionStorage.getItem(DRAFT_KEY) ?? "null") as SetupDraft | null;
+    if (!parsed || parsed.key !== key || Date.now() - Number(parsed.at) > DRAFT_MAX_AGE_MS || !parsed.form) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
 export default function GameSetupApp({
   host,
   initialDate,
   editSlotId,
   initialPresetId = null,
+  resume = false,
 }: {
   host: HostProfile;
   initialDate: string | null;
   editSlotId: string | null;
   /** /schedule/new?preset=<id>: start from this preset. */
   initialPresetId?: string | null;
+  /** ?resume=1: back from the preset pages — restore the game as you left it. */
+  resume?: boolean;
 }) {
+  const draftKey = editSlotId ? `edit:${editSlotId}` : "new";
+  // Read once: this page only renders in the browser (after HostGate's check).
+  const [resumeDraft] = useState<SetupDraft | null>(() => (resume ? readDraft(draftKey) : null));
   const [timeZone, setTimeZone] = useHostTimeZone();
   const [nowMs, setNowMs] = useState(() => Date.now());
   const nowSec = Math.floor(nowMs / 1000);
   const today = todayInZone(timeZone, nowMs);
   const [form, setForm] = useState<SetupForm>(() =>
-    initialForm(initialDate && isIsoDate(initialDate) ? initialDate : todayInZone(timeZone)),
+    resumeDraft && !editSlotId
+      ? resumeDraft.form
+      : initialForm(initialDate && isIsoDate(initialDate) ? initialDate : todayInZone(timeZone)),
   );
-  const [tab, setTab] = useState<TabId>("game");
+  const [tab, setTab] = useState<TabId>(() => resumeDraft?.tab ?? "game");
   const [drawerOpen, setDrawerOpen] = useState(true);
   const [nations, setNations] = useState<RosterNation[]>([]);
   // Hover goes straight to the name pill: re-rendering the whole panel on
@@ -147,7 +176,8 @@ export default function GameSetupApp({
 
   // A new game starts from its mode's default preset (the star on the Presets
   // page), looked up once per mode; without one it lists the whole map.
-  const [defaultCheckedFor, setDefaultCheckedFor] = useState<string | null>(null);
+  // A restored game keeps its own preset choice (no default preset over it).
+  const [defaultCheckedFor, setDefaultCheckedFor] = useState<string | null>(() => resumeDraft?.form.mode ?? null);
   useEffect(() => {
     if (editSlotId || initialPresetId || defaultCheckedFor === form.mode) return undefined;
     let cancelled = false;
@@ -170,6 +200,16 @@ export default function GameSetupApp({
     };
   }, [form.mode, defaultCheckedFor, editSlotId, initialPresetId]);
 
+  // Keep the game in the browser tab, so the preset pages can send you back to it.
+  useEffect(() => {
+    if (editSlotId && editLoad.state !== "ready") return;
+    try {
+      window.sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ key: draftKey, at: Date.now(), form, tab } satisfies SetupDraft));
+    } catch {
+      // Storage full or blocked: the way back still works, just without the draft.
+    }
+  }, [form, tab, draftKey, editSlotId, editLoad.state]);
+
   // Editing: load the game's stored settings.
   useEffect(() => {
     if (!editSlotId) return undefined;
@@ -187,7 +227,8 @@ export default function GameSetupApp({
           setEditLoad({ state: "error", message: result.reason ?? "This game can't be edited any more." });
           return;
         }
-        setForm(formFromSettings(result.settings, zone));
+        // Back from the preset pages: the edit as you left it.
+        setForm(resumeDraft?.form ?? formFromSettings(result.settings, zone));
         setEditing({
           slotId: result.slot.slot_id,
           editable: result.editable,
@@ -204,7 +245,7 @@ export default function GameSetupApp({
     return () => {
       cancelled = true;
     };
-  }, [editSlotId]);
+  }, [editSlotId, resumeDraft]);
 
   // The server's hosts: who a game can be handed to, and its co-hosts (Casino games).
   useEffect(() => {

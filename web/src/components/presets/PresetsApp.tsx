@@ -2,12 +2,14 @@
 
 import SiteHeader from "@/components/site/SiteHeader";
 import Link from "next/link";
+import { backToGame, safeBack, withBack } from "@/lib/returnTo";
 import ServerSwitcher from "@/components/ServerSwitcher";
 import {
   ArrowRight,
   ArrowRightLeft,
   BadgeCheck,
   CalendarPlus,
+  ChevronLeft,
   Copy,
   CopyPlus,
   Eye,
@@ -53,6 +55,11 @@ function readView(): View {
   return new URLSearchParams(window.location.search).get("view") === "library" ? "library" : "ours";
 }
 
+/** Opened from game setup (?back=, lib/returnTo.ts): the way back to that game. */
+function readBack(): string | null {
+  return safeBack(new URLSearchParams(window.location.search).get("back"));
+}
+
 const FACT_ICON: Record<PresetFact["kind"], LucideIcon> = { groups: Layers, locks: Lock, rules: ScrollText, mods: Puzzle };
 
 async function send<T>(url: string, init?: RequestInit): Promise<{ ok: true; body: T } | { ok: false; error: string }> {
@@ -68,6 +75,7 @@ async function send<T>(url: string, init?: RequestInit): Promise<{ ok: true; bod
 
 export default function PresetsApp({ host }: { host: HostProfile }) {
   const [view, setView] = useState<View>(() => readView());
+  const [back] = useState<string | null>(() => readBack());
   const [modeFilter, setModeFilter] = useState<string>("");
   const [search, setSearch] = useState("");
   const [query, setQuery] = useState("");
@@ -175,6 +183,11 @@ export default function PresetsApp({ host }: { host: HostProfile }) {
       </SiteHeader>
 
       <main className="mx-auto max-w-[1500px] px-3 py-4 sm:px-6 sm:py-5">
+        {back && (
+          <Link href={backToGame(back)} className="gm-btn gm-btn-secondary mb-3 h-9 px-3 text-xs">
+            <ChevronLeft aria-hidden strokeWidth={1.75} /> Back to the game
+          </Link>
+        )}
         <div className="flex flex-wrap items-end gap-x-3 gap-y-2">
           <nav data-tour="presets.view" className="flex w-full min-w-0 border-b border-ink-800 sm:w-auto sm:flex-1" aria-label="Which presets">
             <TabButton on={view === "ours"} onClick={() => switchView("ours")} icon={Folder}>
@@ -194,7 +207,7 @@ export default function PresetsApp({ host }: { host: HostProfile }) {
             />
           </label>
           <Link
-            href={`/presets/new${modeFilter ? `?mode=${encodeURIComponent(modeFilter)}` : ""}`}
+            href={withBack(`/presets/new${modeFilter ? `?mode=${encodeURIComponent(modeFilter)}` : ""}`, back)}
             data-tour="presets.new"
             className="gm-btn gm-btn-primary"
           >
@@ -265,6 +278,7 @@ export default function PresetsApp({ host }: { host: HostProfile }) {
               onDelete={() => void remove(preset)}
               onStar={() => void star(preset)}
               onUpdate={() => setUpdating(preset)}
+              back={back}
             />
           ))}
         </div>
@@ -354,6 +368,7 @@ function PresetCard({
   onDelete,
   onStar,
   onUpdate,
+  back = null,
 }: {
   preset: GamePreset;
   view: View;
@@ -363,6 +378,8 @@ function PresetCard({
   onDelete: () => void;
   onStar: () => void;
   onUpdate: () => void;
+  /** Opened from game setup: "Use in the game" returns there with this preset. */
+  back?: string | null;
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const mode = modeOption(preset.mode);
@@ -437,19 +454,19 @@ function PresetCard({
               {busy ? <Spinner className="h-3.5 w-3.5" /> : <CopyPlus aria-hidden strokeWidth={1.75} />}
               Copy to our server
             </button>
-            <Link href={`/presets/edit?id=${preset.preset_id}`} className="gm-btn gm-btn-secondary h-[30px] px-[11px] text-[12.5px] [--cut:7px]">
+            <Link href={withBack(`/presets/edit?id=${preset.preset_id}`, back)} className="gm-btn gm-btn-secondary h-[30px] px-[11px] text-[12.5px] [--cut:7px]">
               <Eye aria-hidden strokeWidth={1.75} /> View
             </Link>
           </>
         ) : (
           <>
             <Link
-              href={`/schedule/new?preset=${preset.preset_id}`}
+              href={back ? backToGame(back, preset.preset_id) : `/schedule/new?preset=${preset.preset_id}`}
               className="gm-btn gm-btn-primary h-[30px] px-[11px] text-[12.5px] [--cut:7px]"
             >
-              <CalendarPlus aria-hidden strokeWidth={1.75} /> Use in a game
+              <CalendarPlus aria-hidden strokeWidth={1.75} /> {back ? "Use in the game" : "Use in a game"}
             </Link>
-            <Link href={`/presets/edit?id=${preset.preset_id}`} className="gm-btn gm-btn-secondary h-[30px] px-[11px] text-[12.5px] [--cut:7px]">
+            <Link href={withBack(`/presets/edit?id=${preset.preset_id}`, back)} className="gm-btn gm-btn-secondary h-[30px] px-[11px] text-[12.5px] [--cut:7px]">
               <Pencil aria-hidden strokeWidth={1.75} /> Edit
             </Link>
             <span className="ml-auto flex items-center gap-0.5">

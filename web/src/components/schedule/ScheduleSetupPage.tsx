@@ -21,7 +21,15 @@ export default function ScheduleSetupPage({ mode }: { mode: "new" | "edit" }) {
   const search = query.toString() ? `?${query.toString()}` : "";
   return (
     <HostGate returnPath={`/schedule/${mode}${search}`}>
-      {(host) => <GameSetupApp host={host} initialDate={date} editSlotId={slot} initialPresetId={preset} />}
+      {(host) => (
+        <GameSetupApp
+          host={host}
+          initialDate={date}
+          editSlotId={slot}
+          initialPresetId={preset}
+          resume={params.get("resume") === "1"}
+        />
+      )}
     </HostGate>
   );
 }

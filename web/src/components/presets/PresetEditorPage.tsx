@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { Copy, Layers, ScrollText } from "lucide-react";
 import HostGate from "@/components/schedule/HostGate";
 import PresetMakerApp from "./PresetMakerApp";
+import { safeBack, withBack } from "@/lib/returnTo";
 
 /** /presets/new[?mode=…] — make a preset. /presets/edit?id=<id> — change (or view) one. */
 export default function PresetEditorPage({ kind }: { kind: "new" | "edit" }) {
@@ -11,10 +12,12 @@ export default function PresetEditorPage({ kind }: { kind: "new" | "edit" }) {
   const id = kind === "edit" ? params.get("id") : null;
   const mode = kind === "new" ? params.get("mode") : null;
   const presetId = id && /^[0-9a-f]{32}$/.test(id) ? id : null;
+  // Opened from game setup: its back button returns there (lib/returnTo.ts).
+  const back = safeBack(params.get("back"));
   const query = presetId ? `?id=${presetId}` : mode ? `?mode=${encodeURIComponent(mode)}` : "";
   return (
     <HostGate
-      returnPath={`/presets/${kind}${query}`}
+      returnPath={withBack(`/presets/${kind}${query}`, back)}
       page="presets"
       title="Game Presets"
       intro="Save a mode's setup once, and load it for every game."
@@ -25,7 +28,7 @@ export default function PresetEditorPage({ kind }: { kind: "new" | "edit" }) {
       ]}
       area="the preset maker"
     >
-      {(host) => <PresetMakerApp key={presetId ?? "new"} host={host} presetId={presetId} initialMode={mode} />}
+      {(host) => <PresetMakerApp key={presetId ?? "new"} host={host} presetId={presetId} initialMode={mode} backTo={back} />}
     </HostGate>
   );
 }

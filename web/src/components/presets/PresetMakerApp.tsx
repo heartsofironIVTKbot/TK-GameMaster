@@ -4,6 +4,7 @@ import { BadgeCheck, ChevronLeft, ChevronRight, CircleAlert, Info, Map as MapIco
 import { MenuButton } from "@/components/site/SiteMenu";
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { backToGame } from "@/lib/returnTo";
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import ModeIcon from "@/components/schedule/ModeIcon";
 import { HostAvatar, Spinner } from "@/components/schedule/ui";
@@ -56,11 +57,16 @@ export default function PresetMakerApp({
   host,
   presetId,
   initialMode,
+  backTo = null,
 }: {
   host: HostProfile;
   presetId: string | null;
   initialMode: string | null;
+  /** Opened from game setup (lib/returnTo.ts): back goes to that game, and a saved preset can be used in it. */
+  backTo?: string | null;
 }) {
+  const exitHref = backTo ? backToGame(backTo) : "/presets";
+  const exitLabel = backTo ? "Back to the game" : "Back to presets";
   const { defaults, error: defaultsError } = usePresetDefaults();
   const startMode = initialMode && SCHEDULE_MODE_VALUES.has(initialMode) ? initialMode : "Roleplay";
   const [state, setState] = useState<MakerState>(() => emptyMaker(startMode));
@@ -375,8 +381,8 @@ export default function PresetMakerApp({
             <Shapes aria-hidden className="h-9 w-9 text-ink-500" strokeWidth={1.5} />
             <h1 className="gm-title mt-4 text-[28px]">Can&apos;t open this preset</h1>
             <p className="mt-2 text-sm text-ink-400">{load.message}</p>
-            <Link href="/presets" className="gm-btn gm-btn-primary mt-6">
-              Back to presets
+            <Link href={exitHref} className="gm-btn gm-btn-primary mt-6">
+              {exitLabel}
             </Link>
           </div>
         )}
@@ -438,7 +444,7 @@ export default function PresetMakerApp({
       </div>
 
       <header className="absolute inset-x-0 top-0 z-[1000] flex h-14 items-center gap-3 border-b border-ink-800 bg-ink-950 px-3 sm:px-4">
-        <Link href="/presets" className="gm-btn gm-btn-quiet h-9 w-9 p-0" aria-label="Back to presets">
+        <Link href={exitHref} className="gm-btn gm-btn-quiet h-9 w-9 p-0" aria-label={exitLabel} title={exitLabel}>
           <ChevronLeft aria-hidden strokeWidth={1.75} />
         </Link>
         <span className="gm-cut hidden h-9 w-9 shrink-0 place-items-center bg-ink-800 text-ink-100 sm:grid">
@@ -458,6 +464,12 @@ export default function PresetMakerApp({
         )}
         {host.demo && <span className="gm-tag hidden bg-fuchsia-500/15 text-fuchsia-200 md:inline-flex">Preview: sample data</span>}
         <div className="ml-auto flex items-center gap-2">
+          {/* From game setup: once saved, take this preset back into the game. */}
+          {backTo && savedId && !dirty && (
+            <Link href={backToGame(backTo, savedId)} className="gm-btn gm-btn-primary h-9 px-3 text-xs">
+              Use it in the game
+            </Link>
+          )}
           {/* Room for the Help button (it sits here, see useTutorialFacts above). */}
           <span aria-hidden className="w-[92px] shrink-0" />
           <span className="hidden sm:block">

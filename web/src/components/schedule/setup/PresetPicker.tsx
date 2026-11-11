@@ -2,9 +2,11 @@
 
 import { BadgeCheck, Layers, Plus, Star } from "lucide-react";
 import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { presetSummary, type GamePreset } from "@/lib/presetTypes";
 import { modeOption } from "@/lib/scheduleOptions";
+import { setupAddress, withBack } from "@/lib/returnTo";
 import { SectionCard, Spinner } from "../ui";
 
 /**
@@ -26,6 +28,10 @@ export default function PresetPicker({
   onApply: (preset: GamePreset) => void;
   onClear: () => void;
 }) {
+  // The preset pages bring you back to this game (lib/returnTo.ts).
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const back = setupAddress(pathname, searchParams.toString());
   const [list, setList] = useState<{ mode: string; presets: GamePreset[] | null; error: string | null } | null>(null);
 
   useEffect(() => {
@@ -54,7 +60,7 @@ export default function PresetPicker({
       title="Preset"
       subtitle={`Loads a saved ${modeOption(mode)?.label ?? mode} setup: nations, locks, rules and mods.`}
       right={
-        <Link href={`/presets/new?mode=${encodeURIComponent(mode)}`} className="gm-btn gm-btn-quiet h-7 px-2 text-xs [--cut:6px]">
+        <Link href={withBack(`/presets/new?mode=${encodeURIComponent(mode)}`, back)} className="gm-btn gm-btn-quiet h-7 px-2 text-xs [--cut:6px]">
           <Plus aria-hidden strokeWidth={2} /> New
         </Link>
       }
@@ -68,7 +74,7 @@ export default function PresetPicker({
       ) : presets.length === 0 && !presetName ? (
         <p className="text-xs text-ink-400">
           No presets for this mode yet, so the game lists the whole map.{" "}
-          <Link href="/presets?view=library" className="font-semibold text-sky-300 hover:underline">
+          <Link href={withBack("/presets?view=library", back)} className="font-semibold text-sky-300 hover:underline">
             Browse the public library
           </Link>{" "}
           or make one.
@@ -111,7 +117,7 @@ export default function PresetPicker({
                 {loaded ? (
                   <>
                     {presetId && (
-                      <Link href={`/presets/edit?id=${presetId}`} className="gm-btn gm-btn-quiet h-7 px-2 text-xs [--cut:6px]">
+                      <Link href={withBack(`/presets/edit?id=${presetId}`, back)} className="gm-btn gm-btn-quiet h-7 px-2 text-xs [--cut:6px]">
                         View
                       </Link>
                     )}
