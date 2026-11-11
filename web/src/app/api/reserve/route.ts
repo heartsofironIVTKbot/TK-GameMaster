@@ -371,11 +371,10 @@ export async function POST(request: NextRequest) {
     ]);
     const historical =
       categoryOfMode(game.mode ?? "") === "Historical" && Boolean((await memberRoleIds(gameGuild)).hist_verified);
-    const user = userRows[0] ?? null;
-    if (!user) {
-      await connection.rollback();
-      return jsonError("No player record found for your Discord account", 403);
-    }
+    // No record yet = a player new to this server (the bot creates records
+    // when it first has something to save; the map's member check already ran):
+    // not banned, nothing verified in the database — their roles still count.
+    const user = userRows[0] ?? ({ hoi4_verified: 0, hist_verified: 0, banned: 0, vip: 0 } as UserRow);
     if (user.banned) {
       await connection.rollback();
       return jsonError("You are banned from reserving nations", 403);
