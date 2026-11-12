@@ -172,7 +172,9 @@ const SETTLE_MS = 120;
 export type OwnHold =
   | { tag: string; status: "holding"; until: number }
   | { tag: string; status: "held"; name: string; until: number }
-  | { tag: string; status: "cooldown"; until: number };
+  | { tag: string; status: "cooldown"; until: number }
+  /** Not a nation this player could reserve (locked, above their access level …): nothing is held. */
+  | { tag: string; status: "refused"; message: string };
 
 async function postSelection(threadId: string, tag: string | null, beacon = false): Promise<unknown> {
   const body = JSON.stringify({ thread_id: threadId, tag });
@@ -194,11 +196,12 @@ async function postSelection(threadId: string, tag: string | null, beacon = fals
 }
 
 function ownHoldOf(tag: string, answer: unknown): OwnHold | null {
-  const result = (answer ?? {}) as { status?: string; name?: string; ends_in_ms?: number };
+  const result = (answer ?? {}) as { status?: string; name?: string; ends_in_ms?: number; message?: string };
   const until = Date.now() + Number(result.ends_in_ms ?? 0);
   if (result.status === "holding") return { tag, status: "holding", until };
   if (result.status === "held") return { tag, status: "held", name: String(result.name ?? "Another player"), until };
   if (result.status === "cooldown") return { tag, status: "cooldown", until };
+  if (result.status === "refused") return { tag, status: "refused", message: String(result.message ?? "You can't reserve this nation.") };
   return null;
 }
 

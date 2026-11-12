@@ -2,26 +2,19 @@ import { isCasinoGame } from "@/lib/casinoSettings";
 import { NextRequest, NextResponse } from "next/server";
 import type { ResultSetHeader, RowDataPacket } from "mysql2";
 import type { PoolConnection } from "mysql2/promise";
-import { HOME_GUILD_ID, playerRecords } from "@/lib/currentGuild";
+import { HOME_GUILD_ID } from "@/lib/currentGuild";
 import { getPool, DatabaseConfigError } from "@/lib/db";
 import { getSession } from "@/lib/session";
-import { canonicalName, nationMatchKeys } from "@/data/nationCategories";
 import { demoLobbyState } from "@/lib/liveDemo";
 import { liveHub } from "@/lib/live/hub";
 import { accessDenied, mapAccessFor } from "@/lib/mapAccess";
 import { coopPromotions } from "@/lib/coopPromote";
-import { unstartedGamePassed } from "@/lib/gameWindow";
 import { recordAudit } from "@/lib/auditLog";
 import { lobbySnapshot, lobbyVersion, versionOf } from "@/lib/lobbySnapshot";
-import { memberRoleIds } from "@/lib/memberRoles";
-import { ironLegionRequired, ironLegionVerifyUrl, parseRequireIronLegion } from "@/lib/ironlegion";
-import { ironLegionMemberVerified } from "@/lib/ironlegionMember";
-import { settingsOf } from "@/lib/serverSettings";
-import { categoryOfMode } from "@/lib/scheduleOptions";
-import { gameGuildOf, getHostRosterEntry, isSchedulerDemo } from "@/lib/scheduleStore";
+import { gameGuildOf, isSchedulerDemo } from "@/lib/scheduleStore";
+import { gameClosedRefusal, isCoopSlot, isFillerSlot, nationRefusal, parseGameData } from "@/lib/reserveRules";
 import { botNationName } from "@/lib/botNation";
 import { moderationOptions } from "@/lib/playerIndex";
-import { memberIsVip, vipOpenNations } from "@/lib/vipStatus";
 import tagToSlotJson from "@/lib/tag_to_slot.json";
 
 /** Owner tag -> playable country slot name (bot's canonical naming). */
@@ -71,73 +64,9 @@ interface GamesRow extends RowDataPacket {
   game_data: unknown;
 }
 
-interface UserRow extends RowDataPacket {
-  hoi4_verified: number | boolean;
-  /** Missing until the bot has added the column (then Historical falls back to hoi4_verified). */
-  hist_verified?: number | boolean;
-  banned: number | boolean;
-  vip?: number | boolean;
-}
-
-/**
- * IronLegion Steam authentication, when the game (or its server) requires it.
- * IronLegion's own yes / no from its database (lib/ironlegionMember.ts), else
- * the bot's `verified` flag in web_member_directory, built from the same answers.
- * No row yet, or an older table: let them through, like the bot does when it
- * can't check (and the bot re-checks its own reservation paths).
- */
-async function ironLegionRefusal(connection: PoolConnection, guildId: string, userId: string, game: GameDataDocument): Promise<string | null> {
-  const server = Boolean((await settingsOf(guildId))?.features.ironlegion);
-  if (!ironLegionRequired(parseRequireIronLegion(game.require_ironlegion), server)) return null;
-  if ((await ironLegionMemberVerified(connection, guildId, userId)) === false) {
-    const url = ironLegionVerifyUrl(guildId, (await memberRoleIds(guildId).catch(() => null))?.ironlegion_verify_channel);
-    return `This game requires IronLegion Steam authentication. Press Authenticate ${url ? `in ${url}` : "on the server's IronLegion panel in Discord"}; then try again.`;
-  }
-  return null;
-}
-
 interface SlotRow extends RowDataPacket {
   slot_key: string;
   user_id: string | number;
-}
-
-interface GameDataDocument {
-  lockdown?: unknown;
-  /** The game's own IronLegion switch (lib/ironlegion.ts). */
-  require_ironlegion?: unknown;
-  add_on?: unknown;
-  randomizer_only?: unknown;
-  capacity?: unknown;
-  locked_regions?: unknown;
-  layout_disabled_nations?: unknown;
-  is_draft?: unknown;
-  /** Players the Host Tool placed: user id → until (epoch s; 0 = until a host changes them). */
-  host_locks?: unknown;
-  /** Who may reserve majors / minors: "VIP" | "Trusted" | "Verified" | "All Users". */
-  major_lock_level?: unknown;
-  minor_lock_level?: unknown;
-}
-
-function parseGameData(raw: unknown): GameDataDocument {
-  if (typeof raw === "string") {
-    try {
-      return (JSON.parse(raw) ?? {}) as GameDataDocument;
-    } catch {
-      return {};
-    }
-  }
-  if (typeof raw === "object" && raw !== null) {
-    return raw as GameDataDocument;
-  }
-  return {};
-}
-
-function isCoopSlot(slotKey: string): boolean {
-  return slotKey.includes("_coop");
-}
-
-function isFillerSlot(slotKey: string): boolean {
-  return slotKey.startsWith("_FILL_");
 }
 
 /**
@@ -316,118 +245,21 @@ export async function POST(request: NextRequest) {
     const options = await moderationOptions(game.guild_id ? String(game.guild_id) : undefined).catch(() => null);
     resolvedSlotKey = botNationName(options?.mode_nations?.[String(game.mode ?? "")], mapTag, resolvedSlotKey);
 
-    if (game.game_started || ["ended", "cancelled"].includes(game.status ?? "")) {
+    // Closed games, locks, bans, access levels and IronLegion (lib/reserveRules.ts,
+    // shared with the map's 30-second hold).
+    const refusal =
+      gameClosedRefusal(game, gameData) ??
+      (await nationRefusal(connection, {
+        game,
+        gameData,
+        slot: resolvedSlotKey,
+        mapTag,
+        userId: session.discord_id,
+        modeMajors: options?.mode_nations?.[String(game.mode ?? "")]?.majors ?? null,
+      }));
+    if (refusal) {
       await connection.rollback();
-      return jsonError("Reservations are closed — this game has started or ended", 409);
-    }
-    // Announced, never started, and its time long gone (lib/gameWindow.ts).
-    if (unstartedGamePassed(game.start_timestamp)) {
-      await connection.rollback();
-      return jsonError("Reservations are closed — this game's time has passed", 409);
-    }
-    if (gameData.lockdown) {
-      await connection.rollback();
-      return jsonError("Reservations are locked down by the host", 409);
-    }
-    // Draft games are filled through the draft pool (POST /api/draft), not by
-    // picking a nation: the captains (or the host) place players.
-    // Casino games: nations are rolled on the Casino (GET /casino/<game>), never picked here.
-    if (isCasinoGame(gameData)) {
-      await connection.rollback();
-      return jsonError("This is a Casino game: roll your nation at the Casino", 409);
-    }
-    if (gameData.is_draft) {
-      await connection.rollback();
-      return jsonError("This is a draft game — use Join the draft; the team captains place players on nations", 409);
-    }
-
-    // Host-locked nations (Games page / calendar) and a preset's not-playable
-    // ones can't be claimed — a co-op slot follows its main nation.
-    let vipOnlyNation: string | null = null;
-    if (!isFillerSlot(resolvedSlotKey)) {
-      const lockedKeys = new Set(
-        [
-          ...(Array.isArray(gameData.locked_regions) ? gameData.locked_regions : []),
-          ...(Array.isArray(gameData.layout_disabled_nations) ? gameData.layout_disabled_nations : []),
-        ].map((name) => canonicalName(String(name))),
-      );
-      const mainNation = isCoopSlot(resolvedSlotKey) ? resolvedSlotKey.split("_coop", 1)[0] : resolvedSlotKey;
-      const nationKeys = mapTag ? nationMatchKeys(mapTag, mainNation, mainNation) : new Set([canonicalName(mainNation)]);
-      // Locked "except VIPs" (Games page / the map's Host Tool): checked once the player is known.
-      const vipOpenKeys = new Set(vipOpenNations(gameData as Record<string, unknown>).map((name) => canonicalName(name)));
-      const disabledKeys = new Set(
-        (Array.isArray(gameData.layout_disabled_nations) ? gameData.layout_disabled_nations : []).map((name) => canonicalName(String(name))),
-      );
-      const matches = [...nationKeys].filter((key) => lockedKeys.has(key));
-      if (matches.length > 0) {
-        if (matches.every((key) => vipOpenKeys.has(key) && !disabledKeys.has(key))) {
-          vipOnlyNation = mainNation;
-        } else {
-          await connection.rollback();
-          return jsonError(`${mainNation} is locked in this game`, 409);
-        }
-      }
-    }
-
-    // Verification gate: the bot gates HOI4 reservations on the Discord
-    // "Authenticated" role; the database-side equivalent is the game type's
-    // Verified flag — users.hoi4_verified (RP Verified) for Roleplay games,
-    // users.hist_verified (Hist Verified) for Historical games once the bot
-    // has set that role up. The game's own server's records (multi-server:
-    // other servers keep theirs in guild_users).
-    const gameGuild = game.guild_id ? String(game.guild_id) : HOME_GUILD_ID;
-    const records = playerRecords(gameGuild);
-    const [userRows] = await connection.query<UserRow[]>(`SELECT * FROM ${records.table} WHERE ${records.where}`, [
-      ...records.whereParams,
-      session.discord_id,
-    ]);
-    const historical =
-      categoryOfMode(game.mode ?? "") === "Historical" && Boolean((await memberRoleIds(gameGuild)).hist_verified);
-    // No record yet = a player new to this server (the bot creates records
-    // when it first has something to save; the map's member check already ran):
-    // not banned, nothing verified in the database — their roles still count.
-    const user = userRows[0] ?? ({ hoi4_verified: 0, hist_verified: 0, banned: 0, vip: 0 } as UserRow);
-    if (user.banned) {
-      await connection.rollback();
-      return jsonError("You are banned from reserving nations", 403);
-    }
-    // A nation locked "except VIPs": VIPs only (hosts place players with the Host Tool).
-    if (vipOnlyNation && !(await memberIsVip(gameGuild, session.discord_id, Boolean(user.vip)))) {
-      await connection.rollback();
-      return jsonError(`${vipOnlyNation} is locked in this game: only VIP players can reserve it`, 403);
-    }
-    // Who may reserve: the game's own levels (Games page / game setup), majors
-    // and minors separately, as the bot's _member_meets_lock_level: everyone,
-    // Verified+ (Verified or Trusted), Trusted+, or VIP. Hosts always may.
-    if (!isFillerSlot(resolvedSlotKey)) {
-      const lists = options?.mode_nations?.[String(game.mode ?? "")];
-      const base = isCoopSlot(resolvedSlotKey) ? resolvedSlotKey.split("_coop", 1)[0] : resolvedSlotKey;
-      const major = lists ? lists.majors.includes(base) : false;
-      const raw = major ? gameData.major_lock_level ?? "Trusted" : gameData.minor_lock_level ?? "All Users";
-      const level = ["VIP", "Trusted", "Verified", "All Users"].includes(String(raw)) ? String(raw) : major ? "Trusted" : "All Users";
-      if (level !== "All Users" && !(await getHostRosterEntry(session.discord_id, gameGuild).catch(() => null))) {
-        const [roleIds, directory] = await Promise.all([
-          memberRoleIds(gameGuild),
-          connection.query<(RowDataPacket & { role_ids: string | null })[]>(
-            "SELECT role_ids FROM web_member_directory WHERE guild_id = ? AND user_id = ? LIMIT 1",
-            [gameGuild, session.discord_id],
-          ),
-        ]);
-        // Role ids as digit strings: JSON.parse would round 19-digit snowflakes.
-        const raws = directory[0][0]?.role_ids;
-        const roles = new Set(typeof raws === "string" ? (raws.match(/\d{5,25}/g) ?? []) : []);
-        const has = (id: string | null) => Boolean(id && roles.has(id));
-        const vip = roleIds.vip_all.some((id) => roles.has(id)) || Boolean(user.vip);
-        const trusted = has(historical ? roleIds.hist_trusted : roleIds.rp_trusted);
-        const verifiedRole = historical ? roleIds.hist_verified : roleIds.rp_verified;
-        const verified = verifiedRole ? has(verifiedRole) : Boolean(historical ? user.hist_verified : user.hoi4_verified);
-        const allowed = level === "VIP" ? vip : level === "Trusted" ? trusted : verified || trusted;
-        if (!allowed) {
-          await connection.rollback();
-          const who = level === "VIP" ? "VIP" : level === "Trusted" ? "Trusted+" : "Verified+";
-          return jsonError(`${major ? "Major" : "Minor"} nations in this game are for ${who} players only.`, 403);
-        }
-      }
+      return jsonError(refusal.message, refusal.status);
     }
 
     // Someone else picked this nation first: it's theirs for 30 s (lib/live/hub.ts).
@@ -439,12 +271,6 @@ export async function POST(request: NextRequest) {
         const seconds = Math.max(1, Math.ceil(holder.ends_in_ms / 1000));
         return jsonError(`${holder.name} is picking this nation right now. Try again in ${seconds}s if they don't take it.`, 409);
       }
-    }
-
-    const ironLegion = await ironLegionRefusal(connection, gameGuild, session.discord_id, gameData);
-    if (ironLegion) {
-      await connection.rollback();
-      return jsonError(ironLegion, 403);
     }
 
     // Lock the reservation rows and validate the slot.

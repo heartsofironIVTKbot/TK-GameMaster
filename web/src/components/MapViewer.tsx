@@ -1453,7 +1453,7 @@ export default function MapViewer({
   const ownHold = useShareSelection(selectedThread || null, sharedTag, Boolean(authUser));
   // A clock for the countdowns, ticking only while one is on screen.
   const [clock, setClock] = useState(() => Date.now());
-  const timed = Boolean(ownHold || otherHold);
+  const timed = Boolean((ownHold && ownHold.status !== "refused") || otherHold);
   const ownHoldRef = useRef(ownHold);
   const onSelectRef = useRef(onSelectNation);
   useEffect(() => {
@@ -1922,6 +1922,23 @@ export default function MapViewer({
                 🔒 {blockedBy.name} is picking this nation · {secondsLeft(blockedBy.until)}s
               </button>
             )}
+            {/* Not a nation this player may reserve (access level, VIP lock, IronLegion …): nothing is held for them. */}
+            {pendingFree && !viewerHasNation && !blockedBy && ownHold?.status === "refused" && (
+              <>
+                <button
+                  type="button"
+                  disabled
+                  title={ownHold.message}
+                  className="gm-btn h-[58px] w-full cursor-not-allowed gap-2 bg-ink-900 disabled:opacity-100 px-0 font-display text-[26px] font-extrabold uppercase tracking-[0.03em] text-ink-500 sm:h-[70px] sm:w-auto sm:px-[52px] sm:text-[32px]"
+                >
+                  <Lock aria-hidden className="h-6 w-6" />
+                  Locked
+                </button>
+                <p role="status" className="gm-plate max-w-[340px] bg-ink-950 px-3 py-1.5 text-center text-xs text-ink-300">
+                  {ownHold.message}
+                </p>
+              </>
+            )}
             {pendingFree && !viewerHasNation && !blockedBy && ownHold?.status === "cooldown" && (
               <button type="button" disabled className="gm-btn h-12 w-full cursor-not-allowed bg-ink-950 px-6 text-ink-300 sm:w-auto">
                 Others get a turn: you can pick it again in {secondsLeft(ownHold.until)}s
@@ -1931,6 +1948,7 @@ export default function MapViewer({
               !viewerHasNation &&
               !blockedBy &&
               ownHold?.status !== "cooldown" &&
+              ownHold?.status !== "refused" &&
               (authUser ? (
                 <>
                   <ReserveGlow>
