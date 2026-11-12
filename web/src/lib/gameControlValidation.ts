@@ -83,6 +83,9 @@ export function validateGameAccess(raw: unknown): Result<GameAccessPayload> {
     case "nation_unlock": {
       const nation = text(body.nation).slice(0, 128);
       if (!nation) return { ok: false, error: "Pick a nation." };
+      if (body.op === "nation_lock") {
+        return { ok: true, value: { thread_id: threadId, op: body.op, nation, vip_exempt: body.vip_exempt === true } };
+      }
       return { ok: true, value: { thread_id: threadId, op: body.op, nation } };
     }
     case "clear":

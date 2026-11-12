@@ -12,6 +12,7 @@ import { parsePresetData } from "@/lib/presetValidation";
 import type { DirectoryMember } from "@/lib/scheduleTypes";
 import { settingsOf } from "@/lib/serverSettings";
 import { sharedCache } from "@/lib/ttlCache";
+import { vipOpenNations } from "@/lib/vipStatus";
 import type { LobbyReservation } from "@/lib/types";
 
 /**
@@ -39,6 +40,8 @@ export interface LobbyGame {
   thread_name: string | null;
   lockdown: boolean;
   locked_regions: string[];
+  /** Of the locked nations, the ones VIPs may still reserve. */
+  vip_open_regions: string[];
   /** A preset's own nation groups (null = the mode's usual grouping). */
   nation_layout: { name: string; tiers: { label: string | null; nations: string[] }[] }[] | null;
   /** Nations the preset leaves out (not playable). */
@@ -81,6 +84,7 @@ interface VersionRow extends RowDataPacket {
   thread_name: string | null;
   lockdown: string | null;
   locked_regions: string | null;
+  vip_open_regions: string | null;
   draft: string | null;
   require_ironlegion: string | null;
   co_hosts: string | null;
@@ -103,6 +107,7 @@ export function lobbyVersion(threadId: string): Promise<string> {
       `SELECT reservations_rev, status, game_started, mode, CAST(host_id AS CHAR) AS host_id, thread_name,
               CAST(JSON_EXTRACT(game_data, '$.lockdown') AS CHAR) AS lockdown,
               CAST(JSON_EXTRACT(game_data, '$.locked_regions') AS CHAR) AS locked_regions,
+              CAST(JSON_EXTRACT(game_data, '$.vip_open_regions') AS CHAR) AS vip_open_regions,
               CAST(JSON_EXTRACT(game_data, '$.draft') AS CHAR) AS draft,
               CAST(JSON_EXTRACT(game_data, '$.require_ironlegion') AS CHAR) AS require_ironlegion,
               CAST(JSON_EXTRACT(game_data, '$.co_hosts') AS CHAR) AS co_hosts,
@@ -114,7 +119,7 @@ export function lobbyVersion(threadId: string): Promise<string> {
     const bucket = Math.floor(Date.now() / REFRESH_BUCKET_MS);
     return fingerprint(
       row
-        ? [row.reservations_rev, row.status, row.game_started, row.mode, row.host_id, row.thread_name, row.lockdown, row.locked_regions, row.draft, row.require_ironlegion, row.co_hosts, row.add_on, bucket]
+        ? [row.reservations_rev, row.status, row.game_started, row.mode, row.host_id, row.thread_name, row.lockdown, row.locked_regions, row.vip_open_regions, row.draft, row.require_ironlegion, row.co_hosts, row.add_on, bucket]
         : ["missing", bucket],
     );
   });
@@ -280,6 +285,7 @@ async function buildSnapshot(threadId: string): Promise<LobbySnapshot> {
           // categories; `lockdown` freezes all claims.
           lockdown: Boolean(gameData.lockdown),
           locked_regions: Array.isArray(gameData.locked_regions) ? gameData.locked_regions.map(String) : [],
+          vip_open_regions: vipOpenNations(gameData as Record<string, unknown>),
           // Preset games: the roster follows the preset's groups and leaves
           // its not-playable nations out (set once, at the announcement).
           nation_layout: parsePresetData({ layout: gameData.nation_layout ?? null }).layout?.map((group) => ({

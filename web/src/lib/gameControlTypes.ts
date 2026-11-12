@@ -177,6 +177,8 @@ export interface GameAccess {
   lockdown: boolean;
   /** Nations nobody can reserve. */
   locked_nations: string[];
+  /** Of those, the ones VIPs may still reserve. */
+  vip_open_nations: string[];
   /** The game's own IronLegion switch; null = the server's setting. */
   require_ironlegion: boolean | null;
   /** The server's setting (what null means). */
@@ -193,6 +195,8 @@ export interface GameAccessPayload {
   minor_level?: AccessLevel;
   enabled?: boolean;
   nation?: string;
+  /** op "nation_lock": VIPs may still reserve it (game_data.vip_open_regions). */
+  vip_exempt?: boolean;
   /** op "ironlegion": true / false, or null for the server's setting. */
   required?: boolean | null;
 }

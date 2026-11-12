@@ -27,6 +27,7 @@ import type { ResourceEntry } from "@/lib/presetTypes";
 import { parsePresetData } from "@/lib/presetValidation";
 import { parseRequireIronLegion } from "@/lib/ironlegion";
 import { settingsOf } from "@/lib/serverSettings";
+import { vipOpenNations } from "@/lib/vipStatus";
 import { prettySlot } from "@/lib/playerProfile";
 import { isSchedulerDemo, listInFlightLifecycle, type InFlightLifecycle } from "@/lib/scheduleStore";
 import type { DirectoryMember, HostProfile } from "@/lib/scheduleTypes";
@@ -277,6 +278,7 @@ export async function getGameControl(gameId: string, viewer: HostProfile): Promi
       minor_level: level(data.minor_lock_level),
       lockdown: Boolean(data.lockdown),
       locked_nations: Array.isArray(data.locked_regions) ? data.locked_regions.map(String).filter((name) => !hidden.has(name)) : [],
+      vip_open_nations: vipOpenNations(data),
       require_ironlegion: parseRequireIronLegion(data.require_ironlegion),
       server_requires_ironlegion: Boolean(serverSettings?.features.ironlegion),
     },

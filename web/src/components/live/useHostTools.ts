@@ -8,6 +8,7 @@ import type {
   RosterRemovePayload,
   ScheduleRequestStatus,
 } from "@/lib/scheduleTypes";
+import type { GameAccessPayload } from "@/lib/gameControlTypes";
 
 /**
  * Live map host tools state: who may use them, the on/off switch, and the
@@ -29,7 +30,8 @@ export interface HostAction {
   payload:
     | { action: "roster_assign"; payload: RosterAssignPayload }
     | { action: "roster_remove"; payload: RosterRemovePayload }
-    | { action: "casino_roll" | "casino_extra"; payload: CasinoGrantPayload };
+    | { action: "casino_roll" | "casino_extra"; payload: CasinoGrantPayload }
+    | { action: "game_access"; payload: GameAccessPayload & { notify?: boolean } };
 }
 
 const STORAGE_KEY = "gm_host_tools";

@@ -91,6 +91,8 @@ export interface LobbyGameLock {
   lockdown: boolean;
   /** Host-disabled nation names or whole categories ("Axis", "Europe", ...). */
   locked_regions: string[];
+  /** Of those, the nations VIPs may still reserve. */
+  vip_open_regions?: string[];
   /** A preset's own nation groups (bot names); absent = the mode's usual grouping. */
   nation_layout?: { name: string; tiers: { label: string | null; nations: string[] }[] }[] | null;
   /** Nations the preset leaves out: not playable, so not listed at all. */

@@ -300,16 +300,23 @@ export function applyDemoAccess(payload: Record<string, unknown>, hostId: string
   if (op === "nation_lock" || op === "nation_unlock") {
     const asked = String(payload.nation ?? "").trim();
     const locked = Array.isArray(data.locked_regions) ? data.locked_regions.map(String) : [];
+    const vipOpen = (Array.isArray(data.vip_open_regions) ? data.vip_open_regions.map(String) : []).filter((name) => locked.includes(name));
     if (op === "nation_lock") {
+      const vipExempt = payload.vip_exempt === true;
       const valid = modeNations(raw.mode);
       const nation = valid ? valid.find((name) => name.toLowerCase() === asked.toLowerCase()) : asked;
       if (!nation) return refuse(`❌ '${asked}' isn't a nation in ${raw.mode}.`);
-      if (locked.includes(nation)) return refuse(`ℹ️ **${nation}** is already locked.`);
-      data.locked_regions = [...locked, nation];
+      if (locked.includes(nation) && vipOpen.includes(nation) === vipExempt) return refuse(`ℹ️ **${nation}** is already locked.`);
+      const fresh = !locked.includes(nation);
+      data.locked_regions = fresh ? [...locked, nation] : locked;
+      data.vip_open_regions = [...vipOpen.filter((name) => name !== nation), ...(vipExempt ? [nation] : [])];
       const holder = raw.reservations[nation];
       const who = demoDirectory().find((member) => member.discord_id === holder)?.display_name ?? "A player";
-      return access("🔒 Nation locked", `**${nation}** can't be reserved (it shows ⚫ on the list).`,
-        holder ? [`${who} already holds ${nation} — locking doesn't remove them.`] : []);
+      return access(
+        vipExempt ? "🔒 Nation locked (VIPs excepted)" : "🔒 Nation locked",
+        vipExempt ? `**${nation}** can only be reserved by VIPs.` : `**${nation}** can't be reserved (it shows ⚫ on the list).`,
+        holder && fresh ? [`${who} already holds ${nation} — locking doesn't remove them.`] : [],
+      );
     }
     const match = locked.find((name) => name.toLowerCase() === asked.toLowerCase());
     if (!match) return refuse(`ℹ️ **${asked}** isn't locked.`);
@@ -317,6 +324,7 @@ export function applyDemoAccess(payload: Record<string, unknown>, hostId: string
       return refuse(`❌ **${match}** isn't playable in this game (its preset leaves it out), so it can't be unlocked.`);
     }
     data.locked_regions = locked.filter((name) => name !== match);
+    data.vip_open_regions = vipOpen.filter((name) => name !== match);
     return access("🔓 Nation unlocked", `**${match}** can be reserved again.`);
   }
   if (op === "clear") {

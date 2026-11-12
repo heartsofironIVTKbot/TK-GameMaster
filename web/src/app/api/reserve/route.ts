@@ -21,6 +21,7 @@ import { categoryOfMode } from "@/lib/scheduleOptions";
 import { gameGuildOf, getHostRosterEntry, isSchedulerDemo } from "@/lib/scheduleStore";
 import { botNationName } from "@/lib/botNation";
 import { moderationOptions } from "@/lib/playerIndex";
+import { memberIsVip, vipOpenNations } from "@/lib/vipStatus";
 import tagToSlotJson from "@/lib/tag_to_slot.json";
 
 /** Owner tag -> playable country slot name (bot's canonical naming). */
@@ -342,6 +343,7 @@ export async function POST(request: NextRequest) {
 
     // Host-locked nations (Games page / calendar) and a preset's not-playable
     // ones can't be claimed — a co-op slot follows its main nation.
+    let vipOnlyNation: string | null = null;
     if (!isFillerSlot(resolvedSlotKey)) {
       const lockedKeys = new Set(
         [
@@ -351,9 +353,19 @@ export async function POST(request: NextRequest) {
       );
       const mainNation = isCoopSlot(resolvedSlotKey) ? resolvedSlotKey.split("_coop", 1)[0] : resolvedSlotKey;
       const nationKeys = mapTag ? nationMatchKeys(mapTag, mainNation, mainNation) : new Set([canonicalName(mainNation)]);
-      if ([...nationKeys].some((key) => lockedKeys.has(key))) {
-        await connection.rollback();
-        return jsonError(`${mainNation} is locked in this game`, 409);
+      // Locked "except VIPs" (Games page / the map's Host Tool): checked once the player is known.
+      const vipOpenKeys = new Set(vipOpenNations(gameData as Record<string, unknown>).map((name) => canonicalName(name)));
+      const disabledKeys = new Set(
+        (Array.isArray(gameData.layout_disabled_nations) ? gameData.layout_disabled_nations : []).map((name) => canonicalName(String(name))),
+      );
+      const matches = [...nationKeys].filter((key) => lockedKeys.has(key));
+      if (matches.length > 0) {
+        if (matches.every((key) => vipOpenKeys.has(key) && !disabledKeys.has(key))) {
+          vipOnlyNation = mainNation;
+        } else {
+          await connection.rollback();
+          return jsonError(`${mainNation} is locked in this game`, 409);
+        }
       }
     }
 
@@ -378,6 +390,11 @@ export async function POST(request: NextRequest) {
     if (user.banned) {
       await connection.rollback();
       return jsonError("You are banned from reserving nations", 403);
+    }
+    // A nation locked "except VIPs": VIPs only (hosts place players with the Host Tool).
+    if (vipOnlyNation && !(await memberIsVip(gameGuild, session.discord_id, Boolean(user.vip)))) {
+      await connection.rollback();
+      return jsonError(`${vipOnlyNation} is locked in this game: only VIP players can reserve it`, 403);
     }
     // Who may reserve: the game's own levels (Games page / game setup), majors
     // and minors separately, as the bot's _member_meets_lock_level: everyone,

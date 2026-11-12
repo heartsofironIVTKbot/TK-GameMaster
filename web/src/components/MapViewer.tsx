@@ -11,6 +11,7 @@ import {
   type RefObject,
 } from "react";
 import { Lock, MousePointerClick } from "lucide-react";
+import NationLockPanel from "@/components/live/NationLockPanel";
 import L from "leaflet";
 import { GeoJSON, MapContainer, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
@@ -37,7 +38,7 @@ import {
   type HostPlayer,
 } from "./live/hostTypes";
 import mapCapitalsData from "@/data/mapCapitals.json";
-import { boardDisplayName, classifyRegions } from "@/data/nationCategories";
+import { boardDisplayName, canonicalName, classifyRegions, nationMatchKeys } from "@/data/nationCategories";
 import { reservationLookup } from "@/lib/reservationMatch";
 import { versionedMapUrl } from "@/lib/mapVersion";
 import { useLiveLobby, useShareSelection } from "./live/useLiveLobby";
@@ -101,6 +102,8 @@ interface MapViewerProps {
   onJoinDraft?: () => void;
   /** Nations the host locked (the roster's "Locked Nations"): greyed out like taken ones. */
   hostLockedTags?: string[];
+  /** The viewer is a VIP on this game's server: nations locked "except VIPs" stay reservable. */
+  viewerVip?: boolean;
 }
 
 /** Capital marker positions per map (scripts/build_capitals.py). */
@@ -125,6 +128,10 @@ export interface MapHostTools {
   /** Reserved players' avatars can be dragged (full Host Tool; off when only
    *  draft pool players are being dropped). */
   dragAvatars: boolean;
+  /** Full Host Tool: lock / unlock the selected nation (VIPs may be let through). */
+  onNationLock?: (nation: NationFeatureProps, lock: boolean, vipExempt: boolean) => void;
+  /** Nations (slot keys) whose lock / unlock is still with the bot. */
+  lockBusySlots?: string[];
 }
 
 // The base layer is static: nation color + a thin dark border. All dynamic
@@ -730,6 +737,7 @@ function parseLobby(raw: unknown): LobbyReply | null {
     game?: {
       lockdown?: boolean;
       locked_regions?: string[];
+      vip_open_regions?: string[];
       nation_layout?: LobbyGameLock["nation_layout"];
       layout_disabled_nations?: string[];
       draft?: LobbyGameLock["draft"];
@@ -752,6 +760,7 @@ function parseLobby(raw: unknown): LobbyReply | null {
           locked_regions: Array.isArray(game.locked_regions)
             ? game.locked_regions
             : [],
+          vip_open_regions: Array.isArray(game.vip_open_regions) ? game.vip_open_regions : [],
           nation_layout: Array.isArray(game.nation_layout) ? game.nation_layout : null,
           hidden_nations: Array.isArray(game.layout_disabled_nations)
             ? game.layout_disabled_nations
@@ -847,6 +856,7 @@ export default function MapViewer({
   receiptGame = null,
   onJoinDraft,
   hostLockedTags,
+  viewerVip = false,
 }: MapViewerProps) {
   const geoJsonUrl = SCENARIOS[scenarioId]?.mapUrl ?? SCENARIOS[DEFAULT_SCENARIO].mapUrl;
   const [data, setData] = useState<NationFeatureCollection | null>(null);
@@ -972,6 +982,8 @@ export default function MapViewer({
         current.lock?.lockdown === lock?.lockdown &&
         current.lock?.locked_regions.join("\u0000") ===
           (lock?.locked_regions ?? []).join("\u0000") &&
+        (current.lock?.vip_open_regions ?? []).join("\u0000") ===
+          (lock?.vip_open_regions ?? []).join("\u0000") &&
         JSON.stringify(current.lock?.nation_layout ?? null) ===
           JSON.stringify(lock?.nation_layout ?? null) &&
         JSON.stringify(current.lock?.draft ?? null) ===
@@ -1407,10 +1419,23 @@ export default function MapViewer({
   // Locked by the host or a preset (the roster's "Locked Nations" and the
   // preset's not-playable ones, greyed on the map), or the whole lobby in
   // lockdown: no one can reserve it (the reserve route refuses too).
+  const selectedHostLocked = Boolean(selected) && (hostLockedTags ?? []).includes(selected?.tag ?? "");
+  // Which lock lists name the selected nation (the bot's names, e.g. "Germany", vs the map's).
+  const selectedKeys = useMemo(
+    () => (selected ? nationMatchKeys(selected.tag, selected.slot_key ?? "", selected.name) : null),
+    [selected],
+  );
+  const namesSelected = (list?: string[] | null) =>
+    Boolean(selectedKeys && (list ?? []).some((name) => selectedKeys.has(canonicalName(name))));
+  // Locked "except VIPs" (Games page / Host Tool); not-playable = a preset leaves it out.
+  const selectedVipOpen = selectedHostLocked && namesSelected(lobbyLock?.vip_open_regions);
+  const selectedNotPlayable = selectedHostLocked && namesSelected(lobbyLock?.hidden_nations);
   const selectedLocked =
     selectionKind === "pending" &&
     Boolean(selected) &&
-    (Boolean(lobbyLock?.lockdown) || (hostLockedTags ?? []).includes(selected?.tag ?? ""));
+    (Boolean(lobbyLock?.lockdown) || (selectedHostLocked && !(selectedVipOpen && viewerVip)));
+  // Host Tool on: the bottom shows Lock / Unlock for the selected nation instead of reserving.
+  const nationLockTool = hostTools?.onNationLock && selected && !lobbyLock?.draft ? hostTools.onNationLock : null;
   // A free nation the viewer could reserve or switch to.
   const pendingFree = selectionKind === "pending" && !selectedLocked;
 
@@ -1735,7 +1760,7 @@ export default function MapViewer({
             selected. Glowing green for a free nation, red outline for
             unreserving your own; locked / co-op show a disabled notice. */}
         {/* A running game: hot-join requests + crash reports instead of reserving. */}
-        {gameRunning && (
+        {gameRunning && !nationLockTool && (
           <HotJoinBar
             threadId={selectedThread}
             selected={selected}
@@ -1829,7 +1854,18 @@ export default function MapViewer({
           />
         )}
         {/* Casino games: nations are rolled on the Casino (via GameMaster), never reserved here. */}
-        {selected && selectionKind && lobbyLock?.casino && !lobbyLock?.draft && !gameRunning && (
+        {selected && nationLockTool && (
+          <NationLockPanel
+            key={selected.tag}
+            name={boardDisplayName(scenarioId, selected.tag, selected.name)}
+            locked={selectedHostLocked}
+            vipOpen={selectedVipOpen}
+            notPlayable={selectedNotPlayable}
+            busy={Boolean(selected.slot_key && hostTools?.lockBusySlots?.includes(selected.slot_key))}
+            onLock={(lock, vipExempt) => nationLockTool(selected, lock, vipExempt)}
+          />
+        )}
+        {selected && selectionKind && lobbyLock?.casino && !lobbyLock?.draft && !gameRunning && !nationLockTool && (
           <div data-tour="map.casino" className="absolute inset-x-4 bottom-5 z-[1010] flex flex-col items-center gap-2 sm:inset-x-auto sm:bottom-7 sm:left-1/2 sm:-translate-x-1/2">
             <p className="gm-plate bg-ink-950 px-4 py-2 text-center text-xs font-semibold text-ink-200">
               Casino game: players roll their nation at the Casino.
@@ -1858,17 +1894,23 @@ export default function MapViewer({
             )}
           </div>
         )}
-        {selected && selectionKind && !lobbyLock?.draft && !lobbyLock?.casino && !gameRunning && (
+        {selected && selectionKind && !lobbyLock?.draft && !lobbyLock?.casino && !gameRunning && !nationLockTool && (
           <div data-tour="map.reserve" className="absolute inset-x-4 bottom-5 z-[1010] flex flex-col items-center gap-2 sm:inset-x-auto sm:bottom-7 sm:left-1/2 sm:-translate-x-1/2">
             {selectedLocked && (
               <button
                 type="button"
                 disabled
-                title={lobbyLock?.lockdown ? "Reservations are closed for this game" : "This nation is locked in this game"}
+                title={
+                  lobbyLock?.lockdown
+                    ? "Reservations are closed for this game"
+                    : selectedVipOpen
+                      ? "Only VIP players can reserve this nation in this game"
+                      : "This nation is locked in this game"
+                }
                 className="gm-btn h-[58px] w-full cursor-not-allowed gap-2 bg-ink-900 disabled:opacity-100 px-0 font-display text-[26px] font-extrabold uppercase tracking-[0.03em] text-ink-500 sm:h-[70px] sm:w-auto sm:px-[52px] sm:text-[32px]"
               >
                 <Lock aria-hidden className="h-6 w-6" />
-                Locked
+                {selectedVipOpen && !lobbyLock?.lockdown ? "VIP only" : "Locked"}
               </button>
             )}
             {pendingFree && !viewerHasNation && blockedBy && (

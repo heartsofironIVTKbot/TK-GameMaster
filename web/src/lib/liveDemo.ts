@@ -179,6 +179,7 @@ export function demoLobbyState(threadId: string) {
       ...game,
       lockdown: false,
       locked_regions: lobby.lockedRegions,
+      vip_open_regions: [],
       nation_layout: lobby.layout ?? null,
       layout_disabled_nations: lobby.hidden ?? [],
       // The open preview lobby shows the map's IronLegion prompt (no real server to link to).

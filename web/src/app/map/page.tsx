@@ -193,6 +193,24 @@ export default function Home() {
     };
   }, []);
 
+  // Is the viewer a VIP on the selected game's server (nations locked "except VIPs").
+  const [vipOf, setVipOf] = useState<{ thread: string; vip: boolean } | null>(null);
+  const viewerId = authUser?.discord_id ?? null;
+  useEffect(() => {
+    if (!selectedThread || !viewerId) return undefined;
+    let cancelled = false;
+    fetch(`/api/games/vip?game=${encodeURIComponent(selectedThread)}`, { cache: "no-store" })
+      .then((response) => (response.ok ? (response.json() as Promise<{ vip?: boolean }>) : { vip: false }))
+      .then((body) => {
+        if (!cancelled) setVipOf({ thread: selectedThread, vip: Boolean(body.vip) });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedThread, viewerId]);
+  const viewerVip = Boolean(viewerId && vipOf && vipOf.thread === selectedThread && vipOf.vip);
+
   // The selected game's own rules and mods (the top bar's Rules / Mods pop-ups).
   const [resourcesOf, setResourcesOf] = useState<{ thread: string; data: { mods: ResourceEntry[]; rules: ResourceEntry[] } } | null>(null);
   useEffect(() => {
@@ -540,6 +558,14 @@ export default function Home() {
     }
   };
 
+  // Nations with a lock / unlock still with the bot (the Host Tool's Lock button waits on it).
+  const lockBusySlots = useMemo(
+    () =>
+      host.actions
+        .filter((action) => action.state === "pending" && action.payload.action === "game_access" && action.targetSlot)
+        .map((action) => action.targetSlot as string),
+    [host.actions],
+  );
   const pendingSlots = useMemo(
     () =>
       new Set(
@@ -552,14 +578,40 @@ export default function Home() {
 
   // Full host tools (Host Tool on), or — in a draft game — only the drop
   // targets for pool players (the captain on the clock or the host).
+  /** Host Tool: lock / unlock the selected nation (the Games page's nation locks; VIPs may be let through). */
+  const handleNationLock = useCallback(
+    (nation: NationFeatureProps, lock: boolean, vipExempt: boolean) => {
+      const slot = nation.slot_key;
+      if (!slot || !selectedThread) return;
+      const name = boardDisplayName(scenarioId, nation.tag, nation.name);
+      void host.send(
+        {
+          action: "game_access",
+          payload: lock
+            ? { thread_id: selectedThread, op: "nation_lock", nation: slot, vip_exempt: vipExempt }
+            : { thread_id: selectedThread, op: "nation_unlock", nation: slot },
+        },
+        lock ? `Lock ${name}${vipExempt ? " (VIPs can reserve)" : ""}` : `Unlock ${name}`,
+        slot,
+      );
+    },
+    [host, selectedThread, scenarioId],
+  );
   const mapHostTools = useMemo(
     () =>
       toolsActive
-        ? { heldPlayer, onDropPlayer: handleDropOnNation, onPlaceHeld: handlePlaceHeld, dragAvatars: true }
+        ? {
+            heldPlayer,
+            onDropPlayer: handleDropOnNation,
+            onPlaceHeld: handlePlaceHeld,
+            dragAvatars: true,
+            onNationLock: handleNationLock,
+            lockBusySlots,
+          }
         : draftCanDrag
           ? { heldPlayer: null, onDropPlayer: handleDropOnNation, onPlaceHeld: () => {}, dragAvatars: false }
           : null,
-    [toolsActive, draftCanDrag, heldPlayer, handleDropOnNation, handlePlaceHeld],
+    [toolsActive, draftCanDrag, heldPlayer, handleDropOnNation, handlePlaceHeld, handleNationLock, lockBusySlots],
   );
   const drawerHostTools = useMemo(
     () =>
@@ -649,6 +701,7 @@ export default function Home() {
         receiptGame={receiptGame}
         onJoinDraft={openJoin}
         hostLockedTags={hostLockedTags}
+        viewerVip={viewerVip}
       />
 
       {/* Left slide-out reservation board (below the top bar). */}

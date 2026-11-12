@@ -58,7 +58,7 @@ export default function AccessCard({ game, onChanged }: { game: GameControl; onC
             label="Lockdown"
             description="Players can't reserve on the website map. Your host tools still work."
           />
-          <NationLocks game={game} disabled={disabled} onLock={(nation) => send({ op: "nation_lock", nation })} onUnlock={(nation) => send({ op: "nation_unlock", nation })} />
+          <NationLocks game={game} disabled={disabled} onLock={(nation, vipExempt) => send({ op: "nation_lock", nation, vip_exempt: vipExempt })} onUnlock={(nation) => send({ op: "nation_unlock", nation })} />
           <IronLegionChoice
             value={game.access.require_ironlegion}
             serverRequires={game.access.server_requires_ironlegion}
@@ -139,10 +139,13 @@ function NationLocks({
 }: {
   game: GameControl;
   disabled: boolean;
-  onLock: (nation: string) => void;
+  onLock: (nation: string, vipExempt: boolean) => void;
   onUnlock: (nation: string) => void;
 }) {
   const [nation, setNation] = useState("");
+  // Lock it for everyone, or let VIPs still reserve it (the map's Host Tool has the same choice).
+  const [vipExempt, setVipExempt] = useState(false);
+  const vipOpen = new Set(game.access.vip_open_nations);
   // Excludes a preset's not-playable nations (locked for good; listed in the header).
   const locked = game.access.locked_nations;
   const known = game.nations ? [...game.nations.majors, ...game.nations.minors] : [];
@@ -161,6 +164,11 @@ function NationLocks({
           {locked.map((name) => (
             <li key={name} className="flex items-center gap-1 gm-cut [--cut:5px] border border-rose-400/30 bg-rose-500/10 py-0.5 pl-2 pr-1 text-xs text-rose-100">
               {name}
+              {vipOpen.has(name) && (
+                <span title="VIPs can still reserve it" className="gm-cut [--cut:3px] bg-amber-400/15 px-1 text-[10px] font-bold text-amber-200">
+                  VIP ok
+                </span>
+              )}
               <button
                 type="button"
                 disabled={disabled}
@@ -180,7 +188,7 @@ function NationLocks({
         onSubmit={(event) => {
           event.preventDefault();
           if (!nation.trim() || !valid) return;
-          onLock(nation.trim());
+          onLock(nation.trim(), vipExempt);
           setNation("");
         }}
       >
@@ -207,6 +215,16 @@ function NationLocks({
           Lock
         </button>
       </form>
+      <label className="mt-1.5 flex items-center gap-2 text-[11px] text-ink-300">
+        <input
+          type="checkbox"
+          checked={vipExempt}
+          disabled={disabled}
+          onChange={(event) => setVipExempt(event.target.checked)}
+          className="accent-brand-400"
+        />
+        VIPs can still reserve it
+      </label>
       {nation.trim() && !valid && <p className="mt-1 text-[11px] text-brand-200">Not a nation in {game.mode}.</p>}
     </div>
   );
