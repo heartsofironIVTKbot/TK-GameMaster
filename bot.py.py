@@ -25786,6 +25786,122 @@ def get_category_name_for_nation(nation: str, game_mode: str):
 
     return "⚠️ UNMAPPED NATIONS"
 
+# ————— /health: is the bot, the website and the database up (2026-11-12) —————
+_HEALTH_PROCESS_STARTED = time.time()
+HEALTH_TIMEOUT_SEC = 8.0
+
+
+def _health_duration(seconds: float) -> str:
+    seconds = int(max(0, seconds))
+    days, rest = divmod(seconds, 86400)
+    hours, rest = divmod(rest, 3600)
+    minutes = rest // 60
+    if days:
+        return f"{days}d {hours}h"
+    if hours:
+        return f"{hours}h {minutes}m"
+    return f"{minutes}m"
+
+
+def _health_day_square(percent) -> str:
+    """The status page's daily bar colours (UptimeCard.barTone) as squares."""
+    if percent is None:
+        return "⬛"
+    if percent >= 99.5:
+        return "🟩"
+    if percent >= 95:
+        return "🟨"
+    return "🟥"
+
+
+async def _health_check_database() -> tuple[bool, str]:
+    started = time.perf_counter()
+    try:
+        await asyncio.wait_for(
+            _run_mysql_io(lambda: _guild_settings_query_mysql("SELECT 1", fetch="one"), label="health check"),
+            timeout=HEALTH_TIMEOUT_SEC,
+        )
+        return True, f"{round((time.perf_counter() - started) * 1000)} ms"
+    except asyncio.TimeoutError:
+        return False, f"no answer in {int(HEALTH_TIMEOUT_SEC)} s"
+    except Exception as e:
+        return False, f"unreachable ({type(e).__name__})"
+
+
+async def _health_check_website() -> tuple[bool, str, dict | None]:
+    """The website's own health check (it also checks its database link),
+    plus its public uptime for the 30-day squares."""
+    session = await _get_log_session()
+    timeout = aiohttp.ClientTimeout(total=HEALTH_TIMEOUT_SEC)
+    started = time.perf_counter()
+    try:
+        async with session.get(f"{WEB_SITE_URL}/api/health", timeout=timeout) as response:
+            body = await response.json(content_type=None)
+            ms = round((time.perf_counter() - started) * 1000)
+            if response.status == 200 and isinstance(body, dict) and body.get("ok"):
+                ok, detail = True, f"{ms} ms"
+            elif isinstance(body, dict) and body.get("database") == "unreachable":
+                ok, detail = False, "up, but it can't reach the database"
+            else:
+                ok, detail = False, f"answered HTTP {response.status}"
+    except asyncio.TimeoutError:
+        return False, f"no answer in {int(HEALTH_TIMEOUT_SEC)} s", None
+    except Exception as e:
+        return False, f"unreachable ({type(e).__name__})", None
+    status = None
+    try:
+        async with session.get(f"{WEB_SITE_URL}/api/status", timeout=timeout) as response:
+            if response.status == 200:
+                status = await response.json(content_type=None)
+    except Exception:
+        status = None
+    return ok, detail, status
+
+
+def _health_embed(db: tuple, web: tuple, latency_ms: int | None, servers: int, uptime_sec: float) -> discord.Embed:
+    db_ok, db_detail = db
+    web_ok, web_detail, status = web
+    all_ok = db_ok and web_ok
+    square = lambda ok: "🟩" if ok else "🟥"
+    latency = f"{latency_ms} ms" if latency_ms is not None else "connecting"
+    embed = discord.Embed(
+        title="🩺 GameMaster Health",
+        description="**All systems are up.**" if all_ok else "**Something is down** — details below.",
+        color=EmbedColor.SUCCESS if all_ok else EmbedColor.DANGER,
+    )
+    embed.add_field(
+        name=f"{square(True)} Bot",
+        value=f"Online · {latency}\nUp {_health_duration(uptime_sec)} · {servers} server(s)",
+        inline=True,
+    )
+    embed.add_field(name=f"{square(web_ok)} Website", value=("Online · " if web_ok else "Down · ") + web_detail, inline=True)
+    embed.add_field(name=f"{square(db_ok)} Database", value=("Online · " if db_ok else "Down · ") + db_detail, inline=True)
+    days = (status or {}).get("days") if isinstance(status, dict) else None
+    if isinstance(days, list) and days:
+        bars = "".join(_health_day_square(day.get("percent") if isinstance(day, dict) else None) for day in days[-30:])
+        uptime = status.get("uptime_30d")
+        embed.add_field(
+            name=f"Uptime, last 30 days · {f'{uptime}%' if uptime is not None else 'no data'}",
+            value=bars,
+            inline=False,
+        )
+    embed.add_field(name="Checked", value=f"<t:{int(time.time())}:R>", inline=False)
+    embed.set_footer(text="🟩 up  🟨 some downtime  🟥 down  ⬛ no data")
+    return embed
+
+
+@tree.command(name="health", description="Is GameMaster's bot, website and database up right now?", guild=discord.Object(id=GUILD_ID))
+async def health_command(interaction: discord.Interaction):
+    await interaction.response.defer(thinking=True)
+    db, web = await asyncio.gather(_health_check_database(), _health_check_website())
+    latency = bot.latency
+    latency_ms = round(latency * 1000) if latency and latency == latency and latency != float("inf") else None
+    embed = _health_embed(db, web, latency_ms, len(_active_guilds()), time.time() - _HEALTH_PROCESS_STARTED)
+    view = discord.ui.View(timeout=None)
+    view.add_item(discord.ui.Button(label="Status page", style=discord.ButtonStyle.link, url=f"{WEB_SITE_URL}/status", emoji="📈"))
+    await interaction.followup.send(embed=embed, view=view)
+
+
 GAME_THREAD_CLEAN_LIMIT = 1000
 
 
