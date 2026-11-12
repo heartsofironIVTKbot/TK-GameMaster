@@ -21292,6 +21292,59 @@ async def _close_game_thread(game: dict | None, notice: str | None = None) -> No
         print(f"[WARN] closing game thread {thread.id} failed: {e}")
 
 
+# Games whose thread couldn't be opened (no permission yet …): game key → when to try again.
+_game_thread_retry_at: dict[str, float] = {}
+GAME_THREAD_RETRY_SEC = 600
+
+
+async def _open_missing_game_threads_for_guild() -> None:
+    """Announced games without a Game Thread get one (2026-11-12: the bot
+    lacked Create Public Threads when a game was announced). Each game is
+    tried at most every 10 minutes; ended / cancelled games are left alone."""
+    now = time.time()
+    games = await _load_games_resilient()
+    for key, game in list(games.items()):
+        if not isinstance(game, dict) or not game.get("no_thread") or game.get("game_thread_id"):
+            continue
+        if str(game.get("guild_id") or cur_gid()) != str(cur_gid()):
+            continue
+        if str(game.get("status") or "").lower() in ("ended", "cancelled") or game.get("game_end_started_at"):
+            continue
+        if _game_thread_retry_at.get(str(key), 0) > now:
+            continue
+        channel_id = _iid(game.get("announcement_channel_id"))
+        message_id = _iid(game.get("announcement_message_id"))
+        if not channel_id or not message_id:
+            continue
+        _game_thread_retry_at[str(key)] = now + GAME_THREAD_RETRY_SEC
+        try:
+            channel = bot.get_channel(channel_id) or await bot.fetch_channel(channel_id)
+            message = await channel.fetch_message(message_id)
+        except discord.NotFound:
+            continue  # the announcement is gone: nothing to hang a thread on
+        except discord.HTTPException as e:
+            print(f"[WARN] game thread catch-up: announcement of {key} unreadable: {e}")
+            continue
+        # A thread someone already opened on it by hand: adopt it.
+        thread = getattr(message, "thread", None)
+        seed: dict = {"host_id": game.get("host_id")}
+        if thread is None:
+            name = str(game.get("thread_name") or f"{game.get('mode') or 'Game'} Game")
+            thread = await _create_game_thread(message, seed, key, name)
+        if thread is None:
+            continue
+        fresh = await _load_games_resilient()
+        fresh_key, fresh_game = _find_game_entry(fresh, key)
+        if fresh_game is None or fresh_game.get("game_thread_id"):
+            continue
+        fresh_game["game_thread_id"] = thread.id
+        if seed.get("game_thread_intro_id"):
+            fresh_game["game_thread_intro_id"] = seed["game_thread_intro_id"]
+        await save_single_game(str(fresh_key or key), fresh_game, rewrite_reservations=False)
+        _game_thread_retry_at.pop(str(key), None)
+        print(f"💬 Opened the missing Game Thread for {key}.")
+
+
 async def _archive_and_delete_game_thread(game_key, game: dict | None, *, post_html: bool = True) -> bool:
     """Save the thread (database for the website, an HTML file in the game's
     host chat-logs post), then delete it. Sets game["game_thread_archived_at"]
@@ -26723,9 +26776,11 @@ def _short_nation_list(names: list, limit: int = 25) -> str:
 
 @tasks.loop(seconds=60)
 async def scheduled_nation_unlock_loop():
-    """Runs once per active server (_scheduled_nation_unlock_loop_for_guild)."""
+    """Runs once per active server (_scheduled_nation_unlock_loop_for_guild);
+    also opens Game Threads that couldn't be opened at the announcement."""
     await bot.wait_until_ready()
     await _run_for_active_guilds(_scheduled_nation_unlock_loop_for_guild, "scheduled_nation_unlock_loop")
+    await _run_for_active_guilds(_open_missing_game_threads_for_guild, "missing game threads")
 
 
 async def _scheduled_nation_unlock_loop_for_guild():
