@@ -12,6 +12,7 @@ import { usePlayerRequest } from "@/components/usePlayerRequest";
 import type { ArchiveGameDetail, ArchiveMarks, ArchiveRow } from "@/lib/archiveTypes";
 import { modeOption } from "@/lib/scheduleOptions";
 import { MARK, MARK_ORDER, PRESENCE, RatingBlock, StatusTag, presenceLabel, when } from "./parts";
+import GameThreadLog from "./GameThreadLog";
 
 /**
  * /archive/<game>: one game's record. The rating, count boxes like the map's
@@ -236,6 +237,9 @@ function GameView({ game, running, onRated }: { game: ArchiveGameDetail; running
           })
         )}
       </section>
+
+      {/* The game's thread, saved when it ended (members of its server). */}
+      {!running && <GameThreadLog gameId={card.id} />}
     </>
   );
 }
