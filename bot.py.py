@@ -22217,7 +22217,11 @@ async def _process_web_game_access(req: dict):
     elif op in ("nation_lock", "nation_unlock"):
         nation = str(payload.get("nation") or "").strip()
         locked = [str(n) for n in (game.get("locked_regions") or [])]
+        # Locked nations VIPs may still reserve (the website's reserve route
+        # checks this list; everything else treats them as locked).
+        vip_open = [str(n) for n in (game.get("vip_open_regions") or []) if str(n) in locked]
         if op == "nation_lock":
+            vip_exempt = payload.get("vip_exempt") is True
             if mode != "Other":
                 valid = _get_mode_nation_data(mode)[0]
                 match = next((n for n in valid if n.lower() == nation.lower()), None)
@@ -22226,16 +22230,23 @@ async def _process_web_game_access(req: dict):
                 nation = match
             if not nation:
                 return False, None, "❌ Pick a nation."
-            if nation in locked:
-                return False, None, f"ℹ️ **{nation}** is already locked."
-            locked.append(nation)
-            holder = (game.get("reservations") or {}).get(nation)
-            if holder:
-                guild = bot.get_guild(cur_gid())
-                holder_member = guild.get_member(int(holder)) if guild is not None and str(holder).isdigit() else None
-                who = holder_member.display_name if holder_member is not None else "A player"
-                notes.append(f"{who} already holds {nation} — locking doesn't remove them.")
-            title, summary = "🔒 Nation locked", f"**{nation}** can't be reserved (it shows ⚫ on the list)."
+            if nation in (game.get("layout_disabled_nations") or []):
+                return False, None, f"ℹ️ **{nation}** isn't playable in this game (its preset leaves it out)."
+            if nation in locked and (nation in vip_open) == vip_exempt:
+                return False, None, f"ℹ️ **{nation}** is already locked{' (VIPs can still reserve it)' if vip_exempt else ''}."
+            if nation not in locked:
+                locked.append(nation)
+                holder = (game.get("reservations") or {}).get(nation)
+                if holder:
+                    guild = bot.get_guild(cur_gid())
+                    holder_member = guild.get_member(int(holder)) if guild is not None and str(holder).isdigit() else None
+                    who = holder_member.display_name if holder_member is not None else "A player"
+                    notes.append(f"{who} already holds {nation} — locking doesn't remove them.")
+            vip_open = [n for n in vip_open if n != nation] + ([nation] if vip_exempt else [])
+            if vip_exempt:
+                title, summary = "🔒 Nation locked (VIPs excepted)", f"**{nation}** can only be reserved by VIPs."
+            else:
+                title, summary = "🔒 Nation locked", f"**{nation}** can't be reserved (it shows ⚫ on the list)."
         else:
             match = next((n for n in locked if n.lower() == nation.lower()), None)
             if match is None:
@@ -22245,8 +22256,10 @@ async def _process_web_game_access(req: dict):
                     f"❌ **{match}** isn't playable in this game (its preset leaves it out), so it can't be unlocked."
                 )
             locked.remove(match)
+            vip_open = [n for n in vip_open if n != match]
             title, summary = "🔓 Nation unlocked", f"**{match}** can be reserved again."
         game["locked_regions"] = locked
+        game["vip_open_regions"] = vip_open
     elif op == "clear":
         if game.get("game_started"):
             return False, None, (
