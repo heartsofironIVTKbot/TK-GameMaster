@@ -3446,7 +3446,10 @@ RANDOMIZER_DATA: Dict[str, Any] = {
             ],
         },
         "Line_Specialty_Note": (
-            "Line Battalions & Regimental Companies of non-selected categories BANNED. "
+            # Same rule as the Casino (lib/data/units.ts ALWAYS_ALLOWED_SPECIALTY_UNITS, 2026-11-12).
+            "Line Battalions & Regimental Companies of non-selected categories BANNED, except "
+            "Motorized Anti-Tank, Anti-Tank Battery, Motorized Anti-Air, Anti-Air Battery, Infantry Guns, "
+            "Heavy Weapons Co, Motorized Heavy Weapons Co and Rocket Battery (allowed with every Specialty). "
             "Standard Support Companies remain UNLOCKED."
         ),
     },
