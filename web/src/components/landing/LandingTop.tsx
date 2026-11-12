@@ -39,8 +39,9 @@ export default function LandingTop() {
           </Link>
         )}
         {viewer && !viewer.loggedIn && (
+          // Back to the front page after Discord, not the map (Niko, 2026-11-12).
           <a
-            href="/api/auth/login?next=%2Fmap"
+            href="/api/auth/login"
             className="gm-btn hidden h-9 bg-[#5865F2] px-3.5 text-xs text-white hover:bg-[#4752c4] sm:inline-flex"
           >
             Log in
