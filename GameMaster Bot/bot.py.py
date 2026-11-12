@@ -21178,16 +21178,44 @@ CREATE TABLE IF NOT EXISTS game_thread_logs (
 """
 
 
-def _game_thread_intro(game: dict, key) -> str:
-    """The pinned first message of a game's thread."""
+GAME_THREAD_INTRO_VERSION = 2  # 2 = the embed with the map button (2026-11-12)
+
+
+def _game_thread_intro(game: dict, key) -> tuple:
+    """The pinned first message of a game's thread: (embed, view). Spaced-out
+    sections, and a button for the map instead of a raw link."""
     host = f"<@{game['host_id']}>" if game.get("host_id") else "the host"
-    return (
-        "## 💬 Game Thread\n"
-        "This thread is for talking about **this game**: questions, plans and anything the game needs.\n"
-        f"• Need something from the host? Ping {host} here.\n"
-        "• Please keep it clean, and keep anything that isn't about this game out of here.\n"
-        f"• Reserve, see who's playing and read the rules and mods on the map: <{_map_game_url(key)}>"
+    embed = discord.Embed(
+        title="💬 Game Thread",
+        description="The place to talk about **this game**: questions, plans and anything it needs.",
+        color=EmbedColor.BRAND,
     )
+    embed.add_field(name="📣 Need the host?", value=f"Ping {host} here.", inline=False)
+    embed.add_field(
+        name="🧹 Keep it clean",
+        value="Stay on topic. Anything that isn't about this game belongs somewhere else.",
+        inline=False,
+    )
+    embed.add_field(
+        name="🗺️ Reserving, rules and mods",
+        value="All on the game's map: the button below.",
+        inline=False,
+    )
+    embed.set_footer(text="GameMaster closes and archives this thread when the game ends.")
+    view = discord.ui.View(timeout=None)
+    view.add_item(discord.ui.Button(label="Open the map", style=discord.ButtonStyle.link, url=_map_game_url(key), emoji="🗺️"))
+    return embed, view
+
+
+async def _drop_pin_notice(thread, limit: int = 5) -> None:
+    """Delete Discord's "GameMaster pinned a message" line right after pinning."""
+    try:
+        async for message in thread.history(limit=limit):
+            if message.type == discord.MessageType.pins_add and message.author.id == bot.user.id:
+                await message.delete()
+                break
+    except discord.HTTPException:
+        pass
 
 
 async def _create_game_thread(anno_message, game: dict, key, name: str):
@@ -21199,17 +21227,50 @@ async def _create_game_thread(anno_message, game: dict, key, name: str):
         print(f"[WARN] could not open the game thread for {key}: {e}")
         return None
     try:
-        intro = await thread.send(
-            _game_thread_intro(game, key), allowed_mentions=discord.AllowedMentions.none(), suppress_embeds=True,
-        )
+        embed, view = _game_thread_intro(game, key)
+        intro = await thread.send(embed=embed, view=view, allowed_mentions=discord.AllowedMentions.none())
         try:
             await intro.pin()
+            await _drop_pin_notice(thread)
         except discord.HTTPException:
             pass
         game["game_thread_intro_id"] = intro.id
+        game["game_thread_intro_version"] = GAME_THREAD_INTRO_VERSION
     except discord.HTTPException as e:
         print(f"[WARN] game thread intro for {key} failed: {e}")
     return thread
+
+
+async def _refresh_game_thread_intros_for_guild() -> None:
+    """Threads opened with an older intro get the current one (edited in place)."""
+    games = await _load_games_resilient()
+    for key, game in list(games.items()):
+        if not isinstance(game, dict) or not game.get("game_thread_intro_id"):
+            continue
+        if int(game.get("game_thread_intro_version") or 1) >= GAME_THREAD_INTRO_VERSION:
+            continue
+        if str(game.get("guild_id") or cur_gid()) != str(cur_gid()):
+            continue
+        if str(game.get("status") or "").lower() in ("ended", "cancelled") or game.get("game_end_started_at"):
+            continue
+        thread = await _game_thread_of(game)
+        if thread is None:
+            continue
+        try:
+            message = await thread.fetch_message(_iid(game["game_thread_intro_id"]))
+            embed, view = _game_thread_intro(game, key)
+            await message.edit(content=None, embed=embed, view=view, allowed_mentions=discord.AllowedMentions.none())
+            await _drop_pin_notice(thread, limit=100)
+        except discord.NotFound:
+            pass
+        except discord.HTTPException as e:
+            print(f"[WARN] game thread intro refresh for {key} failed: {e}")
+            continue
+        fresh = await _load_games_resilient()
+        fresh_key, fresh_game = _find_game_entry(fresh, key)
+        if fresh_game is not None:
+            fresh_game["game_thread_intro_version"] = GAME_THREAD_INTRO_VERSION
+            await save_single_game(str(fresh_key or key), fresh_game, rewrite_reservations=False)
 
 
 async def _game_thread_of(game: dict | None):
@@ -21376,6 +21437,7 @@ async def _open_missing_game_threads_for_guild() -> None:
         fresh_game["game_thread_id"] = thread.id
         if seed.get("game_thread_intro_id"):
             fresh_game["game_thread_intro_id"] = seed["game_thread_intro_id"]
+            fresh_game["game_thread_intro_version"] = seed.get("game_thread_intro_version")
         await save_single_game(str(fresh_key or key), fresh_game, rewrite_reservations=False)
         _game_thread_retry_at.pop(str(key), None)
         print(f"💬 Opened the missing Game Thread for {key}.")
@@ -26736,6 +26798,7 @@ async def _check_scheduled_announcements_for_guild():
                 "automated_unlocks": dict(item.get("automated_unlocks") or {}),
                 "game_thread_id": game_thread.id if game_thread is not None else None,
                 "game_thread_intro_id": thread_seed.get("game_thread_intro_id"),
+                "game_thread_intro_version": thread_seed.get("game_thread_intro_version"),
             }
             if draft_config:
                 new_game = games_data[game_key]
@@ -26933,6 +26996,7 @@ async def scheduled_nation_unlock_loop():
     await bot.wait_until_ready()
     await _run_for_active_guilds(_scheduled_nation_unlock_loop_for_guild, "scheduled_nation_unlock_loop")
     await _run_for_active_guilds(_open_missing_game_threads_for_guild, "missing game threads")
+    await _run_for_active_guilds(_refresh_game_thread_intros_for_guild, "game thread intros")
 
 
 async def _scheduled_nation_unlock_loop_for_guild():

@@ -75,7 +75,7 @@ class FakeThread(discord.Thread):
             yield message
 
     async def send(self, content=None, **kwargs):
-        self.sent.append(content)
+        self.sent.append(content if content is not None else kwargs.get("embed"))
         return SentMessage(len(self.sent))
 
     async def edit(self, **kwargs):
@@ -116,11 +116,16 @@ gm._run_mysql_io = _run_mysql_io
 gm._open_game_log_thread = _open_game_log_thread
 
 # --- The intro ---
-intro = gm._game_thread_intro({"host_id": 555}, "1570407426308448318")
-check("the intro names it a Game Thread", "Game Thread" in intro, intro)
+embed, view = gm._game_thread_intro({"host_id": 555}, "1570407426308448318")
+intro = " ".join([embed.title or "", embed.description or "", *[f"{f.name} {f.value}" for f in embed.fields], embed.footer.text or ""])
+check("the intro is an embed titled Game Thread", embed.title == "💬 Game Thread", embed.title)
 check("it tells players to ping the host", "<@555>" in intro and "Ping" in intro, intro)
-check("it asks to keep it clean and on this game", "keep it clean" in intro and "this game" in intro, intro)
-check("it links the game's map", "/map?game=1570407426308448318" in intro, intro)
+check("it asks to keep it clean and on this game", "Keep it clean" in intro and "this game" in intro, intro)
+check("in separate sections", [f.name for f in embed.fields] == ["📣 Need the host?", "🧹 Keep it clean", "🗺️ Reserving, rules and mods"], [f.name for f in embed.fields])
+buttons = [item for item in view.children]
+check("the map is a button, not a raw link",
+      len(buttons) == 1 and buttons[0].label == "Open the map" and buttons[0].url.endswith("/map?game=1570407426308448318")
+      and "http" not in intro, (buttons, intro))
 check("it never says Reservation Thread", "Reservation" not in intro, intro)
 
 # --- The HTML transcript ---
@@ -244,13 +249,58 @@ allowed["value"] = True
 gm._game_thread_retry_at.clear()  # ten minutes later
 asyncio.run(gm._open_missing_game_threads_for_guild())
 check("once allowed, the thread is opened", STORE["500"].get("game_thread_id") == 500 and SAVES == ["500"], STORE["500"])
-check("with the pinned intro", "Game Thread" in (THREADS[500].sent[0] if THREADS[500].sent else "") and STORE["500"].get("game_thread_intro_id") is not None, THREADS[500].sent)
+first = THREADS[500].sent[0] if THREADS[500].sent else None
+check("with the pinned intro", getattr(first, "title", "") == "💬 Game Thread" and STORE["500"].get("game_thread_intro_id") is not None
+      and STORE["500"].get("game_thread_intro_version") == gm.GAME_THREAD_INTRO_VERSION, THREADS[500].sent)
 check("named after the game", THREADS[500].name == "Roleplay Game - Saturday - 11.14.2026", THREADS[500].name)
 
 STORE["600"] = {"no_thread": True, "guild_id": GID, "status": "ended", "announcement_channel_id": 77, "announcement_message_id": 500}
 calls = announcement.calls
 asyncio.run(gm._open_missing_game_threads_for_guild())
 check("ended games get no thread", announcement.calls == calls and "game_thread_id" not in STORE["600"])
+
+# --- Old-style intros are swapped for the embed, and the pin notice goes ---
+class OldIntro:
+    def __init__(self):
+        self.edited = None
+
+    async def edit(self, **kwargs):
+        self.edited = kwargs
+
+
+class PinNotice:
+    def __init__(self):
+        self.type = discord.MessageType.pins_add
+        self.author = type("A", (), {"id": gm.bot.user.id if gm.bot.user else 0})()
+        self.deleted = False
+
+    async def delete(self):
+        self.deleted = True
+
+
+old_intro = OldIntro()
+notice = PinNotice()
+old_thread = FakeThread(700, "Roleplay Game - Saturday", [notice])
+old_thread.fetch_message = lambda mid: _resolve(old_intro)
+
+
+async def _resolve(value):
+    return value
+
+
+THREADS[700] = old_thread
+STORE.clear()
+SAVES.clear()
+STORE["700"] = {"no_thread": True, "guild_id": GID, "status": None, "game_thread_id": 700, "game_thread_intro_id": 701, "host_id": 555}
+if gm.bot.user is None:
+    gm.bot._connection.user = type("U", (), {"id": 999})()  # the bot's own id for the pin-notice check
+    notice.author.id = 999
+asyncio.run(gm._refresh_game_thread_intros_for_guild())
+check("an old intro is edited into the embed with the map button",
+      old_intro.edited and old_intro.edited.get("content") is None and old_intro.edited["embed"].title == "💬 Game Thread"
+      and old_intro.edited["view"].children[0].label == "Open the map", old_intro.edited)
+check("its 'pinned a message' notice is removed", notice.deleted is True)
+check("and it's marked done (no edit every minute)", STORE["700"].get("game_thread_intro_version") == gm.GAME_THREAD_INTRO_VERSION, STORE["700"])
 
 for line in results:
     print(line)
