@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { RowDataPacket } from "mysql2";
-import { HOME_GUILD_ID, currentGuildId } from "@/lib/currentGuild";
+import { HOME_GUILD_ID, currentGuildId, hostServersOf } from "@/lib/currentGuild";
 import { getPool, DatabaseConfigError } from "@/lib/db";
 import { demoLobbies } from "@/lib/liveDemo";
 import { gameGuildOf, isSchedulerDemo } from "@/lib/scheduleStore";
-import { mapAccessFor } from "@/lib/mapAccess";
+import { ACCESS_MESSAGES, mapAccessFor, memberGuildFor } from "@/lib/mapAccess";
+import { getSession } from "@/lib/session";
 import { UNSTARTED_GAME_CLOSES_AFTER_SEC } from "@/lib/gameWindow";
 
 /**
@@ -16,7 +17,8 @@ import { UNSTARTED_GAME_CLOSES_AFTER_SEC } from "@/lib/gameWindow";
  * Reads the same `games` table the bot owns.
  *
  * One server's games (multi-server): the server of ?game= (the bot's
- * announcement / reminder links), else the one the viewer's host pages are on.
+ * announcement / reminder links), else the one the viewer's host pages are on,
+ * else (players) a GameMaster server they're a member of.
  * Only for that server's members, signed in (lib/mapAccess.ts): anyone else
  * gets no games and `access` ("login" / "not_member") with the reason.
  */
@@ -36,15 +38,37 @@ interface GameRow extends RowDataPacket {
   start_timestamp: number | null;
 }
 
+/**
+ * No game link: a host's current server; a player's own GameMaster server;
+ * null for a player in none (no longer the home server for everyone). Not
+ * signed in: the home server, which then asks them to log in.
+ */
+async function defaultGuild(): Promise<string | null> {
+  const session = await getSession().catch(() => null);
+  if (!session) return HOME_GUILD_ID;
+  const hosts = await hostServersOf(session.discord_id).catch(() => []);
+  if (hosts.length > 0) return currentGuildId();
+  return memberGuildFor(session.discord_id, HOME_GUILD_ID);
+}
+
 export async function GET(request: NextRequest) {
   // Accessing request data keeps this handler out of build-time prerendering
   // (Cache Components is enabled, and `export const dynamic` is not allowed
   // in that mode — a prerendered games list would be stale forever).
   const linked = request.nextUrl.searchParams.get("game") ?? "";
   try {
-    const guildId = (THREAD_RE.test(linked) ? await gameGuildOf(linked) : null) ?? (await currentGuildId());
     // The sample lobbies belong to the home server.
-    if (isSchedulerDemo()) return NextResponse.json({ games: guildId === HOME_GUILD_ID ? demoLobbies(true) : [] });
+    if (isSchedulerDemo()) {
+      const demoGuild = (THREAD_RE.test(linked) ? await gameGuildOf(linked) : null) ?? (await currentGuildId());
+      return NextResponse.json({ games: demoGuild === HOME_GUILD_ID ? demoLobbies(true) : [] });
+    }
+    const guildId = (THREAD_RE.test(linked) ? await gameGuildOf(linked) : null) ?? (await defaultGuild());
+    if (guildId === null) {
+      return NextResponse.json(
+        { games: [], access: "not_member", error: ACCESS_MESSAGES.no_server },
+        { status: 403, headers: { "Cache-Control": "no-store" } },
+      );
+    }
 
     const access = await mapAccessFor(guildId);
     if (!access.ok) {
