@@ -50,6 +50,15 @@ class Msg:
         self.type = kind or discord.MessageType.default
 
 
+class SentMessage:
+    def __init__(self, n):
+        self.id = 9000 + n
+        self.pinned = False
+
+    async def pin(self):
+        self.pinned = True
+
+
 class FakeThread(discord.Thread):
     def __init__(self, tid, name, messages):  # no super(): only these are read
         self.id = tid
@@ -67,6 +76,7 @@ class FakeThread(discord.Thread):
 
     async def send(self, content=None, **kwargs):
         self.sent.append(content)
+        return SentMessage(len(self.sent))
 
     async def edit(self, **kwargs):
         self.edits.append(kwargs)
@@ -176,6 +186,71 @@ THREADS[44] = thread3
 kept = {"game_thread_id": 44, "lobby_thread_id": "44"}
 check("a failed save keeps the thread", asyncio.run(gm._archive_and_delete_game_thread("44", kept)) is False and not thread3.deleted)
 check("and it can be tried again later", not kept.get("game_thread_archived_at"))
+
+# --- Catch-up: a game announced while GameMaster couldn't open threads gets one later ---
+class FakeAnnouncement:
+    def __init__(self, mid, allowed):
+        self.id = mid
+        self.thread = None
+        self.allowed = allowed
+        self.calls = 0
+
+    async def create_thread(self, name, auto_archive_duration=None):
+        self.calls += 1
+        if not self.allowed["value"]:
+            raise discord.Forbidden(type("R", (), {"status": 403, "reason": "Forbidden"})(), "Missing Permissions")
+        new = FakeThread(self.id, name, [])
+        THREADS[self.id] = new
+        return new
+
+
+class FakeChannel:
+    def __init__(self, message):
+        self.message = message
+
+    async def fetch_message(self, mid):
+        return self.message
+
+
+allowed = {"value": False}
+announcement = FakeAnnouncement(500, allowed)
+THREADS[77] = FakeChannel(announcement)
+GID = str(gm.cur_gid())
+STORE = {"500": {"no_thread": True, "guild_id": GID, "status": None, "announcement_channel_id": 77,
+                 "announcement_message_id": 500, "thread_name": "Roleplay Game - Saturday - 11.14.2026", "host_id": 555}}
+SAVES = []
+
+
+async def _games():
+    import copy
+    return copy.deepcopy(STORE)
+
+
+async def _save(key, game, rewrite_reservations=False):
+    STORE[key] = game
+    SAVES.append(key)
+
+
+gm._load_games_resilient = _games
+gm.save_single_game = _save
+gm._run_mysql_io = _run_mysql_io
+
+asyncio.run(gm._open_missing_game_threads_for_guild())
+check("without the permission nothing is saved", "game_thread_id" not in STORE["500"] and not SAVES, STORE["500"])
+asyncio.run(gm._open_missing_game_threads_for_guild())
+check("and it waits before trying again (no spam)", announcement.calls == 1, announcement.calls)
+
+allowed["value"] = True
+gm._game_thread_retry_at.clear()  # ten minutes later
+asyncio.run(gm._open_missing_game_threads_for_guild())
+check("once allowed, the thread is opened", STORE["500"].get("game_thread_id") == 500 and SAVES == ["500"], STORE["500"])
+check("with the pinned intro", "Game Thread" in (THREADS[500].sent[0] if THREADS[500].sent else "") and STORE["500"].get("game_thread_intro_id") is not None, THREADS[500].sent)
+check("named after the game", THREADS[500].name == "Roleplay Game - Saturday - 11.14.2026", THREADS[500].name)
+
+STORE["600"] = {"no_thread": True, "guild_id": GID, "status": "ended", "announcement_channel_id": 77, "announcement_message_id": 500}
+calls = announcement.calls
+asyncio.run(gm._open_missing_game_threads_for_guild())
+check("ended games get no thread", announcement.calls == calls and "game_thread_id" not in STORE["600"])
 
 for line in results:
     print(line)

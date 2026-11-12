@@ -267,6 +267,7 @@ export const REQUIRED_PERMISSIONS: readonly { bit: number; name: string; why: st
   { bit: 35, name: "Create Public Threads", why: "Open each game's Game Thread on its announcement." },
   { bit: 38, name: "Send Messages in Threads", why: "Post in game threads: the intro, unlocks, game start and end." },
   { bit: 34, name: "Manage Threads", why: "Close and remove a game's thread when the game ends." },
+  { bit: 51, name: "Pin Messages", why: "Pin the Game Thread's intro and the Host Panel (Discord split it from Manage Messages)." },
   { bit: 17, name: "Mention Everyone", why: "Ping a mode's role on announcements even if the role isn't mentionable." },
   { bit: 18, name: "Use External Emojis", why: "GameMaster's own emojis in its messages." },
   { bit: 28, name: "Manage Roles", why: "Give host ranks, Verified, Trusted, bans, VIP and each game's pass role." },
