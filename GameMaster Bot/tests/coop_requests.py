@@ -312,6 +312,62 @@ check("the real save writes the first co-op as main",
 check("and DMs the promoted player", dms == [(ASKER, "Germany")], dms)
 check("draft games are left to the captains", draft["reservations"] == {"Germany_coop": ASKER}, draft)
 
+# --- Anti-spam (2026-11-12): asking, withdrawing and asking again DM'd the owner each time ---
+gm.save_single_game = save_single_game
+gm._roster_after_change = _nothing
+clock = {"now": 2_000_000_000}
+gm.time.time = lambda: clock["now"]
+
+fresh_game(reservations={"Germany": OWNER, "Italy": OTHER})
+ok, _, err = run("coop_request", ASKER, nation="Germany")
+check("spam: the first request goes through", ok and len(DMS) == 1, (ok, err, DMS))
+run("coop_cancel", ASKER)
+ok, _, err = run("coop_request", ASKER, nation="Germany")
+check("spam: asking again right after withdrawing waits", not ok and err.startswith("⏳") and "5 minutes" in err, err)
+ok, _, err = run("coop_request", ASKER, nation="Italy")
+check("spam: hopping to another nation waits too", not ok and err.startswith("⏳"), err)
+check("spam: and no extra DM went out", len(DMS) == 1, DMS)
+clock["now"] += 5 * 60
+ok, _, err = run("coop_request", ASKER, nation="Italy")
+check("spam: after 5 minutes a new request goes through", ok and len(DMS) == 2, (ok, err))
+
+# Declined: that nation waits 30 minutes, another nation only the usual 5.
+ok, _, err = asyncio.run(gm._coop_decide(MEMBERS[OTHER], GAME, str(ASKER), False))
+check("spam: the owner declines", ok, err)
+clock["now"] += 5 * 60
+ok, _, err = run("coop_request", ASKER, nation="Italy")
+check("spam: the declined nation waits 30 minutes", not ok and "declined your request" in err and "25 minutes" in err, err)
+ok, _, err = run("coop_request", ASKER, nation="Germany")
+check("spam: another nation is fine after the 5 minutes", ok, err)
+clock["now"] += 30 * 60
+run("coop_cancel", ASKER)
+clock["now"] += 5 * 60
+ok, _, err = run("coop_request", ASKER, nation="Italy")
+check("spam: after 30 minutes the declined nation can be asked again", ok, err)
+
+# Asking again for the same pending request is free (no DM, no wait).
+dm_count = len(DMS)
+ok, result, err = run("coop_request", ASKER, nation="Italy")
+check("spam: re-pressing the same request is free", ok and result == {"coop": "pending", "nation": "Italy"} and len(DMS) == dm_count, (ok, err))
+
+# Hot-join requests (running game) DM the host: one every 3 minutes.
+fresh_game(reservations={"Germany": OWNER}, game_started=True, host_id=THIRD)
+
+
+def hotjoin(action, actor, **payload):
+    req = {"action": action, "host_id": actor, "payload": {"thread_id": GAME, **payload}}
+    return asyncio.run(gm._process_web_hotjoin(req))
+
+
+ok, _, err = hotjoin("hotjoin_request", ASKER, nation="France")
+check("spam: a hot-join request goes through", ok and len(DMS) == 1, (ok, err, DMS))
+hotjoin("hotjoin_cancel", ASKER)
+ok, _, err = hotjoin("hotjoin_request", ASKER, nation="Poland")
+check("spam: another hot-join right away waits", not ok and err.startswith("⏳") and "3 minutes" in err, err)
+clock["now"] += 3 * 60
+ok, _, err = hotjoin("hotjoin_request", ASKER, nation="Poland")
+check("spam: after 3 minutes it goes through", ok and len(DMS) == 2, (ok, err))
+
 print("\n".join(results))
 failed = sum(1 for line in results if line.startswith("FAIL"))
 print(f"\n{len(results) - failed}/{len(results)} passed")

@@ -30763,6 +30763,14 @@ async def _process_web_hotjoin(req: dict):
     if not await is_user_authenticated(actor, int(key)):
         return False, None, ironlegion_unverified_message(cur_gid())
 
+    existing = requests.get(uid)
+    if existing and existing.get("status") == "pending" and existing.get("nation") == nation:
+        return True, {"hotjoin": "pending", "nation": nation}, None
+    history = _request_log(game, "hotjoin_request_log", uid)
+    wait = _request_wait(history, nation, now, HOTJOIN_REQUEST_GAP_SEC)
+    if wait:
+        return False, None, wait
+    history["last"] = now
     requests[uid] = {"nation": nation, "status": "pending", "ts": now, "current": current}
     game["hotjoin_requests"] = _trim_hotjoin_requests(requests)
     await save_single_game(key, game, rewrite_reservations=False)
@@ -30845,6 +30853,45 @@ async def _web_hotjoin_decide(actor, key: str, game: dict, payload: dict):
 #       with "Keep players where I put them" stays until a host moves them.
 COOP_WEB_ACTIONS = ("coop_request", "coop_cancel", "coop_decide", "coop_kick", "coop_promote")
 COOP_REQUEST_TTL_SEC = 24 * 3600
+# Anti-spam (2026-11-12): each new request DMs the nation's player, and asking,
+# withdrawing and asking again (or hopping between nations) spammed them.
+COOP_REQUEST_GAP_SEC = 5 * 60          # one new co-op request per player per game every 5 minutes
+COOP_DECLINED_WAIT_SEC = 30 * 60       # the same nation again after a decline
+HOTJOIN_REQUEST_GAP_SEC = 3 * 60       # the same for hot-join requests (they DM the host)
+
+
+def _request_log(game: dict, field: str, uid: str) -> dict:
+    """A player's request history on one game (game[field][uid]): when they
+    last sent one, and per nation when it was declined. Kept apart from the
+    requests themselves, which a new request replaces."""
+    log = game.get(field)
+    if not isinstance(log, dict):
+        log = {}
+        game[field] = log
+    entry = log.get(uid)
+    if not isinstance(entry, dict):
+        entry = {}
+        log[uid] = entry
+    return entry
+
+
+def _wait_text(seconds: int) -> str:
+    minutes = max(1, -(-int(seconds) // 60))
+    return f"{minutes} minute{'s' if minutes != 1 else ''}"
+
+
+def _request_wait(entry: dict, nation: str, now: int, gap: int, declined_wait: int = 0) -> str | None:
+    """Why this player must wait before asking again (None: they may ask now)."""
+    declined_at = int((entry.get("declined") or {}).get(nation) or 0)
+    if declined_wait and declined_at and now - declined_at < declined_wait:
+        return (
+            f"⏳ **{nation}**'s player declined your request. "
+            f"You can ask again in {_wait_text(declined_wait - (now - declined_at))}."
+        )
+    last = int(entry.get("last") or 0)
+    if last and now - last < gap:
+        return f"⏳ You just sent a request. You can send another in {_wait_text(gap - (now - last))}."
+    return None
 
 
 def _coop_requests(game) -> dict:
@@ -30946,6 +30993,11 @@ async def _process_web_coop(req: dict):
     existing = requests.get(uid)
     if existing and existing.get("status") == "pending" and existing.get("nation") == nation:
         return True, {"coop": "pending", "nation": nation}, None
+    history = _request_log(game, "coop_request_log", uid)
+    wait = _request_wait(history, nation, now, COOP_REQUEST_GAP_SEC, COOP_DECLINED_WAIT_SEC)
+    if wait:
+        return False, None, wait
+    history["last"] = now
     requests[uid] = {"nation": nation, "owner": owner_id, "name": actor.display_name, "status": "pending", "ts": now}
     game["coop_requests"] = _trim_hotjoin_requests(requests)
     await save_single_game(key, game, rewrite_reservations=False)
@@ -31096,6 +31148,8 @@ async def _coop_decide(actor, thread_id: str, user_id: str, approve: bool):
             return False, None, "ℹ️ This request is more than a day old, so it has expired."
         if not approve:
             mark("declined")
+            declined = _request_log(game, "coop_request_log", user_id).setdefault("declined", {})
+            declined[nation] = now
             await save_single_game(key, game, rewrite_reservations=False)
             if target is not None:
                 await _dm_user_safe(
