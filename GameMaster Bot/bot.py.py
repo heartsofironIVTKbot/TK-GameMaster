@@ -34251,6 +34251,29 @@ def _home_modes_to_add(stored) -> list[str]:
     return [key for key, _ in BUILTIN_MODES if key not in modes and key in _HOME_MODE_SEED]
 
 
+def _home_modes_left_blank(settings) -> list[str]:
+    """Home game modes whose links are still a new server's defaults (public
+    mods, no rulesets) while the bot has its own lists for them: the bot
+    joined the home server while running and seeded it like any server.
+    Modes a host has edited since are left alone."""
+    modes = (settings or {}).get("modes") if isinstance(settings, dict) else None
+    if not isinstance(modes, dict):
+        return []
+    blank = []
+    for key, _branch in BUILTIN_MODES:
+        mode = modes.get(key)
+        seed = _HOME_MODE_SEED.get(key)
+        if not isinstance(mode, dict) or not seed:
+            continue
+        own_rules = list(seed.get("rule_links") or [])
+        own_mods = list(seed.get("mod_links") or [])
+        if mode.get("rule_links") or not (own_rules or own_mods != _default_mode_mod_links(key)):
+            continue
+        if list(mode.get("mod_links") or []) == _default_mode_mod_links(key):
+            blank.append(key)
+    return blank
+
+
 def _fresh_home_settings(name: str) -> dict:
     """The home server's first settings: nothing mapped, like any server.
     The game modes' mod and rule links and the rule numbers carry over."""
@@ -34325,6 +34348,25 @@ async def _bootstrap_server_settings() -> None:
                     if await _save_bot_settings(GUILD_ID, merged, summary="Added new game modes: " + ", ".join(added_modes)):
                         _rt(GUILD_ID).settings = merged
                         _apply_settings(_rt(GUILD_ID), merged)
+                # Home modes still on a new server's blank lists (the bot joined the
+                # home server while running, 2026-11-12): give them their own links back.
+                blank_modes = _home_modes_left_blank(_rt(GUILD_ID).settings)
+                if blank_modes:
+                    merged = json.loads(json.dumps(_rt(GUILD_ID).settings))
+                    # The bot's own lists, as written in this file (the saved blank ones are applied by now).
+                    for key in blank_modes:
+                        merged["modes"][key]["mod_links"] = [dict(e) for e in _HOME_MODE_SEED[key].get("mod_links") or []]
+                        merged["modes"][key]["rule_links"] = [dict(e) for e in _HOME_MODE_SEED[key].get("rule_links") or []]
+                    if await _save_bot_settings(
+                        GUILD_ID, merged, summary="Restored the mod and rule links of: " + ", ".join(blank_modes),
+                    ):
+                        _rt(GUILD_ID).settings = merged
+                        _apply_settings(_rt(GUILD_ID), merged)
+                        print(f"⚙️ Restored mod / rule links for {len(blank_modes)} home game mode(s).")
+            # The website's lists (presets, Games page) from the settings now in force:
+            # the startup publish ran before they were applied.
+            if _guild_active(GUILD_ID):
+                await _publish_guild_web_data(home)
         except Exception as e:
             print(f"⚠️ Saving server settings failed: {e}")
 
@@ -34480,9 +34522,12 @@ async def on_guild_join(guild: discord.Guild):
         row = await _run_mysql_io(_load_guild_settings_row_mysql, guild.id, label="guild settings read")
         if row is not None and not row.get("settings"):
             expected = int(row.get("version") or 0)
+            # The home server keeps its game modes' own mod and rule links (TommyKay's
+            # lists), like a home server first seen at startup; others start blank.
+            first = _fresh_home_settings(guild.name) if guild.id == GUILD_ID else _default_guild_settings(guild.name)
             await _run_mysql_io(
                 lambda: _save_guild_settings_mysql(
-                    guild.id, _default_guild_settings(guild.name), expected, status=None,
+                    guild.id, first, expected, status=None,
                     actor_name="GameMaster bot", summary="Joined the server — waiting for setup", changes=[],
                 ),
                 label="guild settings init",
