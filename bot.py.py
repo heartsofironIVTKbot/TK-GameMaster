@@ -18827,6 +18827,10 @@ async def _resolve_game_thread(guild, thread_id):
     except (TypeError, ValueError):
         return None
     _, cached = _find_game_entry(get_cached_games_data() or {}, tid)
+    if cached is None:
+        # Not cached: read the games, so a new game's Game Thread (same id as
+        # the game) is never taken for an old reservation thread.
+        _, cached = _find_game_entry(await _load_games_resilient(), tid)
     if cached is not None and not _game_has_thread(cached):
         return None
     channel = None
@@ -19056,14 +19060,19 @@ async def _game_start_core(guild, actor, thread_id_str: str, *, game_id: str, pa
     mark_live_post_dirty(thread_id_str, "status")
 
     # Older games still have a reservation thread: point it at the website.
+    started_note = (
+        "## 🎮 Game Has Started\n"
+        f"> Reservations are locked. Hot-join or report a crash on the website: <{_map_game_url(thread_id_str)}>"
+    )
     try:
         if thread is not None:
-            await thread.send(
-                "## 🎮 Game Has Started\n"
-                f"> Reservations are locked. Hot-join or report a crash on the website: {_map_game_url(thread_id_str)}"
-            )
+            await thread.send(started_note)
     except Exception as e:
         print(f"Failed to send public game-start message: {e}")
+    # The game thread.
+    started_games = await _load_games_resilient()
+    _sk, started_game = _find_game_entry(started_games, thread_id_str)
+    await _post_in_game_thread(started_game or game, started_note)
 
     return {
         "title": "🎮 Game started",
@@ -21107,6 +21116,232 @@ async def _post_to_game_log_thread(game_key, game: dict, *, embed=None, content=
         print(f"[WARN] game thread post failed for {game_key}: {e}")
 
 
+# ==========================================================================
+# GAME THREADS (2026-11-12) — not the old reservation threads: reserving is
+# on the website. Each announced game gets a "Game Thread" on its
+# announcement post (same id as the game) for talk about that game. GameMaster
+# posts a pinned intro, the automatic unlocks, "Game has started" and "Game is
+# ending". /clean tidies it. When the game ends (or is cancelled) the thread is
+# locked, saved as an HTML file in the game's host chat-logs post and in
+# game_thread_logs (the website's Archive shows it to the server's members),
+# then deleted.
+# ==========================================================================
+GAME_THREAD_ARCHIVE_MINUTES = 10080  # Discord's longest: a week of quiet before it auto-archives
+GAME_THREAD_MAX_MESSAGES = 5000      # read for the transcript
+
+_GAME_THREAD_LOGS_DDL = """
+CREATE TABLE IF NOT EXISTS game_thread_logs (
+    game_id VARCHAR(32) NOT NULL PRIMARY KEY,
+    guild_id VARCHAR(32) NOT NULL,
+    thread_name VARCHAR(120) NOT NULL,
+    messages MEDIUMTEXT NOT NULL,
+    message_count INT NOT NULL,
+    archived_at BIGINT NOT NULL,
+    INDEX idx_game_thread_logs_guild (guild_id)
+)
+"""
+
+
+def _game_thread_intro(game: dict, key) -> str:
+    """The pinned first message of a game's thread."""
+    host = f"<@{game['host_id']}>" if game.get("host_id") else "the host"
+    return (
+        "## 💬 Game Thread\n"
+        "This thread is for talking about **this game**: questions, plans and anything the game needs.\n"
+        f"• Need something from the host? Ping {host} here.\n"
+        "• Please keep it clean, and keep anything that isn't about this game out of here.\n"
+        f"• Reserve, see who's playing and read the rules and mods on the map: <{_map_game_url(key)}>"
+    )
+
+
+async def _create_game_thread(anno_message, game: dict, key, name: str):
+    """Open the game's thread on its announcement post and pin the intro.
+    Sets game["game_thread_intro_id"]; the caller stores game_thread_id. None on failure."""
+    try:
+        thread = await anno_message.create_thread(name=name[:100], auto_archive_duration=GAME_THREAD_ARCHIVE_MINUTES)
+    except discord.HTTPException as e:
+        print(f"[WARN] could not open the game thread for {key}: {e}")
+        return None
+    try:
+        intro = await thread.send(
+            _game_thread_intro(game, key), allowed_mentions=discord.AllowedMentions.none(), suppress_embeds=True,
+        )
+        try:
+            await intro.pin()
+        except discord.HTTPException:
+            pass
+        game["game_thread_intro_id"] = intro.id
+    except discord.HTTPException as e:
+        print(f"[WARN] game thread intro for {key} failed: {e}")
+    return thread
+
+
+async def _game_thread_of(game: dict | None):
+    """The game's thread (None when it has none, or it's gone)."""
+    thread_id = _iid((game or {}).get("game_thread_id"))
+    if not thread_id:
+        return None
+    thread = bot.get_channel(thread_id)
+    if thread is None:
+        try:
+            thread = await bot.fetch_channel(thread_id)
+        except (discord.NotFound, discord.Forbidden):
+            return None
+        except discord.HTTPException as e:
+            print(f"[WARN] game thread {thread_id} unavailable: {e}")
+            return None
+    return thread if isinstance(thread, discord.Thread) else None
+
+
+async def _post_in_game_thread(game: dict | None, content: str) -> bool:
+    """Post in the game's thread (reopening it if it auto-archived). False when there is none."""
+    thread = await _game_thread_of(game)
+    if thread is None:
+        return False
+    try:
+        if thread.archived and not thread.locked:
+            await thread.edit(archived=False)
+        await thread.send(content, allowed_mentions=discord.AllowedMentions.none(), suppress_embeds=True)
+        return True
+    except discord.HTTPException as e:
+        print(f"[WARN] game thread post failed for {thread.id}: {e}")
+        return False
+
+
+def _thread_message_record(message) -> dict:
+    """One thread message as stored for the transcript (embeds as their text)."""
+    author = message.author
+    avatar = getattr(getattr(author, "display_avatar", None), "url", None)
+    embeds = []
+    for embed in message.embeds or []:
+        text = " — ".join(part for part in (embed.title, embed.description) if part)
+        if text:
+            embeds.append(text[:2000])
+    return {
+        "id": str(message.id),
+        "author_id": str(author.id),
+        "author": getattr(author, "display_name", None) or getattr(author, "name", None) or "Unknown",
+        "avatar": avatar,
+        "bot": bool(getattr(author, "bot", False)),
+        "ts": int(message.created_at.timestamp()),
+        "content": message.clean_content or "",
+        "attachments": [{"name": a.filename, "url": a.url} for a in message.attachments or []],
+        "embeds": embeds,
+    }
+
+
+def _game_thread_html(title: str, records: list[dict]) -> str:
+    """A self-contained HTML page of the thread (opens in any browser)."""
+    esc = html.escape
+    rows = []
+    for rec in records:
+        when = datetime.datetime.fromtimestamp(rec["ts"], tz=datetime.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+        avatar = f'<img class="av" src="{esc(rec["avatar"])}" alt="">' if rec.get("avatar") else '<div class="av"></div>'
+        body = esc(rec.get("content") or "").replace("\n", "<br>")
+        extras = "".join(f'<div class="embed">{esc(text)}</div>' for text in rec.get("embeds") or [])
+        extras += "".join(
+            f'<div class="file">📎 <a href="{esc(a["url"])}">{esc(a["name"])}</a></div>'
+            for a in rec.get("attachments") or []
+        )
+        tag = ' <span class="tag">BOT</span>' if rec.get("bot") else ""
+        rows.append(
+            f'<div class="msg">{avatar}<div><div class="head"><b>{esc(rec["author"])}</b>{tag}'
+            f' <span class="when">{when}</span></div><div class="body">{body}</div>{extras}</div></div>'
+        )
+    empty = "<p>No messages.</p>"
+    return (
+        '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+        f"<title>{esc(title)}</title><style>"
+        "body{margin:0;background:#16181c;color:#dcdde1;font:15px/1.45 system-ui,sans-serif}"
+        "header{padding:20px 24px;border-bottom:1px solid #2a2d33}h1{margin:0;font-size:20px}"
+        "header p{margin:4px 0 0;color:#8b8f97;font-size:13px}main{padding:8px 24px 32px;max-width:960px}"
+        ".msg{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid #1f2227}"
+        ".av{width:40px;height:40px;border-radius:50%;background:#2a2d33;flex:none}"
+        ".head b{color:#fff}.when{color:#7d828b;font-size:12px;margin-left:6px}"
+        ".tag{background:#5865f2;color:#fff;font-size:10px;border-radius:3px;padding:1px 4px;margin-left:4px}"
+        ".body{word-wrap:break-word}.embed{border-left:3px solid #4f545c;padding:4px 10px;margin-top:6px;color:#b5b9c0}"
+        ".file{margin-top:4px}a{color:#00a8fc}</style></head><body>"
+        f"<header><h1>{esc(title)}</h1><p>{len(records)} message(s) · saved by GameMaster when the game ended</p></header>"
+        f"<main>{''.join(rows) or empty}</main></body></html>"
+    )
+
+
+def _save_game_thread_log_mysql(game_id: str, guild_id: str, name: str, records: list[dict]) -> None:
+    _guild_settings_query_mysql(_GAME_THREAD_LOGS_DDL, commit=True)
+    _guild_settings_query_mysql(
+        "INSERT INTO game_thread_logs (game_id, guild_id, thread_name, messages, message_count, archived_at) "
+        "VALUES (%s, %s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE thread_name = VALUES(thread_name), "
+        "messages = VALUES(messages), message_count = VALUES(message_count), archived_at = VALUES(archived_at)",
+        (game_id, guild_id, name[:120], json.dumps(records, ensure_ascii=False), len(records), int(time.time())),
+        commit=True,
+    )
+
+
+async def _close_game_thread(game: dict | None, notice: str | None = None) -> None:
+    """Game end / cancel begins: say so in the thread and lock it (nobody else writes)."""
+    thread = await _game_thread_of(game)
+    if thread is None:
+        return
+    try:
+        if thread.archived:
+            await thread.edit(archived=False)
+        if notice:
+            await thread.send(notice, allowed_mentions=discord.AllowedMentions.none(), suppress_embeds=True)
+        await thread.edit(locked=True)
+    except discord.HTTPException as e:
+        print(f"[WARN] closing game thread {thread.id} failed: {e}")
+
+
+async def _archive_and_delete_game_thread(game_key, game: dict | None, *, post_html: bool = True) -> bool:
+    """Save the thread (database for the website, an HTML file in the game's
+    host chat-logs post), then delete it. Sets game["game_thread_archived_at"]
+    (the caller saves the game). False when it couldn't be read or saved: the
+    thread is kept then."""
+    if not game or game.get("game_thread_archived_at"):
+        return True
+    thread = await _game_thread_of(game)
+    if thread is None:
+        return True
+    records: list[dict] = []
+    try:
+        async for message in thread.history(limit=GAME_THREAD_MAX_MESSAGES, oldest_first=True):
+            if message.type not in (discord.MessageType.default, discord.MessageType.reply):
+                continue
+            records.append(_thread_message_record(message))
+    except discord.HTTPException as e:
+        print(f"[WARN] reading game thread {thread.id} failed — kept, not deleted: {e}")
+        return False
+    name = thread.name or game.get("thread_name") or str(game_key)
+    stable = str(_attendance_stable_id(game, game_key))
+    try:
+        await _run_mysql_io(
+            _save_game_thread_log_mysql, stable, str(game.get("guild_id") or cur_gid()), name, records,
+            label="game thread log save",
+        )
+    except Exception as e:
+        print(f"[WARN] saving game thread {thread.id} failed — kept, not deleted: {e}")
+        return False
+    try:
+        log_thread = await _open_game_log_thread(game_key, game) if post_html else None
+        if log_thread is not None:
+            data = _game_thread_html(name, records).encode("utf-8")
+            safe = re.sub(r"[^A-Za-z0-9._-]+", "_", name)[:80] or "game_thread"
+            await log_thread.send(
+                content=f"💬 **Game thread** — {len(records)} message(s), saved when the game ended.",
+                file=discord.File(io.BytesIO(data), filename=f"{safe}.html"),
+            )
+    except Exception as e:
+        print(f"[WARN] game thread HTML for {game_key} not posted: {e}")
+    game["game_thread_archived_at"] = int(time.time())
+    try:
+        await thread.delete()
+    except discord.NotFound:
+        pass
+    except discord.HTTPException as e:
+        print(f"[WARN] deleting game thread {thread.id} failed: {e}")
+    return True
+
+
 _feedback_archive_locks: dict[str, asyncio.Lock] = {}
 
 
@@ -21324,6 +21559,14 @@ async def _game_end_core(guild, actor, thread_id_str: str, *, progress) -> dict:
                 )
         except Exception as e:
             print(f"Failed to send public game-end message: {e}")
+    # The game thread: "Game is ending" (once), then locked (saved and deleted at the end).
+    await _close_game_thread(
+        game,
+        None if resuming_game_end else (
+            "## 🏁 Game Is Ending\n> The host is wrapping up the session. This thread is now closed; "
+            "it's saved to the game's archive and removed shortly."
+        ),
+    )
 
     await progress("⏳ **Finalizing attendance and public log…**")
 
@@ -21489,6 +21732,14 @@ async def _game_end_core(guild, actor, thread_id_str: str, *, progress) -> dict:
         ended_key, ended_game = _find_game_entry(ended_games, thread_id_str)
         if ended_game is not None:
             await _open_game_log_thread(str(ended_key or thread_id_str), ended_game)
+            # The game thread: saved (website + an HTML file in that post), then deleted.
+            if ended_game.get("game_thread_id") and not ended_game.get("game_thread_archived_at"):
+                await progress("⏳ Saving the game thread…")
+                if await _archive_and_delete_game_thread(str(ended_key or thread_id_str), ended_game):
+                    await save_single_game(str(ended_key or thread_id_str), ended_game, rewrite_reservations=False)
+                    await progress("✅ Game thread saved to the archive and removed.")
+                else:
+                    await progress("⚠️ The game thread couldn't be saved, so it was kept (locked).")
     except Exception as e:
         print(f"[WARN] game thread for {thread_id_str} failed: {e}")
 
@@ -21840,6 +22091,16 @@ async def _game_cancel_core(guild, actor, thread_id_str: str, *, reason: str, pr
                 print(f"[WARN] Could not delete Host Control Center thread {panel_thread_id}: {e}")
     except Exception as e:
         print(f"[WARN] game_cancel host-panel delete step failed: {e}")
+
+    # --- THE GAME THREAD: closed, saved for the record, deleted (best-effort) ---
+    try:
+        if game.get("game_thread_id") and not game.get("game_thread_archived_at"):
+            await _close_game_thread(game, f"## ❌ Game Cancelled\n> {reason[:1500]}")
+            if await _archive_and_delete_game_thread(thread_id_str, game, post_html=False):
+                await save_single_game(thread_id_str, game, rewrite_reservations=False)
+    except Exception as e:
+        step_errors.append(f"Game thread: {e}")
+        print(f"[WARN] game_cancel game thread step failed: {e}")
 
     # --- ALWAYS RESPOND — this is the fix for the "no response at all" bug ---
     summary = f"✅ Game cancelled and archived. DMs sent to {dm_count} players" + (
@@ -25436,6 +25697,56 @@ def get_category_name_for_nation(nation: str, game_mode: str):
 
     return "⚠️ UNMAPPED NATIONS"
 
+GAME_THREAD_CLEAN_LIMIT = 1000
+
+
+@tree.command(name="clean", description="[Host] Delete chat messages in this game thread (never GameMaster's).", guild=discord.Object(id=GUILD_ID))
+@app_commands.describe(which="Delete every message, or every message except yours")
+@app_commands.choices(which=[
+    app_commands.Choice(name="All messages (yours too)", value="all"),
+    app_commands.Choice(name="All messages except mine", value="keep_mine"),
+])
+async def clean_game_thread(interaction: discord.Interaction, which: str = "keep_mine"):
+    """Tidy a Game Thread (2026-11-12: game threads only). GameMaster's own
+    messages — the pinned intro, unlocks, start / end notices — always stay."""
+    channel = interaction.channel
+    if not isinstance(channel, discord.Thread):
+        return await interaction.response.send_message("❌ `/clean` only works inside a game's thread.", ephemeral=True)
+    if not isinstance(interaction.user, discord.Member) or not _member_is_host(interaction.user):
+        return await interaction.response.send_message("❌ Only hosts can clean a game thread.", ephemeral=True)
+    games = await _load_games_resilient()
+    game = next(
+        (g for g in games.values() if isinstance(g, dict) and _iid(g.get("game_thread_id")) == channel.id),
+        None,
+    )
+    if game is None:
+        return await interaction.response.send_message("❌ `/clean` only works inside a game's thread.", ephemeral=True)
+    if channel.locked or str(game.get("status") or "") in ("ended", "cancelled"):
+        return await interaction.response.send_message("ℹ️ This game is ending — its thread is closed.", ephemeral=True)
+    await interaction.response.defer(ephemeral=True, thinking=True)
+    keep_mine = which != "all"
+    me = interaction.user.id
+
+    def removable(message) -> bool:
+        if message.author.id == bot.user.id or message.author.bot:
+            return False
+        if keep_mine and message.author.id == me:
+            return False
+        return message.type in (discord.MessageType.default, discord.MessageType.reply)
+
+    try:
+        deleted = await channel.purge(limit=GAME_THREAD_CLEAN_LIMIT, check=removable, reason=f"/clean by {interaction.user}")
+    except discord.Forbidden:
+        return await interaction.followup.send("❌ GameMaster needs **Manage Messages** to delete messages here.", ephemeral=True)
+    except discord.HTTPException as e:
+        return await interaction.followup.send(f"❌ Discord refused the clean-up: {e}", ephemeral=True)
+    _audit_log("INFO", f"/clean thread={channel.id} by={me} mode={which} deleted={len(deleted)}")
+    note = " (yours too)" if not keep_mine else " (yours were kept)"
+    await interaction.followup.send(
+        f"🧹 Removed **{len(deleted)}** message(s){note}. GameMaster's messages always stay.", ephemeral=True,
+    )
+
+
 @tree.command(name="info", description="Open your player profile: stats, standing, history and roles.", guild=discord.Object(id=GUILD_ID))
 async def info(interaction: discord.Interaction):
     """Sends the player to their own profile on the website (the same record
@@ -26162,6 +26473,10 @@ async def _check_scheduled_announcements_for_guild():
                 content=announcement_content.replace("__MAP_LINK__", f"[{reserve_label}](<{reserve_url}>)"),
                 suppress=True,
             )
+            # The game's thread on the announcement post (talk about this game;
+            # reserving stays on the website). Its id is the game's.
+            thread_seed: dict = {"host_id": host.id}
+            game_thread = await _create_game_thread(anno_message, thread_seed, game_key, thread_name)
 
             # Save to GAMES_FILE just like standard /announce_game
             games_data = await read_json(GAMES_FILE)
@@ -26214,6 +26529,8 @@ async def _check_scheduled_announcements_for_guild():
                 "scheduled_checksum": item.get("scheduled_checksum"),
                 "automated_unlock": bool(item.get("automated_unlock")),
                 "automated_unlocks": dict(item.get("automated_unlocks") or {}),
+                "game_thread_id": game_thread.id if game_thread is not None else None,
+                "game_thread_intro_id": thread_seed.get("game_thread_intro_id"),
             }
             if draft_config:
                 new_game = games_data[game_key]
@@ -26488,7 +26805,8 @@ async def _scheduled_nation_unlock_loop_for_guild():
                 schedule_reservation_update(int(thread_id))
                 game = games_data.get(thread_id) or {}
                 if not _game_has_thread(game):
-                    # The map shows the unlock; the host hears about it by DM.
+                    # The map shows the unlock, the game thread says so, and the host hears about it by DM.
+                    await _post_in_game_thread(game, "\n".join(lines))
                     host = await _web_fetch_member(int(game.get("host_id") or 0))
                     if host is not None:
                         title = game.get("thread_name") or game.get("mode") or "your game"
@@ -28870,6 +29188,9 @@ async def _refresh_announcement_after_edit(game: dict, thread_id: str, changes: 
             if not _game_has_thread(game):
                 # Same format as the announcement loop.
                 game["thread_name"] = f"{mode} Game - {day} - {date_str}"[:100]
+                game_thread = await _game_thread_of(game)
+                if game_thread is not None:
+                    await game_thread.edit(name=game["thread_name"])
                 return
             thread = bot.get_channel(int(thread_id)) or await bot.fetch_channel(int(thread_id))
             # Same format as the announcement loop / /announce_game.
