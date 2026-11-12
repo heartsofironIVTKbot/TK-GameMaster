@@ -5,6 +5,7 @@ import { chatLogSignature, listChatLogs } from "@/lib/chatLogs";
 import { getPool } from "@/lib/db";
 import { GAME_COLUMNS, rawGames, stableId, type GameRow, type RawAttendanceGame } from "@/lib/attendance";
 import { demoControlRaw } from "@/lib/gameControlDemo";
+import { demoLobbies } from "@/lib/liveDemo";
 import {
   ACCESS_LEVELS,
   type AccessLevel,
@@ -559,4 +560,28 @@ export function accessRefusal(game: GameControl, op: GameAccessOp): string | nul
     return "The game has started — clearing it would break its attendance. Remove players one by one, or cancel the game.";
   }
   return null;
+}
+
+/**
+ * The map's Rules and Mods buttons: one game's current lists, the same ones
+ * its Discord announcement and the Games page show. Null when the game isn't
+ * on that server.
+ */
+export async function gameResourcesFor(gameId: string, guildId: string): Promise<{ mods: ResourceEntry[]; rules: ResourceEntry[] } | null> {
+  const raw = await loadRaw(gameId, guildId);
+  const options = await moderationOptions(guildId).catch(() => null);
+  if (!raw) {
+    // Preview: the sample map lobbies aren't the Games page's sample games; their mode's standard lists.
+    const lobby = isSchedulerDemo() ? demoLobbies(true).find((entry) => entry.thread_id === gameId) : null;
+    if (!lobby) return null;
+    const standard = options?.mode_resources?.[lobby.mode ?? ""];
+    return { mods: standard?.mods ?? [], rules: standard?.rules ?? [] };
+  }
+  const data = raw.data;
+  const standard = options?.mode_resources?.[raw.mode ?? ""];
+  const casino = Boolean(data.randomizer_only || data.chaos);
+  return {
+    mods: gameResourceEntries(data, "mods", standard?.mods ?? [], casino),
+    rules: gameResourceEntries(data, "rules", standard?.rules ?? [], casino),
+  };
 }

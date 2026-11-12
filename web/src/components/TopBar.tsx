@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useCallback, useState } from "react";
 import { Puzzle, ScrollText, Wrench } from "lucide-react";
+import ResourceLinksDialog, { type ResourceKind } from "@/components/ResourceLinksDialog";
+import type { ResourceEntry } from "@/lib/presetTypes";
 import { BrandMark, MenuButton, ViewerAvatar } from "@/components/site/SiteMenu";
 import { useViewer } from "@/components/site/viewer";
 
@@ -15,16 +18,13 @@ interface TopBarProps {
   sessionTime?: string;
   /** The game has started. */
   inProgress?: boolean;
-  /** URL opened in a new tab by the "Rules" button. */
-  rulesUrl?: string;
-  /** URL opened in a new tab by the "Mods" button. */
-  modsUrl?: string;
+  /** The selected game's own rules and mods (the Rules / Mods pop-ups); null while loading. */
+  resources?: { mods: ResourceEntry[]; rules: ResourceEntry[] } | null;
+  /** No game is selected (the pop-ups say so). */
+  noGame?: boolean;
   /** Hosts only: the live map host tools switch. */
   hostTools?: { enabled: boolean; isStaff?: boolean; onToggle: () => void } | null;
 }
-
-const DEFAULT_RULES_URL = "https://hoi4.paradoxwikis.com/";
-const DEFAULT_MODS_URL = "https://steamcommunity.com/app/394360/workshop/";
 
 /**
  * The map's top bar: the GameMaster mark and site menu, the game's Rules and
@@ -37,11 +37,14 @@ export default function TopBar({
   scenarioName = "Vanilla",
   sessionTime = "Start time to be announced",
   inProgress = false,
-  rulesUrl = DEFAULT_RULES_URL,
-  modsUrl = DEFAULT_MODS_URL,
+  resources = null,
+  noGame = false,
   hostTools = null,
 }: TopBarProps) {
   const viewer = useViewer();
+  // The game's own lists in a pop-up (they used to open the HOI4 wiki / Workshop, never the game's).
+  const [dialog, setDialog] = useState<ResourceKind | null>(null);
+  const closeDialog = useCallback(() => setDialog(null), []);
   const game = (
     <>
       <span className="gm-cut flex h-[21px] shrink-0 items-center bg-ink-800 px-2.5 text-[11.5px] font-semibold text-ink-300 [--cut:6px]">
@@ -65,30 +68,30 @@ export default function TopBar({
           </Link>
           <MenuButton current="map" className="hidden sm:inline-flex" />
           <span className="mx-1.5 hidden h-6 w-px bg-ink-800 sm:block" aria-hidden />
-          <a
-            href={rulesUrl}
+          <button
+            type="button"
+            onClick={() => setDialog("rules")}
             data-tour="map.rules map.rulesMods"
-            target="_blank"
-            rel="noopener noreferrer"
             title="This game's rules"
             aria-label="Rules"
+            aria-haspopup="dialog"
             className="gm-btn gm-btn-secondary w-9 px-0 md:w-auto md:px-3.5"
           >
             <ScrollText aria-hidden />
             <span className="hidden md:inline">Rules</span>
-          </a>
-          <a
-            href={modsUrl}
+          </button>
+          <button
+            type="button"
+            onClick={() => setDialog("mods")}
             data-tour="map.rulesMods"
-            target="_blank"
-            rel="noopener noreferrer"
             title="The mods to subscribe to"
             aria-label="Mods"
+            aria-haspopup="dialog"
             className="gm-btn gm-btn-secondary w-9 px-0 md:w-auto md:px-3.5"
           >
             <Puzzle aria-hidden />
             <span className="hidden md:inline">Mods</span>
-          </a>
+          </button>
           {hostTools && (
             <button
               type="button"
@@ -133,6 +136,16 @@ export default function TopBar({
         <span className="gm-title min-w-0 truncate text-lg">{lobbyName}</span>
         <span className="flex shrink-0 items-center gap-2 text-[11.5px] text-ink-400">{game}</span>
       </div>
+      {dialog && (
+        <ResourceLinksDialog
+          key={`${dialog}-${resources ? resources[dialog].length : "loading"}`}
+          kind={dialog}
+          entries={resources?.[dialog] ?? []}
+          loading={!noGame && !resources}
+          noGame={noGame}
+          onClose={closeDialog}
+        />
+      )}
     </header>
   );
 }

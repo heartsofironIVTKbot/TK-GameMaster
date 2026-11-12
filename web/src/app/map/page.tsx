@@ -33,6 +33,7 @@ import {
 import { useHostTools } from "@/components/live/useHostTools";
 import { boardDisplayName, canonicalName, majorTagsFor, nationMatchKeys } from "@/data/nationCategories";
 import type { RosterAssignPayload } from "@/lib/scheduleTypes";
+import type { ResourceEntry } from "@/lib/presetTypes";
 import {
   DEFAULT_SCENARIO,
   SCENARIOS,
@@ -191,6 +192,25 @@ export default function Home() {
       cancelled = true;
     };
   }, []);
+
+  // The selected game's own rules and mods (the top bar's Rules / Mods pop-ups).
+  const [resourcesOf, setResourcesOf] = useState<{ thread: string; data: { mods: ResourceEntry[]; rules: ResourceEntry[] } } | null>(null);
+  useEffect(() => {
+    if (!selectedThread) return undefined;
+    let cancelled = false;
+    fetch(`/api/games/resources?game=${encodeURIComponent(selectedThread)}`, { cache: "no-store" })
+      .then((response) => (response.ok ? (response.json() as Promise<{ mods: ResourceEntry[]; rules: ResourceEntry[] }>) : { mods: [], rules: [] }))
+      .then((data) => {
+        if (!cancelled) setResourcesOf({ thread: selectedThread, data });
+      })
+      .catch(() => {
+        if (!cancelled) setResourcesOf({ thread: selectedThread, data: { mods: [], rules: [] } });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedThread]);
+  const resources = resourcesOf && resourcesOf.thread === selectedThread ? resourcesOf.data : null;
 
   const handleSelectNation = useCallback((nation: NationFeatureProps | null) => {
     setSelected(nation);
@@ -766,6 +786,8 @@ export default function Home() {
         scenarioName={SCENARIOS[scenarioId].label}
         sessionTime={sessionTime}
         inProgress={Boolean(activeGame?.game_started)}
+        resources={resources}
+        noGame={!selectedThread}
         hostTools={
           host.isHost
             ? {
