@@ -10448,6 +10448,12 @@ async def create_game_voice_channels(guild, game_mode, reservations, game_id):
     # ==========================================
     base_overwrites = {guild.default_role: discord.PermissionOverwrite(view_channel=False)}
     base_overwrites[gamer_pass_role] = discord.PermissionOverwrite(view_channel=True, connect=True)
+    # GameMaster itself (2026-11-12): hidden from @everyone, the categories were
+    # hidden from the bot too (it isn't an Administrator), so it couldn't move
+    # players in or delete the channels at game end / cancel.
+    base_overwrites[guild.me] = discord.PermissionOverwrite(
+        view_channel=True, connect=True, manage_channels=True, manage_permissions=True, move_members=True,
+    )
 
     # Host Management (server settings → Staff & access) manages these channels.
     for manager_role_id in GAME_VOICE_MANAGER_ROLES:
@@ -10602,17 +10608,14 @@ async def create_game_voice_channels(guild, game_mode, reservations, game_id):
         await _create_vcs_batched(safe_cat, leftovers, gen_chan_ids)
 
     # ==========================================
-    # FINAL SORTING FORCE (THE SAFETY NET)
+    # FINAL SORTING: one bulk move puts the game's categories together, in
+    # order, right below the mode's anchor (moving them one by one let
+    # Discord's position shifts scatter them, 2026-11-12).
     # ==========================================
-    insert_pos = top_cat.position + 1 if top_cat else 1
-    # Reinsert in reverse at the same slot. This keeps every generated category
-    # contiguous directly below its mode anchor and pushes the lower anchor down,
-    # instead of allowing Discord's position shifts to scatter the categories.
-    for cat_obj in reversed(created_categories):
-        try:
-            await cat_obj.edit(position=insert_pos)
-        except Exception as e:
-            print(f"Failed to force sort category {cat_obj.name}: {e}")
+    try:
+        await _place_game_categories(guild, created_categories, anchor_id)
+    except Exception as e:
+        print(f"[WARN] Could not order the game's voice categories: {e}")
 
     if lower_cat and created_categories:
         refreshed_lower = guild.get_channel(lower_cat.id)
@@ -10623,6 +10626,27 @@ async def create_game_voice_channels(guild, game_mode, reservations, game_id):
             )
 
     return gen_cat_ids, gen_chan_ids, gamer_pass_role.id
+
+
+def _game_category_order(existing: list, created: list, anchor_id) -> list:
+    """Every category in its new order: the game's (in creation order) right
+    below the anchor; without an anchor, below the server's first category."""
+    created_ids = {c.id for c in created}
+    others = sorted((c for c in existing if c.id not in created_ids), key=lambda c: (c.position, c.id))
+    anchor_index = next((i for i, c in enumerate(others) if anchor_id and c.id == anchor_id), None)
+    insert_at = anchor_index + 1 if anchor_index is not None else min(1, len(others))
+    return others[:insert_at] + list(created) + others[insert_at:]
+
+
+async def _place_game_categories(guild, created: list, anchor_id) -> None:
+    """Move the game's categories into place in ONE request (Discord's bulk
+    channel positions), so nothing shifts between moves."""
+    if not created:
+        return
+    ordered = _game_category_order(list(guild.categories), created, anchor_id)
+    payload = [{"id": c.id, "position": index} for index, c in enumerate(ordered)]
+    async with _discord_api_sem:
+        await guild._state.http.bulk_channel_update(guild.id, payload, reason="GameMaster: place the game's voice categories")
 
 
 # CLEANUP FUNCTION
@@ -10649,8 +10673,20 @@ async def cleanup_game_voice_channels(guild, cat_ids, vc_ids, role_id=None):
                     category = guild.get_channel(int(cat_id))
                     if category is None:
                         category = await guild.fetch_channel(int(cat_id))
-                    if category:
+                # Channels someone added to it later (deleting a category leaves its channels behind).
+                for leftover in list(getattr(category, "channels", []) or []):
+                    try:
+                        async with _discord_api_sem:
+                            await leftover.delete()
+                    except discord.NotFound:
+                        pass
+                if category:
+                    async with _discord_api_sem:
                         await category.delete()
+            except discord.NotFound:
+                pass
+            except discord.Forbidden as e:
+                print(f"Error deleting Category {cat_id}: GameMaster can't see or manage it ({e})")
             except Exception as e:
                 print(f"Error deleting Category {cat_id}: {e}")
         if i + 5 < len(cat_ids):
