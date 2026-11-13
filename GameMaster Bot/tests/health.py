@@ -23,19 +23,25 @@ def check(name, ok, detail=""):
 days = [{"day": f"2026-10-{d:02d}", "percent": p} for d, p in zip(range(1, 31), [100.0] * 27 + [97.0, 80.0, None])]
 status = {"days": days, "uptime_30d": 99.1}
 
+gm.bot._connection._intents.message_content = True
 up = gm._health_embed((True, "24 ms"), (True, "310 ms", status), 87, 4, 3 * 3600 + 12 * 60)
 fields = {f.name: f.value for f in up.fields}
 check("all up: green embed", up.color.value == gm.EmbedColor.SUCCESS, up.color)
 check("all up: says so", "All systems are up" in up.description)
-check("the bot row is green with latency, uptime and servers",
-      fields.get("🟩 Bot") == "Online · 87 ms\nUp 3h 12m · 4 server(s)", fields)
+check("the bot row is green with latency, uptime, servers and message text",
+      fields.get("🟩 Bot") == "Online · 87 ms\nUp 3h 12m · 4 server(s)\nReads message text ✅", fields)
+check("message text on: no warning", not any("Message text is off" in name for name in fields), list(fields))
 check("the website row is green with its time", fields.get("🟩 Website") == "Online · 310 ms", fields)
 check("the database row is green with its time", fields.get("🟩 Database") == "Online · 24 ms", fields)
 bars = fields.get("Uptime, last 30 days · 99.1%", "")
 check("30 daily squares like the status page", bars == "🟩" * 27 + "🟨🟥⬛", bars)
 
+gm.bot._connection._intents.message_content = False
 down = gm._health_embed((False, "no answer in 8 s"), (False, "unreachable (ClientConnectorError)", None), None, 4, 50)
 fields = {f.name: f.value for f in down.fields}
+check("message text off: the bot row says so", "Can't read message text" in fields.get("🟩 Bot", ""), fields)
+warning = fields.get("⚠️ Message text is off", "")
+check("message text off: how to turn it on", "Message Content" in warning and "MESSAGE_CONTENT_INTENT=1" in warning, fields)
 check("something down: red embed", down.color.value == gm.EmbedColor.DANGER, down.color)
 check("the website row turns red with why", fields.get("🟥 Website") == "Down · unreachable (ClientConnectorError)", fields)
 check("the database row turns red with why", fields.get("🟥 Database") == "Down · no answer in 8 s", fields)
