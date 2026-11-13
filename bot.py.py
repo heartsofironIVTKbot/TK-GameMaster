@@ -21431,6 +21431,23 @@ async def _close_game_thread(game: dict | None, notice: str | None = None) -> No
         print(f"[WARN] closing game thread {thread.id} failed: {e}")
 
 
+async def _save_game_thread_after_end(game_key: str) -> None:
+    """After a game ends: save its thread and delete it (the game's own scope)."""
+    try:
+        games = await _load_games_resilient()
+        key, game = _find_game_entry(games, game_key)
+        if game is None or game.get("game_thread_archived_at"):
+            return
+        if await _archive_and_delete_game_thread(str(key or game_key), game):
+            fresh = await _load_games_resilient()
+            fresh_key, fresh_game = _find_game_entry(fresh, game_key)
+            if fresh_game is not None:
+                fresh_game["game_thread_archived_at"] = game.get("game_thread_archived_at") or int(time.time())
+                await save_single_game(str(fresh_key or game_key), fresh_game, rewrite_reservations=False)
+    except Exception as e:
+        print(f"[WARN] saving the game thread of {game_key} failed: {e}")
+
+
 # Games whose thread couldn't be opened (no permission yet …): game key → when to try again.
 _game_thread_retry_at: dict[str, float] = {}
 GAME_THREAD_RETRY_SEC = 600
@@ -21496,6 +21513,7 @@ async def _archive_and_delete_game_thread(game_key, game: dict | None, *, post_h
     if thread is None:
         return True
     records: list[dict] = []
+    started = time.perf_counter()
     try:
         async for message in thread.history(limit=GAME_THREAD_MAX_MESSAGES, oldest_first=True):
             if message.type not in (discord.MessageType.default, discord.MessageType.reply):
@@ -21504,6 +21522,7 @@ async def _archive_and_delete_game_thread(game_key, game: dict | None, *, post_h
     except discord.HTTPException as e:
         print(f"[WARN] reading game thread {thread.id} failed — kept, not deleted: {e}")
         return False
+    read_s = time.perf_counter() - started
     name = thread.name or game.get("thread_name") or str(game_key)
     stable = str(_attendance_stable_id(game, game_key))
     try:
@@ -21532,6 +21551,10 @@ async def _archive_and_delete_game_thread(game_key, game: dict | None, *, post_h
         pass
     except discord.HTTPException as e:
         print(f"[WARN] deleting game thread {thread.id} failed: {e}")
+    print(
+        f"💬 Game thread {thread.id} saved: {len(records)} message(s), read in {read_s:.1f}s, "
+        f"all done in {time.perf_counter() - started:.1f}s."
+    )
     return True
 
 
@@ -21925,14 +21948,15 @@ async def _game_end_core(guild, actor, thread_id_str: str, *, progress) -> dict:
         ended_key, ended_game = _find_game_entry(ended_games, thread_id_str)
         if ended_game is not None:
             await _open_game_log_thread(str(ended_key or thread_id_str), ended_game)
-            # The game thread: saved (website + an HTML file in that post), then deleted.
+            # The game thread: saved (website + an HTML file in that post), then
+            # deleted — in the background, so ending the game doesn't wait on it
+            # (reading a long thread took a while, 2026-11-14).
             if ended_game.get("game_thread_id") and not ended_game.get("game_thread_archived_at"):
-                await progress("⏳ Saving the game thread…")
-                if await _archive_and_delete_game_thread(str(ended_key or thread_id_str), ended_game):
-                    await save_single_game(str(ended_key or thread_id_str), ended_game, rewrite_reservations=False)
-                    await progress("✅ Game thread saved to the archive and removed.")
-                else:
-                    await progress("⚠️ The game thread couldn't be saved, so it was kept (locked).")
+                _spawn_background(
+                    _save_game_thread_after_end(str(ended_key or thread_id_str)),
+                    label=f"game thread save {ended_key or thread_id_str}",
+                )
+                await progress("💬 The game thread is being saved to the archive in the background; it disappears when done.")
     except Exception as e:
         print(f"[WARN] game thread for {thread_id_str} failed: {e}")
 
@@ -25973,9 +25997,13 @@ def _health_embed(db: tuple, web: tuple, latency_ms: int | None, servers: int, u
         description="**All systems are up.**" if all_ok else "**Something is down** — details below.",
         color=EmbedColor.SUCCESS if all_ok else EmbedColor.DANGER,
     )
+    reads_text = bool(getattr(bot.intents, "message_content", False))
     embed.add_field(
         name=f"{square(True)} Bot",
-        value=f"Online · {latency}\nUp {_health_duration(uptime_sec)} · {servers} server(s)",
+        value=(
+            f"Online · {latency}\nUp {_health_duration(uptime_sec)} · {servers} server(s)\n"
+            + ("Reads message text ✅" if reads_text else "Can't read message text ⚠️")
+        ),
         inline=True,
     )
     embed.add_field(name=f"{square(web_ok)} Website", value=("Online · " if web_ok else "Down · ") + web_detail, inline=True)
@@ -25990,6 +26018,16 @@ def _health_embed(db: tuple, web: tuple, latency_ms: int | None, servers: int, u
             inline=False,
         )
     embed.add_field(name="Checked", value=f"<t:{int(time.time())}:R>", inline=False)
+    if not reads_text:
+        embed.add_field(
+            name="⚠️ Message text is off",
+            value=(
+                "Ticket transcripts and saved game threads show people's messages as blank. Turn on **Message "
+                "Content** in the Discord Developer Portal (Bot → Privileged Gateway Intents), set "
+                "`MESSAGE_CONTENT_INTENT=1` on the bot, and restart it."
+            ),
+            inline=False,
+        )
     embed.set_footer(text="🟩 up  🟨 some downtime  🟥 down  ⬛ no data")
     return embed
 
