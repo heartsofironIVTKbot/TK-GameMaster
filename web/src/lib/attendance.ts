@@ -391,6 +391,21 @@ interface EventRow extends RowDataPacket {
   created_at: number;
 }
 
+/**
+ * A game's own times from game_data, for lists. Not games.updated_at: the bot
+ * saves its whole game list at once (game start / end), which marks every
+ * game changed — 507 old games "changed" together crowded a running game off
+ * the Games page (2026-11-13).
+ */
+const jsonSeconds = (path: string) =>
+  `COALESCE(CAST(JSON_UNQUOTE(JSON_EXTRACT(game_data, '$.${path}')) AS UNSIGNED), 0)`;
+/** When the game ended or was cancelled (0 = it hasn't). */
+export const GAME_FINISHED_AT_SQL = `GREATEST(${jsonSeconds("game_end_completed_at")}, ${jsonSeconds("ended_at")}, ${jsonSeconds("cancelled_at")})`;
+/** Its latest real event: finished, started, or its start time. */
+export const GAME_ACTIVITY_SQL = `GREATEST(${GAME_FINISHED_AT_SQL}, ${jsonSeconds("game_started_at")}, COALESCE(start_timestamp, 0))`;
+/** Not ended or cancelled (announced, starting or running). */
+export const GAME_OPEN_SQL = `(status IS NULL OR status NOT IN ('ended', 'cancelled'))`;
+
 export const GAME_COLUMNS = `thread_id, mode, status, thread_name, CAST(host_id AS CHAR) AS host_id,
   CAST(guild_id AS CHAR) AS guild_id, start_timestamp, CAST(game_data AS CHAR) AS game_data_text`;
 
@@ -464,7 +479,7 @@ export async function listAttendanceGames(guildId?: string): Promise<AttendanceG
     const [rows] = await getPool().query<GameRow[]>(
       `SELECT ${GAME_COLUMNS} FROM games
        WHERE guild_id = ? AND game_started = 1 AND (status IS NULL OR status <> 'cancelled')
-       ORDER BY updated_at DESC LIMIT 40`,
+       ORDER BY ${GAME_OPEN_SQL} DESC, ${GAME_ACTIVITY_SQL} DESC LIMIT 40`,
       [guild],
     );
     raws = await rawGames(rows);

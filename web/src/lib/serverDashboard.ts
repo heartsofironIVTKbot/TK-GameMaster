@@ -5,6 +5,7 @@ import { heartbeat, isOnline } from "@/lib/botStatus";
 import { lookupMembers } from "@/lib/memberDirectory";
 import { recentActivity } from "@/lib/playerIndex";
 import { isSchedulerDemo } from "@/lib/scheduleStore";
+import { GAME_FINISHED_AT_SQL } from "@/lib/attendance";
 import type {
   DashboardGame,
   ServerDashboard,
@@ -311,7 +312,7 @@ export async function serverDashboard(guildId: string, setupDone: boolean, demoS
     rows<GameRow>(
       `SELECT thread_id, mode, thread_name, CAST(host_id AS CHAR) AS host_id, start_timestamp, status, game_started,
               NULL AS present_ids, NULL AS snapshot_done
-         FROM games WHERE guild_id = ? AND status = 'ended' ORDER BY updated_at DESC LIMIT 5`,
+         FROM games WHERE guild_id = ? AND status = 'ended' ORDER BY ${GAME_FINISHED_AT_SQL} DESC LIMIT 5`,
       [guildId],
     ),
     recentActivity(6, guildId).catch(() => []),

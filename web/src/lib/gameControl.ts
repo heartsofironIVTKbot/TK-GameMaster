@@ -3,7 +3,16 @@ import { HOME_GUILD_ID } from "@/lib/currentGuild";
 import { DEFAULT_AI_RULES, type AiPlayerResult, type AiRules, type AiStatus, type GameAiAnalysis } from "@/lib/aiAnalysisTypes";
 import { chatLogSignature, listChatLogs } from "@/lib/chatLogs";
 import { getPool } from "@/lib/db";
-import { GAME_COLUMNS, rawGames, stableId, type GameRow, type RawAttendanceGame } from "@/lib/attendance";
+import {
+  GAME_ACTIVITY_SQL,
+  GAME_COLUMNS,
+  GAME_FINISHED_AT_SQL,
+  GAME_OPEN_SQL,
+  rawGames,
+  stableId,
+  type GameRow,
+  type RawAttendanceGame,
+} from "@/lib/attendance";
 import { demoControlRaw } from "@/lib/gameControlDemo";
 import { demoLobbies } from "@/lib/liveDemo";
 import {
@@ -135,12 +144,13 @@ const PHASE_RANK: Record<GamePhase, number> = { starting: 0, live: 0, ending: 0,
 async function loadRaws(guildId: string): Promise<RawAttendanceGame[]> {
   // The sample games belong to the home server; other sample servers have none.
   if (isSchedulerDemo()) return guildId === HOME_GUILD_ID ? demoControlRaw() : [];
+  // Every open game (announced, starting, running) first, then the ones that
+  // ended or were cancelled in the last two days — by the games' own times.
   const [rows] = await getPool().query<GameRow[]>(
     `SELECT ${GAME_COLUMNS} FROM games
-     WHERE guild_id = ? AND ((status IS NULL OR status NOT IN ('ended', 'cancelled'))
-        OR updated_at >= NOW() - INTERVAL 2 DAY)
-     ORDER BY updated_at DESC LIMIT 60`,
-    [guildId],
+     WHERE guild_id = ? AND (${GAME_OPEN_SQL} OR ${GAME_FINISHED_AT_SQL} >= ?)
+     ORDER BY ${GAME_OPEN_SQL} DESC, ${GAME_ACTIVITY_SQL} DESC LIMIT 60`,
+    [guildId, Math.floor(Date.now() / 1000) - RECENT_SEC],
   );
   return rawGames(rows);
 }
