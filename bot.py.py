@@ -10425,7 +10425,38 @@ MAJOR_LOCATIONS = {
 
 }
 
+def _game_overwrite(guild, **perms) -> discord.PermissionOverwrite:
+    """A channel permission GameMaster is allowed to give (2026-11-13): Discord
+    refuses a whole channel (403 Missing Permissions) when an overwrite allows
+    something the bot doesn't have itself — and Manage Permissions can only be
+    handed out by an Administrator. Those are left out instead."""
+    mine = guild.me.guild_permissions
+    keep = {}
+    for name, value in perms.items():
+        if value and not mine.administrator:
+            needed = "manage_roles" if name == "manage_permissions" else name
+            if name == "manage_permissions" or not getattr(mine, needed, False):
+                continue
+        keep[name] = value
+    return discord.PermissionOverwrite(**keep)
+
+
 async def create_game_voice_channels(guild, game_mode, reservations, game_id):
+    """The game's Gamer Pass role, voice categories and channels. If Discord
+    refuses part-way, what was already made is removed again, so a retry
+    starts clean (a failed start left a stray pass role, 2026-11-13)."""
+    made = {"role": None, "cats": [], "vcs": []}
+    try:
+        return await _build_game_voice_channels(guild, game_mode, reservations, game_id, made)
+    except Exception:
+        try:
+            await cleanup_game_voice_channels(guild, made["cats"], made["vcs"], made["role"])
+        except Exception as e:
+            print(f"[WARN] cleaning up a failed voice setup for {game_id} failed: {e}")
+        raise
+
+
+async def _build_game_voice_channels(guild, game_mode, reservations, game_id, made: dict):
 
     # ==========================================
     # 1. DYNAMIC GAMER PASS CREATION & ASSIGNMENT
@@ -10435,6 +10466,7 @@ async def create_game_voice_channels(guild, game_mode, reservations, game_id):
         permissions=discord.Permissions.none(),
         reason=f"Dynamic Gamer Pass for game {game_id}"
     )
+    made["role"] = gamer_pass_role.id
 
     # NOTE: The pass role is intentionally NOT assigned to reserved players here.
     # Players now receive it individually only after confirming participation via
@@ -10447,28 +10479,28 @@ async def create_game_voice_channels(guild, game_mode, reservations, game_id):
     # 2. PERMISSIONS SETUP
     # ==========================================
     base_overwrites = {guild.default_role: discord.PermissionOverwrite(view_channel=False)}
-    base_overwrites[gamer_pass_role] = discord.PermissionOverwrite(view_channel=True, connect=True)
+    base_overwrites[gamer_pass_role] = _game_overwrite(guild, view_channel=True, connect=True)
     # GameMaster itself (2026-11-12): hidden from @everyone, the categories were
     # hidden from the bot too (it isn't an Administrator), so it couldn't move
     # players in or delete the channels at game end / cancel.
-    base_overwrites[guild.me] = discord.PermissionOverwrite(
-        view_channel=True, connect=True, manage_channels=True, manage_permissions=True, move_members=True,
+    base_overwrites[guild.me] = _game_overwrite(
+        guild, view_channel=True, connect=True, manage_channels=True, move_members=True,
     )
 
     # Host Management (server settings → Staff & access) manages these channels.
     for manager_role_id in GAME_VOICE_MANAGER_ROLES:
         manager_role = guild.get_role(int(manager_role_id))
         if manager_role:
-            base_overwrites[manager_role] = discord.PermissionOverwrite(
-                view_channel=True, manage_channels=True, manage_permissions=True, connect=True, move_members=True,
-                manage_messages=True,
+            base_overwrites[manager_role] = _game_overwrite(
+                guild, view_channel=True, manage_channels=True, manage_permissions=True, connect=True,
+                move_members=True, manage_messages=True,
             )
 
     host_roles = globals().get("ALLOWED_HOST_ROLES", [])
     for r_id in host_roles:
         role = guild.get_role(r_id)
         if role:
-            base_overwrites[role] = discord.PermissionOverwrite(view_channel=True, connect=True, move_members=True)
+            base_overwrites[role] = _game_overwrite(guild, view_channel=True, connect=True, move_members=True)
 
     # ==========================================
     # 3. CHANNEL GENERATION PREP
@@ -10481,7 +10513,7 @@ async def create_game_voice_channels(guild, game_mode, reservations, game_id):
     lower_cat = guild.get_channel(lower_anchor_id) if lower_anchor_id else None
     target_pos = top_cat.position + 1 if top_cat else 1
 
-    gen_chan_ids, gen_cat_ids = [], []
+    gen_chan_ids, gen_cat_ids = made["vcs"], made["cats"]
     created_categories = [] # Store category objects to force-sort them at the end
     placed_nations = set()
     kaiserreich_faction_vcs_only = False
@@ -18942,7 +18974,9 @@ async def _game_start_core(guild, actor, thread_id_str: str, *, game_id: str, pa
         if fresh_game.get("game_started"):
             raise GameLifecycleError("ℹ️ This game has already been started.")
         started_at = int(fresh_game.get("game_start_started_at") or 0)
-        if started_at and int(time.time()) - started_at < 600:
+        # A start that stopped with an error doesn't block pressing Start again (2026-11-13).
+        failed_at = int(fresh_game.get("game_start_failed_at") or 0)
+        if started_at and failed_at < started_at and int(time.time()) - started_at < 600:
             raise GameLifecycleError("ℹ️ This game is already being started.")
         fresh_game["game_start_started_at"] = int(time.time())
         fresh_game["archive_layout"] = _archive_layout_snapshot(fresh_game)
@@ -18961,7 +18995,15 @@ async def _game_start_core(guild, actor, thread_id_str: str, *, game_id: str, pa
 
     await progress("⏳ **Creating voice channels and Gamer Pass role…**")
 
-    cat_ids, vc_ids, role_id = await create_game_voice_channels(guild, game_mode, game.get("reservations", {}), game_id)
+    try:
+        cat_ids, vc_ids, role_id = await create_game_voice_channels(guild, game_mode, game.get("reservations", {}), game_id)
+    except discord.Forbidden as e:
+        raise GameLifecycleError(
+            "❌ Discord refused to create the game's voice channels: GameMaster is missing a permission "
+            "(Manage Channels, Manage Roles, Move Members or Connect) in this server or in the voice categories' "
+            f"place. Nothing was left behind — fix it (the server's Health page lists what's missing) and press "
+            f"Start game again. ({e.text or e})"
+        )
 
     game["temp_vc_categories"] = cat_ids
     game["temp_vc_channels"] = vc_ids
