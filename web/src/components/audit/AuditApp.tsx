@@ -7,7 +7,7 @@ import { Download, List, RefreshCw, Search, X } from "lucide-react";
 import { Spinner } from "@/components/schedule/ui";
 import { AUDIT_CATEGORIES, AUDIT_CATEGORY_LABELS } from "@/lib/auditTypes";
 import type { HostProfile } from "@/lib/scheduleTypes";
-import AuditList, { CATEGORY_ICON, useAuditFeed } from "./AuditList";
+import AuditList, { categoryIcon, useAuditFeed } from "./AuditList";
 
 /**
  * /audit — every recorded action on this server (reservations, roster moves,
@@ -92,7 +92,7 @@ export default function AuditApp({ host }: { host: HostProfile }) {
               All
             </button>
             {AUDIT_CATEGORIES.map((category) => {
-              const { icon: Icon, tone } = CATEGORY_ICON[category];
+              const { icon: Icon, tone } = categoryIcon(category);
               const on = filters.category === category;
               return (
               <button

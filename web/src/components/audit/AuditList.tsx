@@ -5,6 +5,7 @@ import {
   CalendarCheck,
   ChevronDown,
   ChevronRight,
+  Dices,
   Dot,
   Filter,
   Gamepad2,
@@ -18,15 +19,17 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import type { AuditEvent, AuditPage } from "@/lib/auditTypes";
+import type { AuditCategory, AuditEvent, AuditPage } from "@/lib/auditTypes";
 import { detectTimeZone, formatInZone, formatRelative } from "@/lib/timeEngine";
 import { useNow, useRefreshTick } from "@/components/attendance/labels";
 import { Spinner } from "@/components/schedule/ui";
 
 /** The audit feed (the /audit page and a player's History on the Database page). */
 
-/** Each category's line icon and colour. */
-export const CATEGORY_ICON: Record<string, { icon: LucideIcon; tone: string }> = {
+/** Each category's line icon and colour. Typed by the category list, so a new
+ *  category without an icon fails the build (a missing "casino" icon crashed
+ *  the whole /audit page, 2026-11-13). */
+export const CATEGORY_ICON: Record<AuditCategory, { icon: LucideIcon; tone: string }> = {
   reservation: { icon: CalendarCheck, tone: "text-sky-300" },
   roster: { icon: Repeat, tone: "text-sky-300" },
   game: { icon: Gamepad2, tone: "text-emerald-300" },
@@ -36,9 +39,15 @@ export const CATEGORY_ICON: Record<string, { icon: LucideIcon; tone: string }> =
   roles: { icon: Tag, tone: "text-ink-300" },
   message: { icon: Mail, tone: "text-ink-300" },
   settings: { icon: Settings, tone: "text-yellow-300" },
+  casino: { icon: Dices, tone: "text-amber-300" },
   system: { icon: Bot, tone: "text-ink-300" },
 };
-const FALLBACK_ICON = { icon: Dot, tone: "text-ink-500" };
+export const FALLBACK_ICON = { icon: Dot, tone: "text-ink-500" };
+
+/** A category's icon, or a plain dot for one this page doesn't know (never a crash). */
+export function categoryIcon(category: string): { icon: LucideIcon; tone: string } {
+  return (CATEGORY_ICON as Record<string, { icon: LucideIcon; tone: string }>)[category] ?? FALLBACK_ICON;
+}
 
 const SOURCE_LABEL: Record<string, string> = { web: "Website", bot: "Bot", discord: "Discord", casino: "Casino site" };
 
@@ -146,7 +155,7 @@ function AuditRow({
   onPerson?: (id: string) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const meta = CATEGORY_ICON[event.category] ?? FALLBACK_ICON;
+  const meta = categoryIcon(event.category);
   const Icon = meta.icon;
   const details = Object.entries(event.details ?? {}).filter(([, value]) => value != null && value !== "");
   const person = (id: string | null, name: string | null, role: string) =>
