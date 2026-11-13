@@ -83,7 +83,9 @@ export function phaseOf(raw: RawAttendanceGame, nowSec: number): GamePhase {
   }
   if (data.game_started) return "live";
   const starting = num(data.game_start_started_at);
-  if (starting && nowSec - starting < START_RETRY_SEC) return "starting";
+  // A start that stopped with an error is over: the host can press Start again (2026-11-13).
+  const failed = num(data.game_start_failed_at) >= starting;
+  if (starting && !failed && nowSec - starting < START_RETRY_SEC) return "starting";
   return "announced";
 }
 

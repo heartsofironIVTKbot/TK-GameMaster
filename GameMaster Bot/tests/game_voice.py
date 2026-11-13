@@ -92,6 +92,11 @@ class Guild:
         self.id = 1
         self.default_role = Role(1, "@everyone")
         self.me = Role(2, "GameMaster (member)")
+        # Like on TommyKay: no Administrator.
+        self.me.guild_permissions = discord.Permissions(
+            view_channel=True, manage_channels=True, manage_roles=True, connect=True, move_members=True,
+            manage_messages=True, send_messages=True,
+        )
         self.channels = {}
         self.roles = {}
         self._state = State()
@@ -127,7 +132,9 @@ for index, name in enumerate(["INFO", "HOI4 ROLEPLAY", "HOI4 HISTORICAL", "STELL
     GUILD.channels[100 + index] = Cat(100 + index, name, index)
 
 gm.GAME_VOICE_ANCHORS["RP"] = (101, 102)  # below HOI4 ROLEPLAY, above HOI4 HISTORICAL
-gm.GAME_VOICE_MANAGER_ROLES[:] = []
+MANAGERS = Role(77, "Host Management")
+GUILD.roles[77] = MANAGERS
+gm.GAME_VOICE_MANAGER_ROLES[:] = [77]
 gm.ALLOWED_HOST_ROLES = []
 
 
@@ -172,6 +179,52 @@ check("the server's own categories stay", all(not GUILD.channels[100 + i].delete
 # Order without an anchor: below the server's first category.
 order2 = gm._game_category_order([Cat(1, "A", 0), Cat(2, "B", 1)], [Cat(9, "G1", 5), Cat(8, "G2", 6)], None)
 check("no anchor: right below the first category", [c.name for c in order2] == ["A", "G1", "G2", "B"], [c.name for c in order2])
+
+# --- Without Administrator, Discord refuses a channel whose permissions grant
+# Manage Permissions (403 Missing Permissions on game start, 2026-11-13) ---
+check("GameMaster never asks for Manage Permissions on its own channels", mine.manage_permissions is None, mine)
+managers = ow.get(MANAGERS)
+check("Host Management keeps what GameMaster may give (manage, move, connect)",
+      managers is not None and managers.manage_channels and managers.move_members and managers.view_channel, managers)
+check("but not Manage Permissions (only an Administrator can hand that out)", managers.manage_permissions is None, managers)
+GUILD.me.guild_permissions = discord.Permissions(administrator=True)
+check("an Administrator bot may give it", gm._game_overwrite(GUILD, manage_permissions=True).manage_permissions is True)
+GUILD.me.guild_permissions = discord.Permissions(view_channel=True, connect=True)
+check("a permission GameMaster lacks isn't handed out", gm._game_overwrite(GUILD, move_members=True, connect=True).move_members is None)
+check("denies are always kept", gm._game_overwrite(GUILD, view_channel=False).view_channel is False)
+GUILD.me.guild_permissions = discord.Permissions(
+    view_channel=True, manage_channels=True, manage_roles=True, connect=True, move_members=True, manage_messages=True,
+)
+
+# --- Discord refusing part-way: what was made is removed again ---
+calls = {"n": 0}
+real_create = GUILD.create_category
+
+
+async def refusing_create(name, overwrites=None, position=None):
+    calls["n"] += 1
+    if calls["n"] == 2:
+        raise discord.Forbidden(type("R", (), {"status": 403, "reason": "Forbidden"})(), "Missing Permissions")
+    return await real_create(name, overwrites=overwrites, position=position)
+
+
+GUILD.create_category = refusing_create
+before = set(GUILD.channels)
+try:
+    asyncio.run(gm.create_game_voice_channels(GUILD, "Roleplay", reservations, "game-2"))
+    raised = False
+except discord.Forbidden:
+    raised = True
+GUILD.create_category = real_create
+new_roles = [r for r in GUILD.roles.values() if r.name.endswith("Pass") and r.id != role_id]
+check("the refusal still reaches the start (so the host sees it)", raised)
+check("the pass role it made is deleted again", new_roles and all(r.deleted for r in new_roles), [(r.name, r.deleted) for r in new_roles])
+check("and the category it made is deleted again", set(GUILD.channels) == before, set(GUILD.channels) - before)
+
+# --- A failed start doesn't block pressing Start again ---
+import time as _time
+now = int(_time.time())
+check("the live post says it stopped", gm._live_post_status({"game_start_started_at": now - 30, "game_start_failed_at": now - 20}) == "stopped")
 
 for line in results:
     print(line)
