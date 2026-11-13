@@ -39,6 +39,7 @@ import { settingsOf } from "@/lib/serverSettings";
 import { vipOpenNations } from "@/lib/vipStatus";
 import { prettySlot } from "@/lib/playerProfile";
 import { isSchedulerDemo, listInFlightLifecycle, type InFlightLifecycle } from "@/lib/scheduleStore";
+import { staleOpenGame } from "@/lib/gameWindow";
 import type { DirectoryMember, HostProfile } from "@/lib/scheduleTypes";
 
 /**
@@ -162,6 +163,9 @@ export async function listControlGames(viewer: HostProfile): Promise<GameControl
   const names = await lookupMembers(raws.map((raw) => raw.host_id ?? ""), viewer.guild_id);
   return raws
     .map((raw) => summaryOf(raw, names, viewer, inFlightFor(raw, inFlight), nowSec))
+    // Old leftovers aren't current games: never started and long past, or
+    // "running" since forever (an imported game with no start time showed as 1970).
+    .filter((game) => !staleOpenGame(game.phase, game.scheduled_at, game.started_at, nowSec))
     .sort(
       (a, b) =>
         PHASE_RANK[a.phase] - PHASE_RANK[b.phase] ||
