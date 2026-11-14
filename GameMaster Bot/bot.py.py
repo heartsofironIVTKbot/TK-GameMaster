@@ -26536,11 +26536,12 @@ _RETIRED_ADDONS = {"all": "randomizer", "lootbox": None, "starwars": None, "fort
 
 
 # The Casino (TommyKay only; docs/casino-integration.md).
-# Until CASINO_ADDONS_LIVE is True only Host Management can schedule them (a
-# test game: the slot gets `addon_test`); other hosts see them as unavailable,
-# and older slots that still carry them are announced as normal map games.
-# Switch on together with CASINO_ADDONS_LIVE in web/src/lib/scheduleOptions.ts.
-CASINO_ADDONS_LIVE = False
+# Switched on for every host 2026-11-15, together with CASINO_ADDONS_LIVE in
+# web/src/lib/scheduleOptions.ts. Set both back to False to take it away: then
+# only Host Management can schedule it (a test game: the slot gets
+# `addon_test`), other hosts see it as unavailable, and older slots that still
+# carry it are announced as normal map games.
+CASINO_ADDONS_LIVE = True
 _UNAVAILABLE_ADDONS = set() if CASINO_ADDONS_LIVE else {"randomizer"}
 
 

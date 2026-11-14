@@ -106,11 +106,11 @@ export interface AddOnOption {
 
 /**
  * The Casino (TommyKay only; docs/casino-integration.md).
- * Switch on for every host here and with CASINO_ADDONS_LIVE in the bot. Until
- * then Host Management can still schedule it (a test game; ExtrasTab), and
- * the local dev server can always pick it.
+ * Switched on for every host 2026-11-15, together with CASINO_ADDONS_LIVE in
+ * the bot. Set both back to false to take it away again (Host Management can
+ * then still schedule it as a test game; ExtrasTab).
  */
-export const CASINO_ADDONS_LIVE = false;
+export const CASINO_ADDONS_LIVE = true;
 const CASINO_READY = CASINO_ADDONS_LIVE || process.env.NODE_ENV === "development";
 
 /** Add-ons only TommyKay's server (the home server) can use. */

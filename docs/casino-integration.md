@@ -203,7 +203,8 @@ left is the end-to-end test game and switching on (step 8).
      unused.
 8. **Switch on and test** (2026-11-09; code done, test and switch-on to go).
    - **The switch:** `CASINO_ADDONS_LIVE` in the bot and in
-     `web/src/lib/scheduleOptions.ts`, both `False` for now. Until it's on,
+     `web/src/lib/scheduleOptions.ts`, **both on since 2026-11-15** (every
+     host on TommyKay's server can pick the Casino). With it off,
      Host Management can still schedule Casino and Fortunes games on
      TommyKay's server (the slot gets `addon_test`, so it's announced with
      the add-on); other hosts see "Currently unavailable". That's how the
@@ -221,10 +222,10 @@ left is the end-to-end test game and switching on (step 8).
    - **Docs:** README, games-page, command-migration-audit and
      games-without-threads say the Casino is back. The front page stays as
      it is (Niko: TommyKay-only, so docs only).
-   - **Music:** the free-tier Suno tracks are gone; Niko's three tunes
-     (`hoi4-casino` `public/audio/casino_tune_1..3.mp3`) play, one picked at
+   - **Music:** the free-tier Suno tracks are gone; Niko's five tunes
+     (`hoi4-casino` `public/audio/casino_tune_1..5.mp3`) play, one picked at
      random per visit, decoded only when played (`lib/audio.ts`), with a
-     compact 1 / 2 / 3 switcher on phones.
+     compact 1–5 switcher on phones.
    - **To go (Niko, then us):** set the Casino's Vercel database settings to
      the bot's database (with the certificate), restart the bot on Apollo,
      then a test Casino game and a test Fortunes game scheduled by Host
