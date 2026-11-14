@@ -19,7 +19,7 @@ type State = { phase: "loading" } | { phase: "entry"; entry: CasinoEntry } | { p
 const KIND_TEXT = {
   new: "Opening the Casino…",
   resume: "Taking you back to where you left off…",
-  receipt: "You've already rolled here. Opening your receipt…",
+  receipt: "You've already rolled here.",
 } as const;
 
 export default function CasinoGate() {
@@ -48,8 +48,10 @@ export default function CasinoGate() {
           return;
         }
         setState({ phase: "entry", entry: body });
-        // The link is good for a minute: go straight on (not in the preview, which has no Casino behind it).
-        if (body.status === "ok" && !body.preview) window.location.replace(body.url);
+        // A new or unfinished run: the link is good for a minute, so go straight on
+        // (not in the preview, which has no Casino behind it). A finished run stays
+        // here: its nation, the map and the receipt (never back into the Casino).
+        if (body.status === "ok" && !body.preview && body.kind !== "receipt") window.location.replace(body.url);
       })
       .catch(() => {
         if (!cancelled) setState({ phase: "error", message: "Network error. Check your connection and try again." });
@@ -97,9 +99,20 @@ export default function CasinoGate() {
             {state.entry.preview && (
               <p className="mt-3 text-xs text-ink-500">Preview mode: there&apos;s no Casino behind this sample game, so it doesn&apos;t go on.</p>
             )}
-            <a href={state.entry.url} className="gm-btn gm-btn-primary mt-5 inline-flex">
-              <ExternalLink aria-hidden strokeWidth={1.75} /> Open the Casino
-            </a>
+            {state.entry.kind === "receipt" ? (
+              <div className="mt-5 flex flex-col items-center gap-2">
+                <Link href={`/map?game=${encodeURIComponent(game)}`} className="gm-btn gm-btn-primary">
+                  <MapIcon aria-hidden strokeWidth={1.75} /> View on the map
+                </Link>
+                <a href={state.entry.url} className="gm-btn gm-btn-secondary">
+                  <ExternalLink aria-hidden strokeWidth={1.75} /> View my receipt
+                </a>
+              </div>
+            ) : (
+              <a href={state.entry.url} className="gm-btn gm-btn-primary mt-5 inline-flex">
+                <ExternalLink aria-hidden strokeWidth={1.75} /> Open the Casino
+              </a>
+            )}
           </>
         )}
         {state.phase === "entry" && state.entry.status === "denied" && (

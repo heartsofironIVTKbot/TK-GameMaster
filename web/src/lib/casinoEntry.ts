@@ -23,9 +23,9 @@ import { settingsOf } from "@/lib/serverSettings";
  */
 
 export { CASINO_URL };
-/** A fresh link works once, for a minute (the bot's WEB_ACCESS_TOKEN_TTL_SEC). */
+/** A fresh or resume link works once, for a minute (the bot's WEB_ACCESS_TOKEN_TTL_SEC). */
 const NEW_LINK_SEC = 60;
-/** Resume / receipt links can be opened again for 3 days (the bot's RECEIPT_VIEW_TOKEN_TTL_SEC). */
+/** A finished run's receipt link can be opened again for 3 days (the bot's RECEIPT_VIEW_TOKEN_TTL_SEC). */
 const RECEIPT_LINK_SEC = 3 * 24 * 3600;
 /** The bot's numeric tiers: lower = more privileged. */
 const TIER = { vip: 0, trusted: 1, verified: 2, none: 3 } as const;
@@ -223,10 +223,12 @@ async function writeToken(
       isVerified ? 1 : 0,
       isAuthenticated ? 1 : 0,
       banned ? 1 : 0,
-      kind === "new" ? 0 : 1,
+      // Only a finished run's receipt link is reusable; a resume link works once
+      // (2026-11-14: a 3-day reusable resume link was a way back into the run).
+      kind === "receipt" ? 1 : 0,
       kind === "receipt" ? 1 : 0,
       now,
-      now + (kind === "new" ? NEW_LINK_SEC : RECEIPT_LINK_SEC),
+      now + (kind === "receipt" ? RECEIPT_LINK_SEC : NEW_LINK_SEC),
       isVip || isTrusted || isVerified || isAuthenticated ? 1 : 0,
       tier,
       gameKey,
