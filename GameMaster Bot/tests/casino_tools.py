@@ -78,6 +78,7 @@ grants = []
 dms = []
 notes = []
 dropped = []
+transfers = []
 
 
 async def read_games():
@@ -89,6 +90,9 @@ async def save_game(key, game, rewrite_reservations=False):
 
 
 async def run_mysql(fn, *args, label=None):
+    if fn is gm._transfer_web_session_mysql:
+        transfers.append(args)
+        return None
     if fn is gm._insert_casino_grant_request_sync:
         grants.append({"request_id": args[0], "game": args[1], "target": args[2], "host": args[3], "mode": args[4], "payload": args[5]})
         return None
@@ -195,11 +199,11 @@ async def main():
     # Never a move or a swap.
     reset()
     ok, _, err = await gm._process_web_roster_assign(request("roster_assign", HOST, {"user_id": str(ALICE), "kind": "nation", "nation": "Germany", "occupied": "swap"}))
-    check("taken nation: refused, no swap", ok is False and "never swap" in (err or "") and store[GAME]["reservations"]["Germany"] == BOB, err)
+    check("taken nation: a newcomer is pointed to the filler swap", ok is False and "as a filler" in (err or "") and store[GAME]["reservations"]["Germany"] == BOB, err)
     ok, _, err = await gm._process_web_roster_assign(request("roster_assign", HOST, {"user_id": str(BOB), "kind": "nation", "nation": "France"}))
     check("player with a nation: refused, no move", ok is False and "remove them first" in (err or "") and "France" not in store[GAME]["reservations"], err)
     ok, _, err = await gm._process_web_roster_assign(request("roster_assign", HOST, {"user_id": str(ALICE), "kind": "filler", "nation": None, "filler_name": "x"}))
-    check("fillers refused", ok is False and "no fillers" in (err or ""), err)
+    check("fillers are allowed (2026-11-15)", ok is True and store[GAME]["reservations"].get("_FILL_x") == ALICE, err)
 
     # Co-ops (2026-11-15): a free player onto a taken major's co-op slot.
     gm.is_user_authenticated = nothing_true
@@ -209,11 +213,60 @@ async def main():
     ok, _, err = await gm._process_web_roster_assign(request("roster_assign", OTHER_HOST, {"user_id": str(ALICE), "kind": "coop", "nation": "Germany"}))
     check("co-op: another game's host can't", ok is False and "Only this game's host" in (err or ""), err)
     ok, _, err = await gm._process_web_roster_assign(request("roster_assign", HOST, {"user_id": str(BOB), "kind": "coop", "nation": "France"}))
-    check("co-op: a player with a nation isn't moved", ok is False and "remove them first" in (err or ""), err)
+    check("co-op: moving a player with a nation asks first", ok == gm.WEB_REQUEST_CONFIRM and store[GAME]["reservations"]["Germany"] == BOB, err)
     ok, result, err = await gm._process_web_roster_assign(request("roster_assign", HOST, {"user_id": str(ALICE), "kind": "coop", "nation": "Germany"}))
     check("co-op: the host adds a free player as Germany's co-op",
           ok is True and store[GAME]["reservations"].get("Germany_coop") == ALICE and store[GAME]["reservations"]["Germany"] == BOB,
           (ok, result, err, store[GAME]["reservations"]))
+
+    async def assign(actor, uid, **payload):
+        return await gm._process_web_roster_assign(request("roster_assign", actor, {"user_id": str(uid), **payload}))
+
+    # Fillers (2026-11-15), and moving a player who holds a nation.
+    reset()
+    ok, _, err = await assign(HOST, ALICE, kind="filler", nation=None, filler_name="Spare")
+    check("filler: the host adds a filler", ok is True and store[GAME]["reservations"].get("_FILL_Spare") == ALICE, (ok, err, store[GAME]["reservations"]))
+    reset()
+    store[GAME]["reservations"]["France"] = ALICE
+    ok, result, err = await assign(HOST, ALICE, kind="coop", nation="Germany")
+    check("moving a player off their nation asks first", ok == gm.WEB_REQUEST_CONFIRM and "Casino roll" in str(result), (ok, result, err))
+    ok, result, err = await assign(HOST, ALICE, kind="coop", nation="Germany", force=True)
+    check("  then moves them and frees the nation",
+          ok is True and store[GAME]["reservations"].get("Germany_coop") == ALICE and "France" not in store[GAME]["reservations"],
+          (ok, err, store[GAME]["reservations"]))
+    check("  and drops their roll for it", dropped == [ALICE], dropped)
+
+    # A filler swaps out a no-show: keep the receipt.
+    reset()
+    transfers.clear()
+    store[GAME]["reservations"]["_FILL_Spare"] = ALICE
+    store[GAME]["web_override_rolls"] = {str(BOB): {"ideology": "x"}}
+    ok, _, err = await assign(HOST, ALICE, kind="nation", nation="Germany")
+    check("swap: the host must choose", ok is False and "Choose swap or replace" in (err or ""), err)
+    ok, _, err = await assign(HOST, ALICE, kind="nation", nation="Germany", occupied="swap", receipt="keep")
+    res = store[GAME]["reservations"]
+    check("swap/keep: the filler takes the nation, the no-show the bench",
+          ok is True and res.get("Germany") == ALICE and res.get("_FILL_Spare") == BOB, (ok, err, res))
+    check("swap/keep: the run goes to the filler", transfers and transfers[-1][1:3] == (BOB, ALICE), transfers)
+    check("swap/keep: the game's records follow", store[GAME]["web_override_rolls"] == {str(ALICE): {"ideology": "x"}}, store[GAME]["web_override_rolls"])
+    check("swap/keep: no fresh roll", grants == [] and dropped == [], (grants, dropped))
+
+    # Replace and roll their own, once the game has started.
+    reset()
+    store[GAME]["reservations"]["_FILL_Spare"] = ALICE
+    store[GAME]["game_started"] = True
+    ok, _, err = await assign(HOST, ALICE, kind="nation", nation="Germany", occupied="replace", receipt="roll")
+    res = store[GAME]["reservations"]
+    check("replace/roll after the start: the no-show leaves",
+          ok is True and res.get("Germany") == ALICE and BOB not in res.values() and "_FILL_Spare" not in res, (ok, err, res))
+    check("  their roll is dropped", dropped == [BOB], dropped)
+    check("  the filler gets a fresh roll for Germany",
+          grants and grants[-1]["mode"] == "fresh" and grants[-1]["payload"]["config"].get("nation") == "Germany", grants)
+
+    # Only a filler swaps a player out.
+    reset()
+    ok, _, err = await assign(HOST, ALICE, kind="nation", nation="Germany")
+    check("a newcomer can't take a taken nation directly", ok is False and "as a filler" in (err or ""), err)
 
     # Emergency Unreserve: the host is warned, then may add them back.
     reset()

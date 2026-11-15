@@ -32278,7 +32278,7 @@ async def _web_casino_add(payload: dict, actor, game: dict, thread_id: str, user
     if not _can_manage_casino_game(actor, game):
         return False, None, _CASINO_TOOL_REFUSAL
     if str(payload.get("kind") or "") != "nation":
-        return False, None, "❌ Casino games have nations and co-ops, but no fillers."
+        return False, None, "❌ Use the filler or co-op option for that."
     if game.get("game_started"):
         return False, None, "❌ This game has started, so the Casino is closed for it."
     target = await _web_fetch_member(user_id)
@@ -32351,6 +32351,183 @@ async def _web_casino_add(payload: dict, actor, game: dict, thread_id: str, user
         details={"slot": key, "rooms": rooms, "dm_sent": dm_sent}, source="web",
     )
     return True, {"slot_key": key, "dm_sent": dm_sent}, None
+
+
+def _transfer_web_session_mysql(thread_id: str, old_user, new_user, username) -> None:
+    """Hand a player's Casino run (web_sessions row: their rolls, receipt) to
+    another player: a filler taking over a no-show keeps their setup."""
+    conn = None
+    cur = None
+    try:
+        conn = _db_get_connection()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM web_sessions WHERE game_id = %s AND user_id = %s", (str(thread_id), str(new_user)))
+        cur.execute(
+            "UPDATE web_sessions SET user_id = %s, username = %s WHERE game_id = %s AND user_id = %s",
+            (str(new_user), username, str(thread_id), str(old_user)),
+        )
+        try:
+            # The old player's browser must not act for the new one.
+            cur.execute(
+                "UPDATE web_sessions SET session_key = NULL WHERE game_id = %s AND user_id = %s",
+                (str(thread_id), str(new_user)),
+            )
+        except Exception:
+            pass
+        conn.commit()
+    finally:
+        if cur is not None:
+            try:
+                cur.close()
+            except Exception:
+                pass
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+
+def _casino_move_user_fields(game: dict, old_user, new_user) -> None:
+    """The game's per-player Casino records follow a run to its new player."""
+    for field in ("randomizer_last_roll", "web_override_rolls"):
+        records = game.get(field)
+        if isinstance(records, dict) and str(old_user) in records:
+            records[str(new_user)] = records.pop(str(old_user))
+
+
+async def _web_casino_nation(payload: dict, actor, game: dict, thread_id: str, user_id: int):
+    """Host Tool on a Casino game: a player onto a nation (2026-11-15).
+    A newcomer onto a free nation: _web_casino_add (they roll the rest). A
+    filler or co-op onto a free nation: they move and get a roll link. A
+    filler onto a taken nation (swapping out a no-show, also once the game
+    has started): `occupied` swap (the old player becomes the filler) or
+    replace (they leave), and `receipt` keep (the filler takes over their
+    Casino setup and receipt) or roll (a fresh roll of their own)."""
+    if not _can_manage_casino_game(actor, game):
+        return False, None, _CASINO_TOOL_REFUSAL
+    res = game.get("reservations") or {}
+    key = str(payload.get("nation") or "").strip()
+    current = _roster_slot_of(res, user_id)
+    occupant = res.get(key)
+    from_bench = bool(current) and (str(current).startswith("_FILL_") or "_coop" in str(current))
+    if occupant is None and not from_bench:
+        return await _web_casino_add(payload, actor, game, thread_id, user_id)
+    if occupant is not None and str(occupant) == str(user_id):
+        return True, {"slot_key": key, "unchanged": True}, None
+    if occupant is not None and not str(current or "").startswith("_FILL_"):
+        return False, None, (
+            f"❌ **{key}** is taken. To swap a player out, add the newcomer as a filler, "
+            f"then drag the filler onto **{key}**."
+        )
+    mode = game.get("mode", "")
+    if mode != "Other" and key not in _roster_valid_nations(mode):
+        return False, None, f"❌ '{key}' isn't a nation in {mode}."
+    target = await _web_fetch_member(user_id)
+    if target is None:
+        return False, None, "❌ That player is no longer in the server."
+    occupied = str(payload.get("occupied") or "")
+    receipt = str(payload.get("receipt") or "")
+    if occupant is not None and (occupied not in ("swap", "replace") or receipt not in ("keep", "roll")):
+        return False, None, "❌ Choose swap or replace, and whether they keep the receipt or roll their own."
+
+    # Apply on a fresh read: the board may have changed while we checked.
+    games_data = await _read_games_fresh()
+    game = games_data.get(thread_id)
+    if not isinstance(game, dict):
+        return False, None, "❌ This game no longer exists."
+    res = game.get("reservations") or {}
+    if _roster_slot_of(res, user_id) != current or str(res.get(key)) != str(occupant):
+        return False, None, "❌ The board changed while this was being checked — try again."
+    del res[current]
+    if occupant is not None:
+        del res[key]
+    res[key] = user_id
+    swapped_to = current if occupant is not None and occupied == "swap" else None
+    if swapped_to:
+        res[swapped_to] = occupant
+    game["reservations"] = res
+    keep = occupant is not None and receipt == "keep"
+    if keep:
+        _casino_move_user_fields(game, occupant, user_id)
+    _casino_unblock(game, user_id)
+    await save_single_game(thread_id, game, rewrite_reservations=True)
+    await _roster_after_change(thread_id)
+
+    label = _pretty_reservation_name(key)
+    old = await _web_fetch_member(int(occupant)) if occupant is not None else None
+    old_name = old.display_name if old is not None else (str(occupant) if occupant is not None else None)
+    if keep:
+        username, _banned = _member_identity_flags(target)
+        try:
+            await _run_mysql_io(
+                _transfer_web_session_mysql, thread_id, occupant, user_id, username,
+                label="casino run transfer",
+            )
+        except Exception as e:
+            print(f"[WARN] casino run transfer failed: {e}")
+        dm_sent = await _roster_notify_player(
+            target, game, thread_id, actor,
+            title="🎲 You took over a nation",
+            text=(
+                f"**{actor.display_name}** put you on **{label}** in place of **{old_name}**, "
+                f"with their Casino setup. Your receipt: {_casino_game_url(thread_id)}"
+            ),
+            color=EmbedColor.SUCCESS, label="casino takeover",
+        )
+    else:
+        if occupant is not None:
+            await _roster_drop_player_state(thread_id, int(occupant))
+        rooms = _casino_rooms_on(game)
+        if rooms:
+            try:
+                tier = "major" if is_major(key, mode) else "minor"
+            except Exception:
+                tier = "minor"
+            url = await _casino_grant_link(
+                thread_id, target, actor, mode="fresh", nation=key, rooms=rooms,
+                allowances={room: _casino_default_rerolls(game, room, tier) for room in rooms},
+            )
+            dm_sent = await _casino_dm_link(
+                target, game, actor,
+                title="🎲 Roll your setup",
+                text=f"**{actor.display_name}** put you on **{label}**. Roll the rest of your setup at the Casino.",
+                url=url, label="casino move",
+            )
+        else:
+            dm_sent = await _roster_notify_player(
+                target, game, thread_id, actor,
+                title="📋 You were moved",
+                text=f"**{actor.display_name}** put you on **{label}**.",
+                color=EmbedColor.SUCCESS, label="casino move",
+            )
+    if old is not None and _roster_notify_on(payload):
+        await _roster_notify_player(
+            old, game, thread_id, actor,
+            title="🔁 You were swapped out" if swapped_to else "🚫 You were replaced",
+            text=(
+                f"**{actor.display_name}** gave **{label}** to **{target.display_name}**"
+                + (f"; you're on **{_pretty_reservation_name(swapped_to)}** now." if swapped_to else ".")
+            ),
+            color=EmbedColor.INFO if swapped_to else EmbedColor.DANGER, label="casino swap",
+        )
+    _audit_log(
+        "INFO",
+        f"web casino nation thread={thread_id} by={actor.id} user={user_id} slot={key} from={current} "
+        f"displaced={occupant} occupied={occupied or None} receipt={receipt or None} dm={dm_sent}",
+    )
+    audit_event(
+        "roster", "casino_swap" if occupant is not None else "casino_move",
+        f"{actor.display_name} put {target.display_name} on {label}"
+        + (f" in place of {old_name} ({'kept their receipt' if keep else 'rolls their own'})" if occupant is not None else "")
+        + (f" ({game['thread_name']})" if game.get("thread_name") else ""),
+        actor_id=actor.id, actor_name=actor.display_name,
+        target_id=user_id, target_name=target.display_name, game_id=thread_id,
+        details={"slot": key, "from": current, "displaced": str(occupant) if occupant else None,
+                 "swapped_to": swapped_to, "receipt": receipt or None, "dm_sent": dm_sent},
+        source="web",
+    )
+    return True, {"slot_key": key, "moved_from": current, "displaced": str(occupant) if occupant else None}, None
 
 
 async def _web_casino_remove(payload: dict, actor, game: dict, thread_id: str, user_id: int):
@@ -32670,10 +32847,12 @@ def _host_unlock(game: dict, user_id) -> None:
         game["host_locks"].pop(str(user_id), None)
 
 
-async def _process_web_roster_assign(req: dict):
+async def _process_web_roster_assign(req: dict, _casino_checked: bool = False):
     """Put a player on a nation, co-op slot or filler (formerly /add,
     /add_coop, /add_filler). A taken nation needs occupied='swap' (the other
-    player takes the mover's old slot) or 'replace' (they're removed)."""
+    player takes the mover's old slot) or 'replace' (they're removed).
+    Casino games: nations go through _web_casino_nation; co-ops and fillers
+    through this normal path after the Casino checks (`_casino_checked`)."""
     payload = req.get("payload") or {}
     actor = await _web_fetch_member(int(req.get("host_id") or 0))
     if not _member_is_host(actor):
@@ -32695,19 +32874,26 @@ async def _process_web_roster_assign(req: dict):
         return False, None, "❌ This game no longer exists."
     if game.get("status") in ("ended", "cancelled"):
         return False, None, "❌ This game has ended."
-    if _is_casino_game_dict(game):
-        if kind != "coop":
-            return await _web_casino_add(payload, actor, game, thread_id, user_id)
+    if _is_casino_game_dict(game) and not _casino_checked:
+        if kind == "nation":
+            return await _web_casino_nation(payload, actor, game, thread_id, user_id)
+        # A co-op or a filler (2026-11-15). A player leaving a nation they
+        # rolled loses that roll: the host confirms it first.
         if not _can_manage_casino_game(actor, game):
             return False, None, _CASINO_TOOL_REFUSAL
-        if game.get("game_started"):
-            return False, None, "❌ This game has started, so the Casino is closed for it."
         held = _roster_slot_of(game.get("reservations") or {}, user_id)
-        if held:
-            return False, None, (
-                f"❌ They already have **{_pretty_reservation_name(held)}**. "
-                "Casino games don't move players: remove them first."
-            )
+        left_main = held if held and "_coop" not in str(held) and not str(held).startswith("_FILL_") else None
+        if left_main and not force:
+            who = await _web_fetch_member(user_id)
+            name = who.display_name if who is not None else str(user_id)
+            return WEB_REQUEST_CONFIRM, {"warnings": [
+                f"{name} holds {_pretty_reservation_name(left_main)}: moving them frees it, "
+                "and their Casino roll for it is dropped."
+            ]}, None
+        ok, result, err = await _process_web_roster_assign(req, _casino_checked=True)
+        if ok is True and left_main and not (isinstance(result, dict) and result.get("unchanged")):
+            await _roster_drop_player_state(thread_id, user_id)
+        return ok, result, err
     target = await _web_fetch_member(user_id)
     if target is None:
         return False, None, "❌ That player is no longer in the server."

@@ -140,6 +140,7 @@ export function validateRosterAssign(raw: unknown): RosterAssignPayload | null {
     notify: input.notify !== false,
     tag: typeof input.tag === "string" && /^[A-Z0-9]{2,4}$/.test(input.tag) ? input.tag : null,
     lock: input.lock === true,
+    receipt: input.receipt === "keep" || input.receipt === "roll" ? input.receipt : null,
   };
 }
 

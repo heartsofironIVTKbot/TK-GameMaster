@@ -53,7 +53,7 @@ export default function HostToolsPanel({
   onDismiss,
   onClose,
   slotLabel,
-  casino = null,
+  casino,
   onCasinoGrant,
 }: {
   lobbyName: string;
@@ -81,6 +81,7 @@ export default function HostToolsPanel({
   slotLabel: (slot: string) => string;
   /** A Casino game: its rooms that are on, and whether the nation wheel is (null = a normal game). */
   casino?: { rooms: string[]; nationRoll: boolean } | null;
+  // undefined: the game's settings haven't loaded yet (no normal-game hint flashing on a Casino game).
   /** Casino games: give the player a roll, or extra rolls for some rooms (the bot DMs them the link). */
   onCasinoGrant?: (player: HostPlayer, action: "casino_roll" | "casino_extra", rooms: string[], count: number) => void;
 }) {
@@ -291,8 +292,10 @@ export default function HostToolsPanel({
               />
             </label>
             <p className="mt-1.5 px-0.5 text-xs text-ink-400">
-              {casino
-                ? "Casino game: drag a player onto a free nation to add them (they get a link to roll the rest), or onto a taken major to add them as its co-op. Click them for rolls. No moves or swaps."
+              {casino === undefined && selectedThread
+                ? "Loading the game…"
+                : casino
+                ? "Casino game: drag a player onto a free nation to add them (they get a link to roll the rest), onto a taken major to add them as its co-op, or onto Add as filler. Drag a filler onto a nation to swap out its player. Click a player for rolls."
                 : "Drag a player onto a nation, or click them and then the nation."}
             </p>
           </div>
@@ -351,17 +354,15 @@ export default function HostToolsPanel({
             </ul>
           )}
 
-          <div data-tour="hosttool.zones" className={`grid gap-2 ${casino ? "grid-cols-1" : "grid-cols-2"}`}>
-            {!casino && (
-              <DropZone
-                icon={Puzzle}
-                label="Add as filler"
-                tone="sky"
-                heldPlayer={heldPlayer}
-                onPlayer={(player, point) => onFiller(player, point)}
-                pointOf={pointOf}
-              />
-            )}
+          <div data-tour="hosttool.zones" className="grid grid-cols-2 gap-2">
+            <DropZone
+              icon={Puzzle}
+              label="Add as filler"
+              tone="sky"
+              heldPlayer={heldPlayer}
+              onPlayer={(player, point) => onFiller(player, point)}
+              pointOf={pointOf}
+            />
             <DropZone
               icon={UserMinus}
               label="Remove from game"
@@ -459,7 +460,7 @@ export default function HostToolsPanel({
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block text-[12.5px] font-semibold text-ink-100">{action.label}</span>
-                        {action.message && <span className="block">{action.message}</span>}
+                        {action.message && <span className="block">{action.message.replace(/\*\*/g, "")}</span>}
                         {action.state === "confirm" && (
                           <ul className="mt-1 list-disc pl-4">
                             {action.warnings.map((warning) => (

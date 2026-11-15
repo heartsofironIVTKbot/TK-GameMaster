@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeftRight, Bell, BellOff, Handshake, Puzzle, RotateCcw, UserMinus } from "lucide-react";
+import { ArrowLeftRight, Bell, BellOff, Dices, Handshake, Puzzle, Receipt, RotateCcw, UserMinus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { DropPoint, HostPlayer } from "./hostTypes";
 
@@ -23,14 +23,25 @@ export type HostPromptRequest =
       allowCoop: boolean;
     }
   | { type: "filler"; point: DropPoint; player: HostPlayer }
-  | { type: "remove"; point: DropPoint; player: HostPlayer };
+  | { type: "remove"; point: DropPoint; player: HostPlayer }
+  /** Casino games: a filler dropped on a taken nation (swapping out a no-show). */
+  | {
+      type: "casino_swap";
+      point: DropPoint;
+      player: HostPlayer;
+      occupant: HostPlayer;
+      slot: string;
+      tag: string;
+      nationName: string;
+    };
 
 export type HostPromptChoice =
   | { kind: "swap" }
   | { kind: "replace" }
   | { kind: "coop" }
   | { kind: "filler"; name: string }
-  | { kind: "remove" };
+  | { kind: "remove" }
+  | { kind: "casino_swap"; occupied: "swap" | "replace"; receipt: "keep" | "roll" };
 
 export default function HostPrompt({
   request,
@@ -49,6 +60,7 @@ export default function HostPrompt({
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const [fillerName, setFillerName] = useState("Filler");
+  const [receipt, setReceipt] = useState<"keep" | "roll">("keep");
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -112,6 +124,56 @@ export default function HostPrompt({
               Add {request.player.name} as co-op
             </button>
           )}
+          <p className="flex items-center gap-1.5 px-2 pb-1 pt-1.5 text-[11.5px] text-ink-500">
+            <Dm aria-hidden className="h-3.5 w-3.5" />
+            {notify ? "Both players get a DM." : "Notify players is off: nobody gets a DM."}
+          </p>
+        </>
+      )}
+
+      {request.type === "casino_swap" && (
+        <>
+          <p className="px-2 pb-2 pt-1 text-[12.5px] text-ink-400">
+            <b className="font-semibold text-ink-100">{request.player.name}</b> takes{" "}
+            <b className="font-semibold text-ink-100">{request.nationName}</b> from{" "}
+            <b className="font-semibold text-ink-100">{request.occupant.name}</b>.
+          </p>
+          <p className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-ink-500">Casino setup</p>
+          <div className="grid grid-cols-2 gap-1 px-1 pb-2">
+            {(
+              [
+                ["keep", Receipt, `Keep ${request.occupant.name}'s`],
+                ["roll", Dices, "Roll their own"],
+              ] as const
+            ).map(([value, Icon, text]) => (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={receipt === value}
+                onClick={() => setReceipt(value)}
+                className={`gm-cut flex items-center gap-1.5 px-2 py-1.5 text-left text-[12px] font-semibold [--cut:6px] ${
+                  receipt === value ? "bg-brand-400 text-brand-950" : "bg-ink-900 text-ink-200 hover:bg-ink-800"
+                }`}
+              >
+                <Icon aria-hidden className="h-3.5 w-3.5 shrink-0" />
+                <span className="min-w-0 truncate">{text}</span>
+              </button>
+            ))}
+          </div>
+          <button type="button" className={button} onClick={() => onChoose({ kind: "casino_swap", occupied: "swap", receipt })}>
+            <ArrowLeftRight aria-hidden className={icon} />
+            <span className="min-w-0">
+              Swap
+              <span className="block text-[11.5px] font-medium text-ink-500">{request.occupant.name} becomes the filler</span>
+            </span>
+          </button>
+          <button type="button" className={button} onClick={() => onChoose({ kind: "casino_swap", occupied: "replace", receipt })}>
+            <RotateCcw aria-hidden className={icon} />
+            <span className="min-w-0">
+              Replace
+              <span className="block text-[11.5px] font-medium text-ink-500">{request.occupant.name} leaves the game</span>
+            </span>
+          </button>
           <p className="flex items-center gap-1.5 px-2 pb-1 pt-1.5 text-[11.5px] text-ink-500">
             <Dm aria-hidden className="h-3.5 w-3.5" />
             {notify ? "Both players get a DM." : "Notify players is off: nobody gets a DM."}

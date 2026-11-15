@@ -430,7 +430,7 @@ export default function Home() {
   const sendAssign = useCallback(
     (
       player: HostPlayer,
-      fields: Pick<RosterAssignPayload, "kind" | "nation" | "filler_name" | "occupied" | "tag">,
+      fields: Pick<RosterAssignPayload, "kind" | "nation" | "filler_name" | "occupied" | "tag" | "receipt">,
       label: string,
     ) => {
       void host.send(
@@ -464,7 +464,21 @@ export default function Home() {
       const keys = nationMatchKeys(nation.tag, slot, nation.name);
       const occupant = reservations.find((reservation) => keys.has(canonicalName(String(reservation.slot_key))));
       if (occupant && String(occupant.user_id) === player.user_id) return;
-      // Casino games never move, swap or replace: a taken major gets a co-op instead.
+      // Casino games: a filler dropped on a taken nation swaps out its player
+      // (the host picks: keep the old player's receipt, or roll their own).
+      if (occupant && gameLock?.casino && player.from_slot?.startsWith("_FILL_")) {
+        setHostPrompt({
+          type: "casino_swap",
+          point,
+          player,
+          occupant: playerFromReservation(occupant),
+          slot,
+          tag: nation.tag,
+          nationName,
+        });
+        return;
+      }
+      // Anyone else onto a taken major: its co-op.
       if (occupant && gameLock?.casino && majorTagsFor(scenarioId).has(nation.tag)) {
         sendAssign(
           player,
@@ -549,6 +563,17 @@ export default function Home() {
         prompt.player,
         { kind: "filler", nation: null, filler_name: choice.name, occupied: null },
         `${prompt.player.name} → filler “${choice.name}”`,
+      );
+      return;
+    }
+    if (prompt.type === "casino_swap" && choice.kind === "casino_swap") {
+      const { player, occupant, slot, nationName, tag } = prompt;
+      sendAssign(
+        player,
+        { kind: "nation", nation: slot, filler_name: null, occupied: choice.occupied, tag, receipt: choice.receipt },
+        `${player.name} ${choice.occupied === "swap" ? "⇄" : "replaces"} ${occupant.name} on ${nationName} (${
+          choice.receipt === "keep" ? `keeps ${occupant.name}'s receipt` : "rolls their own"
+        })`,
       );
       return;
     }
@@ -812,7 +837,7 @@ export default function Home() {
           onConfirm={host.confirm}
           onDismiss={host.dismiss}
           slotLabel={slotLabel}
-          casino={gameLock?.casino ? { rooms: gameLock.casino_rooms ?? [], nationRoll: gameLock.casino_nation_roll !== false } : null}
+          casino={gameLock === null ? undefined : gameLock.casino ? { rooms: gameLock.casino_rooms ?? [], nationRoll: gameLock.casino_nation_roll !== false } : null}
           onCasinoGrant={sendCasinoGrant}
           onClose={() => {
             host.setEnabled(false);

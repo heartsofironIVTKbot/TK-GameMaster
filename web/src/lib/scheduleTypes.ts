@@ -410,6 +410,9 @@ export interface RosterAssignPayload {
   tag?: string | null;
   /** Host Tool "Keep players where I put them": they can't change it themselves until a host does (else 30 s). */
   lock?: boolean;
+  /** Casino games, a filler swapped onto a taken nation: keep the old player's
+   *  Casino setup and receipt, or roll their own. */
+  receipt?: "keep" | "roll" | null;
 }
 
 /** Take a player off a game (formerly /remove). */
