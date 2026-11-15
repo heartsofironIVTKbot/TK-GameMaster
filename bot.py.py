@@ -8007,6 +8007,36 @@ def _promote_coops(reservations: dict) -> list:
     return promoted
 
 
+def _drop_orphan_coops(reservations: dict) -> list:
+    """Casino games (2026-11-15): co-ops leave with their main player. The
+    run and its receipt are the main's, and a co-op taking over the nation
+    would get to roll a fresh one. Changes `reservations` in place; returns
+    [(user_id, nation)] for each co-op that went."""
+    dropped = []
+    for key in [k for k in reservations if "_coop" in str(k)]:
+        base = str(key).split("_coop", 1)[0]
+        if base and not base.startswith("_FILL_") and base not in reservations:
+            dropped.append((reservations.pop(key), base))
+    return dropped
+
+
+async def _dm_coop_dropped(thread_id: str, game: dict, user_id, nation: str) -> None:
+    try:
+        member = await _web_fetch_member(int(user_id))
+        if member is None:
+            return
+        await _dm_user_safe(
+            member,
+            content=(
+                f"🎲 The main player left **{nation}** in the Casino game, so your co-op slot went with them. "
+                f"See the lobby on the map: {_map_game_url(thread_id)}"
+            ),
+            label="co-op dropped",
+        )
+    except Exception as e:
+        print(f"[WARN] co-op dropped DM failed: {e}")
+
+
 async def _dm_coop_promoted(thread_id: str, game: dict, user_id, nation: str) -> None:
     try:
         member = await _web_fetch_member(int(user_id))
@@ -8039,7 +8069,11 @@ async def save_single_game(thread_id: str, game: dict, rewrite_reservations: boo
     # A major whose main player left: its first co-op takes over (not in drafts,
     # where the captains place everyone).
     promoted = []
+    dropped = []
     if rewrite_reservations and isinstance(game.get("reservations"), dict) and not _is_draft_game(game):
+        # Casino games: no take-over, the co-ops go with their main.
+        if _is_casino_game_dict(game):
+            dropped = _drop_orphan_coops(game["reservations"])
         promoted = _promote_coops(game["reservations"])
     # Hard-timeout guarded (like every other MySQL write) so a dead/slow
     # connection can't hang the calling command (and the entire caller's flow,
@@ -8048,6 +8082,8 @@ async def save_single_game(thread_id: str, game: dict, rewrite_reservations: boo
     if promoted:
         for uid, nation in promoted:
             asyncio.create_task(_dm_coop_promoted(tid, game, uid, nation))
+    for uid, nation in dropped:
+        asyncio.create_task(_dm_coop_dropped(tid, game, uid, nation))
     cache = _games_cache if isinstance(_games_cache, dict) else {}
     cache[tid] = game
     _set_games_cache(cache)
@@ -30994,8 +31030,14 @@ def _coop_problem(game: dict, nation: str, uid: str, member) -> str | None:
         return "❌ The game has already started, so co-op requests are closed."
     if game.get("lockdown"):
         return "❌ Reservations are locked down by the host."
-    if _is_casino_game_dict(game) or _is_draft_game(game):
-        return "❌ Co-op requests aren't used in Casino or draft games."
+    if _is_draft_game(game):
+        return "❌ Co-op requests aren't used in draft games."
+    if _is_casino_game_dict(game):
+        # Out by Emergency Unreserve or a host: only a host brings them back (Host Tool).
+        if str(uid) in {str(x) for x in game.get("randomizer_unreserved") or []}:
+            return "❌ Emergency Unreserve was used in this game, so only a host can bring this player back."
+        if str(uid) in {str(x) for x in game.get("casino_host_removed") or []}:
+            return "❌ A host removed this player from this game, so only a host can bring them back."
     mode = game.get("mode", "")
     if mode == "Other" or nation not in get_major_nations_for_mode(mode):
         return "❌ Co-op is only for major nations."
@@ -31114,6 +31156,9 @@ async def _coop_make_main(actor, key: str, game: dict, user_id: str):
     nation = str(slot).split("_coop", 1)[0]
     if str(res.get(nation)) != str(actor.id):
         return False, None, f"❌ Only the main player on **{nation}** can hand it over."
+    if _is_casino_game_dict(game):
+        # The run (and its receipt) is the main's: a new main would get to roll again.
+        return False, None, "❌ In a Casino game the main player stays the one who rolled the nation."
     locks = game.get("host_locks") if isinstance(game.get("host_locks"), dict) else {}
     if str(actor.id) in locks and int(locks.get(str(actor.id)) or 0) == 0:
         return False, None, "❌ The host placed you on this nation: ask a host to change it."
@@ -31263,11 +31308,15 @@ async def _coop_decide(actor, thread_id: str, user_id: str, approve: bool):
         mark("approved")
         await save_single_game(key, game, rewrite_reservations=True)
         await _roster_after_change(key)
+        casino_note = (
+            f"\n🎲 Your main's Casino receipt (once they've finished rolling): {_casino_game_url(key)}"
+            if _is_casino_game_dict(game) else ""
+        )
         await _dm_user_safe(
             target,
             content=(
                 f"✅ **{actor.display_name}** accepted: you're on the **{nation}** co-op. "
-                f"See the lobby on the map: {_map_game_url(key)}"
+                f"See the lobby on the map: {_map_game_url(key)}{casino_note}"
             ),
             label="co-op accepted",
         )
@@ -32229,7 +32278,7 @@ async def _web_casino_add(payload: dict, actor, game: dict, thread_id: str, user
     if not _can_manage_casino_game(actor, game):
         return False, None, _CASINO_TOOL_REFUSAL
     if str(payload.get("kind") or "") != "nation":
-        return False, None, "❌ Casino games only have nations: no co-ops or fillers."
+        return False, None, "❌ Casino games have nations and co-ops, but no fillers."
     if game.get("game_started"):
         return False, None, "❌ This game has started, so the Casino is closed for it."
     target = await _web_fetch_member(user_id)
@@ -32647,7 +32696,18 @@ async def _process_web_roster_assign(req: dict):
     if game.get("status") in ("ended", "cancelled"):
         return False, None, "❌ This game has ended."
     if _is_casino_game_dict(game):
-        return await _web_casino_add(payload, actor, game, thread_id, user_id)
+        if kind != "coop":
+            return await _web_casino_add(payload, actor, game, thread_id, user_id)
+        if not _can_manage_casino_game(actor, game):
+            return False, None, _CASINO_TOOL_REFUSAL
+        if game.get("game_started"):
+            return False, None, "❌ This game has started, so the Casino is closed for it."
+        held = _roster_slot_of(game.get("reservations") or {}, user_id)
+        if held:
+            return False, None, (
+                f"❌ They already have **{_pretty_reservation_name(held)}**. "
+                "Casino games don't move players: remove them first."
+            )
     target = await _web_fetch_member(user_id)
     if target is None:
         return False, None, "❌ That player is no longer in the server."
@@ -32792,6 +32852,9 @@ async def _process_web_roster_assign(req: dict):
             swapped_to = current_key
     res[key] = user_id
     game["reservations"] = res
+    if _is_casino_game_dict(game):
+        # A host bringing a player back (a Casino co-op) clears what kept them out.
+        _casino_unblock(game, user_id)
     # The player (and a swapped one) can't undo this on the map for a while.
     keep = bool(payload.get("lock"))
     _host_lock(game, user_id, keep)
@@ -32828,6 +32891,8 @@ async def _process_web_roster_assign(req: dict):
             text = f"{by} added you to the game as **{label}**."
         if occupant is not None and not swapped_to:
             text += f" {other} was taken off that slot."
+        if kind == "coop" and _is_casino_game_dict(game):
+            text += f"\n🎲 Your main's Casino receipt (once they've finished rolling): {_casino_game_url(thread_id)}"
         await _roster_notify_player(target, game, thread_id, actor, title=title, text=text, color=color, label="roster change")
         if kind != "filler":
             await _roster_send_mode_info_dm(target, mode, nation)
