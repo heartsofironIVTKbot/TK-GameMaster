@@ -173,6 +173,17 @@ export default function GameControlPanel({
       : []),
   ];
   const current = tabs.some((entry) => entry.id === tab) ? tab : "overview";
+  const startSoon = !game.scheduled_at || game.scheduled_at - now / 1000 <= 3600;
+  const startForm = (
+    <StartGameForm
+      game={game}
+      now={now}
+      canStart={showControls}
+      busy={working}
+      sending={sending === "game_start"}
+      onStart={(payload) => void submit("game_start", payload)}
+    />
+  );
   const busyNote = (
     <p className="gm-plate flex items-center gap-2 p-4 text-sm text-ink-400 [--cut:12px]">
       <Spinner className="h-4 w-4" /> Available again once the bot has finished.
@@ -319,20 +330,14 @@ export default function GameControlPanel({
 
       {current === "overview" && (
         <>
+          {/* From an hour before the start, Start game comes first: on a big
+              Casino game the rolls list would otherwise push it off the screen. */}
+          {game.phase === "announced" && startSoon && startForm}
           {game.phase === "announced" && game.add_on === "randomizer" && (
             <CasinoFallbackCard game={game} onChanged={refreshAll} />
           )}
           {game.phase === "announced" && game.add_on === "randomizer" && game.can_manage && <CasinoRollsCard game={game} />}
-          {game.phase === "announced" && (
-            <StartGameForm
-              game={game}
-              now={now}
-              canStart={showControls}
-              busy={working}
-              sending={sending === "game_start"}
-              onStart={(payload) => void submit("game_start", payload)}
-            />
-          )}
+          {game.phase === "announced" && !startSoon && startForm}
           {game.phase === "starting" && !working && (
             <Notice tone="busy" icon={Play} title="The bot is starting this game">
               A start began less than 10 minutes ago. If it got stuck (for example the bot restarted), you can try again once those 10

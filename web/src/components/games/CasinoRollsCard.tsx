@@ -1,6 +1,6 @@
 "use client";
 
-import { Dices, ExternalLink, RefreshCw } from "lucide-react";
+import { ChevronDown, ChevronUp, Dices, ExternalLink, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Spinner } from "@/components/schedule/ui";
 import type { CasinoRollRow, CasinoRolls } from "@/lib/casinoEntry";
@@ -17,6 +17,7 @@ export default function CasinoRollsCard({ game }: { game: GameControl }) {
   const [loading, setLoading] = useState(false);
   const [opening, setOpening] = useState<string | null>(null);
   const [receiptError, setReceiptError] = useState<string | null>(null);
+  const [showFinished, setShowFinished] = useState(false);
   const key = game.storage_key || game.id;
 
   const load = useCallback(async () => {
@@ -50,6 +51,9 @@ export default function CasinoRollsCard({ game }: { game: GameControl }) {
 
   const rows = rolls?.status === "ok" ? rolls.rows : [];
   const unfinished = rows.filter((row) => row.state !== "finished").length;
+  const finished = rows.length - unfinished;
+  // Finished runs fold away so a big game's list doesn't bury Start game.
+  const shown = showFinished ? rows : rows.filter((row) => row.state !== "finished");
 
   return (
     <section className="gm-plate space-y-3 p-4 sm:p-[18px]">
@@ -75,7 +79,7 @@ export default function CasinoRollsCard({ game }: { game: GameControl }) {
       ) : (
         <>
           <ul className="divide-y divide-ink-800">
-            {rows.map((row) => (
+            {shown.map((row) => (
               <li key={row.user_id} className="flex items-center gap-2 py-1.5 text-sm">
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-semibold text-ink-100">{row.name}</span>
@@ -101,6 +105,17 @@ export default function CasinoRollsCard({ game }: { game: GameControl }) {
               </li>
             ))}
           </ul>
+          {finished > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowFinished((value) => !value)}
+              className="gm-btn gm-btn-secondary h-7 px-2.5 text-xs"
+              aria-expanded={showFinished}
+            >
+              {showFinished ? <ChevronUp aria-hidden className="h-3.5 w-3.5" /> : <ChevronDown aria-hidden className="h-3.5 w-3.5" />}
+              {showFinished ? "Hide finished" : `Show ${finished} finished`}
+            </button>
+          )}
           {receiptError && <p className="text-xs text-rose-300">{receiptError}</p>}
           {rolls.rooms_on && (
             <p className="text-xs text-ink-400">
