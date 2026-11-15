@@ -445,8 +445,16 @@ export async function DELETE(request: NextRequest) {
     // Emergency Unreserve (api/casino/<game>/unreserve) or the host can.
     const lockedData = parseGameData(game.game_data);
     if (isCasinoGame(lockedData)) {
-      await connection.rollback();
-      return jsonError("This is a Casino game: if you can't play, use Emergency Unreserve under your nation.", 409);
+      // A co-op never rolled anything, so they may simply leave (2026-11-15).
+      const [mine] = await connection.query<SlotRow[]>(
+        "SELECT slot_key, user_id FROM game_reservations WHERE thread_id = ? AND user_id = ?",
+        [threadId, session.discord_id],
+      );
+      const onlyCoop = mine.length > 0 && mine.every((row) => String(row.slot_key).includes("_coop"));
+      if (!onlyCoop) {
+        await connection.rollback();
+        return jsonError("This is a Casino game: if you can't play, use Emergency Unreserve under your nation.", 409);
+      }
     }
     // The Host Tool placed them: they can't undo it themselves for a while (bot _host_lock).
     const locks = lockedData.host_locks && typeof lockedData.host_locks === "object" ? (lockedData.host_locks as Record<string, unknown>) : {};

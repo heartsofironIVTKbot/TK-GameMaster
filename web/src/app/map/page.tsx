@@ -464,6 +464,15 @@ export default function Home() {
       const keys = nationMatchKeys(nation.tag, slot, nation.name);
       const occupant = reservations.find((reservation) => keys.has(canonicalName(String(reservation.slot_key))));
       if (occupant && String(occupant.user_id) === player.user_id) return;
+      // Casino games never move, swap or replace: a taken major gets a co-op instead.
+      if (occupant && gameLock?.casino && majorTagsFor(scenarioId).has(nation.tag)) {
+        sendAssign(
+          player,
+          { kind: "coop", nation: slot, filler_name: null, occupied: null, tag: nation.tag },
+          `${player.name} → ${nationName} co-op`,
+        );
+        return;
+      }
       if (!occupant || gameLock?.casino) {
         sendAssign(
           player,

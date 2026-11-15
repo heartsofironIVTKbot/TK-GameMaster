@@ -292,7 +292,7 @@ export default function HostToolsPanel({
             </label>
             <p className="mt-1.5 px-0.5 text-xs text-ink-400">
               {casino
-                ? "Casino game: drag a player onto a free nation to add them (they get a link to roll the rest), or click them for rolls. No moves or swaps."
+                ? "Casino game: drag a player onto a free nation to add them (they get a link to roll the rest), or onto a taken major to add them as its co-op. Click them for rolls. No moves or swaps."
                 : "Drag a player onto a nation, or click them and then the nation."}
             </p>
           </div>

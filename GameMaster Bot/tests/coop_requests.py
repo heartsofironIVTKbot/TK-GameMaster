@@ -312,6 +312,57 @@ check("the real save writes the first co-op as main",
 check("and DMs the promoted player", dms == [(ASKER, "Germany")], dms)
 check("draft games are left to the captains", draft["reservations"] == {"Germany_coop": ASKER}, draft)
 
+# --- Casino games have co-ops again (2026-11-15) ---
+fresh_game(add_on="randomizer")
+ok, result, err = run("coop_request", ASKER, nation="Germany")
+check("casino: a co-op request goes through", ok and result == {"coop": "pending", "nation": "Germany"}, (ok, result, err))
+DMS.clear()
+ok, result, err = run("coop_decide", OWNER, user_id=str(ASKER), approve=True)
+check("casino: accepting puts them on the co-op", ok and STORE[GAME]["reservations"].get("Germany_coop") == ASKER, (ok, err))
+check("casino: the accept DM links the main's Casino receipt",
+      any(uid == ASKER and "/casino/" in (text or "") for uid, text, _ in DMS), DMS)
+
+fresh_game(add_on="randomizer", randomizer_unreserved=[str(ASKER)])
+ok, _, err = run("coop_request", ASKER, nation="Germany")
+check("casino: Emergency Unreserve keeps them out", not ok and "Emergency Unreserve" in err, err)
+fresh_game(add_on="randomizer", casino_host_removed=[str(ASKER)])
+ok, _, err = run("coop_request", ASKER, nation="Germany")
+check("casino: a host removal keeps them out", not ok and "host removed" in err, err)
+
+fresh_game(add_on="randomizer")
+STORE[GAME]["reservations"]["Germany_coop"] = ASKER
+ok, _, err = run("coop_promote", OWNER, user_id=str(ASKER))
+check("casino: no Make main (the new main would roll again)",
+      not ok and "rolled the nation" in err and STORE[GAME]["reservations"]["Germany"] == OWNER, err)
+
+res = {"Germany_coop": ASKER, "Germany_coop_2": THIRD, "Italy": OTHER, "Italy_coop": OWNER}
+dropped = gm._drop_orphan_coops(res)
+check("casino: co-ops go with their main, others stay",
+      sorted(dropped) == sorted([(ASKER, "Germany"), (THIRD, "Germany")]) and res == {"Italy": OTHER, "Italy_coop": OWNER}, (dropped, res))
+
+
+async def _real_casino_save():
+    real_io, real_dm = gm._run_mysql_io, gm._dm_coop_dropped
+    seen = []
+
+    async def dm(tid, game, uid, nation):
+        seen.append((uid, nation))
+
+    gm._run_mysql_io, gm._dm_coop_dropped = _fake_mysql_io, dm
+    try:
+        WRITTEN.clear()
+        game = {"mode": "Roleplay", "add_on": "randomizer", "reservations": {"Germany_coop": ASKER, "France": OTHER}}
+        await REAL_SAVE("900000000000000003", game, rewrite_reservations=True)
+        await asyncio.sleep(0)
+        return seen
+    finally:
+        gm._run_mysql_io, gm._dm_coop_dropped = real_io, real_dm
+
+
+dropped_dms = asyncio.run(_real_casino_save())
+check("casino: the real save drops the co-op instead of promoting it", WRITTEN and WRITTEN[-1] == {"France": OTHER}, WRITTEN)
+check("casino: and tells them", dropped_dms == [(ASKER, "Germany")], dropped_dms)
+
 # --- Anti-spam (2026-11-12): asking, withdrawing and asking again DM'd the owner each time ---
 gm.save_single_game = save_single_game
 gm._roster_after_change = _nothing

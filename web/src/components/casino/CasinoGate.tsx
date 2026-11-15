@@ -87,15 +87,22 @@ export default function CasinoGate() {
           <>
             <Dices aria-hidden className="mx-auto h-9 w-9 text-brand-400" strokeWidth={1.5} />
             <h1 className="gm-title mt-3 text-[30px]">The Casino</h1>
-            <p className="mt-2 text-sm text-ink-300">
-              {KIND_TEXT[state.entry.kind]}
-              {state.entry.nation && (
-                <>
-                  {" "}
-                  Your nation: <b className="text-ink-100">{state.entry.nation}</b>.
-                </>
-              )}
-            </p>
+            {state.entry.coop_of ? (
+              <p className="mt-2 text-sm text-ink-300">
+                You&apos;re on the <b className="text-ink-100">{state.entry.nation}</b> co-op with{" "}
+                <b className="text-ink-100">{state.entry.coop_of}</b>, who rolled it.
+              </p>
+            ) : (
+              <p className="mt-2 text-sm text-ink-300">
+                {KIND_TEXT[state.entry.kind]}
+                {state.entry.nation && (
+                  <>
+                    {" "}
+                    Your nation: <b className="text-ink-100">{state.entry.nation}</b>.
+                  </>
+                )}
+              </p>
+            )}
             {state.entry.preview && (
               <p className="mt-3 text-xs text-ink-500">Preview mode: there&apos;s no Casino behind this sample game, so it doesn&apos;t go on.</p>
             )}
@@ -105,7 +112,8 @@ export default function CasinoGate() {
                   <MapIcon aria-hidden strokeWidth={1.75} /> View on the map
                 </Link>
                 <a href={state.entry.url} className="gm-btn gm-btn-secondary">
-                  <ExternalLink aria-hidden strokeWidth={1.75} /> View my receipt
+                  <ExternalLink aria-hidden strokeWidth={1.75} />{" "}
+                  {state.entry.coop_of ? `View ${state.entry.coop_of}'s receipt` : "View my receipt"}
                 </a>
               </div>
             ) : (

@@ -1884,13 +1884,132 @@ export default function MapViewer({
                     🚨 Can&apos;t play? Emergency Unreserve
                   </button>
                 )}
+                {/* Your co-op players (Casino: no "Make main", the run is yours). */}
+                {myCoops.length > 0 && selectedThread && (
+                  <div className="gm-plate flex w-full flex-col gap-1.5 bg-ink-950 px-3 py-2 sm:w-[340px]">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-400">Your co-op</p>
+                    {myCoops.map((entry) => {
+                      const id = String(entry.user_id);
+                      const name = reservationName(entry);
+                      const asking = kickAsk?.user_id === id;
+                      return (
+                        <div key={id} className="flex items-center gap-2 text-sm">
+                          <span className="min-w-0 flex-1 truncate text-ink-100">{asking ? `Take ${name} off your co-op?` : name}</span>
+                          {asking ? (
+                            <>
+                              <button type="button" onClick={() => setKickAsk(null)} className="gm-btn gm-btn-secondary h-7 px-2.5 text-xs">
+                                Keep
+                              </button>
+                              <button
+                                type="button"
+                                disabled={coop.kick.busy}
+                                onClick={() => {
+                                  setKickAsk(null);
+                                  void coop.kick.submit("DELETE", { thread_id: selectedThread, user_id: id });
+                                }}
+                                className="gm-btn gm-btn-danger h-7 px-2.5 text-xs"
+                              >
+                                Remove
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              type="button"
+                              disabled={coop.kick.busy}
+                              onClick={() => setKickAsk({ user_id: id, name, action: "remove" })}
+                              className="gm-btn gm-btn-secondary h-7 px-2.5 text-xs text-rose-200"
+                            >
+                              {coop.kick.busy ? "Removing…" : "Remove"}
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                    {coop.kick.state.phase === "error" && <p className="text-xs text-rose-300">{coop.kick.state.message}</p>}
+                  </div>
+                )}
+              </>
+            ) : myCoopOfSelected ? (
+              <>
+                <p className="gm-plate bg-ink-950 px-4 py-2 text-center text-xs font-semibold text-sky-100">
+                  You&apos;re on the {boardDisplayName(scenarioId, selected.tag, selected.name)} co-op with {ownerLabelText(ownerLabel)}.
+                </p>
+                <a href={`/casino/${encodeURIComponent(selectedThread ?? "")}`} className="gm-btn gm-btn-secondary h-12 w-full bg-ink-950 px-6 sm:w-auto">
+                  Open {ownerLabelText(ownerLabel)}&apos;s Casino receipt
+                </a>
+                <button
+                  type="button"
+                  className="gm-btn gm-btn-danger h-10 w-full bg-ink-950 px-6 text-sm sm:w-auto"
+                  disabled={reserving}
+                  onClick={handleUnreserve}
+                >
+                  {reserving ? "Leaving…" : "Leave co-op"}
+                </button>
               </>
             ) : (
-              <ReserveGlow>
-                <a href={`/casino/${encodeURIComponent(selectedThread ?? "")}`} className={RESERVE_BUTTON}>
-                  Roll at the Casino
-                </a>
-              </ReserveGlow>
+              <>
+                {!viewerHasNation && (
+                  <ReserveGlow>
+                    <a href={`/casino/${encodeURIComponent(selectedThread ?? "")}`} className={RESERVE_BUTTON}>
+                      Roll at the Casino
+                    </a>
+                  </ReserveGlow>
+                )}
+                {/* A taken major: ask its player for a co-op (they get the main's receipt). */}
+                {selectionKind === "coop" && !viewerHasNation && myCoopHere && (
+                  <div className="gm-plate flex w-full flex-col items-center gap-2 bg-ink-950 px-4 py-3 text-center sm:w-auto">
+                    <p className="text-sm font-semibold text-sky-100">
+                      Request sent to {ownerLabelText(ownerLabel)}. Waiting for them to accept.
+                    </p>
+                    <p className="text-[11px] text-ink-400">They got a Discord DM too. You&apos;ll see the answer here.</p>
+                    <button
+                      type="button"
+                      disabled={coop.ask.busy}
+                      onClick={() => void coop.ask.submit("DELETE", { thread_id: selectedThread })}
+                      className="gm-btn gm-btn-secondary h-8 px-3 text-xs"
+                    >
+                      {coop.ask.busy ? "Withdrawing…" : "Withdraw request"}
+                    </button>
+                  </div>
+                )}
+                {selectionKind === "coop" && !viewerHasNation && !myCoopHere &&
+                  (authUser ? (
+                    <button
+                      type="button"
+                      disabled={!selectedThread || coop.ask.busy}
+                      onClick={() =>
+                        void coop.ask.submit("POST", {
+                          thread_id: selectedThread,
+                          nation: selectedReservation?.slot_key ?? selected.name,
+                          tag: selected.tag,
+                        })
+                      }
+                      className="gm-btn h-12 w-full bg-ink-950 px-6 text-sky-200 hover:text-white sm:w-auto"
+                    >
+                      {coop.ask.busy ? "Sending…" : `Request co-op with ${ownerLabelText(ownerLabel)}`}
+                    </button>
+                  ) : (
+                    <a
+                      href={`/api/auth/login?next=${encodeURIComponent(selectedThread ? `/map?game=${selectedThread}` : "/map")}`}
+                      className="gm-btn h-12 w-full bg-ink-950 px-6 text-sky-200 hover:text-white sm:w-auto"
+                    >
+                      Log in to request co-op
+                    </a>
+                  ))}
+                {viewerHasNation && (
+                  <a href={`/casino/${encodeURIComponent(selectedThread ?? "")}`} className="gm-btn gm-btn-secondary h-11 w-full bg-ink-950 px-6 text-sm sm:w-auto">
+                    {mySlot && String(mySlot.slot_key).includes("_coop") ? "Open my main's Casino receipt" : "Open my Casino receipt"}
+                  </a>
+                )}
+              </>
+            )}
+            {selectionKind === "coop" && coop.ask.state.phase === "error" && (
+              <p className="gm-cut max-w-[360px] bg-ink-950 px-3 py-1.5 text-center text-xs text-rose-300 [--cut:6px]">{coop.ask.state.message}</p>
+            )}
+            {reserveMessage && (
+              <p className={`gm-cut bg-ink-950 px-3 py-1.5 text-xs [--cut:6px] ${reserveMessage.kind === "success" ? "text-emerald-300" : "text-rose-300"}`}>
+                {reserveMessage.text}
+              </p>
             )}
           </div>
         )}

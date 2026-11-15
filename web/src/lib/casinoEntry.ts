@@ -31,7 +31,15 @@ const RECEIPT_LINK_SEC = 3 * 24 * 3600;
 const TIER = { vip: 0, trusted: 1, verified: 2, none: 3 } as const;
 
 export type CasinoEntry =
-  | { status: "ok"; url: string; kind: "new" | "resume" | "receipt"; nation: string | null; preview?: boolean }
+  | {
+      status: "ok";
+      url: string;
+      kind: "new" | "resume" | "receipt";
+      nation: string | null;
+      preview?: boolean;
+      /** A co-op player: the main's name (the receipt is theirs). */
+      coop_of?: string | null;
+    }
   | { status: "not_casino"; map_url: string }
   | { status: "denied"; title: string; message: string; map_url: string | null; action?: { label: string; url: string } };
 
@@ -87,6 +95,8 @@ export async function casinoEntry(gameKey: string, userId: string, username: str
   // Already holding a nation: resume the run, or see the receipt (never a fresh roll).
   const [held] = await db.query<Row[]>("SELECT slot_key FROM game_reservations WHERE thread_id = ? AND user_id = ? LIMIT 1", [gameKey, userId]);
   const nation = held[0]?.slot_key ? String(held[0].slot_key) : null;
+  // A co-op never rolls: the run is the main's, and they get the main's receipt.
+  if (nation && nation.includes("_coop")) return coopEntry(db, gameKey, guildId, nation.split("_coop", 1)[0], map);
 
   const closed = flag(game.game_started) || game.status === "ended" || game.status === "cancelled";
   if (closed && !nation) {
@@ -140,6 +150,35 @@ export async function casinoEntry(gameKey: string, userId: string, username: str
   if (nation) kind = (await runOf(db, gameKey, userId)).finished ? "receipt" : "resume";
   const token = await writeToken(db, gameKey, userId, username, player, kind);
   return { status: "ok", kind, nation, url: casinoLink(token, gameKey) };
+}
+
+/**
+ * A co-op player's way in (2026-11-15): their main's Casino receipt once the
+ * main has finished rolling (the same read-only link the main gets), never a
+ * run of their own.
+ */
+async function coopEntry(db: Pool, gameKey: string, guildId: string, nation: string, map: string): Promise<CasinoEntry> {
+  const [owners] = await db.query<Row[]>(
+    "SELECT CAST(user_id AS CHAR) AS user_id FROM game_reservations WHERE thread_id = ? AND slot_key = ? LIMIT 1",
+    [gameKey, nation],
+  );
+  const mainId = owners[0]?.user_id ? String(owners[0].user_id) : null;
+  if (!mainId) {
+    return { status: "denied", title: "No main player", message: `Nobody holds ${nation} right now, so there's no receipt to show.`, map_url: map };
+  }
+  const main = await playerFlags(db, guildId, mainId);
+  const mainName = main.username ?? "Your main";
+  if (!(await runOf(db, gameKey, mainId)).finished) {
+    return {
+      status: "denied",
+      title: "Your main is still rolling",
+      message: `You're on the ${nation} co-op. ${mainName} hasn't finished rolling at the Casino yet: once they have, this opens their receipt.`,
+      map_url: map,
+    };
+  }
+  if (!(await casinoUp())) return { status: "denied", title: "The Casino is down", message: CASINO_DOWN_MESSAGE, map_url: map };
+  const token = await writeToken(db, gameKey, mainId, main.username, main, "receipt");
+  return { status: "ok", kind: "receipt", nation, coop_of: mainName, url: casinoLink(token, gameKey) };
 }
 
 /** A player's standing on the server, as the old Discord panel read it from their live roles. */
@@ -283,8 +322,18 @@ export async function casinoReceipt(
   if (!allowed) return { status: "denied", message: "Only this game's host, its co-hosts and Host Management can see players' receipts." };
 
   const [held] = await db.query<Row[]>("SELECT slot_key FROM game_reservations WHERE thread_id = ? AND user_id = ? LIMIT 1", [gameKey, playerId]);
-  const nation = held[0]?.slot_key ? String(held[0].slot_key) : null;
+  let nation = held[0]?.slot_key ? String(held[0].slot_key) : null;
   if (!nation) return { status: "denied", message: "This player has no nation in this game." };
+  // A co-op: their main's receipt (the run is the main's).
+  if (nation.includes("_coop")) {
+    nation = nation.split("_coop", 1)[0];
+    const [owners] = await db.query<Row[]>(
+      "SELECT CAST(user_id AS CHAR) AS user_id FROM game_reservations WHERE thread_id = ? AND slot_key = ? LIMIT 1",
+      [gameKey, nation],
+    );
+    if (!owners[0]?.user_id) return { status: "denied", message: `Nobody holds ${nation} right now.` };
+    playerId = String(owners[0].user_id);
+  }
   const run = await runOf(db, gameKey, playerId);
   if (!run.finished) {
     return { status: "ok", finished: false, nation, url: staticReceiptUrl(gameKey, playerId, nation, String(game.mode ?? ""), run.results) };

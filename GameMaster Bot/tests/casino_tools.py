@@ -122,6 +122,10 @@ async def nothing(*args, **kwargs):
     return None
 
 
+async def nothing_true(*args, **kwargs):
+    return True
+
+
 gm._read_games_fresh = read_games
 gm.save_single_game = save_game
 gm._run_mysql_io = run_mysql
@@ -195,7 +199,21 @@ async def main():
     ok, _, err = await gm._process_web_roster_assign(request("roster_assign", HOST, {"user_id": str(BOB), "kind": "nation", "nation": "France"}))
     check("player with a nation: refused, no move", ok is False and "remove them first" in (err or "") and "France" not in store[GAME]["reservations"], err)
     ok, _, err = await gm._process_web_roster_assign(request("roster_assign", HOST, {"user_id": str(ALICE), "kind": "filler", "nation": None, "filler_name": "x"}))
-    check("fillers / co-ops refused", ok is False and "only have nations" in (err or ""), err)
+    check("fillers refused", ok is False and "no fillers" in (err or ""), err)
+
+    # Co-ops (2026-11-15): a free player onto a taken major's co-op slot.
+    gm.is_user_authenticated = nothing_true
+    gm.get_major_nations_for_mode = lambda mode: ["Germany", "France", "Italy"]
+    gm._is_on_major_cooldown = lambda *args, **kwargs: False
+    reset()
+    ok, _, err = await gm._process_web_roster_assign(request("roster_assign", OTHER_HOST, {"user_id": str(ALICE), "kind": "coop", "nation": "Germany"}))
+    check("co-op: another game's host can't", ok is False and "Only this game's host" in (err or ""), err)
+    ok, _, err = await gm._process_web_roster_assign(request("roster_assign", HOST, {"user_id": str(BOB), "kind": "coop", "nation": "France"}))
+    check("co-op: a player with a nation isn't moved", ok is False and "remove them first" in (err or ""), err)
+    ok, result, err = await gm._process_web_roster_assign(request("roster_assign", HOST, {"user_id": str(ALICE), "kind": "coop", "nation": "Germany"}))
+    check("co-op: the host adds a free player as Germany's co-op",
+          ok is True and store[GAME]["reservations"].get("Germany_coop") == ALICE and store[GAME]["reservations"]["Germany"] == BOB,
+          (ok, result, err, store[GAME]["reservations"]))
 
     # Emergency Unreserve: the host is warned, then may add them back.
     reset()
