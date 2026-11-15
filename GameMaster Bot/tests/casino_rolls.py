@@ -142,7 +142,7 @@ check("a late joiner gets one reminder", len([1 for uid, label, _ in DMS if uid 
 fresh(3600 - 5)
 asyncio.run(watch(3600 - 5))
 alerts = [(uid, text) for uid, label, text in DMS if label == "casino host alert"]
-check("an hour before: the host and co-host get the list", sorted(uid for uid, _ in alerts) == [HOST, COHOST], alerts)
+check("an hour before: the host (not the co-host) gets the list", [uid for uid, _ in alerts] == [HOST], alerts)
 check("  naming the players and the nation", alerts and "P22 — Italy" in alerts[0][1] and "P23 — France" in alerts[0][1], alerts)
 DMS.clear()
 asyncio.run(watch(3600 - 65))

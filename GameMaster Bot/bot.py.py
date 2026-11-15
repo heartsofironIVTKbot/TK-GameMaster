@@ -27855,9 +27855,10 @@ async def _casino_roll_watch_game(key: str, left: int, now: int) -> None:
 
 
 async def _casino_alert_hosts(key: str, game: dict, text: str) -> None:
-    """DM the game's host and co-hosts."""
+    """DM the game's host (not the co-hosts)."""
     ids = []
-    for raw in [game.get("host_id"), *(game.get("co_hosts") or [])]:
+    # The host only (2026-11-15: co-hosts don't get these DMs).
+    for raw in [game.get("host_id")]:
         if str(raw or "").isdigit() and int(raw) not in ids:
             ids.append(int(raw))
     for uid in ids:
@@ -31730,7 +31731,8 @@ async def _process_web_filler_request(req: dict):
     await save_single_game(key, game, rewrite_reservations=False)
     gid = cur_gid()
     ids = []
-    for raw in [game.get("host_id"), *(game.get("co_hosts") or [])]:
+    # The host only (2026-11-15: co-hosts don't get these DMs).
+    for raw in [game.get("host_id")]:
         if str(raw or "").isdigit() and int(raw) not in ids:
             ids.append(int(raw))
     for host_id in ids:

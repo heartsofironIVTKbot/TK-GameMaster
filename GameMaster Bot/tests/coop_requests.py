@@ -375,7 +375,7 @@ fresh_game(add_on="randomizer", host_id=OWNER, co_hosts=[str(THIRD)], thread_nam
 ok, result, err = filler_req(ASKER)
 check("filler: a player without a nation can ask", ok and result == {"filler": "pending"}, (ok, result, err))
 hosts_dmed = sorted(uid for uid, _text, view in DMS if view is not None)
-check("filler: the host and co-host get Accept / Decline", hosts_dmed == sorted([OWNER, THIRD]), DMS)
+check("filler: only the host gets Accept / Decline", hosts_dmed == [OWNER], DMS)
 customs = [getattr(item, "custom_id", "") for _u, _t, view in DMS if view for item in view.children]
 check("filler: the buttons carry server, game and player", any(c.startswith("gmfill:") and c.endswith(f":accept:{GAME}:{ASKER}") for c in customs), customs)
 DMS.clear()
