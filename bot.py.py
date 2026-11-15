@@ -27622,6 +27622,283 @@ def _automatic_reminder_due(game: dict, now: int) -> bool:
     )
 
 
+def _game_reminder_text(game: dict, storage_key) -> str:
+    """The automatic one-hour game reminder (with the checksum)."""
+    start_ts = int(game.get("start_timestamp") or 0)
+    checksum = game.get("scheduled_checksum") or "not provided"
+    return (
+        f"⏰ **Game reminder:** your game starts <t:{start_ts}:F> (<t:{start_ts}:R>).\n"
+        f"🔢 **Checksum:** `{checksum}`\n\n"
+        "Please prepare your game and mods now. If you cannot attend, unreserve on the website "
+        f"as soon as possible: {_map_game_url(storage_key)}"
+    )
+
+
+# ————— Casino games: unfinished rolls (2026-11-15) —————
+# A player holding a nation in a Casino game who hasn't finished rolling (say
+# 3 of 5 rooms, then closed the tab) gets reminders by DM; the host and
+# co-hosts get the list an hour before; 30 minutes before the start they're
+# taken off the nation (only a host can bring them back), and the one-hour
+# reminder with the checksum waits until they've finished. Hosts see everyone
+# on the Games page's "Casino rolls" card (web lib/casinoRolls.ts, same rule).
+CASINO_ROLL_REMINDERS_BEFORE = (3 * 3600, 2 * 3600, 3600, 45 * 60)
+CASINO_HOST_ALERT_BEFORE = 3600
+CASINO_REMOVE_BEFORE = 30 * 60
+_CASINO_STAGE_NAMES = {
+    0: "the nation wheel",
+    1: "the Poker Lounge",
+    2: "the Doctrine room",
+    3: "the Build slots",
+    4: "the Roulette",
+}
+
+
+def _fetch_casino_runs_mysql(thread_id: str) -> dict:
+    """Every web run of a game: {user_id: {current_stage, status, receipt_dm_sent}}."""
+    conn = None
+    cur = None
+    try:
+        conn = _db_get_connection()
+        cur = conn.cursor(dictionary=True)
+        cur.execute(
+            "SELECT user_id, current_stage, status, receipt_dm_sent FROM web_sessions WHERE game_id = %s",
+            (str(thread_id),),
+        )
+        return {str(row["user_id"]): row for row in cur.fetchall() or []}
+    finally:
+        if cur is not None:
+            try:
+                cur.close()
+            except Exception:
+                pass
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+
+def _casino_run_finished(run, override) -> bool:
+    """Finished as the Casino counts it (the receipt), or a host grant's roll came back."""
+    if isinstance(override, dict) and override:
+        return True
+    if not run:
+        return False
+    try:
+        stage = int(run.get("current_stage") or 0)
+    except (TypeError, ValueError):
+        stage = 0
+    return (
+        str(run.get("status") or "").upper() == "FINALIZED"
+        or str(run.get("receipt_dm_sent") or "0") in ("1", "True", "true")
+        or stage >= 5
+    )
+
+
+async def _casino_unfinished(game_key: str, game: dict) -> list:
+    """[(user_id, nation, stage)] for each nation's player still to finish rolling."""
+    if not _is_casino_game_dict(game) or not _casino_rooms_on(game):
+        return []
+    mains = [
+        (str(nation), int(uid)) for nation, uid in (game.get("reservations") or {}).items()
+        if "_coop" not in str(nation) and not str(nation).startswith("_FILL_") and str(uid).isdigit()
+    ]
+    if not mains:
+        return []
+    runs = await _run_mysql_io(_fetch_casino_runs_mysql, str(game_key), label="casino runs") or {}
+    overrides = game.get("web_override_rolls") if isinstance(game.get("web_override_rolls"), dict) else {}
+    unfinished = []
+    for nation, uid in mains:
+        run = runs.get(str(uid))
+        if _casino_run_finished(run, overrides.get(str(uid))):
+            continue
+        try:
+            stage = int((run or {}).get("current_stage") or 0)
+        except (TypeError, ValueError):
+            stage = 0
+        unfinished.append((uid, nation, stage))
+    return unfinished
+
+
+def _casino_where(stage: int) -> str:
+    return _CASINO_STAGE_NAMES.get(int(stage or 0), "the Casino")
+
+
+@tasks.loop(seconds=60)
+async def casino_roll_watch_loop():
+    """Runs once per Casino server (_casino_roll_watch_for_guild)."""
+    await bot.wait_until_ready()
+    await _run_for_active_guilds(_casino_roll_watch_for_guild, "casino_roll_watch_loop")
+
+
+async def _casino_roll_watch_for_guild():
+    if cur_gid() not in CASINO_GUILD_IDS:
+        return
+    now = int(time.time())
+    games = await _load_games_resilient()
+    for key, snapshot in list(games.items()):
+        if not isinstance(snapshot, dict) or not _is_casino_game_dict(snapshot):
+            continue
+        start_ts = int(snapshot.get("start_timestamp") or 0)
+        if (
+            not start_ts or snapshot.get("game_started")
+            or snapshot.get("status") in ("ended", "cancelled")
+            or not snapshot.get("announcement_message_id")
+        ):
+            continue
+        left = start_ts - now
+        if left <= 0 or left > CASINO_ROLL_REMINDERS_BEFORE[0] + 60:
+            continue
+        try:
+            await _casino_roll_watch_game(str(key), left, now)
+        except Exception as e:
+            print(f"[WARN] casino roll watch failed for {key}: {e}")
+
+
+async def _casino_roll_watch_game(key: str, left: int, now: int) -> None:
+    games_data = await _read_games_fresh()
+    game = games_data.get(key)
+    if not isinstance(game, dict):
+        return
+    unfinished = await _casino_unfinished(key, game)
+    start_ts = int(game.get("start_timestamp") or 0)
+    deadline = start_ts - CASINO_REMOVE_BEFORE
+    changed = False
+
+    # 30 minutes before: the unfinished are taken off their nation.
+    if left <= CASINO_REMOVE_BEFORE:
+        if unfinished and not game.get("casino_unfinished_removed_at"):
+            await _casino_remove_unfinished(key, game, unfinished)
+            return
+        if not game.get("casino_unfinished_removed_at"):
+            game["casino_unfinished_removed_at"] = now
+            changed = True
+    else:
+        # Reminders by DM: the latest one that's due, once per player and step.
+        sent = game.get("casino_roll_reminders") if isinstance(game.get("casino_roll_reminders"), dict) else {}
+        due = [mark for mark in CASINO_ROLL_REMINDERS_BEFORE if left <= mark]
+        for uid, nation, stage in unfinished:
+            done = set(sent.get(str(uid)) or [])
+            if not due or str(due[-1]) in done:
+                continue
+            member = await _web_fetch_member(uid)
+            if member is not None:
+                await _dm_user_safe(
+                    member,
+                    content=(
+                        f"🎲 Your Casino rolls for **{_pretty_reservation_name(nation)}** aren't finished yet "
+                        f"(you stopped at {_casino_where(stage)}). Finish them by <t:{deadline}:t> "
+                        f"(<t:{deadline}:R>), or you'll be taken off the nation 30 minutes before the game.\n"
+                        f"Continue here: {_casino_game_url(key)}"
+                    ),
+                    label="casino roll reminder",
+                )
+            sent[str(uid)] = sorted(done | {str(mark) for mark in due})
+            changed = True
+        if changed:
+            game["casino_roll_reminders"] = sent
+
+        # An hour before: the host and co-hosts get the list.
+        if left <= CASINO_HOST_ALERT_BEFORE and not game.get("casino_unfinished_alert_at"):
+            game["casino_unfinished_alert_at"] = now
+            changed = True
+            if unfinished:
+                await _casino_alert_hosts(
+                    key, game,
+                    f"🎲 **{len(unfinished)} player{'s' if len(unfinished) != 1 else ''} haven't finished "
+                    f"their Casino rolls** for **{game.get('thread_name') or 'your game'}** "
+                    f"(starts <t:{start_ts}:R>), so their receipts aren't ready:\n"
+                    + "\n".join(
+                        f"• {_audit_who(uid) or uid} — {_pretty_reservation_name(nation)} (at {_casino_where(stage)})"
+                        for uid, nation, stage in unfinished
+                    )
+                    + f"\nThey're taken off their nation at <t:{deadline}:t> if they don't finish. "
+                    f"Everyone's rolls and receipts: {_game_control_url(key)}",
+                )
+
+    # The one-hour reminder (checksum) for players who finished after it went out.
+    if game.get("automatic_reminder_sent_at"):
+        unfinished_ids = {uid for uid, _n, _s in unfinished}
+        attempted = {int(u) for u in game.get("automatic_reminder_dm_ids", []) if str(u).isdigit()}
+        for raw_uid in {v for v in (game.get("reservations") or {}).values()}:
+            if not str(raw_uid).isdigit():
+                continue
+            uid = int(raw_uid)
+            if uid in attempted or uid in unfinished_ids:
+                continue
+            member = await _web_fetch_member(uid)
+            if member is not None:
+                await _dm_user_safe(member, content=_game_reminder_text(game, key), label="game reminder")
+            attempted.add(uid)
+            game["automatic_reminder_dm_ids"] = sorted(attempted)
+            changed = True
+
+    if changed:
+        await save_single_game(key, game, rewrite_reservations=False)
+
+
+async def _casino_alert_hosts(key: str, game: dict, text: str) -> None:
+    """DM the game's host and co-hosts."""
+    ids = []
+    for raw in [game.get("host_id"), *(game.get("co_hosts") or [])]:
+        if str(raw or "").isdigit() and int(raw) not in ids:
+            ids.append(int(raw))
+    for uid in ids:
+        member = await _web_fetch_member(uid)
+        if member is not None:
+            await _dm_user_safe(member, content=text, label="casino host alert")
+
+
+async def _casino_remove_unfinished(key: str, game: dict, unfinished: list) -> None:
+    """30 minutes before the start: unfinished players leave their nation
+    (their co-ops with them); only a host can bring them back."""
+    now = int(time.time())
+    res = game.get("reservations") or {}
+    removed = []
+    blocked = [str(x) for x in game.get("casino_host_removed") or []]
+    for uid, nation, stage in unfinished:
+        keys = [k for k, v in res.items() if str(v) == str(uid)]
+        if not keys:
+            continue
+        for k in keys:
+            del res[k]
+        if str(uid) not in blocked:
+            blocked.append(str(uid))
+        _host_unlock(game, uid)
+        removed.append((uid, nation, stage))
+    game["reservations"] = res
+    game["casino_host_removed"] = blocked
+    game["casino_unfinished_removed_at"] = now
+    await save_single_game(key, game, rewrite_reservations=True)
+    await _roster_after_change(key)
+    for uid, nation, stage in removed:
+        await _roster_drop_player_state(key, uid)
+        member = await _web_fetch_member(uid)
+        if member is not None:
+            await _dm_user_safe(
+                member,
+                content=(
+                    f"🚫 You were taken off **{_pretty_reservation_name(nation)}**: your Casino rolls weren't "
+                    "finished 30 minutes before the game. If you still want to play, ask the host to add you back."
+                ),
+                label="casino unfinished removed",
+            )
+    if removed:
+        await _casino_alert_hosts(
+            key, game,
+            f"🚫 **Taken off for unfinished Casino rolls** in **{game.get('thread_name') or 'your game'}**:\n"
+            + "\n".join(f"• {_audit_who(uid) or uid} — {_pretty_reservation_name(nation)}" for uid, nation, _s in removed)
+            + f"\nTheir nations are free again. You can add players back with the Host Tool: {_map_game_url(key)}",
+        )
+        audit_event(
+            "roster", "casino_unfinished_removed",
+            f"Removed {len(removed)} player(s) with unfinished Casino rolls"
+            + (f" from {game['thread_name']}" if game.get("thread_name") else ""),
+            game_id=key, details={"removed": [{"user_id": str(u), "nation": n} for u, n, _s in removed]},
+            source="bot",
+        )
+
+
 @tasks.loop(seconds=60)
 async def scheduled_game_reminder_loop():
     """Runs once per active server (_scheduled_game_reminder_loop_for_guild)."""
@@ -27653,13 +27930,15 @@ async def _scheduled_game_reminder_loop_for_guild():
             game["automatic_reminder_claimed_at"] = now
             await save_single_game(str(storage_key), game, rewrite_reservations=False)
 
-        checksum = game.get("scheduled_checksum") or "not provided"
-        message = (
-            f"⏰ **Game reminder:** your game starts <t:{start_ts}:F> (<t:{start_ts}:R>).\n"
-            f"🔢 **Checksum:** `{checksum}`\n\n"
-            "Please prepare your game and mods now. If you cannot attend, unreserve on the website "
-            f"as soon as possible: {_map_game_url(storage_key)}"
-        )
+        message = _game_reminder_text(game, storage_key)
+        # Casino games: players who haven't finished rolling don't get the
+        # checksum yet (casino_roll_watch_loop sends it once they finish).
+        unfinished = set()
+        if _is_casino_game_dict(game):
+            try:
+                unfinished = {uid for uid, _nation, _stage in await _casino_unfinished(str(storage_key), game)}
+            except Exception as e:
+                print(f"[WARN] Casino unfinished check failed for {storage_key}: {e}")
         seen = set()
         attempted = {
             int(uid) for uid in game.get("automatic_reminder_dm_ids", [])
@@ -27670,7 +27949,7 @@ async def _scheduled_game_reminder_loop_for_guild():
                 uid = int(raw_uid)
             except (TypeError, ValueError):
                 continue
-            if uid in seen or uid in attempted:
+            if uid in seen or uid in attempted or uid in unfinished:
                 continue
             seen.add(uid)
             member = guild.get_member(uid)
@@ -36267,6 +36546,10 @@ async def on_ready():
 
         if not scheduled_game_reminder_loop.is_running():
             scheduled_game_reminder_loop.start()
+            loops_started += 1
+
+        if not casino_roll_watch_loop.is_running():
+            casino_roll_watch_loop.start()
             loops_started += 1
 
         # Scheduled nation unlock loop — SKIPS Casino add-on games (web-
