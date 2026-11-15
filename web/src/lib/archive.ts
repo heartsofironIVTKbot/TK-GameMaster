@@ -20,6 +20,7 @@ import {
   type ArchiveTab,
 } from "@/lib/archiveTypes";
 import { HOME_GUILD_ID } from "@/lib/currentGuild";
+import { parseBigJson } from "@/lib/attendance";
 import { getPool } from "@/lib/db";
 import { lookupMembers } from "@/lib/memberDirectory";
 import { searchTerms } from "@/lib/rpArchiveTypes";
@@ -191,7 +192,47 @@ export function rawFromData(row: {
 }
 
 function fromRow(row: GameRow): RawArchiveGame {
-  return rawFromData({ ...row, data: obj(parseJson(row.data)) });
+  // parseBigJson: the bot stores present_ids and the like as numbers, and
+  // JSON.parse would round 18-digit Discord ids so they never match anyone.
+  let data: Record<string, unknown> = {};
+  try {
+    data = obj(row.data ? parseBigJson(row.data) : null);
+  } catch {
+    data = obj(parseJson(row.data));
+  }
+  return rawFromData({ ...row, data });
+}
+
+interface SlotRow extends RowDataPacket {
+  thread_id: string;
+  slot_key: string;
+  user_id: string;
+}
+
+/**
+ * Who held which nation. The bot keeps reservations in the game_reservations
+ * table and leaves them out of game_data (_split_game_for_mysql), so the
+ * JSON copy is only a fallback for games imported before that.
+ */
+async function attachSlots(games: RawArchiveGame[]): Promise<RawArchiveGame[]> {
+  if (games.length === 0) return games;
+  const [slots] = await getPool().query<SlotRow[]>(
+    `SELECT CAST(thread_id AS CHAR) AS thread_id, slot_key, CAST(user_id AS CHAR) AS user_id
+       FROM game_reservations WHERE thread_id IN (?)`,
+    [games.map((game) => game.id)],
+  );
+  const byGame = new Map<string, Record<string, string>>();
+  for (const slot of slots) {
+    if (!slot.user_id || slot.user_id === "0") continue;
+    const held = byGame.get(String(slot.thread_id)) ?? {};
+    held[String(slot.slot_key)] = String(slot.user_id);
+    byGame.set(String(slot.thread_id), held);
+  }
+  for (const game of games) {
+    const held = byGame.get(game.id);
+    if (held) game.reservations = held;
+  }
+  return games;
 }
 
 async function loadRawGames(): Promise<RawArchiveGame[]> {
@@ -200,7 +241,7 @@ async function loadRawGames(): Promise<RawArchiveGame[]> {
     const [rows] = await getPool().query<GameRow[]>(
       `${GAME_SELECT} WHERE ${GAME_WHERE} ORDER BY COALESCE(g.start_timestamp, 0) DESC LIMIT ${MAX_GAMES}`,
     );
-    return rows.map(fromRow);
+    return await attachSlots(rows.map(fromRow));
   } catch (error) {
     const code = (error as { code?: string } | null)?.code;
     if (code === "ER_NO_SUCH_TABLE" || code === "ER_BAD_FIELD_ERROR") return [];
@@ -217,7 +258,7 @@ export async function loadRawArchiveGame(id: string): Promise<RawArchiveGame | n
       LIMIT 1`,
     [id, id, id],
   );
-  return rows[0] ? fromRow(rows[0]) : null;
+  return rows[0] ? ((await attachSlots([fromRow(rows[0])]))[0] ?? null) : null;
 }
 
 interface ServerRow extends RowDataPacket {
