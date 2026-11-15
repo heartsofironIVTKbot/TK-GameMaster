@@ -735,7 +735,7 @@ CREATE TABLE IF NOT EXISTS schedule_slots (
 _WEB_SCHEDULE_REQUESTS_DDL = """
 CREATE TABLE IF NOT EXISTS web_schedule_requests (
     request_id VARCHAR(64) PRIMARY KEY,
-    action VARCHAR(16) NOT NULL,
+    action VARCHAR(64) NOT NULL,
     slot_id VARCHAR(64) NULL,
     host_id BIGINT NOT NULL,
     payload JSON NULL,
@@ -1769,6 +1769,23 @@ def _ensure_users_schema_mysql() -> list[str]:
 
         # Web Scheduling Calendar: request queue + host roster mirror.
         cursor.execute(_WEB_SCHEDULE_REQUESTS_DDL)
+        # 2026-11-15: `action` was VARCHAR(16), so the longer request names
+        # ("game_log_analysis", "casino_emergency_unreserve") failed to queue
+        # and the website said "Database unavailable". Widen older tables.
+        cursor.execute(
+            """
+            SELECT CHARACTER_MAXIMUM_LENGTH FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = %s AND TABLE_NAME = 'web_schedule_requests' AND COLUMN_NAME = 'action'
+            """,
+            (db_name,),
+        )
+        action_len = cursor.fetchone()
+        if action_len and action_len[0] is not None and int(action_len[0]) < 64:
+            try:
+                cursor.execute("ALTER TABLE web_schedule_requests MODIFY COLUMN action VARCHAR(64) NOT NULL")
+                print("✅ web_schedule_requests schema: `action` widened to VARCHAR(64)")
+            except Exception as col_err:
+                print(f"⚠️ web_schedule_requests schema: could not widen `action`: {col_err}")
         cursor.execute(_WEB_HOST_ROSTER_DDL)
         cursor.execute(_WEB_MEMBER_DIRECTORY_DDL)
         # Self-heal the profile-card columns on directories created before them.
