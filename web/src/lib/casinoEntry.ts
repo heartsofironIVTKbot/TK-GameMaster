@@ -10,6 +10,7 @@ import { ironLegionRequired, ironLegionVerifyUrl, parseRequireIronLegion } from 
 import { ironLegionMemberVerified } from "@/lib/ironlegionMember";
 import { memberRoleIds } from "@/lib/memberRoles";
 import { isSchedulerDemo } from "@/lib/scheduleStore";
+import { casinoRoomsOf } from "@/lib/lobbySnapshot";
 import { settingsOf } from "@/lib/serverSettings";
 
 /**
@@ -274,6 +275,105 @@ async function writeToken(
     ],
   );
   return token;
+}
+
+/** One nation's player in a Casino game, and how far they've rolled. */
+export interface CasinoRollRow {
+  user_id: string;
+  name: string;
+  nation: string;
+  state: "finished" | "rolling" | "not_started";
+  /** Where an unfinished run stopped ("Doctrine room"). */
+  where: string | null;
+}
+
+export type CasinoRolls =
+  | { status: "ok"; rows: CasinoRollRow[]; rooms_on: boolean; removal_at: number | null }
+  | { status: "denied"; message: string };
+
+const STAGE_NAMES: Record<number, string> = { 0: "Nation wheel", 1: "Poker Lounge", 2: "Doctrine room", 3: "Build slots", 4: "Roulette" };
+
+/** Finished as the bot counts it (_casino_run_finished): the receipt, or a host grant's roll came back. */
+function runFinished(row: Row | undefined, override: unknown): boolean {
+  if (override && typeof override === "object" && Object.keys(override as object).length > 0) return true;
+  if (!row) return false;
+  return String(row.status ?? "").toUpperCase() === "FINALIZED" || flag(row.receipt_dm_sent) || Number(row.current_stage ?? 0) >= 5;
+}
+
+/**
+ * Everyone's Casino rolls in a game (2026-11-15), for its host, co-hosts and
+ * Host Management: the Games page's "Casino rolls" card, in place of the old
+ * Casino's host page. Unfinished players are reminded by DM and taken off
+ * their nation 30 minutes before the start (bot casino_roll_watch_loop).
+ */
+export async function casinoRolls(gameKey: string, viewer: { id: string; isStaff: boolean; guildId: string | null }): Promise<CasinoRolls> {
+  if (isSchedulerDemo()) {
+    return {
+      status: "ok",
+      rooms_on: true,
+      removal_at: null,
+      rows: [
+        { user_id: "1", name: "Otto", nation: "Germany", state: "finished", where: null },
+        { user_id: "2", name: "Ivan", nation: "Soviet Union", state: "rolling", where: STAGE_NAMES[2] },
+        { user_id: "3", name: "Tom", nation: "France", state: "not_started", where: null },
+      ],
+    };
+  }
+  const db = getPool();
+  const [games] = await db.query<Row[]>(
+    "SELECT CAST(host_id AS CHAR) AS host_id, guild_id, game_data FROM games WHERE thread_id = ? LIMIT 1",
+    [gameKey],
+  );
+  const game = games[0];
+  const data = json(game?.game_data);
+  if (!game || !isCasinoGame(data)) return { status: "denied", message: "This isn't a Casino game." };
+  const guildId = game.guild_id ? String(game.guild_id) : HOME_GUILD_ID;
+  const coHosts = Array.isArray(data.co_hosts) ? data.co_hosts.map(String) : [];
+  const allowed = String(game.host_id ?? "") === viewer.id || coHosts.includes(viewer.id) || (viewer.isStaff && viewer.guildId === guildId);
+  if (!allowed) return { status: "denied", message: "Only this game's host, its co-hosts and Host Management can see everyone's rolls." };
+
+  const [held] = await db.query<Row[]>(
+    "SELECT slot_key, CAST(user_id AS CHAR) AS user_id FROM game_reservations WHERE thread_id = ?",
+    [gameKey],
+  );
+  const mains = held.filter((row) => {
+    const slot = String(row.slot_key ?? "");
+    return slot && !slot.includes("_coop") && !slot.startsWith("_FILL_");
+  });
+  const ids = mains.map((row) => String(row.user_id));
+  const [sessions] = await db.query<Row[]>(
+    "SELECT CAST(user_id AS CHAR) AS user_id, current_stage, status, receipt_dm_sent FROM web_sessions WHERE game_id = ?",
+    [gameKey],
+  );
+  const runs = new Map(sessions.map((row) => [String(row.user_id), row]));
+  const names = new Map<string, string>();
+  if (ids.length) {
+    const [members] = await db.query<Row[]>(
+      `SELECT CAST(user_id AS CHAR) AS user_id, display_name, username FROM web_member_directory
+        WHERE guild_id = ? AND user_id IN (${ids.map(() => "?").join(",")})`,
+      [guildId, ...ids],
+    );
+    for (const member of members) names.set(String(member.user_id), String(member.display_name || member.username || member.user_id));
+  }
+  const overrides = data.web_override_rolls && typeof data.web_override_rolls === "object" ? (data.web_override_rolls as Record<string, unknown>) : {};
+  const roomsOn = casinoRoomsOf(data).casino_rooms.length > 0;
+  const rows: CasinoRollRow[] = mains.map((row) => {
+    const id = String(row.user_id);
+    const run = runs.get(id);
+    const finished = !roomsOn || runFinished(run, overrides[id]);
+    const stage = Number(run?.current_stage ?? 0);
+    return {
+      user_id: id,
+      name: names.get(id) ?? id,
+      nation: String(row.slot_key),
+      state: finished ? "finished" : run ? "rolling" : "not_started",
+      where: finished || !run ? null : (STAGE_NAMES[stage] ?? null),
+    };
+  });
+  const order = { not_started: 0, rolling: 1, finished: 2 } as const;
+  rows.sort((a, b) => order[a.state] - order[b.state] || a.name.localeCompare(b.name));
+  const start = Number(data.start_timestamp ?? 0);
+  return { status: "ok", rows, rooms_on: roomsOn, removal_at: start > 0 ? start - 30 * 60 : null };
 }
 
 export type CasinoReceipt =

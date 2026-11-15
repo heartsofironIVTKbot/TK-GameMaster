@@ -40,6 +40,7 @@ import ChatLogCard from "./ChatLogCard";
 import DraftCard from "./DraftCard";
 import HotJoinCard from "./HotJoinCard";
 import CasinoFallbackCard from "./CasinoFallbackCard";
+import CasinoRollsCard from "./CasinoRollsCard";
 import LateJoinCard from "./LateJoinCard";
 import MessagePlayersCard from "./MessagePlayersCard";
 import RemindersCard from "./RemindersCard";
@@ -321,6 +322,7 @@ export default function GameControlPanel({
           {game.phase === "announced" && game.add_on === "randomizer" && (
             <CasinoFallbackCard game={game} onChanged={refreshAll} />
           )}
+          {game.phase === "announced" && game.add_on === "randomizer" && game.can_manage && <CasinoRollsCard game={game} />}
           {game.phase === "announced" && (
             <StartGameForm
               game={game}

@@ -342,7 +342,7 @@ async function snapshotDraft(
 const CASINO_ROOM_KEYS = ["ideology", "path", "doctrine", "build", "achievements"];
 
 /** A Casino game's rooms that are on (the bot's synced host_settings, else the setup's casino_settings). */
-function casinoRoomsOf(gameData: { host_settings?: unknown; casino_settings?: unknown }): { casino_rooms: string[]; casino_nation_roll: boolean } {
+export function casinoRoomsOf(gameData: { host_settings?: unknown; casino_settings?: unknown }): { casino_rooms: string[]; casino_nation_roll: boolean } {
   const boxesOf = (source: unknown) => {
     const boxes = source && typeof source === "object" ? (source as Record<string, unknown>).randomizers : null;
     return boxes && typeof boxes === "object" && Object.keys(boxes).length > 0 ? (boxes as Record<string, unknown>) : null;
