@@ -363,6 +363,50 @@ dropped_dms = asyncio.run(_real_casino_save())
 check("casino: the real save drops the co-op instead of promoting it", WRITTEN and WRITTEN[-1] == {"France": OTHER}, WRITTEN)
 check("casino: and tells them", dropped_dms == [(ASKER, "Germany")], dropped_dms)
 
+# --- Casino: asking to be a filler (2026-11-15) ---
+def filler_req(actor):
+    return asyncio.run(gm._process_web_filler_request({"action": "filler_request", "host_id": actor, "payload": {"thread_id": GAME}}))
+
+
+gm.save_single_game = save_single_game
+gm._roster_after_change = _nothing
+gm._member_is_staff = lambda member: False
+fresh_game(add_on="randomizer", host_id=OWNER, co_hosts=[str(THIRD)], thread_name="Sunday RP")
+ok, result, err = filler_req(ASKER)
+check("filler: a player without a nation can ask", ok and result == {"filler": "pending"}, (ok, result, err))
+hosts_dmed = sorted(uid for uid, _text, view in DMS if view is not None)
+check("filler: the host and co-host get Accept / Decline", hosts_dmed == sorted([OWNER, THIRD]), DMS)
+customs = [getattr(item, "custom_id", "") for _u, _t, view in DMS if view for item in view.children]
+check("filler: the buttons carry server, game and player", any(c.startswith("gmfill:") and c.endswith(f":accept:{GAME}:{ASKER}") for c in customs), customs)
+DMS.clear()
+ok, result, _ = filler_req(ASKER)
+check("filler: asking again while it waits sends nothing new", ok and result == {"filler": "pending"} and not DMS, DMS)
+ok, _, err = filler_req(OTHER)
+check("filler: a player in the game can't ask", not ok and "already in this game" in err, err)
+
+ok, _, err = asyncio.run(gm._filler_decide(MEMBERS[OTHER], GAME, str(ASKER), True))
+check("filler: only a host decides", not ok and "co-hosts" in err, err)
+DMS.clear()
+ok, result, err = asyncio.run(gm._filler_decide(MEMBERS[OWNER], GAME, str(ASKER), True))
+res = STORE[GAME]["reservations"]
+check("filler: accepting puts them on the game as a filler",
+      ok and result.get("filler") == "approved" and res.get(result.get("slot_key")) == ASKER and result["slot_key"].startswith("_FILL_"),
+      (ok, result, err, res))
+check("filler: they're told", any(uid == ASKER and "filler" in text for uid, text, _ in DMS), DMS)
+ok, _, err = asyncio.run(gm._filler_decide(MEMBERS[THIRD], GAME, str(ASKER), True))
+check("filler: a second answer does nothing", not ok and "isn't waiting" in err, err)
+
+fresh_game(add_on="randomizer", host_id=OWNER)
+filler_req(ASKER)
+DMS.clear()
+ok, result, _ = asyncio.run(gm._filler_decide(MEMBERS[OWNER], GAME, str(ASKER), False))
+check("filler: declining tells them and adds no one",
+      ok and result == {"filler": "declined"} and ASKER not in STORE[GAME]["reservations"].values()
+      and any(uid == ASKER and "declined" in text for uid, text, _ in DMS), (result, DMS))
+fresh_game(host_id=OWNER)
+ok, _, err = filler_req(ASKER)
+check("filler: only Casino games", not ok and "Casino games" in err, err)
+
 # --- Anti-spam (2026-11-12): asking, withdrawing and asking again DM'd the owner each time ---
 gm.save_single_game = save_single_game
 gm._roster_after_change = _nothing

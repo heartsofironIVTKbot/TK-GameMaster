@@ -1,5 +1,6 @@
 import { casinoEntry } from "@/lib/casinoEntry";
 import { DatabaseConfigError } from "@/lib/db";
+import { getHostStatus } from "@/lib/hostAuth";
 import { DEMO_HOST, isSchedulerDemo } from "@/lib/scheduleStore";
 import { getSession } from "@/lib/session";
 
@@ -12,7 +13,7 @@ import { getSession } from "@/lib/session";
  */
 const GAME_KEY_RE = /^[A-Za-z0-9_-]{1,64}$/;
 
-export async function GET(_request: Request, { params }: { params: Promise<{ game: string }> }) {
+export async function GET(request: Request, { params }: { params: Promise<{ game: string }> }) {
   const { game } = await params;
   if (!GAME_KEY_RE.test(game)) return Response.json({ status: "denied", title: "Not a game", message: "This link isn't a game.", map_url: null }, { status: 400 });
   const user = isSchedulerDemo()
@@ -20,7 +21,13 @@ export async function GET(_request: Request, { params }: { params: Promise<{ gam
     : await getSession().catch(() => null);
   if (!user) return Response.json({ status: "login" }, { status: 401, headers: { "Cache-Control": "no-store" } });
   try {
-    const entry = await casinoEntry(game, user.discord_id, user.username);
+    const status = await getHostStatus().catch(() => null);
+    const host = status?.status === "ok" ? status.host : null;
+    const entry = await casinoEntry(game, user.discord_id, user.username, {
+      isStaff: Boolean(host?.is_staff),
+      staffGuild: host?.guild_id ?? null,
+      roll: new URL(request.url).searchParams.get("roll") === "1",
+    });
     return Response.json(entry, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (error instanceof DatabaseConfigError) {

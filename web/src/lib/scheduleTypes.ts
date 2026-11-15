@@ -188,6 +188,7 @@ export type RequestAction =
   | "coop_decide"
   | "coop_kick"
   | "coop_promote"
+  | "filler_request"
   | "crash_report"
   | "feedback_rate"
   | "server_setup";

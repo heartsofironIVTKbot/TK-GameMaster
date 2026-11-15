@@ -11,6 +11,7 @@ import { ironLegionMemberVerified } from "@/lib/ironlegionMember";
 import { memberRoleIds } from "@/lib/memberRoles";
 import { isSchedulerDemo } from "@/lib/scheduleStore";
 import { casinoRoomsOf } from "@/lib/lobbySnapshot";
+import { moderationOptions } from "@/lib/playerIndex";
 import { settingsOf } from "@/lib/serverSettings";
 
 /**
@@ -42,10 +43,16 @@ export type CasinoEntry =
       coop_of?: string | null;
     }
   | { status: "not_casino"; map_url: string }
+  /** The game's host, a co-host or Host Management without a nation: the map, or roll. */
+  | { status: "host"; map_url: string }
+  /** Every nation is taken: ask to be a filler, or watch (and ask to co-op) on the map. */
+  | { status: "full"; map_url: string; filler: "none" | "pending" | "approved" | "declined" }
   | { status: "denied"; title: string; message: string; map_url: string | null; action?: { label: string; url: string } };
 
 interface GameRow extends RowDataPacket {
   thread_id: string;
+  host_id: string | null;
+  mode: string | null;
   guild_id: string | null;
   status: string | null;
   game_started: number | null;
@@ -71,8 +78,26 @@ export const mapUrlOf = (gameKey: string) => `/map?game=${encodeURIComponent(gam
 
 const casinoLink = (token: string, gameKey: string) => `${CASINO_URL}/?token=${token}&gameId=${encodeURIComponent(gameKey)}`;
 
-/** Where this player should go for this game, with every check the old panel made. */
-export async function casinoEntry(gameKey: string, userId: string, username: string): Promise<CasinoEntry> {
+/** Every playable nation of the game's mode is held (the Casino has nothing left to roll). */
+async function allNationsTaken(db: Pool, gameKey: string, guildId: string, mode: string, data: Record<string, unknown>): Promise<boolean> {
+  const list = (await moderationOptions(guildId).catch(() => null))?.mode_nations?.[mode];
+  if (!list) return false;
+  const hidden = new Set((Array.isArray(data.layout_disabled_nations) ? data.layout_disabled_nations : []).map(String));
+  const playable = [...list.majors, ...list.minors].filter((name) => !hidden.has(name));
+  if (playable.length === 0) return false;
+  const [rows] = await db.query<Row[]>("SELECT slot_key FROM game_reservations WHERE thread_id = ?", [gameKey]);
+  const taken = new Set(rows.map((row) => String(row.slot_key)));
+  return playable.every((name) => taken.has(name));
+}
+
+/** Where this player should go for this game, with every check the old panel made.
+ *  `viewer.roll`: a host chose to roll after all (skip the host choice). */
+export async function casinoEntry(
+  gameKey: string,
+  userId: string,
+  username: string,
+  viewer: { isStaff?: boolean; staffGuild?: string | null; roll?: boolean } = {},
+): Promise<CasinoEntry> {
   const map = mapUrlOf(gameKey);
   if (isSchedulerDemo()) {
     // Preview: no database or Casino to talk to; show where it would go.
@@ -80,7 +105,7 @@ export async function casinoEntry(gameKey: string, userId: string, username: str
   }
   const db = getPool();
   const [games] = await db.query<GameRow[]>(
-    "SELECT thread_id, guild_id, status, game_started, game_data FROM games WHERE thread_id = ? LIMIT 1",
+    "SELECT thread_id, CAST(host_id AS CHAR) AS host_id, mode, guild_id, status, game_started, game_data FROM games WHERE thread_id = ? LIMIT 1",
     [gameKey],
   );
   const game = games[0];
@@ -98,6 +123,15 @@ export async function casinoEntry(gameKey: string, userId: string, username: str
   const nation = held[0]?.slot_key ? String(held[0].slot_key) : null;
   // A co-op never rolls: the run is the main's, and they get the main's receipt.
   if (nation && nation.includes("_coop")) return coopEntry(db, gameKey, guildId, nation.split("_coop", 1)[0], map);
+  // A filler has nothing to roll: the host can swap them in for a no-show.
+  if (nation && nation.startsWith("_FILL_")) {
+    return {
+      status: "denied",
+      title: "You're a filler",
+      message: "You're on this game as a filler, so there's nothing to roll. If a player doesn't show up, the host can swap you in.",
+      map_url: map,
+    };
+  }
 
   const closed = flag(game.game_started) || game.status === "ended" || game.status === "cancelled";
   if (closed && !nation) {
@@ -122,6 +156,21 @@ export async function casinoEntry(gameKey: string, userId: string, username: str
       message: "A host took you off this game, so you can't roll again yourself. If they want you back, they can add you.",
       map_url: map,
     };
+  }
+
+  if (!nation) {
+    // The host, co-hosts and Host Management: the live map, or a roll of their own.
+    const coHosts = Array.isArray(data.co_hosts) ? data.co_hosts.map(String) : [];
+    const hosting =
+      String(game.host_id ?? "") === userId || coHosts.includes(userId) || (Boolean(viewer.isStaff) && viewer.staffGuild === guildId);
+    if (hosting && !viewer.roll) return { status: "host", map_url: map };
+    // Nothing left to roll: a filler spot, or the map (co-op requests are there).
+    if (await allNationsTaken(db, gameKey, guildId, String(game.mode ?? ""), data)) {
+      const requests = data.filler_requests && typeof data.filler_requests === "object" ? (data.filler_requests as Record<string, unknown>) : {};
+      const mine = requests[userId] && typeof requests[userId] === "object" ? String((requests[userId] as Record<string, unknown>).status ?? "") : "";
+      const filler = mine === "pending" || mine === "approved" || mine === "declined" ? mine : "none";
+      return { status: "full", map_url: map, filler };
+    }
   }
 
   const player = await playerFlags(db, guildId, userId);

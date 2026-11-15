@@ -31666,6 +31666,188 @@ class CoopRequestButton(discord.ui.DynamicItem[discord.ui.Button],
         await _disable_message_buttons(interaction.message, note=f"-# {note}")
 
 
+# ————— Casino games: asking to be a filler (2026-11-15) —————
+# When every nation is taken, GameMaster's /casino/<game> offers "Request a
+# filler spot": the host and co-hosts get a DM with Accept / Decline; an
+# accepted player goes on the game as a filler (they can later be swapped
+# in for a no-show with the Host Tool).
+FILLER_REQUEST_COOLDOWN_SEC = 10 * 60
+
+
+def _filler_requests(game) -> dict:
+    requests = game.get("filler_requests")
+    return requests if isinstance(requests, dict) else {}
+
+
+def _filler_problem(game: dict, uid: str) -> str | None:
+    if game.get("status") in ("ended", "cancelled"):
+        return "❌ This game has already ended."
+    if game.get("game_started"):
+        return "❌ The game has already started: ask the host directly."
+    if not _is_casino_game_dict(game):
+        return "❌ Filler requests are for Casino games."
+    if _roster_slot_of(game.get("reservations") or {}, uid):
+        return "ℹ️ You're already in this game."
+    if uid in {str(x) for x in game.get("randomizer_unreserved") or []} | {str(x) for x in game.get("casino_host_removed") or []}:
+        return "❌ You left or were taken off this game, so only a host can bring you back."
+    return None
+
+
+def _filler_slot_key(res: dict, name: str) -> str:
+    base = "_FILL_" + ("".join(ch if ch.isalnum() else "_" for ch in name).strip("_")[:30] or "Filler")
+    if base not in res:
+        return base
+    return next(f"{base}_{i}" for i in range(2, 100) if f"{base}_{i}" not in res)
+
+
+async def _process_web_filler_request(req: dict):
+    payload = req.get("payload") or {}
+    thread_id = str(payload.get("thread_id") or "").strip()
+    if not thread_id.isdigit():
+        return False, None, "❌ Invalid game."
+    actor = await _web_fetch_member(int(req.get("host_id") or 0))
+    if actor is None:
+        return False, None, "❌ You need to be in the server to do that."
+    games_data = await _read_games_fresh()
+    storage_key, game = _find_game_entry(games_data, thread_id)
+    if not game:
+        return False, None, "❌ This game no longer exists."
+    key = str(storage_key or thread_id)
+    uid = str(actor.id)
+    problem = _filler_problem(game, uid)
+    if problem:
+        return False, None, problem
+    requests = _filler_requests(game)
+    now = int(time.time())
+    entry = requests.get(uid) or {}
+    if entry.get("status") == "pending":
+        return True, {"filler": "pending"}, None
+    if now - int(entry.get("ts") or 0) < FILLER_REQUEST_COOLDOWN_SEC:
+        wait = FILLER_REQUEST_COOLDOWN_SEC - (now - int(entry.get("ts") or 0))
+        return False, None, f"⏳ You asked a moment ago: try again in {max(1, wait // 60)} minutes."
+    requests[uid] = {"status": "pending", "ts": now, "name": actor.display_name}
+    game["filler_requests"] = requests
+    await save_single_game(key, game, rewrite_reservations=False)
+    gid = cur_gid()
+    ids = []
+    for raw in [game.get("host_id"), *(game.get("co_hosts") or [])]:
+        if str(raw or "").isdigit() and int(raw) not in ids:
+            ids.append(int(raw))
+    for host_id in ids:
+        host = await _web_fetch_member(host_id)
+        if host is None:
+            continue
+        view = discord.ui.View(timeout=None)
+        view.add_item(FillerRequestButton(gid, "accept", key, uid))
+        view.add_item(FillerRequestButton(gid, "decline", key, uid))
+        await _dm_user_safe(
+            host,
+            content=(
+                f"🧩 **{actor.display_name}** asks to be a **filler** in **{game.get('thread_name') or 'your Casino game'}** "
+                f"(every nation is taken). Lobby: {_map_game_url(key)}"
+            ),
+            view=view,
+            label="filler request",
+        )
+    audit_event(
+        "roster", "filler_requested",
+        f"{actor.display_name} asked to be a filler" + (f" in {game['thread_name']}" if game.get("thread_name") else ""),
+        actor_id=actor.id, actor_name=actor.display_name, game_id=key, source="web",
+    )
+    return True, {"filler": "pending"}, None
+
+
+async def _filler_decide(actor, key: str, user_id: str, approve: bool):
+    games_data = await _read_games_fresh()
+    storage_key, game = _find_game_entry(games_data, key)
+    if not game:
+        return False, None, "❌ This game no longer exists."
+    key = str(storage_key or key)
+    if not _can_manage_casino_game(actor, game):
+        return False, None, _CASINO_TOOL_REFUSAL
+    requests = _filler_requests(game)
+    entry = requests.get(str(user_id))
+    if not entry or entry.get("status") != "pending":
+        return False, None, "ℹ️ That request isn't waiting any more (another host may have answered)."
+    now = int(time.time())
+    target = await _web_fetch_member(int(user_id))
+    if not approve:
+        entry.update(status="declined", decided_at=now, by=str(actor.id))
+        game["filler_requests"] = requests
+        await save_single_game(key, game, rewrite_reservations=False)
+        if target is not None:
+            await _dm_user_safe(target, content=f"🚫 The host declined your filler request for **{game.get('thread_name') or 'the game'}**.", label="filler declined")
+        return True, {"filler": "declined"}, None
+    problem = _filler_problem(game, str(user_id)) if target is not None else "❌ That player is no longer in the server."
+    if problem:
+        entry.update(status="failed", decided_at=now, by=str(actor.id))
+        game["filler_requests"] = requests
+        await save_single_game(key, game, rewrite_reservations=False)
+        return False, None, problem.replace("You're already", "They're already").replace("You left", "They left")
+    res = game.get("reservations") or {}
+    slot = _filler_slot_key(res, target.display_name)
+    res[slot] = int(user_id)
+    game["reservations"] = res
+    entry.update(status="approved", decided_at=now, by=str(actor.id), slot=slot)
+    game["filler_requests"] = requests
+    await save_single_game(key, game, rewrite_reservations=True)
+    await _roster_after_change(key)
+    await _dm_user_safe(
+        target,
+        content=(
+            f"✅ **{actor.display_name}** put you down as a **filler** in **{game.get('thread_name') or 'the game'}**. "
+            f"If a player doesn't show up, the host can swap you in. Lobby: {_map_game_url(key)}"
+        ),
+        label="filler accepted",
+    )
+    audit_event(
+        "roster", "filler_accepted",
+        f"{actor.display_name} accepted {target.display_name} as a filler" + (f" in {game['thread_name']}" if game.get("thread_name") else ""),
+        actor_id=actor.id, actor_name=actor.display_name, target_id=int(user_id), target_name=target.display_name,
+        game_id=key, details={"slot": slot}, source="web",
+    )
+    return True, {"filler": "approved", "slot_key": slot}, None
+
+
+class FillerRequestButton(discord.ui.DynamicItem[discord.ui.Button],
+                          template=r"gmfill:(?P<gid>\d+):(?P<action>accept|decline):(?P<key>\d+):(?P<user>\d+)"):
+    """Restart-proof Accept / Decline on the filler request DM."""
+
+    def __init__(self, gid: int, action: str, key: str, user_id: str):
+        self.gid = int(gid)
+        self.action = action
+        self.key = str(key)
+        self.user_id = str(user_id)
+        accept = action == "accept"
+        super().__init__(discord.ui.Button(
+            label="Accept" if accept else "Decline",
+            emoji="✅" if accept else "🚫",
+            style=discord.ButtonStyle.success if accept else discord.ButtonStyle.danger,
+            custom_id=f"gmfill:{gid}:{action}:{key}:{user_id}",
+        ))
+
+    @classmethod
+    async def from_custom_id(cls, interaction, item, match, /):
+        return cls(int(match["gid"]), match["action"], match["key"], match["user"])
+
+    async def callback(self, interaction: discord.Interaction):
+        try:
+            await interaction.response.defer()
+        except Exception:
+            pass
+        with guild_scope(self.gid):
+            actor = await _web_fetch_member(interaction.user.id)
+            if actor is None:
+                ok, result, err = False, None, "❌ You need to be in the server to do that."
+            else:
+                ok, result, err = await _filler_decide(actor, self.key, self.user_id, self.action == "accept")
+        if ok:
+            note = "✅ Accepted: they're on the game as a filler." if (result or {}).get("filler") == "approved" else "🚫 Declined."
+        else:
+            note = err or "❌ Something went wrong."
+        await _disable_message_buttons(interaction.message, note=f"-# {note}")
+
+
 _CRASH_REPORTS_DDL = """
 CREATE TABLE IF NOT EXISTS crash_reports (
     report_id VARCHAR(32) NOT NULL PRIMARY KEY,
@@ -32042,6 +32224,8 @@ async def web_schedule_request_loop():
                 ok, result, err = await _process_web_hotjoin(req)
             elif action in COOP_WEB_ACTIONS:
                 ok, result, err = await _process_web_coop(req)
+            elif action == "filler_request":
+                ok, result, err = await _process_web_filler_request(req)
             elif action == "crash_report":
                 ok, result, err = await _process_web_crash_report(req)
             elif action == "feedback_rate":
@@ -36460,6 +36644,7 @@ async def on_ready():
     try:
         bot.add_dynamic_items(HotJoinButton)
         bot.add_dynamic_items(CoopRequestButton)
+        bot.add_dynamic_items(FillerRequestButton)
     except Exception as e:
         print(f"⚠️ Could not register hot-join buttons: {e}")
     # Old crash report panels (they now link to the website).
