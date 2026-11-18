@@ -8,5 +8,5 @@ export const LEGAL = {
   /** Questions and data requests: a direct message on Discord. */
   discord: "nikala2003",
   /** When either page last changed in substance. */
-  updated: "8 November 2026",
+  updated: "18 November 2026",
 };

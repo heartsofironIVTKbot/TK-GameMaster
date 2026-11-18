@@ -26,7 +26,18 @@ const SECTIONS: LegalSection[] = [
         <ul>
           <li>the games, their settings and the nation each player reserved;</li>
           <li>
-            attendance: during a game the bot checks the game&apos;s voice channels a few times, on its own, to see who is there and who took part;
+            the server&apos;s member list: each member&apos;s Discord ID, name, avatar and roles, so hosts can find players on the website and the live map can
+            show who reserved what;
+          </li>
+          <li>
+            attendance: during a game the bot checks the game&apos;s voice channels a few times, on its own, to see who is there and who took part. For a
+            reserved player who isn&apos;t there, it also notes their Discord status at that moment (online, idle, do not disturb or offline), so hosts can tell
+            someone running late from someone who didn&apos;t come. Only the status is read, never your activity or custom status, and it never decides
+            attendance on its own;
+          </li>
+          <li>
+            game threads: when a game ends, its Game Thread (the messages, who wrote them, and links to files) is saved before the thread is deleted, so the
+            game&apos;s discussion can still be read;
           </li>
           <li>records hosts and staff give or log: commends, Merit, warnings, dishonours, game bans, no-shows and the reasons given;</li>
           <li>ratings you give a game, and requests to join a game that has already started;</li>
@@ -83,7 +94,11 @@ const SECTIONS: LegalSection[] = [
             icon, and each game&apos;s day, time and mode; never its players).
           </li>
           <li>
-            <b className="text-ink-100">Your server&apos;s hosts and staff:</b> its player records, attendance, tickets and audit log.
+            <b className="text-ink-100">Your server&apos;s members:</b> the saved Game Threads of its finished games, on the game&apos;s Archive page.
+          </li>
+          <li>
+            <b className="text-ink-100">Your server&apos;s hosts and staff:</b> its member list, player records, attendance (including the Discord statuses
+            noted), tickets and audit log.
           </li>
           <li>
             <b className="text-ink-100">You:</b> your profile and the closed tickets you took part in.
@@ -148,7 +163,7 @@ const SECTIONS: LegalSection[] = [
           within 30 days.
         </p>
         <p>
-          Deleting removes everything GameMaster holds about you: your reservations, attendance, records, ratings, tickets and the rest, on every server.
+          Deleting removes everything GameMaster holds about you: your reservations, attendance, records, ratings, tickets, your messages in saved Game Threads and the rest, on every server.
           Messages you posted in Discord itself are Discord&apos;s to keep or delete, not GameMaster&apos;s.
         </p>
         <p>Depending on where you live, you may also have the right to complain to your data protection authority.</p>
