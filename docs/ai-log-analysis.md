@@ -85,12 +85,21 @@ two word lists are kept equal by `web/tests/roleplay.test.mjs`.
 
 ## The model
 
-**Claude Haiku 5.5** (`claude-haiku-5-5`, Anthropic) since 18 November 2026,
-about $0.006 an analysis (a 30,000-token log in, ~6,000 tokens out). It
-replaced Google Gemini, whose free tier kept refusing with 429s (no Search
-without billing, about 20 requests a day on 3.8 Flash). **Claude Sonnet 5.5**
-(`claude-sonnet-5-5`) judges creativity more consistently at about 20 times
-the price: set `AI_MODEL` on the bot to switch without a code change.
+**Claude Haiku 5.5** (`claude-haiku-5-5`, Anthropic) since 18 November 2026.
+It replaced Google Gemini, whose free tier kept refusing with 429s. The first
+three real runs cost about $0.02 each (the console prints each run's
+tokens; the model's thinking counts as output). **Claude Sonnet 5.5**
+(`claude-sonnet-5-5`) judges creativity more consistently and writes better
+recaps, but its per-token price is 20 times Haiku's (roughly $0.40 an
+analysis, about $12 a month at one game a day), so it was kept off for now.
+Set `AI_MODEL` to `claude-sonnet-5-5` on the bot to switch without a code
+change.
+
+On Sonnet (and Opus / Fable) the request turns on Anthropic's server-side
+refusal fallback (`fallbacks: "default"`, beta `server-side-fallback-2026-07-01`):
+if a safety check wrongly declines a log (war talk is normal in HOI4
+roleplay), the same request is finished by a fallback model. Haiku has no
+fallback; a refusal there is shown to the host.
 
 The key is `ANTHROPIC_API_KEY` (console.anthropic.com, prepaid credits: when
 they run out, analyses stop with "out of credits" instead of billing more).

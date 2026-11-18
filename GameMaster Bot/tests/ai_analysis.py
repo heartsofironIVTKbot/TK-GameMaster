@@ -135,8 +135,16 @@ class FakeMessages:
 
 
 def fake_client(outcome):
+    """Both endpoints record into the same list; `beta` tells which was used."""
     messages = FakeMessages(outcome)
-    gm.client = type("Client", (), {"messages": messages})()
+    beta = FakeMessages(outcome)
+    beta.calls = messages.calls
+
+    def beta_stream(**kwargs):
+        return FakeMessages.stream(beta, **kwargs, beta=True)
+
+    beta.stream = beta_stream
+    gm.client = type("Client", (), {"messages": messages, "beta": type("Beta", (), {"messages": beta})()})()
     return messages
 
 
@@ -162,6 +170,19 @@ check("Structured output asks for the exact shape", sent["output_config"]["forma
 check("Effort is set explicitly", sent["output_config"]["effort"] == "medium")
 check("The prompt goes in one user message", sent["messages"] == [{"role": "user", "content": "prompt"}])
 check("No web search tool is sent", "tools" not in sent)
+real_model = gm.AI_MODEL
+gm.AI_MODEL = "claude-haiku-5-5"
+messages = fake_client(("end_turn", '{"ok": 1}'))
+asyncio.run(gm._ai_json("prompt", schema))
+check("Haiku: plain endpoint, no fallbacks (Haiku has none)",
+      "beta" not in messages.calls[0] and "fallbacks" not in messages.calls[0] and messages.calls[0]["model"] == "claude-haiku-5-5")
+gm.AI_MODEL = "claude-sonnet-5-5"
+messages = fake_client(("end_turn", '{"ok": 1}'))
+asyncio.run(gm._ai_json("prompt", schema))
+check("Sonnet (AI_MODEL): refusal fallback is on (beta endpoint, fallbacks default)",
+      messages.calls[0].get("beta") is True and messages.calls[0].get("fallbacks") == "default"
+      and messages.calls[0].get("betas") == [gm.AI_FALLBACK_BETA])
+gm.AI_MODEL = real_model
 
 check("Refusal is reported", "declined" in (ai_error(("refusal", "")) or ""))
 check("A cut-off answer is reported", "cut off" in (ai_error(("max_tokens", '{"ok"')) or ""))
