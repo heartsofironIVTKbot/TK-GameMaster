@@ -25,9 +25,9 @@ spec.loader.exec_module(gm)
 results = []
 
 
-def check(name, condition):
+def check(name, condition, detail=None):
     results.append((name, bool(condition)))
-    print(("PASS " if condition else "FAIL ") + name)
+    print(("PASS " if condition else "FAIL ") + name + ("" if condition or detail is None else f"  ({detail})"))
 
 
 # ---- Out-of-character one-liners --------------------------------------------
@@ -192,6 +192,75 @@ check("No credits left is explained", "out of credits" in (ai_error(api_error(
 check("A wrong model name is named", "AI_MODEL" in (ai_error(api_error(anthropic.NotFoundError, 404, "model not found")) or ""))
 check("Rate limiting is explained", "rate-limiting" in (ai_error(api_error(anthropic.RateLimitError, 429, "rate limited")) or ""))
 check("An Anthropic outage is explained", "trouble" in (ai_error(api_error(anthropic.InternalServerError, 500, "boom")) or ""))
+
+# ---- The reward rules (lowered 19 Nov 2026) -----------------------------------
+def reward(words, creativity, merit=True):
+    r = gm._ai_reward(words, creativity, 0, False, merit)
+    return (r["commends"], r["merit"])
+
+
+for words, creativity, expected, label in [
+    (149, 9, (0, 0), "149 words: nothing"),
+    (150, 4, (0, 2), "150 words, creativity 4: 2 Merit"),
+    (150, 3, (0, 0), "150 words, creativity 3: nothing"),
+    (300, 5, (0, 3), "300 words, creativity 5: 3 Merit"),
+    (300, 4, (0, 2), "300 words, creativity 4: 2 Merit (3 needs 5)"),
+    (450, 5, (0, 4), "450 words, creativity 5: 4 Merit"),
+    (600, 6, (1, 0), "600 words, creativity 6: 1 commend"),
+    (600, 5, (0, 4), "600 words, creativity 5: 4 Merit (a commend needs 6)"),
+    (1200, 7, (2, 0), "1,200 words, creativity 7: 2 commends"),
+    (1200, 6, (1, 0), "1,200 words, creativity 6: 1 commend (2 need 7)"),
+    (2500, 8, (3, 0), "2,500 words, creativity 8: 3 commends"),
+    (2500, 7, (2, 0), "2,500 words, creativity 7: 2 commends (3 need 8)"),
+]:
+    check(f"Rules: {label}", reward(words, creativity) == expected)
+check("Rules: Merit off, 600 words creativity 5 gets nothing", reward(600, 5, merit=False) == (0, 0))
+check("Rules: Merit off, 600 words creativity 6 gets 1 commend", reward(600, 6, merit=False) == (1, 0))
+check("Rules: why names the creativity needed", "needs 4/10" in gm._ai_reward(200, 3, 0, False, True)["why"])
+rules = gm._ai_rules()
+check("Rules for the website carry each tier's creativity", rules["merit_tiers"][-1] == [150, 2, 4] and rules["commend_tiers"][0] == [2500, 3, 8])
+
+# ---- Shared nations: who wrote what --------------------------------------------
+FRANCE_LOG = "\n".join([
+    "FRAnezemennn joined.",
+    "[19:20] (\x12FRAnezemennn): The bonapartes have been gaining more and more power in the Country.",
+    "[19:25] (\x12FRAnezemennn): We will fully take over the Benelux region and reintegrate them.",
+    "[19:30] (\x12FRA56789): France is not lost yet we will fight on!",
+    "[19:31] (\x12FRA56789): unpause",
+    "[19:32] (\x12GERWilhelm): The Reich offers peace.",
+])
+speakers = gm._ai_tag_speakers(FRANCE_LOG, "FRA")
+check("Speakers: in-game names under the tag, OOC and joins left out", speakers == {"nezemennn": 23, "56789": 9}, speakers)
+check("Names: 'nezemennn' matches Discord 'ne_zemen'", gm._ai_name_score("nezemennn", ["ne_zemen", "Ne Zemen"]) >= gm._AI_NAME_MATCH)
+check("Names: '56789' doesn't match 'Apap Noc'", gm._ai_name_score("56789", ["nie4321", "Apap Noc"]) < gm._AI_NAME_MATCH)
+france = [
+    {"tag": "FRA", "nation": "France", "user_id": "1", "role": "MAIN", "name": "nie4321", "names": ["nie4321", "Apap Noc"]},
+    {"tag": "FRA", "nation": "France", "user_id": "2", "role": "COOP", "name": "ne_zemen", "names": ["ne_zemen", "Ne Zemen"]},
+]
+coop = gm._ai_coop_speakers(FRANCE_LOG, france)
+check("Co-op: the co-op gets their own in-game name", coop[1]["speakers"] == ["nezemennn"], coop)
+check("Co-op: the unmatched name goes to the one player left", coop[0]["speakers"] == ["56789"], coop)
+check("Co-op: shares come from the words each wrote", abs(coop[1]["share"] - 23 / 32) < 1e-9 and abs(coop[0]["share"] - 9 / 32) < 1e-9, coop)
+three = france + [{"tag": "FRA", "nation": "France", "user_id": "3", "role": "COOP", "name": "zed", "names": ["zed_x"]}]
+coop3 = gm._ai_coop_speakers(FRANCE_LOG, three)
+check("Co-op: with two unplaced players the bot doesn't guess (AI decides)", coop3[0]["share"] is None and coop3[1]["speakers"] == ["nezemennn"], coop3)
+fra_stats = {"FRA": gm._authoritative_nation_rp_stats(FRANCE_LOG, "FRA"), "GER": gm._authoritative_nation_rp_stats(FRANCE_LOG, "GER")}
+fra_prompt = gm._ai_grading_prompt(FRANCE_LOG, france, fra_stats, {"mode": "Roleplay", "files": 1}, coop)
+check("Prompt: tells the AI which in-game names are the co-op's", "in-game name(s): nezemennn" in fra_prompt)
+check("Prompt: a nation can have any number of players", "any number of players" in fra_prompt)
+ai_rows = [  # the AI repeats its old mistake: all of France's lines to the main
+    {"tag": "FRA", "user_id": "1", "in_character_share": 1, "share_of_tag": 1, "creativity": 6, "toxicity": 0,
+     "low_effort": False, "left_early": False, "summary": "", "snippets": []},
+    {"tag": "FRA", "user_id": "2", "in_character_share": 1, "share_of_tag": 0, "creativity": 6, "toxicity": 0,
+     "low_effort": False, "left_early": False, "summary": "", "snippets": []},
+]
+assembled = gm._ai_assemble(france, fra_stats, ai_rows, True, coop)
+words_fra = fra_stats["FRA"]["rp_words"]
+check("Co-op: the bot's share wins over the AI's wrong one",
+      assembled[1]["meaningful_words"] == round(words_fra * 23 / 32) and assembled[0]["meaningful_words"] == round(words_fra * 9 / 32)
+      and assembled[1]["meaningful_words"] > assembled[0]["meaningful_words"] > 0,
+      [(p["user_id"], p["meaningful_words"]) for p in assembled])
+check("Co-op: Discord names aren't stored in the results", all("names" not in p for p in assembled))
 
 # ---- A full grading run -----------------------------------------------------
 answer = {

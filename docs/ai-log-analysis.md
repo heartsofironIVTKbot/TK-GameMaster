@@ -117,17 +117,31 @@ generous:
 
 | Reward | In-character words | Creativity |
 | --- | --- | --- |
-| 3 commends | 3,000+ | 7/10+ |
-| 2 commends | 1,500+ | 7/10+ |
-| 1 commend | 750+ | 7/10+ |
-| 4 Merit | 500+ | 6/10+ |
-| 3 Merit | 350+ | 6/10+ |
-| 2 Merit | 200+ | 6/10+ |
+| 3 commends | 2,500+ | 8/10+ |
+| 2 commends | 1,200+ | 7/10+ |
+| 1 commend | 600+ | 6/10+ |
+| 4 Merit | 450+ | 5/10+ |
+| 3 Merit | 300+ | 5/10+ |
+| 2 Merit | 150+ | 4/10+ |
+
+Lowered on 19 November 2026 (before: commends at 750 / 1,500 / 3,000 words
+with creativity 7+, Merit at 200 / 350 / 500 with 6+). Each tier now has its
+own creativity minimum: the best tier both numbers reach is given, so 2,500
+words at creativity 7 is 2 commends. Analyses made before keep the rules
+they were graded with.
 
 - **In-character words** = the nation's words × the share the AI judges to
   be real roleplay (diplomacy, speeches, news, story). Out-of-character chat
   ("lag?", "gg", game mechanics, coordinating) doesn't count. Main + co-op
   on one nation split it by who wrote what.
+- **Shared nations (any number of players):** the bot reads each in-game
+  name writing under the tag (`FRAnezemennn` → "nezemennn") and matches it to
+  the players' Discord names (username, display name, server nickname;
+  "nezemennn" is "ne_zemen"). A name that matches nobody goes to the one
+  player left without a match. When every name is placed, each player's share
+  is the bot's own word count, whatever the AI says, and the AI is told whose
+  lines are whose. Otherwise the AI gets the list of in-game names and
+  matches them itself (`_ai_coop_speakers` in `bot.py.py`).
 - **Nothing** for toxicity 4/10 or more, or for mostly one-liners / spam.
 - **Merit is only recommended where the server uses it** (server settings →
   Features → Hearts of Valor & Merit). With it off, only commends.
@@ -136,8 +150,8 @@ generous:
 Before (for comparison): 2 Merit from 51 words, 3 from 101, 4 from 176, a
 commend from 250, no quality bar.
 
-The numbers live in `bot.py.py` (`AI_COMMEND_TIERS`, `AI_MERIT_TIERS`,
-`AI_*_MIN_CREATIVITY`, `AI_TOXIC_FROM`) and are mirrored in
+The numbers live in `bot.py.py` (`AI_COMMEND_TIERS`, `AI_MERIT_TIERS` as
+(words, how many, creativity), `AI_TOXIC_FROM`) and are mirrored in
 `web/src/lib/aiAnalysisTypes.ts` for the page's explanation.
 
 ## For players

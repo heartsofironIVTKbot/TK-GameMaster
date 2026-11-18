@@ -1,6 +1,6 @@
 import { RATING_WINDOW_SEC } from "@/lib/archiveTypes";
 import { HOME_GUILD_ID } from "@/lib/currentGuild";
-import { DEFAULT_AI_RULES, type AiPlayerResult, type AiRules, type AiStatus, type GameAiAnalysis } from "@/lib/aiAnalysisTypes";
+import { DEFAULT_AI_RULES, type AiPlayerResult, type AiRules, type AiStatus, type AiTier, type GameAiAnalysis } from "@/lib/aiAnalysisTypes";
 import { chatLogSignature, listChatLogs } from "@/lib/chatLogs";
 import { getPool } from "@/lib/db";
 import {
@@ -389,15 +389,18 @@ const AI_STATUSES: AiStatus[] = ["rewarded", "minimal", "no_rp", "toxic", "ungra
 
 function aiRules(raw: unknown): AiRules {
   const rules = obj(raw);
-  const tiers = (value: unknown, fallback: [number, number][]) =>
-    Array.isArray(value) && value.every((tier) => Array.isArray(tier) && tier.length === 2)
-      ? (value as unknown[][]).map((tier) => [num(tier[0]), num(tier[1])] as [number, number])
+  const commendMin = num(rules.commend_min_creativity) || DEFAULT_AI_RULES.commend_min_creativity;
+  const meritMin = num(rules.merit_min_creativity) || DEFAULT_AI_RULES.merit_min_creativity;
+  // Older analyses stored [words, count] with one creativity minimum for every tier.
+  const tiers = (value: unknown, fallback: AiTier[], min: number): AiTier[] =>
+    Array.isArray(value) && value.length > 0 && value.every((tier) => Array.isArray(tier) && (tier.length === 2 || tier.length === 3))
+      ? (value as unknown[][]).map((tier) => [num(tier[0]), num(tier[1]), tier.length === 3 ? num(tier[2]) : min] as AiTier)
       : fallback;
   return {
-    commend_tiers: tiers(rules.commend_tiers, DEFAULT_AI_RULES.commend_tiers),
-    merit_tiers: tiers(rules.merit_tiers, DEFAULT_AI_RULES.merit_tiers),
-    commend_min_creativity: num(rules.commend_min_creativity) || DEFAULT_AI_RULES.commend_min_creativity,
-    merit_min_creativity: num(rules.merit_min_creativity) || DEFAULT_AI_RULES.merit_min_creativity,
+    commend_tiers: tiers(rules.commend_tiers, DEFAULT_AI_RULES.commend_tiers, commendMin),
+    merit_tiers: tiers(rules.merit_tiers, DEFAULT_AI_RULES.merit_tiers, meritMin),
+    commend_min_creativity: commendMin,
+    merit_min_creativity: meritMin,
     toxic_from: num(rules.toxic_from) || DEFAULT_AI_RULES.toxic_from,
   };
 }

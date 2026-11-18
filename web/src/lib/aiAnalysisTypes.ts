@@ -13,30 +13,35 @@ export const CHAT_LOG_MAX_BYTES = 3 * 1024 * 1024;
 /** Files per game (a rehost after a crash, a log saved in parts). */
 export const CHAT_LOG_MAX_FILES = 10;
 
+/** [in-character words, how many, creativity at least]. */
+export type AiTier = [number, number, number];
+
 export interface AiRules {
-  /** [in-character words, commends], highest first. */
-  commend_tiers: [number, number][];
-  /** [in-character words, Merit points], highest first. */
-  merit_tiers: [number, number][];
+  /** Commend tiers, best first. */
+  commend_tiers: AiTier[];
+  /** Merit tiers, best first. */
+  merit_tiers: AiTier[];
+  /** The lowest tier's creativity (analyses before per-tier minimums had one for all tiers). */
   commend_min_creativity: number;
   merit_min_creativity: number;
   /** Toxicity at or above this: no reward. */
   toxic_from: number;
 }
 
+/** Lowered 19 November 2026 (bot.py.py AI_COMMEND_TIERS / AI_MERIT_TIERS). */
 export const DEFAULT_AI_RULES: AiRules = {
   commend_tiers: [
-    [3000, 3],
-    [1500, 2],
-    [750, 1],
+    [2500, 3, 8],
+    [1200, 2, 7],
+    [600, 1, 6],
   ],
   merit_tiers: [
-    [500, 4],
-    [350, 3],
-    [200, 2],
+    [450, 4, 5],
+    [300, 3, 5],
+    [150, 2, 4],
   ],
-  commend_min_creativity: 7,
-  merit_min_creativity: 6,
+  commend_min_creativity: 6,
+  merit_min_creativity: 4,
   toxic_from: 4,
 };
 
@@ -124,35 +129,33 @@ export function aiReward(
   const words = meaningfulWords.toLocaleString("en-US");
   if (toxicity >= rules.toxic_from) return nothing(`Toxicity ${toxicity}/10 — no reward.`);
   if (lowEffort) return nothing("Mostly one-liners, spam or out-of-character chat — no reward.");
-  if (creativity >= rules.commend_min_creativity) {
-    for (const [min, count] of rules.commend_tiers) {
-      if (meaningfulWords >= min) return { commends: count, merit: 0, why: `${words} words of in-character RP, creativity ${creativity}/10.` };
+  const why = `${words} words of in-character RP, creativity ${creativity}/10.`;
+  for (const [min, count, minCreativity] of rules.commend_tiers) {
+    if (meaningfulWords >= min && creativity >= minCreativity) return { commends: count, merit: 0, why };
+  }
+  if (meritEnabled) {
+    for (const [min, count, minCreativity] of rules.merit_tiers) {
+      if (meaningfulWords >= min && creativity >= minCreativity) return { commends: 0, merit: count, why };
     }
   }
-  if (meritEnabled && creativity >= rules.merit_min_creativity) {
-    for (const [min, count] of rules.merit_tiers) {
-      if (meaningfulWords >= min) return { commends: 0, merit: count, why: `${words} words of in-character RP, creativity ${creativity}/10.` };
-    }
-  }
-  const lowest = meritEnabled ? rules.merit_tiers[rules.merit_tiers.length - 1][0] : rules.commend_tiers[rules.commend_tiers.length - 1][0];
-  if (meaningfulWords < lowest) {
-    return nothing(`${words} words of in-character RP — ${lowest.toLocaleString("en-US")} are needed for ${meritEnabled ? "Merit" : "a commend"}.`);
+  const tiers = meritEnabled ? rules.merit_tiers : rules.commend_tiers;
+  const [lowestWords, , lowestCreativity] = tiers[tiers.length - 1];
+  if (meaningfulWords < lowestWords) {
+    return nothing(`${words} words of in-character RP — ${lowestWords.toLocaleString("en-US")} are needed for ${meritEnabled ? "Merit" : "a commend"}.`);
   }
   return meritEnabled
-    ? nothing(`Creativity ${creativity}/10 — Merit needs ${rules.merit_min_creativity}/10.`)
-    : nothing(`Creativity ${creativity}/10 — a commend needs ${rules.commend_min_creativity}/10 (Merit is off on this server).`);
+    ? nothing(`Creativity ${creativity}/10 — Merit needs ${lowestCreativity}/10.`)
+    : nothing(`Creativity ${creativity}/10 — a commend needs ${lowestCreativity}/10 (Merit is off on this server).`);
 }
 
 /** Plain-language summary of the rules for hosts. */
 export function rulesSummary(rules: AiRules, meritEnabled: boolean): string[] {
   const words = (n: number) => n.toLocaleString("en-US");
-  const commends = [...rules.commend_tiers].reverse().map(([min, count]) => `${count} at ${words(min)}+`).join(", ");
-  const lines = [
-    `Commends: ${commends} words of in-character RP, with creativity ${rules.commend_min_creativity}/10 or more.`,
-  ];
+  const list = (tiers: AiTier[]) =>
+    [...tiers].reverse().map(([min, count, minCreativity]) => `${count} at ${words(min)}+ words (creativity ${minCreativity}+)`).join(", ");
+  const lines = [`Commends: ${list(rules.commend_tiers)} of in-character RP.`];
   if (meritEnabled) {
-    const merit = [...rules.merit_tiers].reverse().map(([min, count]) => `${count} at ${words(min)}+`).join(", ");
-    lines.push(`Merit: ${merit} words, with creativity ${rules.merit_min_creativity}/10 or more.`);
+    lines.push(`Merit: ${list(rules.merit_tiers)}.`);
   } else {
     lines.push("Merit is off on this server, so only commends are recommended.");
   }
