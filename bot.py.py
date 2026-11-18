@@ -153,7 +153,7 @@ def _build_db_config() -> dict:
 BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 GENAI_API_KEY = os.getenv("GENAI_API_KEY")
 # Override via GEMINI_MODEL if Google renames or retires it (docs/ai-log-analysis.md).
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
 
 
 # ==========================================================================
