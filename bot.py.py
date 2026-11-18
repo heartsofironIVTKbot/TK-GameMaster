@@ -28,7 +28,7 @@ import secrets
 import string
 import tempfile
 from dataclasses import dataclass
-from google import genai
+import anthropic
 from typing import List, Dict, Any, Union, Optional, Tuple, Sequence
 
 # Rocket Roulette Engine — backend randomizer (builds + doctrines).
@@ -151,9 +151,10 @@ def _build_db_config() -> dict:
 
 
 BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
-GENAI_API_KEY = os.getenv("GENAI_API_KEY")
-# Override via GEMINI_MODEL if Google renames or retires it (docs/ai-log-analysis.md).
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
+ANTHROPIC_API_KEY = (os.getenv("ANTHROPIC_API_KEY") or "").strip() or None
+# The Claude model for AI chat-log grading; AI_MODEL picks another (e.g.
+# claude-sonnet-5-5) without a code change (docs/ai-log-analysis.md).
+AI_MODEL = (os.getenv("AI_MODEL") or "").strip() or "claude-haiku-5-5"
 
 
 # ==========================================================================
@@ -182,8 +183,8 @@ HOST_LOG_WEBHOOK_URL = (os.getenv("HOST_LOG_WEBHOOK_URL") or "").strip() or None
 _DISCORD_WEBHOOK_HOSTS = ("discord.com", "discordapp.com")
 
 client = None
-if GENAI_API_KEY:
-    client = genai.Client(api_key=GENAI_API_KEY)
+if ANTHROPIC_API_KEY:
+    client = anthropic.AsyncAnthropic(api_key=ANTHROPIC_API_KEY)
 # Home server (Casino add-ons, AI log tools, the `users` table). Every server,
 # home included, is set up on the website. Required: startup refuses without it.
 GUILD_ID = _env_int("HOME_GUILD_ID", 0)
@@ -19387,7 +19388,7 @@ def _authoritative_nation_rp_stats(log_text: str, tag: str) -> dict:
 
 
 def _build_authoritative_log_audit(log_text: str, reservations: dict | None) -> str:
-    """Deterministic counts supplied to Gemini so it never estimates from a partial reading."""
+    """Deterministic counts supplied to the AI so it never estimates from a partial reading."""
     tags = set()
     for nation in (reservations or {}):
         if str(nation).startswith("_FILL_"):
@@ -19424,7 +19425,7 @@ def _build_authoritative_log_audit(log_text: str, reservations: dict | None) -> 
 
 
 def _enforce_authoritative_ai_counts(report: str, log_text: str) -> str:
-    """Correct Gemini's numeric claims and append a deterministic count to every tagged block."""
+    """Correct the AI's numeric claims and append a deterministic count to every tagged block."""
     if not report:
         return report
     pieces = report.split("🔹")
@@ -19516,7 +19517,7 @@ async def _find_game_for_commend(thread_ref) -> tuple[str | None, dict]:
 # exact word counts — the AI can't be generous. Merit is only recommended on
 # servers that use it (server settings → Features → Hearts of Valor & Merit).
 # ==========================================================================
-AI_GRADING_VERSION = 3  # 3: Gemini 3.8 Flash, Search, several log files, game summary
+AI_GRADING_VERSION = 4  # 3: Gemini 3.8 Flash, Search, several log files, game summary; 4: Claude (Haiku 5.5), no web search
 AI_COMMEND_TIERS = ((3000, 3), (1500, 2), (750, 1))  # in-character words → commends
 AI_MERIT_TIERS = ((500, 4), (350, 3), (200, 2))      # in-character words → Merit points
 AI_COMMEND_MIN_CREATIVITY = 7
@@ -19662,7 +19663,7 @@ def _ai_history_note(mode: str) -> str:
     )
 
 
-# What the AI must answer with (Gemini holds it to this exactly).
+# What the AI must answer with (Claude's structured output holds it to this exactly).
 _AI_RESPONSE_SCHEMA = {
     "type": "object",
     "properties": {
@@ -19687,10 +19688,12 @@ _AI_RESPONSE_SCHEMA = {
                     "tag", "user_id", "in_character_share", "share_of_tag", "creativity", "toxicity",
                     "low_effort", "left_early", "summary", "snippets",
                 ],
+                "additionalProperties": False,
             },
         },
     },
     "required": ["game_summary", "players"],
+    "additionalProperties": False,
 }
 
 
@@ -19717,9 +19720,8 @@ Be strict: rewards are for standout roleplay, not for taking part.
 THE GAME
 - Game mode: {mode}. {_ai_mode_note(mode)}
 {_ai_history_note(mode)}
-- You have Google Search. Use it, briefly, when it helps you understand what a player is roleplaying: an
-  unfamiliar focus path, an in-game event, a mod's lore or leader, or a country tag you don't know. Don't search
-  for things the log already makes clear.
+- When a player roleplays something you don't know (an unfamiliar focus path, a mod's lore or leader, a country
+  tag), judge it from what the log itself shows; never mark roleplay down because you don't recognise it.
 {files_note}
 HOW THE LOG LOOKS
 - Lines start with the country tag fused to the in-game name (e.g. `SOVNikoloza:`). The tag is the nation.
@@ -19783,68 +19785,58 @@ def _parse_ai_json(text: str):
     return None
 
 
-def _gemini_configs(schema: dict | None) -> list[tuple[str, dict]]:
-    """Request settings, best first: Google Search + the exact JSON shape; Search
-    alone (JSON from the prompt); the JSON shape alone. A model that refuses one
-    combination gets the next."""
-    search = {"tools": [{"google_search": {}}]}
-    shaped = {"response_mime_type": "application/json"}
-    if schema:
-        shaped["response_json_schema"] = schema
-    return [("search+schema", {**search, **shaped}), ("search", dict(search)), ("schema", shaped)]
+AI_MAX_TOKENS = 32000  # the grades + recap are a few thousand tokens; the rest is room for thinking
 
 
-# The settings that last worked (so a refused combination isn't retried every run).
-_gemini_config_ok: str | None = None
+class AIError(Exception):
+    """The AI couldn't answer; the message is safe to show a host."""
 
 
-def _gemini_refused_config(error: Exception) -> bool:
-    """Google said no to the request's settings (not overload, not the API key)."""
-    text = str(error).lower()
-    refused = "400" in text or "invalid_argument" in text or "not supported" in text or "unsupported" in text
-    return refused and "api key" not in text
+def _ai_error_text(error: Exception) -> str:
+    """A host-readable reason for a failed Claude request."""
+    if isinstance(error, anthropic.AuthenticationError):
+        return "the Anthropic API key was refused (check ANTHROPIC_API_KEY)"
+    if isinstance(error, anthropic.PermissionDeniedError):
+        return "the Anthropic API key isn't allowed to use this model"
+    if isinstance(error, anthropic.NotFoundError):
+        return f"the model '{AI_MODEL}' wasn't found (check AI_MODEL)"
+    if isinstance(error, anthropic.RateLimitError):
+        return "Anthropic is rate-limiting the bot; try again in a minute"
+    if isinstance(error, anthropic.APIStatusError):
+        message = str(getattr(error, "message", "") or error)
+        if "credit balance" in message.lower():
+            return "the Anthropic account is out of credits (top up in the Console)"
+        if error.status_code >= 500:
+            return "Anthropic's service is having trouble; try again in a few minutes"
+        return f"Anthropic refused the request: {message}"
+    if isinstance(error, anthropic.APIConnectionError):
+        return "couldn't reach Anthropic (network); try again"
+    return str(error)
 
 
-def _gemini_quota_error(error: Exception) -> bool:
-    """429 RESOURCE_EXHAUSTED. On a project without billing, Gemini 3+ answers
-    every request that uses Google Search this way (Search isn't in the free
-    tier), so it can mean "no Search here" rather than "out of quota"."""
-    text = str(error).lower()
-    return "429" in text or "resource_exhausted" in text
-
-
-async def _gemini_json(prompt: str, schema: dict | None = None) -> str:
-    """Ask Gemini for JSON (retries while it's overloaded). Raises on failure."""
-    global _gemini_config_ok
-    configs = _gemini_configs(schema)
-    if _gemini_config_ok:
-        configs.sort(key=lambda item: item[0] != _gemini_config_ok)
-    last = None
-    no_search = False
-    for name, config in configs:
-        if no_search and "tools" in config:
-            continue
-        if last is not None and _gemini_quota_error(last) and "tools" not in config:
-            print(f"[AI] Gemini quota error with Google Search, trying without it: {last}")
-        for attempt in range(3):
-            try:
-                response = await client.aio.models.generate_content(model=GEMINI_MODEL, contents=prompt, config=config)
-                _gemini_config_ok = name
-                return response.text or ""
-            except Exception as e:
-                last = e
-                text = str(e).lower()
-                if attempt < 2 and ("503" in text or "unavailable" in text or "overloaded" in text):
-                    await asyncio.sleep(2.0 * (2 ** attempt))
-                    continue
-                break
-        if "tools" in config and _gemini_quota_error(last):
-            no_search = True  # every other Search setting would get the same 429
-            continue
-        if not _gemini_refused_config(last):
-            raise last
-        print(f"[AI] Gemini refused the '{name}' settings, trying the next: {last}")
-    raise last
+async def _ai_json(prompt: str, schema: dict) -> str:
+    """Ask Claude for JSON in exactly `schema`'s shape (structured output).
+    The SDK retries rate limits, overloads and network errors itself. Raises
+    AIError with a host-readable reason on failure."""
+    try:
+        async with client.messages.stream(
+            model=AI_MODEL,
+            max_tokens=AI_MAX_TOKENS,
+            messages=[{"role": "user", "content": prompt}],
+            output_config={"effort": "medium", "format": {"type": "json_schema", "schema": schema}},
+        ) as stream:
+            response = await stream.get_final_message()
+    except anthropic.APIError as e:
+        raise AIError(_ai_error_text(e)) from e
+    if response.stop_reason == "refusal":
+        raise AIError("the AI declined to grade this log")
+    if response.stop_reason == "max_tokens":
+        raise AIError("the AI's answer was cut off (the log may be too long)")
+    text = "".join(block.text for block in response.content if block.type == "text")
+    usage = getattr(response, "usage", None)
+    if usage is not None:
+        print(f"[AI] {AI_MODEL}: {usage.input_tokens} tokens in, {usage.output_tokens} out")
+    return text
 
 
 def _ai_assemble(slots: list[dict], stats: dict, ai_players: list, merit_enabled: bool) -> list[dict]:
@@ -19910,7 +19902,7 @@ async def run_ai_log_analysis(log_text: str, reservations: dict | None, guild=No
     """Grade a chat log. Returns the analysis dict, or an error message (str).
     context: {"mode": the game mode, "files": how many log files were joined}."""
     if not client:
-        return "❌ AI is not configured. Missing GENAI_API_KEY."
+        return "❌ AI is not configured. Missing ANTHROPIC_API_KEY."
     if not (log_text or "").strip():
         return "❌ The chat log is empty."
     merit = _merit_enabled() if merit_enabled is None else bool(merit_enabled)
@@ -19919,9 +19911,9 @@ async def run_ai_log_analysis(log_text: str, reservations: dict | None, guild=No
         return "❌ Couldn't find any players in the log or the reservations."
     stats = {tag: _authoritative_nation_rp_stats(log_text, tag) for tag in {slot["tag"] for slot in slots}}
     try:
-        raw = await _gemini_json(_ai_grading_prompt(log_text, slots, stats, context), _AI_RESPONSE_SCHEMA)
+        raw = await _ai_json(_ai_grading_prompt(log_text, slots, stats, context), _AI_RESPONSE_SCHEMA)
     except Exception as e:
-        print(f"Gemini API Error: {e}")
+        print(f"[AI] Claude API error: {e!r}")
         return f"❌ The AI couldn't analyze the log: {e}"
     data = _parse_ai_json(raw)
     if not isinstance(data, dict) or not isinstance(data.get("players"), list):
@@ -19931,7 +19923,7 @@ async def run_ai_log_analysis(log_text: str, reservations: dict | None, guild=No
         "at": int(time.time()),
         "merit_enabled": merit,
         "rules": _ai_rules(),
-        "model": GEMINI_MODEL,
+        "model": AI_MODEL,
         "game_summary": str(data.get("game_summary") or "").strip()[:1200],
         "players": _ai_assemble(slots, stats, data["players"], merit),
     }
@@ -23346,7 +23338,7 @@ async def _process_web_game_log_analysis(req: dict):
     if not game.get("game_started") and str(game.get("status") or "").lower() != "ended":
         return False, None, "❌ The game hasn't started yet — upload the chat log once it's played."
     if not client:
-        return False, None, "❌ The AI isn't set up on this bot (GENAI_API_KEY is missing)."
+        return False, None, "❌ The AI isn't set up on this bot (ANTHROPIC_API_KEY is missing)."
     log = await _run_mysql_io(
         lambda: _load_game_chat_log_mysql([key, thread_id, game.get("lobby_thread_id"), game.get("original_thread_id")]),
         label="chat log read",
@@ -36863,7 +36855,7 @@ if __name__ == "__main__":
         )
     else:
         off = [label for label, value in (
-            ("AI chat-log grading (GENAI_API_KEY)", GENAI_API_KEY),
+            ("AI chat-log grading (ANTHROPIC_API_KEY)", ANTHROPIC_API_KEY),
             ("host log webhook (HOST_LOG_WEBHOOK_URL)", HOST_LOG_WEBHOOK_URL),
         ) if not value]
         if off:
