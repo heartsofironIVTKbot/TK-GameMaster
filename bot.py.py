@@ -153,7 +153,7 @@ def _build_db_config() -> dict:
 BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 ANTHROPIC_API_KEY = (os.getenv("ANTHROPIC_API_KEY") or "").strip() or None
 # The Claude model for AI chat-log grading; AI_MODEL picks another (e.g.
-# claude-sonnet-5-5) without a code change (docs/ai-log-analysis.md).
+# claude-sonnet-5-5, more careful, ~20x the price) without a code change (docs/ai-log-analysis.md).
 AI_MODEL = (os.getenv("AI_MODEL") or "").strip() or "claude-haiku-5-5"
 
 
@@ -19786,6 +19786,9 @@ def _parse_ai_json(text: str):
 
 
 AI_MAX_TOKENS = 32000  # the grades + recap are a few thousand tokens; the rest is room for thinking
+# Models that take Anthropic's server-side refusal fallback (Haiku doesn't).
+AI_FALLBACK_MODELS = {"claude-sonnet-5-5", "claude-opus-5-5", "claude-opus-5", "claude-fable-5-2", "claude-fable-5-1"}
+AI_FALLBACK_BETA = "server-side-fallback-2026-07-01"
 
 
 class AIError(Exception):
@@ -19818,13 +19821,20 @@ async def _ai_json(prompt: str, schema: dict) -> str:
     """Ask Claude for JSON in exactly `schema`'s shape (structured output).
     The SDK retries rate limits, overloads and network errors itself. Raises
     AIError with a host-readable reason on failure."""
+    request = dict(
+        model=AI_MODEL,
+        max_tokens=AI_MAX_TOKENS,
+        messages=[{"role": "user", "content": prompt}],
+        output_config={"effort": "medium", "format": {"type": "json_schema", "schema": schema}},
+    )
     try:
-        async with client.messages.stream(
-            model=AI_MODEL,
-            max_tokens=AI_MAX_TOKENS,
-            messages=[{"role": "user", "content": prompt}],
-            output_config={"effort": "medium", "format": {"type": "json_schema", "schema": schema}},
-        ) as stream:
+        if AI_MODEL in AI_FALLBACK_MODELS:
+            # A safety classifier wrongly declining a chat log (war talk is normal in
+            # HOI4 roleplay) is re-run on a fallback model inside the same request.
+            stream_ctx = client.beta.messages.stream(**request, betas=[AI_FALLBACK_BETA], fallbacks="default")
+        else:
+            stream_ctx = client.messages.stream(**request)
+        async with stream_ctx as stream:
             response = await stream.get_final_message()
     except anthropic.APIError as e:
         raise AIError(_ai_error_text(e)) from e
@@ -19835,7 +19845,7 @@ async def _ai_json(prompt: str, schema: dict) -> str:
     text = "".join(block.text for block in response.content if block.type == "text")
     usage = getattr(response, "usage", None)
     if usage is not None:
-        print(f"[AI] {AI_MODEL}: {usage.input_tokens} tokens in, {usage.output_tokens} out")
+        print(f"[AI] {getattr(response, 'model', None) or AI_MODEL}: {usage.input_tokens} tokens in, {usage.output_tokens} out")
     return text
 
 
