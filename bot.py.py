@@ -13,6 +13,7 @@ import mysql.connector
 import html
 import asyncio
 import collections.abc
+import difflib
 import concurrent.futures
 import contextvars
 import threading
@@ -19518,21 +19519,22 @@ async def _find_game_for_commend(thread_ref) -> tuple[str | None, dict]:
 # servers that use it (server settings → Features → Hearts of Valor & Merit).
 # ==========================================================================
 AI_GRADING_VERSION = 4  # 3: Gemini 3.8 Flash, Search, several log files, game summary; 4: Claude (Haiku 5.5), no web search
-AI_COMMEND_TIERS = ((3000, 3), (1500, 2), (750, 1))  # in-character words → commends
-AI_MERIT_TIERS = ((500, 4), (350, 3), (200, 2))      # in-character words → Merit points
-AI_COMMEND_MIN_CREATIVITY = 7
-AI_MERIT_MIN_CREATIVITY = 6
+# (in-character words, how many, creativity at least), best first. Mirrored in
+# web/src/lib/aiAnalysisTypes.ts DEFAULT_AI_RULES. Lowered 19 November 2026.
+AI_COMMEND_TIERS = ((2500, 3, 8), (1200, 2, 7), (600, 1, 6))  # → commends
+AI_MERIT_TIERS = ((450, 4, 5), (300, 3, 5), (150, 2, 4))      # → Merit points
 AI_TOXIC_FROM = 4                                    # toxicity at or above this: nothing
 AI_NO_RP_WORDS = 20                                  # fewer RP words than this: "0 RP"
 
 
 def _ai_rules() -> dict:
-    """The rules, as shown to hosts on the Games page."""
+    """The rules, as shown to hosts on the Games page. The *_min_creativity
+    fields (the lowest tier's) are for pages that predate per-tier minimums."""
     return {
-        "commend_tiers": [[words, count] for words, count in AI_COMMEND_TIERS],
-        "merit_tiers": [[words, count] for words, count in AI_MERIT_TIERS],
-        "commend_min_creativity": AI_COMMEND_MIN_CREATIVITY,
-        "merit_min_creativity": AI_MERIT_MIN_CREATIVITY,
+        "commend_tiers": [list(tier) for tier in AI_COMMEND_TIERS],
+        "merit_tiers": [list(tier) for tier in AI_MERIT_TIERS],
+        "commend_min_creativity": AI_COMMEND_TIERS[-1][2],
+        "merit_min_creativity": AI_MERIT_TIERS[-1][2],
         "toxic_from": AI_TOXIC_FROM,
     }
 
@@ -19561,23 +19563,21 @@ def _ai_reward(meaningful_words: int, creativity: int, toxicity: int, low_effort
         return nothing(f"Toxicity {toxicity}/10 — no reward.")
     if low_effort:
         return nothing("Mostly one-liners, spam or out-of-character chat — no reward.")
-    if creativity >= AI_COMMEND_MIN_CREATIVITY:
-        for words, count in AI_COMMEND_TIERS:
-            if meaningful_words >= words:
-                return {"commends": count, "merit": 0,
-                        "why": f"{meaningful_words:,} words of in-character RP, creativity {creativity}/10."}
-    if merit_enabled and creativity >= AI_MERIT_MIN_CREATIVITY:
-        for words, count in AI_MERIT_TIERS:
-            if meaningful_words >= words:
-                return {"commends": 0, "merit": count,
-                        "why": f"{meaningful_words:,} words of in-character RP, creativity {creativity}/10."}
-    lowest = AI_MERIT_TIERS[-1][0] if merit_enabled else AI_COMMEND_TIERS[-1][0]
-    if meaningful_words < lowest:
-        target = "Merit" if merit_enabled else "a commend"
-        return nothing(f"{meaningful_words:,} words of in-character RP — {lowest:,} are needed for {target}.")
+    why = f"{meaningful_words:,} words of in-character RP, creativity {creativity}/10."
+    for words, count, min_creativity in AI_COMMEND_TIERS:
+        if meaningful_words >= words and creativity >= min_creativity:
+            return {"commends": count, "merit": 0, "why": why}
     if merit_enabled:
-        return nothing(f"Creativity {creativity}/10 — Merit needs {AI_MERIT_MIN_CREATIVITY}/10.")
-    return nothing(f"Creativity {creativity}/10 — a commend needs {AI_COMMEND_MIN_CREATIVITY}/10 (Merit is off on this server).")
+        for words, count, min_creativity in AI_MERIT_TIERS:
+            if meaningful_words >= words and creativity >= min_creativity:
+                return {"commends": 0, "merit": count, "why": why}
+    lowest_words, _, lowest_creativity = AI_MERIT_TIERS[-1] if merit_enabled else AI_COMMEND_TIERS[-1]
+    if meaningful_words < lowest_words:
+        target = "Merit" if merit_enabled else "a commend"
+        return nothing(f"{meaningful_words:,} words of in-character RP — {lowest_words:,} are needed for {target}.")
+    if merit_enabled:
+        return nothing(f"Creativity {creativity}/10 — Merit needs {lowest_creativity}/10.")
+    return nothing(f"Creativity {creativity}/10 — a commend needs {lowest_creativity}/10 (Merit is off on this server).")
 
 
 def _ai_log_tags(log_text: str) -> set[str]:
@@ -19609,16 +19609,111 @@ def _ai_player_slots(log_text: str, reservations: dict | None, guild=None) -> li
                 member = guild.get_member(int(uid))
         except Exception:
             member = None
+        names = []
+        if member is not None:
+            for attr in ("name", "display_name", "global_name", "nick"):
+                value = str(getattr(member, attr, None) or "").strip()
+                if value and value not in names:
+                    names.append(value)
         slots.append({
             "tag": tag, "nation": base, "user_id": str(uid),
             "role": "COOP" if "_coop" in str(nation) else "MAIN",
             "name": _discord_handle(member) if member is not None else None,
+            "names": names,
         })
         reserved_tags.add(tag)
     for tag in sorted(_ai_log_tags(log_text) - reserved_tags):
         if _authoritative_nation_rp_stats(log_text, tag)["rp_lines"] > 0:
-            slots.append({"tag": tag, "nation": HOI4_TAGS.get(tag, tag), "user_id": None, "role": "UNRESERVED", "name": None})
+            slots.append({"tag": tag, "nation": HOI4_TAGS.get(tag, tag), "user_id": None, "role": "UNRESERVED",
+                          "name": None, "names": []})
     return slots
+
+
+# ---- Who wrote what when players share a nation (main + co-op) -------------------
+# The AI used to guess this from Discord names alone and could credit a co-op's
+# lines to the main player (19 Nov 2026: "nezemennn" in the log is the co-op
+# "ne_zemen", but the main got all of France's words). The bot now reads each
+# in-game speaker under the tag, matches speakers to the players by name, and
+# when every speaker is placed, works out each player's share itself.
+_LOG_CONTROL_CHARS = re.compile(r"[\x00-\x08\x0b-\x1f\x7f]")  # HOI4 colour codes, e.g. \x12 before the tag
+_AI_NAME_MATCH = 0.75
+
+
+def _ai_tag_speakers(log_text: str, tag: str) -> dict[str, int]:
+    """{in-game name: in-character words} for one country tag, in log order."""
+    tag = re.escape((tag or "").upper())
+    direct = re.compile(rf"^{tag}([^:]{{0,40}}):\s?(.*)$")
+    wrapped = re.compile(rf"\({tag}([^)]{{0,40}})\):\s?(.*)$")
+    words: dict[str, int] = {}
+    for raw_line in (log_text or "").splitlines():
+        line = _LOG_CONTROL_CHARS.sub("", raw_line).strip()
+        match = direct.match(line) or wrapped.search(line)
+        if not match:
+            continue
+        speaker, payload = match.group(1).strip(), match.group(2).strip()
+        if not speaker or re.fullmatch(r"(joined|connected|reconnected|left|disconnected|quit)\.?", payload, re.I):
+            continue
+        if _is_ooc_payload(payload):
+            continue
+        words[speaker] = words.get(speaker, 0) + len(re.findall(r"\b[\w'-]+\b", payload, re.UNICODE))
+    return words
+
+
+def _ai_name_key(name: str) -> str:
+    return "".join(ch for ch in str(name or "").lower() if ch.isalnum())
+
+
+def _ai_name_score(speaker: str, names: list[str]) -> float:
+    """How well an in-game name matches a player's Discord names (0-1)."""
+    key = _ai_name_key(speaker)
+    best = 0.0
+    for name in names or []:
+        other = _ai_name_key(name)
+        if len(key) < 3 or len(other) < 3:
+            continue
+        if key == other:
+            return 1.0
+        if key in other or other in key:
+            best = max(best, 0.9)
+        else:
+            best = max(best, difflib.SequenceMatcher(None, key, other).ratio())
+    return best
+
+
+def _ai_coop_speakers(log_text: str, slots: list[dict]) -> dict[int, dict]:
+    """For nations with several players: {slot index: {"speakers": [...],
+    "words": n, "share": 0-1 or None}}. `share` is set only when every speaker
+    of the tag was placed with a player (by name, or the one player left)."""
+    by_tag: dict[str, list[int]] = {}
+    for index, slot in enumerate(slots):
+        by_tag.setdefault(slot["tag"], []).append(index)
+    out: dict[int, dict] = {}
+    for tag, indexes in by_tag.items():
+        if len(indexes) < 2:
+            continue
+        speakers = _ai_tag_speakers(log_text, tag)
+        owner: dict[str, int | None] = {}
+        for speaker in speakers:
+            scores = sorted(((_ai_name_score(speaker, slots[i].get("names") or []), i) for i in indexes), reverse=True)
+            top, second = scores[0], scores[1] if len(scores) > 1 else (0.0, None)
+            owner[speaker] = top[1] if top[0] >= _AI_NAME_MATCH and top[0] > second[0] else None
+        unplaced = [speaker for speaker, i in owner.items() if i is None]
+        without = [i for i in indexes if i not in owner.values()]
+        if unplaced and len(without) == 1:  # everyone else is accounted for
+            for speaker in unplaced:
+                owner[speaker] = without[0]
+        complete = bool(speakers) and all(i is not None for i in owner.values())
+        total = sum(speakers.values())
+        for i in indexes:
+            mine = [speaker for speaker, who in owner.items() if who == i]
+            words = sum(speakers[speaker] for speaker in mine)
+            out[i] = {
+                "speakers": mine,
+                "words": words,
+                "share": (words / total if total else 0.0) if complete else None,
+                "all_speakers": speakers,
+            }
+    return out
 
 
 # Bot-side game-mode background for the AI. Short on purpose: the AI looks up
@@ -19697,16 +19792,29 @@ _AI_RESPONSE_SCHEMA = {
 }
 
 
-def _ai_grading_prompt(log_text: str, slots: list[dict], stats: dict, context: dict | None = None) -> str:
+def _ai_roster_line(index: int, slot: dict, stats: dict, coop: dict) -> str:
+    line = (
+        f"- tag {slot['tag']} | {slot['nation']} | {slot['role']} | user_id {slot['user_id'] or ''}"
+        f"{' | Discord names: ' + ', '.join(slot['names']) if slot.get('names') else (' | ' + slot['name'] if slot.get('name') else '')}"
+        f" | nation's RP lines {stats[slot['tag']]['rp_lines']} | nation's RP words {stats[slot['tag']]['rp_words']}"
+    )
+    info = coop.get(index)
+    if info is None:
+        return line
+    if info["share"] is not None:
+        who = ", ".join(info["speakers"]) or "none"
+        return line + f" | SHARED NATION: this player wrote as in-game name(s): {who} (bot-matched; grade only these lines)"
+    heard = ", ".join(f"{speaker} ({words} words)" for speaker, words in info["all_speakers"].items()) or "none"
+    return line + f" | SHARED NATION: in-game names writing as this tag: {heard} (match them to this nation's rows by name)"
+
+
+def _ai_grading_prompt(log_text: str, slots: list[dict], stats: dict, context: dict | None = None,
+                       coop: dict | None = None) -> str:
     context = context or {}
+    coop = coop if coop is not None else _ai_coop_speakers(log_text, slots)
     mode = str(context.get("mode") or "Hearts of Iron IV")
     files = int(context.get("files") or 1)
-    roster = "\n".join(
-        f"- tag {slot['tag']} | {slot['nation']} | {slot['role']} | user_id {slot['user_id'] or ''}"
-        f"{' | ' + slot['name'] if slot.get('name') else ''} | RP lines {stats[slot['tag']]['rp_lines']} | "
-        f"RP words {stats[slot['tag']]['rp_words']}"
-        for slot in slots
-    )
+    roster = "\n".join(_ai_roster_line(index, slot, stats, coop) for index, slot in enumerate(slots))
     files_note = (
         f"- The log comes in {files} files, all from this ONE game, in the order played (the game was rehosted "
         "after a crash, or the log was saved in parts). Each file starts with a `===== CHAT LOG FILE n of N =====` "
@@ -19746,7 +19854,11 @@ Rules:
   fought, what happened. Name nations, not players. Shown publicly with the results.
 - in_character_share (0-1): the part of that tag's words that is real in-character roleplay (see above).
 - share_of_tag (0-1): when several players share a tag (MAIN + COOP), how much of the tag's in-character RP
-  this player wrote (they add up to 1). Otherwise 1.
+  this player wrote (they add up to 1). Otherwise 1. A nation can have any number of players. The log shows
+  each line's in-game name after the tag (`FRAnezemennn:` is in-game name "nezemennn"), which is often a
+  variant of the Discord name ("nezemennn" is "ne_zemen"). Where the roster says which in-game names are a
+  player's, use exactly that; otherwise match in-game names to the rows by name. Score creativity, summary and
+  snippets for each row from that player's own lines only, never from a teammate's.
 - creativity (0-10, strict): 3 = bare minimum, 5 = ordinary, 7 = clearly good and original, 9-10 = exceptional.
   Generic, copy-pasted or repetitive text scores low. Alternate history and fiction are fine.
 - toxicity (0-10): insults, harassment, slurs, rule-breaking.
@@ -19849,8 +19961,11 @@ async def _ai_json(prompt: str, schema: dict) -> str:
     return text
 
 
-def _ai_assemble(slots: list[dict], stats: dict, ai_players: list, merit_enabled: bool) -> list[dict]:
-    """Combine the AI's quality scores with the bot's counts and rules."""
+def _ai_assemble(slots: list[dict], stats: dict, ai_players: list, merit_enabled: bool,
+                 coop: dict | None = None) -> list[dict]:
+    """Combine the AI's quality scores with the bot's counts and rules. `coop`
+    (_ai_coop_speakers): on a shared nation the bot's own share wins over the AI's."""
+    coop = coop or {}
     entries = [p for p in (ai_players or []) if isinstance(p, dict)]
     for p in entries:  # "" / "none" / "null" all mean no reservation
         if str(p.get("user_id") or "").strip().lower() in ("", "none", "null"):
@@ -19861,7 +19976,7 @@ def _ai_assemble(slots: list[dict], stats: dict, ai_players: list, merit_enabled
         by_tag.setdefault(str(p.get("tag") or "").upper(), []).append(p)
     per_tag = collections.Counter(slot["tag"] for slot in slots)
     out = []
-    for slot in slots:
+    for index, slot in enumerate(slots):
         tag = slot["tag"]
         count = per_tag[tag]
         ai = by_key.get((tag, str(slot["user_id"] or "")))
@@ -19869,7 +19984,13 @@ def _ai_assemble(slots: list[dict], stats: dict, ai_players: list, merit_enabled
             ai = by_tag[tag][0]
         st = stats[tag]
         words = int(st["rp_words"])
-        share = _ai_number((ai or {}).get("share_of_tag"), 0, 1, 1 / count) if count > 1 else 1.0
+        bot_share = (coop.get(index) or {}).get("share")
+        if count == 1:
+            share = 1.0
+        elif bot_share is not None:
+            share = bot_share
+        else:
+            share = _ai_number((ai or {}).get("share_of_tag"), 0, 1, 1 / count)
         in_character = _ai_number((ai or {}).get("in_character_share"), 0, 1, 0.0)
         creativity = int(round(_ai_number((ai or {}).get("creativity"), 0, 10, 0)))
         toxicity = int(round(_ai_number((ai or {}).get("toxicity"), 0, 10, 0)))
@@ -19888,7 +20009,7 @@ def _ai_assemble(slots: list[dict], stats: dict, ai_players: list, merit_enabled
             )
         snippets = (ai or {}).get("snippets") if isinstance((ai or {}).get("snippets"), list) else []
         out.append({
-            **slot,
+            **{key: value for key, value in slot.items() if key != "names"},
             "lines": int(st["rp_lines"]),
             "words": words,
             "meaningful_words": meaningful,
@@ -19920,8 +20041,9 @@ async def run_ai_log_analysis(log_text: str, reservations: dict | None, guild=No
     if not slots:
         return "❌ Couldn't find any players in the log or the reservations."
     stats = {tag: _authoritative_nation_rp_stats(log_text, tag) for tag in {slot["tag"] for slot in slots}}
+    coop = _ai_coop_speakers(log_text, slots)
     try:
-        raw = await _ai_json(_ai_grading_prompt(log_text, slots, stats, context), _AI_RESPONSE_SCHEMA)
+        raw = await _ai_json(_ai_grading_prompt(log_text, slots, stats, context, coop), _AI_RESPONSE_SCHEMA)
     except Exception as e:
         print(f"[AI] Claude API error: {e!r}")
         return f"❌ The AI couldn't analyze the log: {e}"
@@ -19935,7 +20057,7 @@ async def run_ai_log_analysis(log_text: str, reservations: dict | None, guild=No
         "rules": _ai_rules(),
         "model": AI_MODEL,
         "game_summary": str(data.get("game_summary") or "").strip()[:1200],
-        "players": _ai_assemble(slots, stats, data["players"], merit),
+        "players": _ai_assemble(slots, stats, data["players"], merit, coop),
     }
 
 
