@@ -88,7 +88,7 @@ for mode, expected in [
 historical = gm._ai_grading_prompt(LOG, slots, stats, {"mode": "Historical (Vanilla)", "files": 1})
 check("Historical games aren't told they're non-historical", "NOT a history re-enactment" not in historical and "historical game" in historical)
 check("Prompt (one file) doesn't mention several files", "CHAT LOG FILE n of N" not in gm._ai_grading_prompt(LOG, slots, stats, {"mode": "Vanilla", "files": 1}))
-check("Default model is Gemini 3.8 Flash", os.getenv("GEMINI_MODEL") or gm.GEMINI_MODEL == "gemini-3.8-flash")
+check("Default model is Gemini 3.5 Flash-Lite", os.getenv("GEMINI_MODEL") or gm.GEMINI_MODEL == "gemini-3.5-flash-lite")
 
 # ---- Request settings and fallbacks -------------------------------------------
 names = [name for name, _ in gm._gemini_configs(gm._AI_RESPONSE_SCHEMA)]

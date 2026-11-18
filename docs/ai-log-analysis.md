@@ -84,8 +84,11 @@ two word lists are kept equal by `web/tests/roleplay.test.mjs`.
 
 ## The model
 
-**Gemini 3.8 Flash** (`gemini-3.8-flash`), chosen in November 2026 for price,
-long logs and speed. Set `GEMINI_MODEL` on the bot to use another model.
+**Gemini 3.5 Flash-Lite** (`gemini-3.5-flash-lite`) since 18 November 2026: the
+key has no billing, and 3.8 Flash's free tier (about 20 requests a day) kept
+answering 429. **Gemini 3.8 Flash** (`gemini-3.8-flash`) grades better and is
+the one to go back to once billing is on. Set `GEMINI_MODEL` on the bot to use
+another model without a code change.
 
 Each run asks for Google Search plus the exact answer shape. If Google
 refuses that combination, the bot tries Search alone (answer read from the
