@@ -144,6 +144,24 @@ models = fake_client(lambda call, _config: Exception("503 UNAVAILABLE overloaded
 check("Overload is retried, then succeeds", json.loads(asyncio.run(gm._gemini_json("p", None))) == {"ok": 1})
 
 gm._gemini_config_ok = None
+QUOTA = "429 RESOURCE_EXHAUSTED. You exceeded your current quota, please check your plan and billing details."
+models = fake_client(lambda _call, config: Exception(QUOTA) if "tools" in config else '{"ok": 2}')
+check("Free tier: a 429 with Google Search retries without Search", json.loads(asyncio.run(gm._gemini_json("p", gm._AI_RESPONSE_SCHEMA))) == {"ok": 2})
+check("Free tier: the other Search setting is skipped, the schema one used", len(models.calls) == 2 and "tools" not in models.calls[1][1]
+      and "response_json_schema" in models.calls[1][1])
+models = fake_client(lambda _call, config: Exception(QUOTA) if "tools" in config else '{"ok": 2}')
+asyncio.run(gm._gemini_json("p", gm._AI_RESPONSE_SCHEMA))
+check("Free tier: the next run goes straight to the setting without Search", len(models.calls) == 1)
+
+gm._gemini_config_ok = None
+fake_client(lambda _call, _config: Exception(QUOTA))
+try:
+    asyncio.run(gm._gemini_json("p", None))
+    check("A real quota error (also without Search) is reported", False)
+except Exception as error:
+    check("A real quota error (also without Search) is reported", "429" in str(error))
+
+gm._gemini_config_ok = None
 fake_client(lambda _call, _config: Exception("403 PERMISSION_DENIED: API key not valid"))
 try:
     asyncio.run(gm._gemini_json("p", None))

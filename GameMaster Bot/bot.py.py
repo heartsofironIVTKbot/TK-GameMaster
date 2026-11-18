@@ -19805,6 +19805,14 @@ def _gemini_refused_config(error: Exception) -> bool:
     return refused and "api key" not in text
 
 
+def _gemini_quota_error(error: Exception) -> bool:
+    """429 RESOURCE_EXHAUSTED. On a project without billing, Gemini 3+ answers
+    every request that uses Google Search this way (Search isn't in the free
+    tier), so it can mean "no Search here" rather than "out of quota"."""
+    text = str(error).lower()
+    return "429" in text or "resource_exhausted" in text
+
+
 async def _gemini_json(prompt: str, schema: dict | None = None) -> str:
     """Ask Gemini for JSON (retries while it's overloaded). Raises on failure."""
     global _gemini_config_ok
@@ -19812,7 +19820,12 @@ async def _gemini_json(prompt: str, schema: dict | None = None) -> str:
     if _gemini_config_ok:
         configs.sort(key=lambda item: item[0] != _gemini_config_ok)
     last = None
+    no_search = False
     for name, config in configs:
+        if no_search and "tools" in config:
+            continue
+        if last is not None and _gemini_quota_error(last) and "tools" not in config:
+            print(f"[AI] Gemini quota error with Google Search, trying without it: {last}")
         for attempt in range(3):
             try:
                 response = await client.aio.models.generate_content(model=GEMINI_MODEL, contents=prompt, config=config)
@@ -19825,6 +19838,9 @@ async def _gemini_json(prompt: str, schema: dict | None = None) -> str:
                     await asyncio.sleep(2.0 * (2 ** attempt))
                     continue
                 break
+        if "tools" in config and _gemini_quota_error(last):
+            no_search = True  # every other Search setting would get the same 429
+            continue
         if not _gemini_refused_config(last):
             raise last
         print(f"[AI] Gemini refused the '{name}' settings, trying the next: {last}")

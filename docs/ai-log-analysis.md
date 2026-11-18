@@ -89,8 +89,11 @@ long logs and speed. Set `GEMINI_MODEL` on the bot to use another model.
 
 Each run asks for Google Search plus the exact answer shape. If Google
 refuses that combination, the bot tries Search alone (answer read from the
-text), then the answer shape alone, and remembers what worked. A wrong API
-key or an overloaded model is reported, not hidden.
+text), then the answer shape alone, and remembers what worked. On a key
+without billing (free tier), Gemini 3+ answers any request with Search with
+429 RESOURCE_EXHAUSTED, so a 429 skips straight to the answer shape without
+Search; the analysis then runs without web lookups. A wrong API key, an
+overloaded model or a 429 without Search is reported, not hidden.
 
 ## The strict rules
 
