@@ -1,10 +1,10 @@
 """AI chat-log analysis (docs/ai-log-analysis.md).
 
-Loads bot.py.py without starting the bot or touching any database; Gemini is
+Loads bot.py.py without starting the bot or touching any database; Claude is
 faked. Checks: out-of-character one-liners aren't counted, several log files
-are read as one game, the instructions the AI gets, the request settings
-(Google Search + the exact answer shape, and the fallbacks when Google refuses
-a combination), and a full grading run with the game summary.
+are read as one game, the instructions the AI gets, the request to Claude
+(model, exact answer shape, effort) and the reasons shown to hosts when it
+fails, and a full grading run with the game summary.
 
 Run from the repo root with the bot's packages installed:
   python "GameMaster Bot/tests/ai_analysis.py"
@@ -68,7 +68,7 @@ prompt = gm._ai_grading_prompt(two["text"], slots, stats, {"mode": "Kaiserreich 
 for needle, label in [
     ("Kaiserreich", "names the game mode and its setting"),
     ("NOT a history re-enactment", "says RP games aren't historical"),
-    ("Google Search", "may look things up"),
+    ("never mark roleplay down because you don't recognise it", "doesn't punish unfamiliar lore"),
     ("CHAT LOG FILE n of N", "explains several files are one game"),
     ('"unpause"', "ignores game-control chat"),
     ("lobby talk at the very start", "ignores the early lobby chat"),
@@ -88,89 +88,91 @@ for mode, expected in [
 historical = gm._ai_grading_prompt(LOG, slots, stats, {"mode": "Historical (Vanilla)", "files": 1})
 check("Historical games aren't told they're non-historical", "NOT a history re-enactment" not in historical and "historical game" in historical)
 check("Prompt (one file) doesn't mention several files", "CHAT LOG FILE n of N" not in gm._ai_grading_prompt(LOG, slots, stats, {"mode": "Vanilla", "files": 1}))
-check("Default model is Gemini 3.5 Flash-Lite", os.getenv("GEMINI_MODEL") or gm.GEMINI_MODEL == "gemini-3.5-flash-lite")
+check("Default model is Claude Haiku 5.5", os.getenv("AI_MODEL") or gm.AI_MODEL == "claude-haiku-5-5")
 
-# ---- Request settings and fallbacks -------------------------------------------
-names = [name for name, _ in gm._gemini_configs(gm._AI_RESPONSE_SCHEMA)]
-check("Settings order: search+schema, search, schema", names == ["search+schema", "search", "schema"])
-first = gm._gemini_configs(gm._AI_RESPONSE_SCHEMA)[0][1]
-check("First try has Google Search and the exact shape", first["tools"] == [{"google_search": {}}] and "response_json_schema" in first)
+# ---- The request to Claude (faked) ---------------------------------------------
+import anthropic  # noqa: E402
+import httpx2  # noqa: E402  (anthropic 2.x is built on httpx2)
 
-
-class FakeModels:
-    def __init__(self, behaviour):
-        self.behaviour = behaviour
-        self.calls = []
-
-    async def generate_content(self, model, contents, config):
-        self.calls.append((model, config))
-        outcome = self.behaviour(len(self.calls), config)
-        if isinstance(outcome, Exception):
-            raise outcome
-        return type("Response", (), {"text": outcome})()
+schema = gm._AI_RESPONSE_SCHEMA
+check("Answer shape is closed (structured output needs additionalProperties: false)",
+      schema["additionalProperties"] is False and schema["properties"]["players"]["items"]["additionalProperties"] is False)
 
 
-def fake_client(behaviour):
-    models = FakeModels(behaviour)
-    gm.client = type("Client", (), {"aio": type("Aio", (), {"models": models})()})()
-    return models
+class Block:
+    def __init__(self, type_, text=""):
+        self.type, self.text = type_, text
 
 
-async def no_sleep(_seconds):
-    return None
+class FakeStream:
+    def __init__(self, outcome):
+        self.outcome = outcome
+
+    async def __aenter__(self):
+        if isinstance(self.outcome, Exception):
+            raise self.outcome
+        return self
+
+    async def __aexit__(self, *exc):
+        return False
+
+    async def get_final_message(self):
+        stop_reason, text = self.outcome
+        return type("Message", (), {
+            "stop_reason": stop_reason,
+            "content": [Block("thinking"), Block("text", text)],
+            "usage": type("Usage", (), {"input_tokens": 30000, "output_tokens": 5000})(),
+        })()
 
 
-gm.asyncio.sleep = no_sleep
+class FakeMessages:
+    def __init__(self, outcome):
+        self.outcome, self.calls = outcome, []
+
+    def stream(self, **kwargs):
+        self.calls.append(kwargs)
+        return FakeStream(self.outcome)
 
 
-def refuses_search_with_schema(_call, config):
-    if "tools" in config and "response_json_schema" in config:
-        return Exception("400 INVALID_ARGUMENT: tool use with a response schema is unsupported")
-    return '{"game_summary": "", "players": []}'
+def fake_client(outcome):
+    messages = FakeMessages(outcome)
+    gm.client = type("Client", (), {"messages": messages})()
+    return messages
 
 
-gm._gemini_config_ok = None
-models = fake_client(refuses_search_with_schema)
-text = asyncio.run(gm._gemini_json("prompt", gm._AI_RESPONSE_SCHEMA))
-check("Refused combination falls back to the next settings", json.loads(text) == {"game_summary": "", "players": []})
-check("Fallback used Search without the schema", "tools" in models.calls[-1][1] and "response_json_schema" not in models.calls[-1][1])
-check("Model sent is the configured one", models.calls[0][0] == gm.GEMINI_MODEL)
-models = fake_client(refuses_search_with_schema)
-asyncio.run(gm._gemini_json("prompt", gm._AI_RESPONSE_SCHEMA))
-check("Next run starts with the settings that worked", len(models.calls) == 1)
+def api_error(cls, status, message):
+    request = httpx2.Request("POST", "https://api.anthropic.com/v1/messages")
+    return cls(message, response=httpx2.Response(status, request=request), body=None)
 
-gm._gemini_config_ok = None
-models = fake_client(lambda call, _config: Exception("503 UNAVAILABLE overloaded") if call < 3 else '{"ok": 1}')
-check("Overload is retried, then succeeds", json.loads(asyncio.run(gm._gemini_json("p", None))) == {"ok": 1})
 
-gm._gemini_config_ok = None
-QUOTA = "429 RESOURCE_EXHAUSTED. You exceeded your current quota, please check your plan and billing details."
-models = fake_client(lambda _call, config: Exception(QUOTA) if "tools" in config else '{"ok": 2}')
-check("Free tier: a 429 with Google Search retries without Search", json.loads(asyncio.run(gm._gemini_json("p", gm._AI_RESPONSE_SCHEMA))) == {"ok": 2})
-check("Free tier: the other Search setting is skipped, the schema one used", len(models.calls) == 2 and "tools" not in models.calls[1][1]
-      and "response_json_schema" in models.calls[1][1])
-models = fake_client(lambda _call, config: Exception(QUOTA) if "tools" in config else '{"ok": 2}')
-asyncio.run(gm._gemini_json("p", gm._AI_RESPONSE_SCHEMA))
-check("Free tier: the next run goes straight to the setting without Search", len(models.calls) == 1)
+def ai_error(outcome):
+    fake_client(outcome)
+    try:
+        asyncio.run(gm._ai_json("p", schema))
+        return None
+    except gm.AIError as error:
+        return str(error)
 
-gm._gemini_config_ok = None
-fake_client(lambda _call, _config: Exception(QUOTA))
-try:
-    asyncio.run(gm._gemini_json("p", None))
-    check("A real quota error (also without Search) is reported", False)
-except Exception as error:
-    check("A real quota error (also without Search) is reported", "429" in str(error))
 
-gm._gemini_config_ok = None
-fake_client(lambda _call, _config: Exception("403 PERMISSION_DENIED: API key not valid"))
-try:
-    asyncio.run(gm._gemini_json("p", None))
-    check("A bad API key is reported, not hidden behind fallbacks", False)
-except Exception as error:
-    check("A bad API key is reported, not hidden behind fallbacks", "API key" in str(error))
+messages = fake_client(("end_turn", '{"ok": 1}'))
+check("Answer text is returned (thinking blocks skipped)", json.loads(asyncio.run(gm._ai_json("prompt", schema))) == {"ok": 1})
+sent = messages.calls[0]
+check("Model sent is the configured one", sent["model"] == gm.AI_MODEL)
+check("Structured output asks for the exact shape", sent["output_config"]["format"] == {"type": "json_schema", "schema": schema})
+check("Effort is set explicitly", sent["output_config"]["effort"] == "medium")
+check("The prompt goes in one user message", sent["messages"] == [{"role": "user", "content": "prompt"}])
+check("No web search tool is sent", "tools" not in sent)
+
+check("Refusal is reported", "declined" in (ai_error(("refusal", "")) or ""))
+check("A cut-off answer is reported", "cut off" in (ai_error(("max_tokens", '{"ok"')) or ""))
+check("A bad API key is named", "ANTHROPIC_API_KEY" in (ai_error(api_error(anthropic.AuthenticationError, 401, "invalid x-api-key")) or ""))
+check("No credits left is explained", "out of credits" in (ai_error(api_error(
+    anthropic.BadRequestError, 400, "Your credit balance is too low to access the Anthropic API.")) or ""))
+check("A wrong model name is named", "AI_MODEL" in (ai_error(api_error(anthropic.NotFoundError, 404, "model not found")) or ""))
+check("Rate limiting is explained", "rate-limiting" in (ai_error(api_error(anthropic.RateLimitError, 429, "rate limited")) or ""))
+check("An Anthropic outage is explained", "trouble" in (ai_error(api_error(anthropic.InternalServerError, 500, "boom")) or ""))
 
 # ---- A full grading run -----------------------------------------------------
-gm._gemini_config_ok = None
 answer = {
     "game_summary": "The Soviet Union and Germany traded threats over Poland before a tense peace.",
     "players": [
@@ -180,16 +182,19 @@ answer = {
          "low_effort": False, "left_early": False, "summary": "Short peace offer.", "snippets": []},
     ],
 }
-fake_client(lambda _call, _config: json.dumps(answer))
+fake_client(("end_turn", json.dumps(answer)))
 gm.SERVER_FEATURES = {"valor_merit": True} if not hasattr(gm, "SERVER_FEATURES") else gm.SERVER_FEATURES
 analysis = asyncio.run(gm.run_ai_log_analysis(LOG, {"Soviet Union": "111"}, None, merit_enabled=True, context={"mode": "Vanilla", "files": 1}))
 check("Run returns an analysis", isinstance(analysis, dict))
 if isinstance(analysis, dict):
     check("Game summary is kept", analysis["game_summary"].startswith("The Soviet Union"))
-    check("Model is recorded", analysis["model"] == gm.GEMINI_MODEL)
+    check("Model is recorded", analysis["model"] == gm.AI_MODEL)
     by_tag = {player["tag"]: player for player in analysis["players"]}
     check("Reserved player graded", by_tag.get("SOV", {}).get("user_id") == "111" and by_tag["SOV"]["creativity"] == 8)
     check("Unreserved nation matched with an empty user_id", "GER" in by_tag and by_tag["GER"]["creativity"] == 5)
+fake_client(api_error(anthropic.AuthenticationError, 401, "invalid x-api-key"))
+failed_run = asyncio.run(gm.run_ai_log_analysis(LOG, {"Soviet Union": "111"}, None, merit_enabled=True, context={"mode": "Vanilla", "files": 1}))
+check("A failed run tells the host why", isinstance(failed_run, str) and "ANTHROPIC_API_KEY" in failed_run)
 
 failed = [name for name, ok in results if not ok]
 print(f"\n{len(results) - len(failed)}/{len(results)} passed")

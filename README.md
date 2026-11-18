@@ -61,9 +61,9 @@ npm run dev
 
 IronLegion's Steam lock on reservations is off unless a server turns it on and the bot has IronLegion's read-only database login (`IRONLEGION_DB_*`, see `GameMaster Bot/.env.example`). It then checks players hold the authenticated role IronLegion gives on that server.
 
-AI chat-log grading needs `GENAI_API_KEY`. Without that key the rest of GameMaster still runs.
+AI chat-log grading needs `ANTHROPIC_API_KEY` (Claude; `AI_MODEL` picks the model, default `claude-haiku-5-5`). Without that key the rest of GameMaster still runs.
 
-Tests: from `web/`, `node --test` (ticket access, Require IronLegion, guided tours, roleplay archive). In the bot, from the repo root with the bot's packages installed (no database needed): `python "GameMaster Bot/tests/ironlegion_lock.py"` (IronLegion lock) and `python "GameMaster Bot/tests/ai_analysis.py"` (AI analysis, Gemini faked).
+Tests: from `web/`, `node --test` (ticket access, Require IronLegion, guided tours, roleplay archive). In the bot, from the repo root with the bot's packages installed (no database needed): `python "GameMaster Bot/tests/ironlegion_lock.py"` (IronLegion lock) and `python "GameMaster Bot/tests/ai_analysis.py"` (AI analysis, Claude faked).
 
 ## What is not in this repository
 
@@ -96,7 +96,7 @@ Secrets go on the Apollo **Variables** tab (yellow **Create Variables**), not in
 | `MYSQL_SSL_CA` | Aiven's **CA certificate**: paste the whole text, `-----BEGIN CERTIFICATE-----` to `-----END CERTIFICATE-----` |
 | `BASE_URL` | The website's public address, e.g. `https://hoi4gamemaster.online` |
 
-Without `MYSQL_SSL_CA` the bot connects without TLS and Aiven refuses it. The panel may squash the certificate's line breaks; the bot rebuilds them. `GENAI_API_KEY`, `HOST_LOG_WEBHOOK_URL`, `MESSAGE_CONTENT_INTENT` and the `IRONLEGION_DB_*` set stay empty. Do this on the new server, not on the live TommyKay one.
+Without `MYSQL_SSL_CA` the bot connects without TLS and Aiven refuses it. The panel may squash the certificate's line breaks; the bot rebuilds them. `ANTHROPIC_API_KEY`, `AI_MODEL`, `HOST_LOG_WEBHOOK_URL`, `MESSAGE_CONTENT_INTENT` and the `IRONLEGION_DB_*` set stay empty. Do this on the new server, not on the live TommyKay one.
 
 When the bot starts, the console should end with `Logged in as …`. A database error there usually means a wrong port or a missing certificate.
 

@@ -46,7 +46,8 @@ const SECTIONS: LegalSection[] = [
         </ul>
         <p>
           <b className="text-ink-100">Chat logs and AI analysis:</b> a host can upload a game&apos;s Hearts of Iron IV chat log. GameMaster keeps it, and if the host
-          runs the AI analysis, sends it to Google&apos;s Gemini AI, which grades each player&apos;s roleplay and writes a short recap. AI analysis is an optional
+          runs the AI analysis, sends it to Anthropic&apos;s Claude AI, which grades each player&apos;s roleplay and writes a short recap.
+          Anthropic doesn&apos;t use it to train its AI. AI analysis is an optional
           extra, switched on only for selected communities.
         </p>
         <p>
@@ -131,7 +132,7 @@ const SECTIONS: LegalSection[] = [
             <b className="text-ink-100">Backblaze</b>: keeps nightly backups of the database in a private storage bucket.
           </li>
           <li>
-            <b className="text-ink-100">Google (Gemini)</b>: only for chat logs a host sends to the AI analysis.
+            <b className="text-ink-100">Anthropic (Claude)</b>: only for chat logs a host sends to the AI analysis.
           </li>
           <li>
             <b className="text-ink-100">Discord</b>: where the bot works. What you post in Discord itself is governed by Discord&apos;s own privacy policy.

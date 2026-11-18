@@ -66,8 +66,9 @@ The instructions say:
 - **Roleplay games aren't history re-enactments:** alternate paths are the
   point and are never marked down. Historical games are told small
   departures are fine too.
-- **It may use Google Search** briefly, to understand a focus path, an event,
-  a mod's lore or an unfamiliar tag.
+- **Unfamiliar lore** (a focus path, a mod's leader, an unknown tag) is
+  judged from what the log shows, and never marked down for being unknown.
+  The AI has no web search.
 - **What tags mean:** the base game's tag list, and that the roster's nation
   names win when a mod reuses a tag.
 - **What isn't roleplay:** the lobby talk at the very start of the log, and
@@ -84,19 +85,20 @@ two word lists are kept equal by `web/tests/roleplay.test.mjs`.
 
 ## The model
 
-**Gemini 3.5 Flash-Lite** (`gemini-3.5-flash-lite`) since 18 November 2026: the
-key has no billing, and 3.8 Flash's free tier (about 20 requests a day) kept
-answering 429. **Gemini 3.8 Flash** (`gemini-3.8-flash`) grades better and is
-the one to go back to once billing is on. Set `GEMINI_MODEL` on the bot to use
-another model without a code change.
+**Claude Haiku 5.5** (`claude-haiku-5-5`, Anthropic) since 18 November 2026,
+about $0.006 an analysis (a 30,000-token log in, ~6,000 tokens out). It
+replaced Google Gemini, whose free tier kept refusing with 429s (no Search
+without billing, about 20 requests a day on 3.8 Flash). **Claude Sonnet 5.5**
+(`claude-sonnet-5-5`) judges creativity more consistently at about 20 times
+the price: set `AI_MODEL` on the bot to switch without a code change.
 
-Each run asks for Google Search plus the exact answer shape. If Google
-refuses that combination, the bot tries Search alone (answer read from the
-text), then the answer shape alone, and remembers what worked. On a key
-without billing (free tier), Gemini 3+ answers any request with Search with
-429 RESOURCE_EXHAUSTED, so a 429 skips straight to the answer shape without
-Search; the analysis then runs without web lookups. A wrong API key, an
-overloaded model or a 429 without Search is reported, not hidden.
+The key is `ANTHROPIC_API_KEY` (console.anthropic.com, prepaid credits: when
+they run out, analyses stop with "out of credits" instead of billing more).
+Each run is one streamed request with structured output, so the answer
+always has the exact shape (`_AI_RESPONSE_SCHEMA`), and effort `medium`. The
+library retries rate limits, overloads and network errors itself. A wrong
+key, a wrong model name, no credits, a refusal or a cut-off answer is shown
+to the host in plain words, not hidden.
 
 ## The strict rules
 
@@ -152,5 +154,5 @@ logs into any more, so the Games page is the only way. Old archive posts'
 ## Tests
 
 - Bot: `python "GameMaster Bot/tests/ai_analysis.py"` from the repo root with
-  the bot's packages installed (Gemini is faked; no database needed).
+  the bot's packages installed (Claude is faked; no database needed).
 - Website: from `web/`, `node --test` (`tests/roleplay.test.mjs`).
