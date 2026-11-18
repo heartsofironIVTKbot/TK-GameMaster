@@ -19,6 +19,13 @@ test("a log line: tag, in-game name and text", () => {
   assert.equal(wrapped.text, "Comrades, rise!");
 });
 
+test("HOI4's invisible control characters don't hide the tag", () => {
+  // A real line from a live log: \x12 (a colour code) sits between "(" and the tag.
+  const line = parseLogLine("[19:17] (\u0012PHIBranko1): And welcome back to our rp game\r");
+  assert.deepEqual(line, { tag: "PHI", speaker: "Branko1", text: "And welcome back to our rp game", ooc: false });
+  assert.equal(parseLogLine("\u0012GERWilhelm: The Reich\u0011 marches.").text, "The Reich marches.");
+});
+
 test("system lines and joins aren't anyone's roleplay", () => {
   assert.equal(parseLogLine("Game saved").tag, null);
   assert.equal(parseLogLine("GERWilhelm: joined").ooc, true);

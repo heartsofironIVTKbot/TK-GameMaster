@@ -125,10 +125,14 @@ const DIRECT = /^([A-Z]{3}|D\d{2})([^:]{0,40}):\s?(.*)$/;
 const WRAPPED = /^.*?\(([A-Z]{3}|D\d{2})([^)]{0,40})\):\s?(.*)$/;
 const SYSTEM_EVENT = /^(joined|connected|reconnected|left|disconnected|quit)\.?$/i;
 const FILE_MARKER = /^===== CHAT LOG FILE \d+ of \d+/;
+// HOI4 writes invisible control characters into its logs (e.g. \x12 before the
+// tag in "[19:17] (\x12PHIBranko): …", a colour code). They hid the tag from
+// the patterns above, so whole logs read as out-of-character.
+const CONTROL_CHARS = /[\u0000-\u0008\u000B-\u001F\u007F]/g;
 
 /** One log line → who said what (system and join/leave lines have no tag). */
 export function parseLogLine(raw: string): { tag: string | null; speaker: string | null; text: string; ooc: boolean } {
-  const line = raw.replace(/\r$/, "");
+  const line = raw.replace(/\r$/, "").replace(CONTROL_CHARS, "");
   const trimmed = line.trim();
   if (FILE_MARKER.test(trimmed)) return { tag: null, speaker: null, text: trimmed, ooc: true };
   const match = trimmed.match(DIRECT) ?? trimmed.match(WRAPPED);
