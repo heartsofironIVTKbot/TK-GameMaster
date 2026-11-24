@@ -1,0 +1,70 @@
+/**
+ * Road to 56 for the Great Game: TommyKay's "Road to 56" preset (7 majors and
+ * the 50 minors we play, data/officialPresets.json) as map tags, with the
+ * names the preset uses. "Chinese Soviet Republic" is the map's PRC.
+ */
+
+/** Strongest first (the organizers can change this from the control panel). */
+export const R56_MAJORS = ["SOV", "USA", "GER", "FRA", "ENG", "JAP", "ITA"];
+
+export const R56_NAMES: Record<string, string> = {
+  SOV: "Soviet Union",
+  USA: "U.S.A",
+  GER: "Germany",
+  FRA: "France",
+  ENG: "United Kingdom",
+  JAP: "Japan",
+  ITA: "Italy",
+  AUS: "Austria",
+  BEL: "Belgium",
+  BUL: "Bulgaria",
+  CZE: "Czechoslovakia",
+  DEN: "Denmark",
+  EST: "Estonia",
+  FIN: "Finland",
+  GRE: "Greece",
+  HUN: "Hungary",
+  IRE: "Ireland",
+  LAT: "Latvia",
+  LIT: "Lithuania",
+  HOL: "Netherlands",
+  NOR: "Norway",
+  POL: "Poland",
+  POR: "Portugal",
+  ROM: "Romania",
+  SPR: "Spain",
+  SWE: "Sweden",
+  SWI: "Switzerland",
+  YUG: "Yugoslavia",
+  AFG: "Afghanistan",
+  RAJ: "British Raj",
+  CHI: "China",
+  PRC: "Chinese Soviet Republic",
+  FRI: "French Indochina",
+  PER: "Iran",
+  IRQ: "Iraq",
+  MAN: "Manchuria",
+  MPL: "Palestine",
+  SAU: "Saudi Arabia",
+  SIA: "Siam",
+  TUR: "Turkey",
+  AST: "Australia",
+  MAL: "British Malaya",
+  INS: "Dutch East Indies",
+  PHI: "Philippines",
+  CAN: "Canada",
+  CUB: "Cuba",
+  HON: "Honduras",
+  MEX: "Mexico",
+  ARG: "Argentina",
+  BRA: "Brazil",
+  CHL: "Chile",
+  COL: "Colombia",
+  PRU: "Peru",
+  VEN: "Venezuela",
+  COG: "Belgian Congo",
+  EGY: "Egypt",
+  SAF: "South Africa",
+};
+
+export const R56_POOL = Object.keys(R56_NAMES).filter((tag) => !R56_MAJORS.includes(tag));

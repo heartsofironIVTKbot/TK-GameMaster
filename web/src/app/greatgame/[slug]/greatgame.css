@@ -1,0 +1,206 @@
+/* The Great Game 2026 draft room: the poster's synthwave look (neon pink to
+   cyan, riveted steel, chrome lettering). Everything is scoped under .gg. */
+
+.gg {
+  --gg-ink: #0b0618;
+  --gg-ink-2: #120a24;
+  --gg-plate: #1a1030;
+  --gg-line: #34265a;
+  --gg-line-2: #4a3a7a;
+  --gg-fg: #efe9ff;
+  --gg-fg-2: #b9aee0;
+  --gg-fg-3: #8a7fb0;
+  --gg-pink: #ff2bd6;
+  --gg-cyan: #22e5ff;
+  --gg-pending: #ffd23f;
+  --gg-stamp: #ff3b3b;
+  --gg-ai: #3b3650;
+  --gg-ok: #7cf0a0;
+  --gg-display: var(--font-big-shoulders), "Arial Narrow", Impact, sans-serif;
+  --gg-body: var(--font-public-sans), "Segoe UI", system-ui, sans-serif;
+  --gg-brush: var(--font-gg-brush), "Brush Script MT", cursive;
+  --gg-digit: var(--font-gg-digit), "Segoe UI", sans-serif;
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: var(--gg-ink);
+  color: var(--gg-fg);
+  font-family: var(--gg-body);
+  color-scheme: dark;
+}
+
+.gg *:focus-visible {
+  outline: 2px solid var(--gg-cyan);
+  outline-offset: 2px;
+}
+
+.gg-disp {
+  font-family: var(--gg-display);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.gg-digit {
+  font-family: var(--gg-digit);
+  font-variant-numeric: tabular-nums;
+}
+
+.gg-brush {
+  font-family: var(--gg-brush);
+  background: linear-gradient(90deg, var(--gg-pink), #b46bff 55%, var(--gg-cyan));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 8px rgba(255, 43, 214, 0.5));
+}
+
+.gg-chrome {
+  font-family: var(--gg-display);
+  text-transform: uppercase;
+  background: linear-gradient(180deg, #fff 0%, #d9d5e6 38%, #6f6886 50%, #efeaf8 66%, #9d97b2 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 2px 0 #1a1030) drop-shadow(0 0 10px rgba(255, 43, 214, 0.55));
+}
+
+.gg-steel {
+  background: linear-gradient(180deg, #5a5470 0%, #3a3550 18%, #24203a 60%, #1a1630 100%);
+  border-bottom: 2px solid var(--gg-pink);
+  box-shadow: 0 2px 18px rgba(255, 43, 214, 0.45), inset 0 1px 0 #8f88aa;
+  background-image: radial-gradient(circle, #a9a3c0 0 2px, #3a3550 2.5px, transparent 3px),
+    linear-gradient(180deg, #5a5470 0%, #3a3550 18%, #24203a 60%, #1a1630 100%);
+  background-size: 24px 24px, 100% 100%;
+  background-repeat: repeat-x, no-repeat;
+  background-position: 12px 8px, 0 0;
+}
+
+.gg-panel {
+  background: rgba(14, 8, 30, 0.95);
+  border: 1px solid var(--gg-line-2);
+  box-shadow: 0 0 0 1px #000, 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+.gg-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: 1px solid var(--gg-line-2);
+  background: var(--gg-ink-2);
+  color: var(--gg-fg);
+  font: 600 13px/1 var(--gg-body);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.gg-btn:hover:not(:disabled) {
+  border-color: var(--gg-pink);
+}
+.gg-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.gg-btn-primary {
+  border: 0;
+  background: linear-gradient(90deg, #ff2bd6, #b46bff);
+  color: #fff;
+  box-shadow: 0 0 16px rgba(255, 43, 214, 0.45);
+}
+.gg-btn-danger {
+  border: 0;
+  background: var(--gg-stamp);
+  color: #fff;
+}
+.gg-btn-big {
+  min-height: 48px;
+  font: 900 20px/1 var(--gg-display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.gg-input {
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--gg-line-2);
+  background: var(--gg-ink-2);
+  color: var(--gg-fg);
+  padding: 0 10px;
+  font: 14px var(--gg-body);
+  min-width: 0;
+}
+
+.gg-label {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gg-fg-3);
+}
+
+.gg-scroll {
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--gg-line-2) transparent;
+}
+
+.gg-pulse {
+  animation: gg-pulse 1.6s ease-in-out infinite;
+}
+@keyframes gg-pulse {
+  50% {
+    box-shadow: 0 0 0 3px var(--gg-pending), 0 0 22px var(--gg-pending);
+  }
+}
+
+/* Map layers (Leaflet paths). */
+.gg .leaflet-container {
+  background: #0d0820;
+  font-family: var(--gg-body);
+}
+.gg-glow {
+  animation: gg-glow 1.4s ease-in-out infinite;
+}
+@keyframes gg-glow {
+  50% {
+    stroke-opacity: 0.35;
+    fill-opacity: 0.12;
+  }
+}
+.gg-stamp {
+  pointer-events: none;
+  transform: rotate(-12deg);
+  white-space: nowrap;
+  font: 900 13px/1 var(--gg-display);
+  letter-spacing: 0.08em;
+  color: var(--gg-stamp);
+  border: 2px solid var(--gg-stamp);
+  background: rgba(20, 6, 10, 0.6);
+  padding: 2px 6px;
+  border-radius: 2px;
+}
+
+/* Randomizer overlays. */
+.gg-overlay-dim {
+  position: absolute;
+  inset: 0;
+  background: rgba(8, 4, 18, 0.62);
+}
+
+@keyframes gg-pop {
+  0% { transform: scale(0.6); opacity: 0; }
+  70% { transform: scale(1.06); opacity: 1; }
+  100% { transform: scale(1); }
+}
+.gg-pop {
+  animation: gg-pop 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gg-pulse,
+  .gg-glow,
+  .gg-pop {
+    animation: none;
+  }
+}

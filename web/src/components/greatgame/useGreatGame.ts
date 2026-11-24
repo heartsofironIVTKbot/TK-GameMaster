@@ -1,0 +1,141 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { GGState } from "@/lib/greatGame/model";
+
+/**
+ * The Great Game page's live data: loads the event once, then follows the
+ * live channel (every change arrives as the whole state). `serverNow()` is the
+ * server's clock, so every page runs the same timer and the same animation
+ * frame no matter how far off its own clock is.
+ */
+
+export interface GGViewerInfo {
+  id: string;
+  name: string;
+  role: "organizer" | "captain" | "vice" | "recruit" | "caster" | "admin";
+  organizer: boolean;
+  captainOf: string | null;
+}
+
+export type Considering = Record<string, { tag: string; by: string; at: number } | null>;
+
+type Loaded =
+  | { ok: true; state: GGState; viewer: GGViewerInfo | null; demo: boolean }
+  | { ok: false; status: number; message: string };
+
+async function fetchEvent(slug: string): Promise<Loaded> {
+  try {
+    const response = await fetch(`/api/greatgame/${slug}`, { cache: "no-store" });
+    const body = (await response.json().catch(() => ({}))) as { state?: GGState; viewer?: GGViewerInfo; demo?: boolean; error?: string };
+    if (!response.ok || !body.state) {
+      return { ok: false, status: response.status, message: body.error ?? "The draft is unavailable right now." };
+    }
+    return { ok: true, state: body.state, viewer: body.viewer ?? null, demo: Boolean(body.demo) };
+  } catch {
+    return { ok: false, status: 0, message: "Can't reach GameMaster. Check your connection." };
+  }
+}
+
+export function useGreatGame(slug: string) {
+  const [state, setState] = useState<GGState | null>(null);
+  const [viewer, setViewer] = useState<GGViewerInfo | null>(null);
+  const [error, setError] = useState<{ status: number; message: string } | null>(null);
+  const [considering, setConsidering] = useState<Considering>({});
+  const [viewers, setViewers] = useState(0);
+  const [live, setLive] = useState(false);
+  const [demo, setDemo] = useState(false);
+  const offset = useRef(0);
+
+  const take = useCallback((next: GGState) => {
+    offset.current = next.now - Date.now();
+    setState((current) => (current && current.log.length > next.log.length && current.fairness.seed === next.fairness.seed ? current : next));
+  }, []);
+
+  const apply = useCallback(
+    (loaded: Loaded) => {
+      if (!loaded.ok) {
+        setError({ status: loaded.status, message: loaded.message });
+        return false;
+      }
+      setError(null);
+      take(loaded.state);
+      setViewer(loaded.viewer);
+      setDemo(loaded.demo);
+      return true;
+    },
+    [take],
+  );
+
+  const load = useCallback(async () => apply(await fetchEvent(slug)), [slug, apply]);
+
+  useEffect(() => {
+    let source: EventSource | null = null;
+    let cancelled = false;
+    void fetchEvent(slug).then((loaded) => {
+      if (cancelled || !apply(loaded)) return;
+      source = new EventSource(`/api/greatgame/${slug}/live`);
+      source.addEventListener("open", () => setLive(true));
+      source.addEventListener("error", () => setLive(false));
+      source.addEventListener("state", (event) => take(JSON.parse((event as MessageEvent).data) as GGState));
+      source.addEventListener("considering", (event) => setConsidering(JSON.parse((event as MessageEvent).data) as Considering));
+      source.addEventListener("viewers", (event) => setViewers((JSON.parse((event as MessageEvent).data) as { count: number }).count));
+    });
+    return () => {
+      cancelled = true;
+      source?.close();
+    };
+  }, [slug, apply, take]);
+
+  /** Send one action. Resolves to an error message, or null when it went through. */
+  const act = useCallback(
+    async (body: Record<string, unknown>): Promise<string | null> => {
+      try {
+        const response = await fetch(`/api/greatgame/${slug}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const data = (await response.json().catch(() => ({}))) as { state?: GGState; error?: string };
+        if (!response.ok) return data.error ?? "That didn't go through. Try again.";
+        if (data.state) take(data.state);
+        return null;
+      } catch {
+        return "Can't reach GameMaster. Check your connection and try again.";
+      }
+    },
+    [slug, take],
+  );
+
+  const consider = useCallback(
+    (tag: string) => {
+      void fetch(`/api/greatgame/${slug}/consider`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tag }),
+      }).catch(() => undefined);
+    },
+    [slug],
+  );
+
+  const reveal = useCallback(async (): Promise<string | null> => {
+    const response = await fetch(`/api/greatgame/${slug}/reveal`, { method: "POST" });
+    const data = (await response.json().catch(() => ({}))) as { state?: GGState; error?: string };
+    if (!response.ok) return data.error ?? "That didn't go through.";
+    if (data.state) take(data.state);
+    return null;
+  }, [slug, take]);
+
+  const serverNow = useCallback(() => Date.now() + offset.current, []);
+
+  return { state, viewer, error, considering, viewers, live, demo, act, consider, reveal, serverNow, reload: load };
+}
+
+/** Ticks every `ms` so clocks re-render. */
+export function useTick(ms = 250) {
+  const [, setN] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setN((n) => n + 1), ms);
+    return () => clearInterval(id);
+  }, [ms]);
+}
