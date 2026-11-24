@@ -22,6 +22,12 @@ interface Banner {
   late: boolean;
 }
 
+const BAND_H = 83.25;
+const NOTCH_W = 340;
+const NOTCH_H = 128;
+const NOTCH_SLOPE = 46;
+const NOTCH_POINTS = `0,${BAND_H} ${NOTCH_SLOPE},${NOTCH_H} ${NOTCH_W - NOTCH_SLOPE},${NOTCH_H} ${NOTCH_W},${BAND_H}`;
+
 export function bannerFor(state: GGState, now: number): Banner {
   const team = teamById(state, state.turn.team);
   const left = secondsLeft(state, now);
@@ -86,10 +92,12 @@ export default function GGTopBar({
   const ink = colored ? "#120a24" : "#fff";
   return (
     <header className="pointer-events-none absolute inset-x-0 top-0 z-[1100]" style={{ height: 230 }}>
+      {/* The band: brushed steel, a row of neon LEDs along the top with a light chasing across them. */}
       <div className="gg-steel pointer-events-auto absolute inset-x-0 top-0" style={{ height: 84 }} />
+      <div className="gg-leds absolute inset-x-0 top-[5px]" aria-hidden />
 
       {/* Left: the wordmark. */}
-      <div className="pointer-events-auto absolute left-5 top-3 hidden md:block">
+      <div className="pointer-events-auto absolute left-5 top-[16px] hidden md:block">
         <div className="gg-brush" style={{ fontSize: 34, lineHeight: 1 }}>
           The Great Game
         </div>
@@ -98,29 +106,40 @@ export default function GGTopBar({
         </div>
       </div>
 
-      {/* Middle: the notch, the sun clock and the pennant. */}
+      {/* Middle: the notch (its slopes start right at the band's edge), the sun clock and the pennant. */}
       <div
         className="absolute left-1/2 top-0 -translate-x-1/2"
-        style={{ width: 340, height: 118, background: "linear-gradient(180deg,#2b2542,#1a1630)", clipPath: "polygon(0 0,100% 0,100% 56%,86% 100%,14% 100%,0 56%)" }}
+        style={{
+          width: NOTCH_W,
+          height: NOTCH_H,
+          background: "linear-gradient(180deg,#2b2542,#1a1630)",
+          clipPath: `polygon(0 0,100% 0,100% ${BAND_H}px,${NOTCH_W - NOTCH_SLOPE}px 100%,${NOTCH_SLOPE}px 100%,0 ${BAND_H}px)`,
+        }}
       />
-      <svg className="absolute left-1/2 top-0 -translate-x-1/2" width="340" height="120" aria-hidden>
-        <polyline points="0,84 0,66 47.6,118 292.4,118 340,66 340,84" fill="none" stroke="#ff2bd6" strokeWidth="2.5" style={{ filter: "drop-shadow(0 0 6px #ff2bd6)" }} />
+
+      {/* The neon edge: one line along the band and around the notch, with a pulse of light running along it. */}
+      <div className="gg-neon absolute left-0 top-[82px] h-[2.5px]" style={{ right: `calc(50% + ${NOTCH_W / 2}px)` }} aria-hidden />
+      <div className="gg-neon gg-neon-right absolute right-0 top-[82px] h-[2.5px]" style={{ left: `calc(50% + ${NOTCH_W / 2}px)` }} aria-hidden />
+      <svg className="absolute left-1/2 top-0 -translate-x-1/2 overflow-visible" width={NOTCH_W} height={NOTCH_H + 4} aria-hidden>
+        <polyline className="gg-neon-path" points={NOTCH_POINTS} fill="none" strokeWidth="2.5" strokeLinejoin="round" />
+        <polyline className="gg-neon-spark" points={NOTCH_POINTS} fill="none" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" />
       </svg>
-      <div className="absolute left-1/2 top-[2px] -translate-x-1/2">
-        <Sun size={96} frac={banner.frac} id="gg-top-sun" />
+
+      <div className="absolute left-1/2 top-[3px] -translate-x-1/2">
+        <Sun size={78} frac={banner.frac} id="gg-top-sun" />
       </div>
       <div
-        className="absolute left-1/2 top-[64px] -translate-x-1/2"
+        className="absolute left-1/2 top-[84px] -translate-x-1/2"
         style={{
           width: 240,
-          height: 96 + (banner.flag ? 30 : 0) + (banner.timer ? 29 : 0),
+          height: 86 + (banner.flag ? 30 : 0) + (banner.timer ? 29 : 0),
           background: colored ? `linear-gradient(180deg,${banner.color},${hexA(banner.color!, 0.86)})` : "linear-gradient(180deg,#ff2bd6,#8a2be2)",
           clipPath: "polygon(0 0,100% 0,100% 100%,50% 82%,0 100%)",
           filter: `drop-shadow(0 0 14px ${hexA(banner.color ?? "#ff2bd6", 0.7)})`,
         }}
       />
-      <div className="absolute left-1/2 top-[64px] h-[6px] w-[240px] -translate-x-1/2" style={{ background: "linear-gradient(90deg,#8f88aa,#efeaf8,#8f88aa)" }} />
-      <div className="absolute left-1/2 top-[76px] w-[240px] -translate-x-1/2 text-center" style={{ color: ink }} aria-live="polite">
+      <div className="absolute left-1/2 top-[82px] h-[6px] w-[248px] -translate-x-1/2 rounded-sm" style={{ background: "linear-gradient(90deg,#8f88aa,#efeaf8,#8f88aa)" }} />
+      <div className="absolute left-1/2 top-[96px] w-[240px] -translate-x-1/2 text-center" style={{ color: ink }} aria-live="polite">
         {banner.flag && (
           <div className="flex justify-center">
             <Flag tag={banner.flag} w={40} h={26} title={nationName(state, banner.flag)} />

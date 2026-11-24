@@ -88,39 +88,40 @@ export function hexA(hex: string, alpha: number): string {
   return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${alpha})`;
 }
 
-/** The poster's striped sun; `frac` of it is lit, draining from the top. */
+/**
+ * The poster's striped sun. Gaps in its lower half drift down and widen, the
+ * way a synthwave sun does, and it glows softly. `frac` of it is lit (the turn
+ * clock drains it from the top); the rest stays as a faint outline.
+ */
 export function Sun({ size, frac, id }: { size: number; frac: number; id: string }) {
   const top = 100 - Math.max(0, Math.min(1, frac)) * 100;
-  const stripes = [
-    [0, 40],
-    [43, 12],
-    [58, 9],
-    [70, 7],
-    [80, 5],
-    [88, 4],
-    [95, 5],
-  ].map(([y, h]) => <rect key={y} x="0" y={y} width="100" height={h} fill={`url(#${id}s)`} />);
+  const gaps = [0, 1, 2, 3, 4].map((i) => (
+    <rect key={i} className="gg-sun-gap" x="-5" y="49" width="110" height="5" fill="#000" style={{ animationDelay: `${-i * 0.9}s` }} />
+  ));
+  const disc = <rect x="0" y="0" width="100" height="100" fill={`url(#${id}s)`} />;
   return (
-    <svg width={size} height={size} viewBox="0 0 100 100" aria-hidden>
+    <svg width={size} height={size} viewBox="0 0 100 100" aria-hidden className="gg-sun">
       <defs>
         <linearGradient id={`${id}s`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#ffb347" />
-          <stop offset=".55" stopColor="#ff5e7e" />
+          <stop offset="0" stopColor="#ffd36e" />
+          <stop offset=".45" stopColor="#ff8a4c" />
+          <stop offset=".7" stopColor="#ff4f8b" />
           <stop offset="1" stopColor="#c53bff" />
         </linearGradient>
-        <clipPath id={`${id}c`}>
-          <circle cx="50" cy="50" r="48" />
-        </clipPath>
+        <mask id={`${id}m`} maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100">
+          <circle cx="50" cy="50" r="48" fill="#fff" />
+          {gaps}
+        </mask>
         <clipPath id={`${id}f`}>
           <rect x="0" y={top} width="100" height={100 - top} />
         </clipPath>
       </defs>
-      <circle cx="50" cy="50" r="48" fill="#1a0f33" stroke="#ff2bd6" strokeOpacity=".5" />
-      <g clipPath={`url(#${id}c)`} opacity=".22">
-        {stripes}
+      <circle cx="50" cy="50" r="48" fill="#1a0f33" stroke="#ff2bd6" strokeOpacity=".45" />
+      <g mask={`url(#${id}m)`} opacity=".22">
+        {disc}
       </g>
-      <g clipPath={`url(#${id}c)`}>
-        <g clipPath={`url(#${id}f)`}>{stripes}</g>
+      <g mask={`url(#${id}m)`} clipPath={`url(#${id}f)`}>
+        {disc}
       </g>
     </svg>
   );

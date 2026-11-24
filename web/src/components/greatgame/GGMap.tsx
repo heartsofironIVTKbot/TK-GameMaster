@@ -402,7 +402,7 @@ function GGMap({
     </MapContainer>
     {hover && (
       <div
-        className="pointer-events-none absolute left-1/2 top-[236px] z-[950] -translate-x-1/2 rounded-full px-4 py-1.5 text-xs font-bold shadow-xl backdrop-blur-md"
+        className="pointer-events-none absolute left-1/2 top-[252px] z-[950] -translate-x-1/2 rounded-full px-4 py-1.5 text-xs font-bold shadow-xl backdrop-blur-md"
         style={{ background: "rgba(14,8,30,.82)", border: "1px solid rgba(255,255,255,.15)", color: "var(--gg-fg)" }}
       >
         {hover}

@@ -65,14 +65,87 @@
 }
 
 .gg-steel {
-  background: linear-gradient(180deg, #5a5470 0%, #3a3550 18%, #24203a 60%, #1a1630 100%);
-  border-bottom: 2px solid var(--gg-pink);
-  box-shadow: 0 2px 18px rgba(255, 43, 214, 0.45), inset 0 1px 0 #8f88aa;
-  background-image: radial-gradient(circle, #a9a3c0 0 2px, #3a3550 2.5px, transparent 3px),
-    linear-gradient(180deg, #5a5470 0%, #3a3550 18%, #24203a 60%, #1a1630 100%);
-  background-size: 24px 24px, 100% 100%;
-  background-repeat: repeat-x, no-repeat;
-  background-position: 12px 8px, 0 0;
+  background: linear-gradient(180deg, #4f4966 0%, #353049 18%, #221d36 62%, #19152c 100%);
+  box-shadow: inset 0 1px 0 #8f88aa, inset 0 -12px 18px rgba(255, 43, 214, 0.06);
+}
+
+/* Neon LEDs along the top of the band: dim pink dots with a cyan light chasing across them. */
+.gg-leds {
+  height: 6px;
+  background: radial-gradient(circle, rgba(255, 43, 214, 0.35) 0 2px, transparent 2.6px) 0 0 / 22px 6px repeat-x;
+  pointer-events: none;
+}
+.gg-leds::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, #9ff6ff 0 2px, rgba(34, 229, 255, 0.6) 2.4px, transparent 3px) 0 0 / 22px 6px repeat-x;
+  filter: drop-shadow(0 0 4px #22e5ff);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 8%, #000 14%, transparent 22%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 8%, #000 14%, transparent 22%);
+  -webkit-mask-size: 200% 100%;
+  mask-size: 200% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  animation: gg-leds-chase 5s linear infinite;
+}
+@keyframes gg-leds-chase {
+  from { -webkit-mask-position: 120% 0; mask-position: 120% 0; }
+  to { -webkit-mask-position: -120% 0; mask-position: -120% 0; }
+}
+
+/* The neon edge between the bar and the map. */
+.gg-neon {
+  background: linear-gradient(90deg, #ff2bd6 0%, #ff2bd6 42%, #ffe4fb 49%, #22e5ff 52%, #ff2bd6 60%, #ff2bd6 100%) 0 0 / 300% 100%;
+  box-shadow: 0 0 6px #ff2bd6, 0 0 16px rgba(255, 43, 214, 0.65), 0 0 32px rgba(255, 43, 214, 0.3);
+  animation: gg-neon-run 7s linear infinite, gg-neon-breathe 3.2s ease-in-out infinite;
+  pointer-events: none;
+}
+.gg-neon-right {
+  animation-direction: reverse, normal;
+}
+@keyframes gg-neon-run {
+  from { background-position: 100% 0; }
+  to { background-position: 0 0; }
+}
+@keyframes gg-neon-breathe {
+  50% { box-shadow: 0 0 4px #ff2bd6, 0 0 10px rgba(255, 43, 214, 0.5), 0 0 22px rgba(255, 43, 214, 0.2); }
+}
+.gg-neon-path {
+  stroke: #ff2bd6;
+  filter: drop-shadow(0 0 5px #ff2bd6) drop-shadow(0 0 12px rgba(255, 43, 214, 0.6));
+  animation: gg-neon-breathe-svg 3.2s ease-in-out infinite;
+}
+.gg-neon-spark {
+  stroke: #e9fcff;
+  stroke-dasharray: 36 520;
+  filter: drop-shadow(0 0 6px #22e5ff);
+  animation: gg-neon-spark 3.5s linear infinite;
+}
+@keyframes gg-neon-breathe-svg {
+  50% { filter: drop-shadow(0 0 3px #ff2bd6) drop-shadow(0 0 8px rgba(255, 43, 214, 0.45)); }
+}
+@keyframes gg-neon-spark {
+  from { stroke-dashoffset: 556; }
+  to { stroke-dashoffset: 0; }
+}
+
+/* The sun: gaps drift down its lower half and widen; a slow glow. */
+.gg-sun {
+  filter: drop-shadow(0 0 10px rgba(255, 94, 126, 0.55));
+  animation: gg-sun-glow 4s ease-in-out infinite;
+}
+.gg-sun-gap {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: gg-sun-gap 4.5s linear infinite;
+}
+@keyframes gg-sun-gap {
+  0% { transform: translateY(0) scaleY(0.15); }
+  100% { transform: translateY(46px) scaleY(1.7); }
+}
+@keyframes gg-sun-glow {
+  50% { filter: drop-shadow(0 0 16px rgba(255, 94, 126, 0.85)) drop-shadow(0 0 30px rgba(197, 59, 255, 0.35)); }
 }
 
 .gg-panel {
@@ -200,7 +273,13 @@
 @media (prefers-reduced-motion: reduce) {
   .gg-pulse,
   .gg-glow,
-  .gg-pop {
+  .gg-pop,
+  .gg-leds::after,
+  .gg-neon,
+  .gg-neon-path,
+  .gg-neon-spark,
+  .gg-sun,
+  .gg-sun-gap {
     animation: none;
   }
 }
