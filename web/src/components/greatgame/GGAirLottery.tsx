@@ -23,11 +23,17 @@ import * as sound from "./ggSound";
  */
 
 /** Longest a draw can take on any page (the page counts it as animating until then). */
-export const DRUM_MS = 5200;
-const LIFT_FROM = 250; // the drawn ball starts catching more of the jet
-const CATCH_FROM = 900; // earliest catch
-const GATHER_FROM = 1800; // still not caught: the jet core gathers it in
-const CATCH_BY = 3000; // caught by now on every page (a simulation of 300 draws reached the collar by itself within 2.6 s every time)
+export const DRUM_MS = 8000;
+/**
+ * The suspense: the air builds for about 2.5 s with every ball flying, then
+ * the drawn ball starts catching more of the jet. A simulation of 300 draws
+ * caught it by itself between 3.6 and 5.3 s (4 s on average), never later.
+ */
+const SURGE_BUILD = 2500; // the air rises to full over this long
+const LIFT_FROM = 3000; // the drawn ball starts catching more of the jet
+const CATCH_FROM = 3600; // earliest catch
+const GATHER_FROM = 4500; // still not caught: the jet core gathers it in
+const CATCH_BY = 5500; // caught by now on every page
 /** After the catch (ms). */
 const ENTER_MS = 240; // from where it was caught into the collar
 const RISE_MS = 380; // sucked up the tube
@@ -597,7 +603,8 @@ export default function GGAirLottery({
       ctx.beginPath();
       ctx.roundRect(CX - 34, CY - R - 8, 68, 16, 6);
       ctx.fill();
-      const light = sinceCatch !== null ? flash : armed * (0.55 + 0.45 * Math.sin((drawn?.ms ?? 0) / 90));
+      // Pulses faster and faster as the catch nears.
+      const light = sinceCatch !== null ? flash : armed * (0.55 + 0.45 * Math.sin(Math.pow((drawn?.ms ?? 0) / 1000, 1.6) * 7));
       ctx.fillStyle = `rgba(34,229,255,${0.35 + 0.65 * light})`;
       ctx.shadowColor = "#22e5ff";
       ctx.shadowBlur = 20 * light;
@@ -646,7 +653,7 @@ export default function GGAirLottery({
 
       // Air: idle, a surge while the drawn ball rides up, easing back after the catch.
       const surging = drawnTeam && caught && (caught.at === null || ms - caught.at < 400);
-      air += ((surging ? 1.5 : 1) - air) * Math.min(1, dt * 3);
+      air += ((surging ? 1 + 0.5 * smooth(seg(ms, 0, SURGE_BUILD)) : 1) - air) * Math.min(1, dt * 3);
       const boost = clamp((air - 1) / 0.5, 0, 1);
       if (!still) fan += dt * (7 + 38 * boost);
       impacts.length = 0;

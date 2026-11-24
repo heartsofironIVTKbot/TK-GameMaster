@@ -105,60 +105,96 @@ function noiseSource(ctx: AudioContext): AudioBufferSourceNode {
   return source;
 }
 
-/** A plastic ball hitting another: short, bright, louder for harder hits. */
+/**
+ * A lottery ball hitting another: hollow rubbery plastic, so a soft, low
+ * "thock" that bends down in pitch, with a muffled knock and no ring.
+ */
 export function clack(strength: number, pan = 0) {
   const a = audio();
   if (!a) return;
   const { ctx, out } = a;
   const t = ctx.currentTime;
-  const level = Math.min(1, strength) * 0.32;
+  const level = Math.min(1, strength) * 0.3;
   if (level < 0.015) return;
   const dest = panned(ctx, out, pan);
-  const tone = ctx.createOscillator();
-  tone.type = "triangle";
-  tone.frequency.setValueAtTime(1700 + Math.random() * 900, t);
-  tone.frequency.exponentialRampToValueAtTime(900, t + 0.05);
-  const toneGain = ctx.createGain();
-  toneGain.gain.setValueAtTime(level, t);
-  toneGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.06);
-  tone.connect(toneGain).connect(dest);
-  tone.start(t);
-  tone.stop(t + 0.07);
-  const click = noiseSource(ctx);
-  const band = ctx.createBiquadFilter();
-  band.type = "bandpass";
-  band.frequency.value = 3500;
-  band.Q.value = 1.2;
-  const clickGain = ctx.createGain();
-  clickGain.gain.setValueAtTime(level * 0.8, t);
-  clickGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.018);
-  click.connect(band).connect(clickGain).connect(dest);
-  click.start(t);
-  click.stop(t + 0.03);
+  const pitch = 430 + Math.random() * 140;
+  // The body: a quick downward bend, soft attack (squish), short decay.
+  for (const [ratio, share, decay] of [
+    [1, 1, 0.075],
+    [1.6, 0.35, 0.04],
+  ]) {
+    const tone = ctx.createOscillator();
+    tone.type = "sine";
+    tone.frequency.setValueAtTime(pitch * ratio, t);
+    tone.frequency.exponentialRampToValueAtTime(pitch * ratio * 0.55, t + decay);
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(level * share, t + 0.004);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + decay + 0.02);
+    tone.connect(gain).connect(dest);
+    tone.start(t);
+    tone.stop(t + decay + 0.03);
+  }
+  // A muffled knock on top.
+  const knock = noiseSource(ctx);
+  const low = ctx.createBiquadFilter();
+  low.type = "lowpass";
+  low.frequency.value = 1300;
+  low.Q.value = 0.7;
+  const knockGain = ctx.createGain();
+  knockGain.gain.setValueAtTime(0.0001, t);
+  knockGain.gain.exponentialRampToValueAtTime(level * 0.55, t + 0.003);
+  knockGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
+  knock.connect(low).connect(knockGain).connect(dest);
+  knock.start(t);
+  knock.stop(t + 0.04);
 }
 
-/** A ball touching the glass: a thin, ringing tink. */
+/**
+ * A ball bumping the thick glass dome: mostly a dull thud and a soft knock,
+ * with only a faint touch of glass ring.
+ */
 export function tink(strength: number, pan = 0) {
   const a = audio();
   if (!a) return;
   const { ctx, out } = a;
   const t = ctx.currentTime;
-  const level = Math.min(1, strength) * 0.12;
-  if (level < 0.01) return;
+  const level = Math.min(1, strength) * 0.24;
+  if (level < 0.012) return;
   const dest = panned(ctx, out, pan);
-  for (const [freq, share] of [
-    [3300 + Math.random() * 500, 1],
-    [6100 + Math.random() * 700, 0.35],
-  ]) {
-    const tone = ctx.createOscillator();
-    tone.type = "sine";
-    tone.frequency.value = freq;
-    const gain = ctx.createGain();
-    gain.gain.setValueAtTime(level * share, t);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
-    tone.connect(gain).connect(dest);
-    tone.start(t);
-    tone.stop(t + 0.2);
+  const thud = ctx.createOscillator();
+  thud.type = "sine";
+  thud.frequency.setValueAtTime(190 + Math.random() * 40, t);
+  thud.frequency.exponentialRampToValueAtTime(105, t + 0.09);
+  const thudGain = ctx.createGain();
+  thudGain.gain.setValueAtTime(0.0001, t);
+  thudGain.gain.exponentialRampToValueAtTime(level, t + 0.005);
+  thudGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.11);
+  thud.connect(thudGain).connect(dest);
+  thud.start(t);
+  thud.stop(t + 0.12);
+  const knock = noiseSource(ctx);
+  const band = ctx.createBiquadFilter();
+  band.type = "bandpass";
+  band.frequency.value = 850;
+  band.Q.value = 1;
+  const knockGain = ctx.createGain();
+  knockGain.gain.setValueAtTime(0.0001, t);
+  knockGain.gain.exponentialRampToValueAtTime(level * 0.5, t + 0.003);
+  knockGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.035);
+  knock.connect(band).connect(knockGain).connect(dest);
+  knock.start(t);
+  knock.stop(t + 0.045);
+  for (const freq of [2300 + Math.random() * 300, 3600 + Math.random() * 400]) {
+    const ring = ctx.createOscillator();
+    ring.type = "sine";
+    ring.frequency.value = freq;
+    const ringGain = ctx.createGain();
+    ringGain.gain.setValueAtTime(level * 0.05, t);
+    ringGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.15);
+    ring.connect(ringGain).connect(dest);
+    ring.start(t);
+    ring.stop(t + 0.16);
   }
 }
 
@@ -205,9 +241,9 @@ export function airLevel(level: number | null) {
     };
   }
   const t = ctx.currentTime;
-  air.gain.gain.setTargetAtTime(0.05 + 0.13 * level, t, 0.08);
+  air.gain.gain.setTargetAtTime(0.9 * (0.05 + 0.13 * level), t, 0.08);
   air.band.frequency.setTargetAtTime(700 + 1500 * level, t, 0.08);
-  air.rumble.gain.setTargetAtTime(0.18 + 0.32 * level, t, 0.08);
+  air.rumble.gain.setTargetAtTime(0.9 * (0.18 + 0.32 * level), t, 0.08);
 }
 
 /** The catch: a soft thunk as the ball seats in the collar. */
