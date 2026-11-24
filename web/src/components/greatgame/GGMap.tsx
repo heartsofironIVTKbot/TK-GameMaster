@@ -2,11 +2,12 @@
 
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GeoJSON, MapContainer, Marker, useMap } from "react-leaflet";
 import {
   computePixelWorld,
   createWorldCrs,
+  INERTIA_MAX_SPEED,
   MapSetup,
   MAX_ZOOM,
   useMapRemountKey,
@@ -120,7 +121,71 @@ function Patterns({ teams }: { teams: { id: string; color: string }[] }) {
   return null;
 }
 
-export default function GGMap({
+/**
+ * Leaflet redraws only when a move ends, so a long drag or a hard flick ran
+ * past the drawn area and the map vanished. Like the live map
+ * (nationHighlights.ts), redraw for the view now whenever it gets close to the
+ * drawn edge mid-drag.
+ */
+function RedrawAhead({ renderer }: { renderer: L.SVG }) {
+  const map = useMap();
+  useEffect(() => {
+    let queued = false;
+    const check = () => {
+      const base = renderer as L.SVG & { _bounds?: L.Bounds; _update?: () => void; _zoom?: number };
+      const leaflet = map as L.Map & { _animatingZoom?: boolean };
+      const drawn = base._bounds;
+      if (!base._update || !drawn?.min || !drawn.max || leaflet._animatingZoom) return;
+      if (base._zoom !== undefined && base._zoom !== map.getZoom()) return;
+      const size = map.getSize();
+      const margin = Math.min(size.x, size.y) * 0.35;
+      const topLeft = map.containerPointToLayerPoint([0, 0]);
+      const bottomRight = map.containerPointToLayerPoint([size.x, size.y]);
+      if (
+        topLeft.x - drawn.min.x < margin ||
+        topLeft.y - drawn.min.y < margin ||
+        drawn.max.x - bottomRight.x < margin ||
+        drawn.max.y - bottomRight.y < margin
+      ) {
+        base._update();
+      }
+    };
+    const onMove = () => {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(() => {
+        queued = false;
+        check();
+      });
+    };
+    map.on("move", onMove);
+    return () => {
+      map.off("move", onMove);
+    };
+  }, [map, renderer]);
+  return null;
+}
+
+/** Tells the page while the map is being dragged or zoomed (no hover name then). */
+function MotionWatch({ onMoving }: { onMoving: (moving: boolean) => void }) {
+  const map = useMap();
+  useEffect(() => {
+    const start = () => onMoving(true);
+    const end = () => onMoving(false);
+    map.on("movestart zoomstart", start);
+    map.on("moveend zoomend", end);
+    return () => {
+      map.off("movestart zoomstart", start);
+      map.off("moveend zoomend", end);
+    };
+  }, [map, onMoving]);
+  return null;
+}
+
+/** Hovered nation's name: the same pill as the live map, under the pennant. */
+const HOVER_DEBOUNCE_MS = 100;
+
+function GGMap({
   state,
   considering,
   selected,
@@ -139,6 +204,21 @@ export default function GGMap({
   const viewRef = useRef<ViewIntent | null>(EUROPE);
   const baseRef = useRef<L.GeoJSON | null>(null);
   const renderer = useMemo(() => L.svg({ padding: 1 }) as L.SVG, []);
+  // onEachFeature runs once per nation: it reaches the latest handler through a ref.
+  const onSelectRef = useRef(onSelect);
+  useEffect(() => {
+    onSelectRef.current = onSelect;
+  }, [onSelect]);
+  const [hover, setHover] = useState<string | null>(null);
+  const hoverTimer = useRef<number | null>(null);
+  const moving = useRef(false);
+  const onMoving = useCallback((value: boolean) => {
+    moving.current = value;
+    if (value) {
+      if (hoverTimer.current !== null) window.clearTimeout(hoverTimer.current);
+      setHover(null);
+    }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -224,6 +304,7 @@ export default function GGMap({
   if (!data || !world) return <div className="absolute inset-0" style={{ background: SEA }} />;
 
   return (
+    <>
     <MapContainer
       key={mapKey}
       crs={crs}
@@ -236,11 +317,15 @@ export default function GGMap({
       zoomSnap={0}
       zoomDelta={0.25}
       doubleClickZoom={false}
+      inertia
+      inertiaMaxSpeed={INERTIA_MAX_SPEED}
       attributionControl={false}
       className="h-full w-full"
       style={{ background: SEA }}
     >
       <MapSetup world={world} initialViewRef={viewRef} />
+      <RedrawAhead renderer={renderer} />
+      <MotionWatch onMoving={onMoving} />
       <Patterns teams={state.teams} />
       <GeoJSON
         ref={baseRef}
@@ -248,12 +333,31 @@ export default function GGMap({
         style={baseStyle as L.StyleFunction}
         onEachFeature={(feature: NationFeature, layer) => {
           const tag = feature.properties.tag;
-          if (!known[tag]) {
-            (layer as L.Path).options.interactive = false;
-            return;
-          }
-          layer.on("click", () => onSelect(tag));
-          layer.bindTooltip(known[tag], { sticky: true, direction: "top", className: "gg-tip" });
+          const path = layer as L.Polygon;
+          // Draw whole nations, never clipped to the old view (no chopped edges while panning).
+          path.options.noClip = true;
+          const label = known[tag] ?? feature.properties.name;
+          path.on({
+            mouseover: () => {
+              if (moving.current) return;
+              if (hoverTimer.current !== null) window.clearTimeout(hoverTimer.current);
+              hoverTimer.current = window.setTimeout(() => {
+                hoverTimer.current = null;
+                if (moving.current) return;
+                setHover(label);
+                if (known[tag] && selectedRef.current !== tag) path.setStyle({ color: "#efe9ff", weight: 1.8 });
+              }, HOVER_DEBOUNCE_MS);
+            },
+            mouseout: () => {
+              if (hoverTimer.current !== null) window.clearTimeout(hoverTimer.current);
+              hoverTimer.current = null;
+              setHover(null);
+              path.setStyle(baseStyle(feature));
+            },
+            click: () => {
+              if (known[tag]) onSelectRef.current(tag);
+            },
+          });
         }}
         {...{ renderer }}
       />
@@ -262,6 +366,9 @@ export default function GGMap({
           key={`h:${hatchKey}`}
           data={hatched}
           interactive={false}
+          onEachFeature={(_feature: NationFeature, layer) => {
+            (layer as L.Polygon).options.noClip = true;
+          }}
           style={
             ((feature?: NationFeature) => ({
               fillColor: `url(#gg-h-${feature ? paint(feature.properties.tag, "").hatch : ""})`,
@@ -277,6 +384,9 @@ export default function GGMap({
           key={`g:${[...glowTags].join(",")}`}
           data={glow}
           interactive={false}
+          onEachFeature={(_feature: NationFeature, layer) => {
+            (layer as L.Polygon).options.noClip = true;
+          }}
           style={{ fillColor: "#ffd23f", fillOpacity: 0.28, color: "#ffd23f", weight: 3, className: "gg-glow" }}
           {...{ renderer }}
         />
@@ -290,5 +400,17 @@ export default function GGMap({
         />
       ))}
     </MapContainer>
+    {hover && (
+      <div
+        className="pointer-events-none absolute left-1/2 top-[236px] z-[950] -translate-x-1/2 rounded-full px-4 py-1.5 text-xs font-bold shadow-xl backdrop-blur-md"
+        style={{ background: "rgba(14,8,30,.82)", border: "1px solid rgba(255,255,255,.15)", color: "var(--gg-fg)" }}
+      >
+        {hover}
+      </div>
+    )}
+    </>
   );
 }
+
+// The page re-renders 5 times a second for its clocks; the map only when its own inputs change.
+export default memo(GGMap);
