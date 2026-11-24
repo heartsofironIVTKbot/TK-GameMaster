@@ -70,9 +70,7 @@
 }
 
 /* Animations here move with transform and opacity where they can, so they
-   don't repaint the page every frame; the few that must repaint (the snakes,
-   the sun's stripes, the shine on the subtitle) pause while the map moves
-   (.gg[data-moving], set by the map). */
+   don't repaint the page every frame. */
 
 /* Neon LEDs along the top of the band: dim pink dots; a window slides across
    and shows lit cyan dots through it (the dots inside slide back, so they stay
@@ -149,9 +147,8 @@
   100% { background-position: 250% 0, 0 0; }
 }
 
-/* The neon edge: a pink line whose blurred glow breathes (opacity only), with
-   soft pulses of cyan light running along it. The blurs sit on their own
-   layers, so the GPU applies them. */
+/* The neon edge: a pink line whose blurred glow breathes (opacity only, on its
+   own layer), with small pulses of cyan running along it. */
 .gg-neon-glow {
   filter: blur(5px);
   animation: gg-breathe 3.2s ease-in-out infinite;
@@ -160,16 +157,8 @@
 @keyframes gg-breathe {
   50% { opacity: 0.55; }
 }
-.gg-pulse-haze {
-  filter: blur(7px);
-  will-change: transform;
-}
-.gg-pulse-core {
-  filter: blur(1.4px);
-  will-change: transform;
-}
 .gg-pulse-dash {
-  animation: gg-snake 6s linear infinite;
+  animation: gg-snake 4.5s linear infinite;
 }
 @keyframes gg-snake {
   from { stroke-dashoffset: var(--from); }
@@ -197,12 +186,6 @@
 @keyframes gg-sun-gap {
   0% { transform: translateY(0) scaleY(0.15); }
   100% { transform: translateY(46px) scaleY(1.7); }
-}
-
-/* While the map is dragged or zoomed, everything decorative holds still. */
-.gg[data-moving] *,
-.gg[data-moving] *::after {
-  animation-play-state: paused !important;
 }
 
 .gg-panel {

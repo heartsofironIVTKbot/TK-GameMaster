@@ -35,24 +35,20 @@ function neonPath(width: number): string {
 }
 
 /**
- * Soft pulses of light running left to right along the whole edge (one path,
+ * Small pulses of cyan running left to right inside the line itself (one path,
  * so a pulse leaving the left side carries on around the notch and out to the
- * right). Each pulse is a few stacked dashes centred near the same point, then
- * blurred: a wide diffuse cyan haze, and on the line itself a long pale-pink
- * wash, a white core and a cyan heart just behind it. Lengths are in
- * pathLength units (the whole edge is 1000), so they look the same on any
- * screen; `shift` moves a layer's centre forward along the path.
+ * right), like the first neon edge: no haze, just the line's colour fading to
+ * cyan and back. Each pulse is a few stacked dashes of the line's own width,
+ * centred on one point, more opaque towards the middle, which reads as a soft
+ * gradient. Lengths are in pathLength units (the whole edge is 1000).
  */
 const PULSES = 3;
 const PULSE_PERIOD = 1000 / PULSES;
-const PULSE_HAZE = [
-  { len: 190, width: 12, color: "#22e5ff", opacity: 0.45, shift: 0 },
-  { len: 90, width: 8, color: "#7ff3ff", opacity: 0.55, shift: 0 },
-];
 const PULSE_CORE = [
-  { len: 170, width: 2.6, color: "#ffc6f5", opacity: 0.55, shift: 0 },
-  { len: 80, width: 2.8, color: "#ffe9fc", opacity: 0.9, shift: 10 },
-  { len: 60, width: 3, color: "#22e5ff", opacity: 1, shift: -14 },
+  { len: 64, width: 2.5, color: "#ffd9f8", opacity: 0.35, shift: 0 },
+  { len: 40, width: 2.5, color: "#a8f5ff", opacity: 0.5, shift: 0 },
+  { len: 22, width: 2.5, color: "#22e5ff", opacity: 0.75, shift: 0 },
+  { len: 10, width: 2.5, color: "#5cefff", opacity: 1, shift: 0 },
 ];
 
 function Pulses({ path, layers }: { path: string; layers: typeof PULSE_CORE }) {
@@ -71,7 +67,6 @@ function Pulses({ path, layers }: { path: string; layers: typeof PULSE_CORE }) {
             stroke={layer.color}
             strokeOpacity={layer.opacity}
             strokeWidth={layer.width}
-            strokeLinecap="round"
             strokeLinejoin="round"
             strokeDasharray={`${layer.len} ${PULSE_PERIOD - layer.len}`}
             style={{ ["--from" as string]: from, ["--to" as string]: from - PULSE_PERIOD }}
@@ -186,7 +181,7 @@ export default function GGTopBar({
         }}
       />
 
-      {/* The neon edge: one glowing line along the band and around the notch, with soft pulses of cyan light running along it. */}
+      {/* The neon edge: one glowing line along the band and around the notch, with small pulses of cyan running along it. */}
       {width > 0 && (
         <>
           <svg className="gg-neon-glow absolute left-0 top-0 overflow-visible" width={width} height={NOTCH_H + 8} aria-hidden>
@@ -195,10 +190,7 @@ export default function GGTopBar({
           <svg className="absolute left-0 top-0 overflow-visible" width={width} height={NOTCH_H + 8} aria-hidden>
             <path d={path} fill="none" stroke="#ff2bd6" strokeWidth="2.5" strokeLinejoin="round" />
           </svg>
-          <svg className="gg-pulse-haze absolute left-0 top-0 overflow-visible" width={width} height={NOTCH_H + 8} aria-hidden>
-            <Pulses path={path} layers={PULSE_HAZE} />
-          </svg>
-          <svg className="gg-pulse-core absolute left-0 top-0 overflow-visible" width={width} height={NOTCH_H + 8} aria-hidden>
+          <svg className="absolute left-0 top-0 overflow-visible" width={width} height={NOTCH_H + 8} aria-hidden>
             <Pulses path={path} layers={PULSE_CORE} />
           </svg>
         </>

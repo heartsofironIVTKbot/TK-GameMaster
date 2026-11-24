@@ -167,28 +167,18 @@ function RedrawAhead({ renderer }: { renderer: L.SVG }) {
 }
 
 /**
- * Tells the page while the map is being dragged or zoomed: no hover name then,
- * and the page's decorative animations hold still (.gg[data-moving]) so every
- * frame goes to the map.
+ * Tells the page while the map is being dragged or zoomed (no hover name then).
  */
 function MotionWatch({ onMoving }: { onMoving: (moving: boolean) => void }) {
   const map = useMap();
   useEffect(() => {
-    const page = map.getContainer().closest(".gg");
-    const start = () => {
-      page?.setAttribute("data-moving", "");
-      onMoving(true);
-    };
-    const end = () => {
-      page?.removeAttribute("data-moving");
-      onMoving(false);
-    };
+    const start = () => onMoving(true);
+    const end = () => onMoving(false);
     map.on("movestart zoomstart", start);
     map.on("moveend zoomend", end);
     return () => {
       map.off("movestart zoomstart", start);
       map.off("moveend zoomend", end);
-      page?.removeAttribute("data-moving");
     };
   }, [map, onMoving]);
   return null;
