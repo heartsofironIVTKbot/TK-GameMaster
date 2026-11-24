@@ -35,48 +35,13 @@ function neonPath(width: number): string {
 }
 
 /**
- * Small pulses of cyan running left to right inside the line itself (one path,
- * so a pulse leaving the left side carries on around the notch and out to the
- * right), like the first neon edge: no haze, just the line's colour fading to
- * cyan and back. Each pulse is a few stacked dashes of the line's own width,
- * centred on one point, more opaque towards the middle, which reads as a soft
- * gradient. Lengths are in pathLength units (the whole edge is 1000).
+ * Lights gliding left to right along the whole edge, one path, so a light
+ * leaving the left side carries on around the notch and out to the right.
+ * Each is a small soft oval of cyan (a radial gradient, no hard edges) that
+ * turns with the line (offset-path). Three at a time, evenly spaced.
  */
-const PULSES = 3;
-const PULSE_PERIOD = 1000 / PULSES;
-const PULSE_CORE = [
-  { len: 64, width: 2.5, color: "#ffd9f8", opacity: 0.35, shift: 0 },
-  { len: 40, width: 2.5, color: "#a8f5ff", opacity: 0.5, shift: 0 },
-  { len: 22, width: 2.5, color: "#22e5ff", opacity: 0.75, shift: 0 },
-  { len: 10, width: 2.5, color: "#5cefff", opacity: 1, shift: 0 },
-];
-
-function Pulses({ path, layers }: { path: string; layers: typeof PULSE_CORE }) {
-  return (
-    <g>
-      {layers.map((layer) => {
-        // A dash at offset o covers [-o, -o + len]; centred on `shift` that's o = len/2 - shift.
-        const from = layer.len / 2 - layer.shift;
-        return (
-          <path
-            key={`${layer.len}-${layer.width}`}
-            className="gg-pulse-dash"
-            d={path}
-            pathLength={1000}
-            fill="none"
-            stroke={layer.color}
-            strokeOpacity={layer.opacity}
-            strokeWidth={layer.width}
-            strokeLinejoin="round"
-            strokeDasharray={`${layer.len} ${PULSE_PERIOD - layer.len}`}
-            style={{ ["--from" as string]: from, ["--to" as string]: from - PULSE_PERIOD }}
-          />
-        );
-      })}
-    </g>
-  );
-}
-
+const LIGHTS = 3;
+const LIGHT_SECONDS = 7;
 export function bannerFor(state: GGState, now: number): Banner {
   const team = teamById(state, state.turn.team);
   const left = secondsLeft(state, now);
@@ -181,7 +146,7 @@ export default function GGTopBar({
         }}
       />
 
-      {/* The neon edge: one glowing line along the band and around the notch, with small pulses of cyan running along it. */}
+      {/* The neon edge: one glowing line along the band and around the notch, with soft cyan lights gliding along it. */}
       {width > 0 && (
         <>
           <svg className="gg-neon-glow absolute left-0 top-0 overflow-visible" width={width} height={NOTCH_H + 8} aria-hidden>
@@ -190,15 +155,21 @@ export default function GGTopBar({
           <svg className="absolute left-0 top-0 overflow-visible" width={width} height={NOTCH_H + 8} aria-hidden>
             <path d={path} fill="none" stroke="#ff2bd6" strokeWidth="2.5" strokeLinejoin="round" />
           </svg>
-          <svg className="absolute left-0 top-0 overflow-visible" width={width} height={NOTCH_H + 8} aria-hidden>
-            <Pulses path={path} layers={PULSE_CORE} />
-          </svg>
+          <div className="absolute left-0 top-0" aria-hidden>
+            {Array.from({ length: LIGHTS }, (_, i) => (
+              <span
+                key={i}
+                className="gg-light"
+                style={{ offsetPath: `path("${path}")`, animationDuration: `${LIGHT_SECONDS}s`, animationDelay: `${(-i * LIGHT_SECONDS) / LIGHTS}s` }}
+              />
+            ))}
+          </div>
         </>
       )}
 
       <div className="absolute left-1/2 top-[3px] -translate-x-1/2">
         <div className="gg-sun-halo" aria-hidden />
-        <Sun size={78} frac={banner.frac} id="gg-top-sun" />
+        <Sun size={78} frac={banner.frac} />
       </div>
       <div
         className="absolute left-1/2 top-[84px] -translate-x-1/2"

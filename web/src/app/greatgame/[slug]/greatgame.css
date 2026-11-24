@@ -157,15 +157,27 @@
 @keyframes gg-breathe {
   50% { opacity: 0.55; }
 }
-.gg-pulse-dash {
-  animation: gg-snake 4.5s linear infinite;
+.gg-light {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 46px;
+  height: 9px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(150, 245, 255, 0.85), rgba(34, 229, 255, 0.55) 40%, rgba(34, 229, 255, 0.18) 75%, transparent);
+  offset-rotate: auto;
+  offset-anchor: center;
+  animation-name: gg-light;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  pointer-events: none;
 }
-@keyframes gg-snake {
-  from { stroke-dashoffset: var(--from); }
-  to { stroke-dashoffset: var(--to); }
+@keyframes gg-light {
+  from { offset-distance: 0%; }
+  to { offset-distance: 100%; }
 }
 
-/* The sun: gaps drift down its lower half and widen; a halo breathes behind it. */
+/* The sun's glow: a halo breathing behind it (the sun itself is a canvas, ggUi.tsx). */
 .gg-sun-halo {
   position: absolute;
   inset: -16px;
@@ -177,15 +189,6 @@
 @keyframes gg-halo {
   0%, 100% { opacity: 0.7; transform: scale(0.94); }
   50% { opacity: 1; transform: scale(1.06); }
-}
-.gg-sun-gap {
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: gg-sun-gap 4.5s linear infinite;
-}
-@keyframes gg-sun-gap {
-  0% { transform: translateY(0) scaleY(0.15); }
-  100% { transform: translateY(46px) scaleY(1.7); }
 }
 
 .gg-panel {
@@ -318,12 +321,12 @@
   .gg-leds-lit,
   .gg-road,
   .gg-neon-glow,
-  .gg-pulse-dash,
-  .gg-sun-halo,
-  .gg-sun-gap {
+  .gg-light,
+  .gg-sun-halo {
     animation: none;
   }
-  .gg-leds-win {
+  .gg-leds-win,
+  .gg-light {
     display: none;
   }
 }

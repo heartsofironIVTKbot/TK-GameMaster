@@ -167,6 +167,49 @@ function RedrawAhead({ renderer }: { renderer: L.SVG }) {
 }
 
 /**
+ * An SVG renderer that doesn't redraw every nation on a plain pan.
+ *
+ * Leaflet's SVG renderer, whenever it moves its drawing area (at the end of
+ * every drag, and mid-drag via RedrawAhead), rebuilds the outline of every
+ * path: thousands of polygons in three world copies, so a drag stuttered
+ * about once a second. Every path here is drawn whole (noClip), so a pan
+ * within the same zoom leaves every outline exactly as it was: only the SVG's
+ * box has to move. The outlines are rebuilt only when the zoom changed since
+ * they were last drawn (paths drawn for the first time, or after a reset,
+ * draw themselves).
+ */
+type RendererInternals = L.SVG & {
+  _map: L.Map & { _animatingZoom?: boolean };
+  _bounds: L.Bounds;
+  _container: SVGSVGElement;
+  _svgSize?: L.Point;
+  _pathsZoom?: number;
+};
+
+const PanOnlySVG = L.SVG.extend({
+  _update(this: RendererInternals) {
+    const map = this._map;
+    if (map._animatingZoom && this._bounds) return;
+    (L.Renderer.prototype as unknown as { _update: () => void })._update.call(this);
+    const bounds = this._bounds;
+    const size = bounds.getSize();
+    const container = this._container;
+    if (!this._svgSize || !this._svgSize.equals(size)) {
+      this._svgSize = size;
+      container.setAttribute("width", String(size.x));
+      container.setAttribute("height", String(size.y));
+    }
+    L.DomUtil.setPosition(container as unknown as HTMLElement, bounds.min!);
+    container.setAttribute("viewBox", [bounds.min!.x, bounds.min!.y, size.x, size.y].join(" "));
+    const zoom = map.getZoom();
+    if (this._pathsZoom !== zoom) {
+      this._pathsZoom = zoom;
+      this.fire("update");
+    }
+  },
+}) as unknown as new (options?: L.RendererOptions) => L.SVG;
+
+/**
  * Tells the page while the map is being dragged or zoomed (no hover name then).
  */
 function MotionWatch({ onMoving }: { onMoving: (moving: boolean) => void }) {
@@ -205,7 +248,7 @@ function GGMap({
   const mapKey = useMapRemountKey();
   const viewRef = useRef<ViewIntent | null>(EUROPE);
   const baseRef = useRef<L.GeoJSON | null>(null);
-  const renderer = useMemo(() => L.svg({ padding: 1 }) as L.SVG, []);
+  const renderer = useMemo(() => new PanOnlySVG({ padding: 1 }), []);
   // onEachFeature runs once per nation: it reaches the latest handler through a ref.
   const onSelectRef = useRef(onSelect);
   useEffect(() => {

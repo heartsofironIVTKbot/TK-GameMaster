@@ -1,6 +1,7 @@
 "use client";
 
 /* eslint-disable @next/next/no-img-element */
+import { useEffect, useRef } from "react";
 import { turnDeadline } from "@/lib/greatGame/engine";
 import type { GGPerson, GGState, GGTeam } from "@/lib/greatGame/model";
 
@@ -89,42 +90,81 @@ export function hexA(hex: string, alpha: number): string {
 }
 
 /**
- * The poster's striped sun. Gaps in its lower half drift down and widen, the
- * way a synthwave sun does (its glow is a separate halo, .gg-sun-halo). `frac` of it is lit (the turn
- * clock drains it from the top); the rest stays as a faint outline.
+ * The poster's striped sun, drawn on a small canvas: stripes appear at the
+ * horizon (the middle) and drift down, widening as they go. `frac` of it is
+ * lit (the turn clock drains it from the top); the rest stays faint. (An SVG
+ * mask with animated stripes didn't repaint reliably in Chrome: the stripes
+ * stuttered and jumped.) Its glow is a separate halo, .gg-sun-halo.
  */
-export function Sun({ size, frac, id }: { size: number; frac: number; id: string }) {
-  const top = 100 - Math.max(0, Math.min(1, frac)) * 100;
-  const gaps = [0, 1, 2, 3, 4].map((i) => (
-    <rect key={i} className="gg-sun-gap" x="-5" y="49" width="110" height="5" fill="#000" style={{ animationDelay: `${-i * 0.9}s` }} />
-  ));
-  const disc = <rect x="0" y="0" width="100" height="100" fill={`url(#${id}s)`} />;
-  return (
-    <svg width={size} height={size} viewBox="0 0 100 100" aria-hidden className="relative">
-      <defs>
-        <linearGradient id={`${id}s`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#ffd36e" />
-          <stop offset=".45" stopColor="#ff8a4c" />
-          <stop offset=".7" stopColor="#ff4f8b" />
-          <stop offset="1" stopColor="#c53bff" />
-        </linearGradient>
-        <mask id={`${id}m`} maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100">
-          <circle cx="50" cy="50" r="48" fill="#fff" />
-          {gaps}
-        </mask>
-        <clipPath id={`${id}f`}>
-          <rect x="0" y={top} width="100" height={100 - top} />
-        </clipPath>
-      </defs>
-      <circle cx="50" cy="50" r="48" fill="#1a0f33" stroke="#ff2bd6" strokeOpacity=".45" />
-      <g mask={`url(#${id}m)`} opacity=".22">
-        {disc}
-      </g>
-      <g mask={`url(#${id}m)`} clipPath={`url(#${id}f)`}>
-        {disc}
-      </g>
-    </svg>
-  );
+const SUN_STOPS: [number, string][] = [
+  [0, "#ffd36e"],
+  [0.45, "#ff8a4c"],
+  [0.7, "#ff4f8b"],
+  [1, "#c53bff"],
+];
+const SUN_DARK = "#1a0f33";
+const SUN_STRIPES = 5;
+const SUN_STRIPE_MS = 4500;
+
+export function Sun({ size, frac }: { size: number; frac: number }) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const fracRef = useRef(frac);
+  useEffect(() => {
+    fracRef.current = frac;
+  }, [frac]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (!canvas || !ctx) return undefined;
+    const ratio = Math.min(window.devicePixelRatio || 1, 3);
+    canvas.width = Math.round(size * ratio);
+    canvas.height = Math.round(size * ratio);
+    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const gradient = ctx.createLinearGradient(0, 0, 0, 100);
+    for (const [at, color] of SUN_STOPS) gradient.addColorStop(at, color);
+    const disc = () => {
+      ctx.beginPath();
+      ctx.arc(50, 50, 48, 0, Math.PI * 2);
+    };
+    let frame = 0;
+    const draw = (time: number) => {
+      // Work in a 100 x 100 box.
+      ctx.setTransform((canvas.width / 100), 0, 0, canvas.height / 100, 0, 0);
+      ctx.clearRect(0, 0, 100, 100);
+      disc();
+      ctx.fillStyle = SUN_DARK;
+      ctx.fill();
+      ctx.save();
+      disc();
+      ctx.clip();
+      const top = 100 - Math.max(0, Math.min(1, fracRef.current)) * 100;
+      ctx.fillStyle = gradient;
+      ctx.globalAlpha = 0.22;
+      ctx.fillRect(0, 0, 100, top);
+      ctx.globalAlpha = 1;
+      ctx.fillRect(0, top, 100, 100 - top);
+      // Stripes: each starts as nothing at the horizon and leaves below the disc.
+      ctx.fillStyle = SUN_DARK;
+      const phase = still ? 0.5 : (time % SUN_STRIPE_MS) / SUN_STRIPE_MS;
+      for (let i = 0; i < SUN_STRIPES; i++) {
+        const p = (phase + i / SUN_STRIPES) % 1;
+        const height = 8.5 * p;
+        const middle = 51.5 + 48 * p;
+        ctx.fillRect(0, middle - height / 2, 100, height);
+      }
+      ctx.restore();
+      disc();
+      ctx.strokeStyle = "rgba(255,43,214,.45)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      if (!still) frame = requestAnimationFrame(draw);
+    };
+    frame = requestAnimationFrame(draw);
+    return () => cancelAnimationFrame(frame);
+  }, [size]);
+
+  return <canvas ref={canvasRef} aria-hidden className="relative block" style={{ width: size, height: size }} />;
 }
 
 /** "Captain", "Vice-captain", "Recruit" for a team's four slots. */
