@@ -14,7 +14,7 @@ export const PHASES: GGPhase[] = ["teams", "drum", "wheel", "vice", "recruits", 
 export const PHASE_LABEL: Record<GGPhase, string> = {
   teams: "Teams",
   drum: "Lottery drum",
-  wheel: "Major wheel",
+  wheel: "Major reel",
   vice: "Vice-captains",
   recruits: "Recruits",
   bans: "Bans",

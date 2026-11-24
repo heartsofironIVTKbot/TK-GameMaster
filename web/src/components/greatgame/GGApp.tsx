@@ -79,7 +79,7 @@ export default function GGApp({ slug }: { slug: string }) {
         <GGMap state={state} considering={considering} selected={selected} onSelect={select} />
       </div>
 
-      <GGRandomizers state={state} viewer={viewer} act={act} now={now} />
+      <GGRandomizers state={state} viewer={viewer} act={act} now={now} clock={serverNow} />
 
       <GGTopBar
         state={state}

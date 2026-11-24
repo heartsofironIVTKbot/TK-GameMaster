@@ -35,7 +35,7 @@ export function describe(state: GGState, action: GGAction): string {
     case "order.set":
       return "Captain order changed";
     case "wheel.spin":
-      return `Wheel: ${team} rolled ${nation(p.tag)}`;
+      return `Reel: ${team} drew ${nation(p.tag)}`;
     case "major.set":
       return p.tag ? `${team}'s major set to ${nation(p.tag)}` : `${team}'s major cleared`;
     case "vice.draw":

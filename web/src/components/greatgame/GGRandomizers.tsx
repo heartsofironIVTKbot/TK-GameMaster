@@ -3,19 +3,23 @@
 import { useState } from "react";
 import { strengthOrder } from "@/lib/greatGame/engine";
 import type { GGState, GGTeam } from "@/lib/greatGame/model";
+import GGAirLottery, { DRUM_MS } from "./GGAirLottery";
+import GGMajorReel, { REEL_MS } from "./GGMajorReel";
 import { Avatar, Flag, hexA, nationName, person, teamById } from "./ggUi";
 import type { GGViewerInfo } from "./useGreatGame";
 
 /**
  * The four randomizers (steps 1 to 4), over the map. The server picks the
  * result first and stamps it with a time; every page plays the same
- * animation from that time, so all ~40 viewers see the drum drop, the wheel
+ * animation from that time, so all ~40 viewers see the ball caught, the reel
  * land and the card turn together, and a page opened mid-spin joins it.
  */
 
 type Act = (body: Record<string, unknown>) => Promise<string | null>;
 
-export const ANIM_MS: Record<string, number> = { drum: 2600, wheel: 4200, vice: 2200, recruit: 1300 };
+export const ANIM_MS: Record<string, number> = { drum: DRUM_MS, wheel: REEL_MS, vice: 2200, recruit: 1300 };
+/** When the result shows beside the machine (share of the animation): the ball is in the tube, the reel has stopped. */
+const SHOW_AT: Record<string, number> = { drum: 0.55, wheel: 3700 / REEL_MS };
 
 const ease = (t: number) => 1 - Math.pow(1 - t, 3);
 
@@ -91,25 +95,16 @@ function ActButton({ label, can, act, body, waiting }: { label: string; can: boo
   );
 }
 
-/* ---------- Step 1: the lottery drum ---------- */
-function Drum({ state, viewer, act, now }: { state: GGState; viewer: GGViewerInfo; act: Act; now: number }) {
+/* ---------- Step 1: the air lottery ---------- */
+type Clock = () => number;
+
+function Drum({ state, viewer, act, now, clock }: { state: GGState; viewer: GGViewerInfo; act: Act; now: number; clock: Clock }) {
   const p = progressOf(state, "drum", now);
   const playing = p !== null;
-  // While the newest ball rolls, it still shows as "in the drum".
-  const shownOrder = playing ? state.order.slice(0, -1) : state.order;
-  const inDrum = state.teams.filter((team) => !shownOrder.includes(team.id));
+  const ballOut = playing ? p >= SHOW_AT.drum : state.order.length > 0;
+  // While the newest ball is on its way, its slot still shows as open.
+  const shownOrder = playing && !ballOut ? state.order.slice(0, -1) : state.order;
   const newest = teamById(state, state.order.at(-1));
-  const spin = playing ? ease(Math.min(1, p / 0.75)) * 720 : 0;
-  const ballOut = playing ? p > 0.7 : Boolean(newest);
-  const spots = [
-    [-50, 30],
-    [30, 55],
-    [60, -10],
-    [-20, -40],
-    [10, 5],
-    [-70, -10],
-    [45, 25],
-  ];
   return (
     <Shell
       title="Captain order"
@@ -124,39 +119,11 @@ function Drum({ state, viewer, act, now }: { state: GGState; viewer: GGViewerInf
         />
       }
     >
-      <div className="flex flex-wrap items-center justify-center gap-6">
-        <svg width="360" height="320" viewBox="-180 -165 360 330" aria-hidden>
-          <defs>
-            <radialGradient id="gg-ball" cx=".35" cy=".3" r=".8">
-              <stop offset="0" stopColor="#fff" stopOpacity=".7" />
-              <stop offset=".4" stopColor="#fff" stopOpacity="0" />
-              <stop offset="1" stopColor="#000" stopOpacity=".35" />
-            </radialGradient>
-          </defs>
-          <rect x="-18" y="120" width="36" height="34" fill="#5d5873" />
-          <rect x="-100" y="150" width="200" height="12" rx="4" fill="#8f88aa" />
-          <circle r="135" fill="#1a0f33" fillOpacity=".6" stroke="#d9d5e6" strokeWidth="5" />
-          <g transform={`rotate(${spin})`}>
-            {[0, 30, 60, 90, 120, 150].map((a) => (
-              <ellipse key={a} rx={135 * Math.abs(Math.cos((a * Math.PI) / 180)) + 1} ry="135" fill="none" stroke="#9d97b2" strokeWidth="2" opacity=".8" />
-            ))}
-            <line x1="-135" y1="0" x2="135" y2="0" stroke="#9d97b2" strokeWidth="2" />
-            {inDrum.map((team, i) => {
-              const [x, y] = spots[i % spots.length];
-              const jitter = playing ? Math.sin(p * 30 + i) * 8 : 0;
-              return (
-                <g key={team.id} transform={`translate(${x + jitter},${y - jitter})`}>
-                  <circle r="24" fill={team.color} />
-                  <circle r="24" fill="url(#gg-ball)" />
-                </g>
-              );
-            })}
-          </g>
-          <circle r="135" fill="none" stroke="#ff2bd6" strokeWidth="2" opacity=".6" style={{ filter: "drop-shadow(0 0 8px #ff2bd6)" }} />
-          <path d="M110 80 L175 130" stroke="#d9d5e6" strokeWidth="16" strokeLinecap="round" />
-          <path d="M110 80 L175 130" stroke="#2b2542" strokeWidth="10" strokeLinecap="round" />
-        </svg>
-        <div className="w-[230px] text-center">
+      <div className="flex flex-wrap items-center justify-center gap-4">
+        <div className="min-w-0 max-w-[620px] flex-[1_1_480px]">
+          <GGAirLottery state={state} clock={clock} />
+        </div>
+        <div className="w-[210px] text-center">
           {newest && ballOut ? (
             <div key={state.order.length} className="gg-pop">
               <div className="gg-label">Ball {state.order.length}</div>
@@ -180,7 +147,7 @@ function Drum({ state, viewer, act, now }: { state: GGState; viewer: GGViewerInf
       </div>
       <div className="mt-2 flex flex-wrap justify-center gap-2">
         {state.teams.map((_, i) => {
-          const team = teamById(state, shownOrder[i]) ?? (ballOut && i === state.order.length - 1 ? newest : null);
+          const team = teamById(state, shownOrder[i]);
           return (
             <div key={i} className="w-[104px] text-center">
               <span className="gg-digit text-xs" style={{ color: "var(--gg-fg-3)" }}>
@@ -206,24 +173,21 @@ function ordinal(n: number) {
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
 }
 
-/* ---------- Step 2: the major wheel ---------- */
-function Wheel({ state, viewer, act, now }: { state: GGState; viewer: GGViewerInfo; act: Act; now: number }) {
+/* ---------- Step 2: the major reel ---------- */
+function Majors({ state, viewer, act, now, clock }: { state: GGState; viewer: GGViewerInfo; act: Act; now: number; clock: Clock }) {
   const majors = state.config.majors;
   const owner = (tag: string) => state.teams.find((team) => team.major === tag) ?? null;
   const p = progressOf(state, "wheel", now);
   const draw = state.last_draw?.kind === "wheel" ? state.last_draw : null;
-  const seg = 360 / majors.length;
-  // Land the pointer (top, -90°) on the result: turn the wheel so that segment's middle sits there.
-  const target = draw ? majors.indexOf(draw.value) : 0;
-  const rest = -90 - (target * seg + seg / 2);
-  const angle = p !== null ? rest - 360 * 5 * (1 - ease(p)) : draw ? rest : 0;
-  const landed = p === null && draw;
+  const landed = Boolean(draw) && (p === null || p >= SHOW_AT.wheel);
   const resultTeam = draw ? teamById(state, draw.team) : null;
   const spinning = teamById(state, state.turn.team);
+  // Still on the reel: untaken majors, and during a spin its own result until it lands.
+  const onReel = majors.filter((tag) => !owner(tag) || (p !== null && !landed && draw?.value === tag));
   return (
     <Shell
-      title="Major wheel"
-      sub={spinning ? `Spin ${state.teams.filter((t) => t.major).length + 1} of 7 · ${spinning.name}` : "Every major is rolled"}
+      title="Major reel"
+      sub={spinning ? `Spin ${state.teams.filter((t) => t.major).length + (p !== null ? 0 : 1)} of 7 · ${p !== null && resultTeam ? resultTeam.name : spinning.name}` : "Every major is drawn"}
       footer={
         <ActButton
           label={`Spin for ${spinning?.name ?? ""}`}
@@ -235,52 +199,23 @@ function Wheel({ state, viewer, act, now }: { state: GGState; viewer: GGViewerIn
       }
     >
       <div className="flex flex-wrap items-center justify-center gap-8">
-        <svg width="380" height="380" viewBox="-200 -205 400 410" aria-hidden>
-          <circle r="186" fill="#120a24" stroke="#d9d5e6" strokeWidth="6" />
-          <g transform={`rotate(${angle})`}>
-            {majors.map((tag, i) => {
-              const a0 = (i * seg * Math.PI) / 180;
-              const a1 = ((i + 1) * seg * Math.PI) / 180;
-              const am = (a0 + a1) / 2;
-              const r = 170;
-              // Taken before this spin: grey. The spin's own result stays lit while it plays.
-              const t = owner(tag);
-              const taken = t && !(p !== null && draw?.value === tag);
-              const pt = (a: number, rr: number) => `${(rr * Math.cos(a)).toFixed(1)},${(rr * Math.sin(a)).toFixed(1)}`;
-              return (
-                <g key={tag}>
-                  <path d={`M0,0 L${pt(a0, r)} A${r} ${r} 0 0 1 ${pt(a1, r)} Z`} fill={taken ? "#2a2340" : i % 2 ? "#3a1a5e" : "#2a1250"} stroke="#ff2bd6" strokeWidth="1.5" />
-                  <g transform={`translate(${(110 * Math.cos(am)).toFixed(1)},${(110 * Math.sin(am)).toFixed(1)}) rotate(${(am * 180) / Math.PI + 90})`} opacity={taken ? 0.35 : 1}>
-                    <image href={`/assets_rt56/flags/${tag}.png`} x="-21" y="-20" width="42" height="27" />
-                    <text y="24" textAnchor="middle" fontFamily="var(--gg-display)" fontWeight="800" fontSize="14" fill="#fff">
-                      {nationName(state, tag)}
-                    </text>
-                  </g>
-                  {taken && <circle cx={(150 * Math.cos(am)).toFixed(1)} cy={(150 * Math.sin(am)).toFixed(1)} r="8" fill={t!.color} />}
-                </g>
-              );
-            })}
-          </g>
-          <circle r="34" fill="#ff2bd6" stroke="#ffb347" strokeWidth="3" />
-          <text y="6" textAnchor="middle" fontFamily="var(--gg-display)" fontWeight="900" fontSize="18" fill="#120a24">
-            SPIN
-          </text>
-          <path d="M0,-180 L-16,-204 L16,-204 Z" fill="#22e5ff" style={{ filter: "drop-shadow(0 0 6px #22e5ff)" }} />
-        </svg>
+        <div className="min-w-0 flex-[1_1_380px]">
+          <GGMajorReel state={state} clock={clock} />
+        </div>
         <div className="w-[260px]">
           <div className="gg-label">{landed ? "Result" : p !== null ? "Spinning…" : "Waiting for the first spin"}</div>
-          {landed && resultTeam && (
-            <div key={draw!.seq} className="gg-pop mt-2 rounded-xl p-4" style={{ background: hexA(resultTeam.color, 0.12), border: `1px solid ${hexA(resultTeam.color, 0.6)}` }}>
-              <Flag tag={draw!.value} w={72} h={46} />
-              <div className="gg-disp mt-2 text-3xl font-black">{nationName(state, draw!.value)}</div>
+          {landed && resultTeam && draw && (
+            <div key={draw.seq} className="gg-pop mt-2 rounded-xl p-4" style={{ background: hexA(resultTeam.color, 0.12), border: `1px solid ${hexA(resultTeam.color, 0.6)}` }}>
+              <Flag tag={draw.value} w={72} h={46} />
+              <div className="gg-disp mt-2 text-3xl font-black">{nationName(state, draw.value)}</div>
               <div className="font-bold" style={{ color: resultTeam.color }}>
                 {resultTeam.name}
               </div>
             </div>
           )}
-          <div className="gg-label mt-4">Still on the wheel</div>
+          <div className="gg-label mt-4">Still on the reel</div>
           <div className="mt-2 flex flex-wrap gap-1.5">
-            {majors.filter((tag) => !owner(tag)).map((tag) => (
+            {onReel.map((tag) => (
               <Flag key={tag} tag={tag} w={40} h={26} title={nationName(state, tag)} />
             ))}
           </div>
@@ -388,12 +323,12 @@ function Cards({ state, viewer, act, now, kind }: { state: GGState; viewer: GGVi
   );
 }
 
-export default function GGRandomizers({ state, viewer, act, now }: { state: GGState; viewer: GGViewerInfo; act: Act; now: number }) {
+export default function GGRandomizers({ state, viewer, act, now, clock }: { state: GGState; viewer: GGViewerInfo; act: Act; now: number; clock: Clock }) {
   switch (state.phase) {
     case "drum":
-      return <Drum state={state} viewer={viewer} act={act} now={now} />;
+      return <Drum state={state} viewer={viewer} act={act} now={now} clock={clock} />;
     case "wheel":
-      return <Wheel state={state} viewer={viewer} act={act} now={now} />;
+      return <Majors state={state} viewer={viewer} act={act} now={now} clock={clock} />;
     case "vice":
       return <Cards key="vice" state={state} viewer={viewer} act={act} now={now} kind="vice" />;
     case "recruits":
