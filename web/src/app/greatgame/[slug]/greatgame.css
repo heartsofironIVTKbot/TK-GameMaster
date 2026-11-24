@@ -161,8 +161,8 @@
   position: absolute;
   left: 0;
   top: 0;
-  width: 46px;
-  height: 9px;
+  width: 52px;
+  height: 11px;
   border-radius: 50%;
   background: radial-gradient(closest-side, rgba(150, 245, 255, 0.85), rgba(34, 229, 255, 0.55) 40%, rgba(34, 229, 255, 0.18) 75%, transparent);
   offset-rotate: auto;

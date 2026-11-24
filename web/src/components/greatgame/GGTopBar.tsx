@@ -35,13 +35,42 @@ function neonPath(width: number): string {
 }
 
 /**
+ * The same edge with its four notch corners rounded, for the lights to ride
+ * on: on the sharp path a light snapped to the new direction at a corner and
+ * jumped sideways off the line; on curves it turns smoothly.
+ */
+function lightPath(width: number, radius = 18): string {
+  const left = width / 2 - NOTCH_W / 2;
+  const right = width / 2 + NOTCH_W / 2;
+  const points: [number, number][] = [
+    [0, BAND_H],
+    [left, BAND_H],
+    [left + NOTCH_SLOPE, NOTCH_H],
+    [right - NOTCH_SLOPE, NOTCH_H],
+    [right, BAND_H],
+    [width, BAND_H],
+  ];
+  // Step `distance` from point a towards point b.
+  const toward = (a: [number, number], b: [number, number], distance: number): string => {
+    const length = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+    return `${a[0] + ((b[0] - a[0]) * distance) / length} ${a[1] + ((b[1] - a[1]) * distance) / length}`;
+  };
+  let d = `M${points[0][0]} ${points[0][1]}`;
+  for (let i = 1; i < points.length - 1; i++) {
+    const corner = points[i];
+    d += ` L${toward(corner, points[i - 1], radius)} Q${corner[0]} ${corner[1]} ${toward(corner, points[i + 1], radius)}`;
+  }
+  return `${d} L${points[points.length - 1][0]} ${points[points.length - 1][1]}`;
+}
+
+/**
  * Lights gliding left to right along the whole edge, one path, so a light
  * leaving the left side carries on around the notch and out to the right.
  * Each is a small soft oval of cyan (a radial gradient, no hard edges) that
  * turns with the line (offset-path). Three at a time, evenly spaced.
  */
 const LIGHTS = 3;
-const LIGHT_SECONDS = 7;
+const LIGHT_SECONDS = 9;
 export function bannerFor(state: GGState, now: number): Banner {
   const team = teamById(state, state.turn.team);
   const left = secondsLeft(state, now);
@@ -160,7 +189,7 @@ export default function GGTopBar({
               <span
                 key={i}
                 className="gg-light"
-                style={{ offsetPath: `path("${path}")`, animationDuration: `${LIGHT_SECONDS}s`, animationDelay: `${(-i * LIGHT_SECONDS) / LIGHTS}s` }}
+                style={{ offsetPath: `path("${lightPath(width)}")`, animationDuration: `${LIGHT_SECONDS}s`, animationDelay: `${(-i * LIGHT_SECONDS) / LIGHTS}s` }}
               />
             ))}
           </div>
