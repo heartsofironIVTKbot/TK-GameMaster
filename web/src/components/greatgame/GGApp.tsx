@@ -22,7 +22,7 @@ const GGMap = dynamic(() => import("./GGMap"), { ssr: false });
  */
 export default function GGApp({ slug }: { slug: string }) {
   const game = useGreatGame(slug);
-  const { state, viewer, error, considering, act, consider, reveal, serverNow, demo } = game;
+  const { state, viewer, error, considering, act, consider, reveal, serverNow, demo, avatars } = game;
   const [selected, setSelected] = useState<string | null>(null);
   const [panel, setPanel] = useState<"log" | "controls" | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(true);
@@ -79,7 +79,7 @@ export default function GGApp({ slug }: { slug: string }) {
         <GGMap state={state} considering={considering} selected={selected} onSelect={select} />
       </div>
 
-      <GGRandomizers state={state} viewer={viewer} act={act} now={now} clock={serverNow} />
+      <GGRandomizers state={state} viewer={viewer} act={act} now={now} clock={serverNow} avatars={avatars} />
 
       <GGTopBar
         state={state}

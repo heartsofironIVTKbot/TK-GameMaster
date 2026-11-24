@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { strengthOrder } from "@/lib/greatGame/engine";
 import type { GGState, GGTeam } from "@/lib/greatGame/model";
 import GGAirLottery, { DRUM_MS } from "./GGAirLottery";
@@ -19,7 +19,7 @@ type Act = (body: Record<string, unknown>) => Promise<string | null>;
 
 export const ANIM_MS: Record<string, number> = { drum: DRUM_MS, wheel: REEL_MS, vice: 2200, recruit: 1300 };
 /** When the result shows beside the machine (share of the animation): the ball is in the tube, the reel has stopped. */
-const SHOW_AT: Record<string, number> = { drum: 0.55, wheel: 3700 / REEL_MS };
+const SHOW_AT: Record<string, number> = { wheel: 3700 / REEL_MS };
 
 const ease = (t: number) => 1 - Math.pow(1 - t, 3);
 
@@ -98,10 +98,15 @@ function ActButton({ label, can, act, body, waiting }: { label: string; can: boo
 /* ---------- Step 1: the air lottery ---------- */
 type Clock = () => number;
 
-function Drum({ state, viewer, act, now, clock }: { state: GGState; viewer: GGViewerInfo; act: Act; now: number; clock: Clock }) {
+type Avatars = Record<string, string>;
+
+function Drum({ state, viewer, act, now, clock, avatars }: { state: GGState; viewer: GGViewerInfo; act: Act; now: number; clock: Clock; avatars: Avatars }) {
   const p = progressOf(state, "drum", now);
   const playing = p !== null;
-  const ballOut = playing ? p >= SHOW_AT.drum : state.order.length > 0;
+  // The result shows once this page's ball has rolled into its slot.
+  const [landedSeq, setLandedSeq] = useState<number | null>(null);
+  const onLanded = useCallback((seq: number) => setLandedSeq(seq), []);
+  const ballOut = playing ? landedSeq === state.last_draw?.seq : state.order.length > 0;
   // While the newest ball is on its way, its slot still shows as open.
   const shownOrder = playing && !ballOut ? state.order.slice(0, -1) : state.order;
   const newest = teamById(state, state.order.at(-1));
@@ -121,7 +126,7 @@ function Drum({ state, viewer, act, now, clock }: { state: GGState; viewer: GGVi
     >
       <div className="flex flex-wrap items-center justify-center gap-4">
         <div className="min-w-0 max-w-[620px] flex-[1_1_480px]">
-          <GGAirLottery state={state} clock={clock} />
+          <GGAirLottery state={state} clock={clock} avatars={avatars} onLanded={onLanded} />
         </div>
         <div className="w-[210px] text-center">
           {newest && ballOut ? (
@@ -131,9 +136,14 @@ function Drum({ state, viewer, act, now, clock }: { state: GGState; viewer: GGVi
                 className="mx-auto my-3 flex h-[110px] w-[110px] items-center justify-center rounded-full"
                 style={{ background: newest.color, boxShadow: `0 0 30px ${hexA(newest.color, 0.8)}` }}
               >
-                <span className="gg-disp flex h-16 w-16 items-center justify-center rounded-full text-4xl font-black" style={{ background: "#120a24", color: newest.color }}>
-                  {(person(state, newest.captain)?.name ?? "?").charAt(0).toUpperCase()}
-                </span>
+                {newest.captain && avatars[newest.captain] ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={avatars[newest.captain]} alt="" width={72} height={72} className="h-[72px] w-[72px] rounded-full object-cover" style={{ boxShadow: "0 0 0 3px #fff" }} />
+                ) : (
+                  <span className="gg-disp flex h-16 w-16 items-center justify-center rounded-full text-4xl font-black" style={{ background: "#120a24", color: newest.color }}>
+                    {(person(state, newest.captain)?.name ?? "?").charAt(0).toUpperCase()}
+                  </span>
+                )}
               </div>
               <div className="gg-disp text-3xl font-black">{newest.name}</div>
               <div style={{ color: "var(--gg-fg-2)" }}>
@@ -323,10 +333,10 @@ function Cards({ state, viewer, act, now, kind }: { state: GGState; viewer: GGVi
   );
 }
 
-export default function GGRandomizers({ state, viewer, act, now, clock }: { state: GGState; viewer: GGViewerInfo; act: Act; now: number; clock: Clock }) {
+export default function GGRandomizers({ state, viewer, act, now, clock, avatars }: { state: GGState; viewer: GGViewerInfo; act: Act; now: number; clock: Clock; avatars: Avatars }) {
   switch (state.phase) {
     case "drum":
-      return <Drum state={state} viewer={viewer} act={act} now={now} clock={clock} />;
+      return <Drum state={state} viewer={viewer} act={act} now={now} clock={clock} avatars={avatars} />;
     case "wheel":
       return <Majors state={state} viewer={viewer} act={act} now={now} clock={clock} />;
     case "vice":

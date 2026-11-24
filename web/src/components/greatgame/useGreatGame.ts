@@ -22,17 +22,17 @@ export interface GGViewerInfo {
 export type Considering = Record<string, { tag: string; by: string; at: number } | null>;
 
 type Loaded =
-  | { ok: true; state: GGState; viewer: GGViewerInfo | null; demo: boolean }
+  | { ok: true; state: GGState; viewer: GGViewerInfo | null; demo: boolean; avatars: Record<string, string> }
   | { ok: false; status: number; message: string };
 
 async function fetchEvent(slug: string): Promise<Loaded> {
   try {
     const response = await fetch(`/api/greatgame/${slug}`, { cache: "no-store" });
-    const body = (await response.json().catch(() => ({}))) as { state?: GGState; viewer?: GGViewerInfo; demo?: boolean; error?: string };
+    const body = (await response.json().catch(() => ({}))) as { state?: GGState; viewer?: GGViewerInfo; demo?: boolean; avatars?: Record<string, string>; error?: string };
     if (!response.ok || !body.state) {
       return { ok: false, status: response.status, message: body.error ?? "The draft is unavailable right now." };
     }
-    return { ok: true, state: body.state, viewer: body.viewer ?? null, demo: Boolean(body.demo) };
+    return { ok: true, state: body.state, viewer: body.viewer ?? null, demo: Boolean(body.demo), avatars: body.avatars ?? {} };
   } catch {
     return { ok: false, status: 0, message: "Can't reach GameMaster. Check your connection." };
   }
@@ -46,6 +46,8 @@ export function useGreatGame(slug: string) {
   const [viewers, setViewers] = useState(0);
   const [live, setLive] = useState(false);
   const [demo, setDemo] = useState(false);
+  /** Discord profile pictures by person id (missing for people GameMaster's bot hasn't seen). */
+  const [avatars, setAvatars] = useState<Record<string, string>>({});
   const offset = useRef(0);
 
   const take = useCallback((next: GGState) => {
@@ -63,6 +65,7 @@ export function useGreatGame(slug: string) {
       take(loaded.state);
       setViewer(loaded.viewer);
       setDemo(loaded.demo);
+      setAvatars(loaded.avatars);
       return true;
     },
     [take],
@@ -129,7 +132,7 @@ export function useGreatGame(slug: string) {
 
   const serverNow = useCallback(() => Date.now() + offset.current, []);
 
-  return { state, viewer, error, considering, viewers, live, demo, act, consider, reveal, serverNow, reload: load };
+  return { state, viewer, error, considering, viewers, live, demo, avatars, act, consider, reveal, serverNow, reload: load };
 }
 
 /** Ticks every `ms` so clocks re-render; 0 stops it (nothing on screen is counting). */

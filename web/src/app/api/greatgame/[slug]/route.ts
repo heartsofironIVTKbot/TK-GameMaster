@@ -1,5 +1,6 @@
 import { DatabaseConfigError } from "@/lib/db";
 import { actorOf, viewerFor } from "@/lib/greatGame/access";
+import { avatarsFor } from "@/lib/greatGame/avatars";
 import { act, getState, SLUG_RE } from "@/lib/greatGame/store";
 import { isSchedulerDemo } from "@/lib/scheduleStore";
 
@@ -27,7 +28,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
     if (!state) return Response.json({ error: "No such event." }, { status: 404, headers });
     const access = await viewerFor(state);
     if (!access.ok) return Response.json({ error: access.error }, { status: access.status, headers });
-    return Response.json({ state, viewer: access.viewer, demo: isSchedulerDemo() }, { headers });
+    const avatars = await avatarsFor(slug, state.config);
+    return Response.json({ state, viewer: access.viewer, demo: isSchedulerDemo(), avatars }, { headers });
   } catch (error) {
     return failure(error);
   }

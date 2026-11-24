@@ -6,24 +6,35 @@ import { person } from "./ggUi";
 
 /**
  * Step 1's lottery machine: a glass sphere where air keeps the team balls
- * flying the whole time. When Tommy draws, the server has already picked the
- * team and stamped the time; every page then plays the same timeline from
- * that time: the air surges, the drawn ball is carried up to the catcher,
- * sucked up the tube, and rolls left along it into its place in the order.
+ * flying the whole time, each ball wearing its captain's Discord picture.
  *
- * The tumbling itself is local physics (each page's balls fly their own way);
- * only the draw is shared, so a page opened mid-draw joins at the right
- * moment.
+ * When Tommy draws, the server has already picked the team and stamped the
+ * time. Every page then plays the draw from that time: the air surges and the
+ * drawn ball catches more of the jet (nothing drags it), rises with the
+ * others, and is caught when it actually reaches the collar moving upward. It
+ * enters the tube at the speed it arrived with, is sucked up, and rolls left
+ * into its place in the order. If it hasn't reached the collar after a couple
+ * of seconds, the jet's core gathers it in gently.
+ *
+ * The tumbling is local physics, so each page's balls fly their own way and
+ * the catch lands within about a second on every page; a page opened mid-draw
+ * joins in.
  */
 
-export const DRUM_MS = 3600;
-/** Milestones of a draw (ms after the server's draw time). */
-const SURGE_END = 1150; // air surges, the drawn ball is carried up to the catcher
-const CATCH_END = 1300; // caught in the collar
-const RISE_END = 1750; // sucked up the tube
-const TURN_END = 1950; // round the bend
-const ROLL_END = 3000; // rolls along to its slot
-const SETTLE_END = 3300; // a little bounce against the ball before it
+/** Longest a draw can take on any page (the page counts it as animating until then). */
+export const DRUM_MS = 5200;
+const LIFT_FROM = 250; // the drawn ball starts catching more of the jet
+const CATCH_FROM = 900; // earliest catch
+const GATHER_FROM = 1800; // still not caught: the jet core gathers it in
+const CATCH_BY = 3000; // caught by now on every page (a simulation of 300 draws reached the collar by itself within 2.6 s every time)
+/** After the catch (ms). */
+const ENTER_MS = 240; // from where it was caught into the collar
+const RISE_MS = 380; // sucked up the tube
+const TURN_MS = 180; // round the bend
+const ROLL_MS = 1000; // rolls along to its slot
+const SETTLE_MS = 320; // a little bounce against the ball before it
+const LANDED_MS = ENTER_MS + RISE_MS + TURN_MS + ROLL_MS;
+const DONE_MS = LANDED_MS + SETTLE_MS;
 
 const W = 600;
 const H = 460;
@@ -35,6 +46,7 @@ const TUBE_Y = 52;
 const TUBE_BEND = 30;
 const SLOT_X0 = 38;
 const SLOT_GAP = 47;
+const MOUTH_Y = CY - R + BALL_R + 4;
 const TAU = Math.PI * 2;
 
 interface Ball {
@@ -54,12 +66,22 @@ interface Particle {
   life: number;
 }
 
+/** This page's view of the current draw: where and when the ball was caught. */
+interface Catch {
+  seq: number;
+  at: number | null; // ms after the draw
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  landedSent: boolean;
+}
+
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const seg = (t: number, a: number, b: number) => clamp((t - a) / (b - a), 0, 1);
-const easeIn = (t: number) => t * t * t;
 const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
-const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+const smooth = (t: number) => t * t * (3 - 2 * t);
 
 function shade(hex: string, amount: number): string {
   const n = parseInt(hex.slice(1), 16);
@@ -79,85 +101,70 @@ function chrome(ctx: CanvasRenderingContext2D, x0: number, y0: number, x1: numbe
   return g;
 }
 
-function drawBall(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, color: string, label: string, spin: number, glow = 0) {
-  ctx.save();
-  ctx.translate(x, y);
-  if (glow > 0) {
-    ctx.shadowColor = color;
-    ctx.shadowBlur = 24 * glow;
-  }
-  const body = ctx.createRadialGradient(-r * 0.35, -r * 0.42, r * 0.08, 0, 0, r);
-  body.addColorStop(0, shade(color, 0.6));
-  body.addColorStop(0.5, color);
-  body.addColorStop(0.92, shade(color, -0.55));
-  body.addColorStop(1, shade(color, -0.7));
-  ctx.fillStyle = body;
-  ctx.beginPath();
-  ctx.arc(0, 0, r, 0, TAU);
-  ctx.fill();
-  ctx.shadowBlur = 0;
-  // The label band turns with the ball; squashed a little as it turns away.
-  const face = Math.cos(spin * 0.5);
-  ctx.save();
-  ctx.rotate(spin * 0.15);
-  ctx.scale(0.55 + 0.45 * Math.abs(face), 1);
-  ctx.fillStyle = "rgba(255,255,255,.95)";
-  ctx.beginPath();
-  ctx.arc(0, 0, r * 0.52, 0, TAU);
-  ctx.fill();
-  ctx.fillStyle = "#120a24";
-  ctx.font = `900 ${Math.round(r * 0.68)}px "Big Shoulders Display", "Arial Narrow", sans-serif`;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText(label, 0, r * 0.05);
-  ctx.restore();
-  // Rim light from the pink neon below, and a specular highlight.
-  ctx.strokeStyle = "rgba(255,79,224,.35)";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.arc(0, 0, r - 1, Math.PI * 0.15, Math.PI * 0.85);
-  ctx.stroke();
-  ctx.fillStyle = "rgba(255,255,255,.55)";
-  ctx.beginPath();
-  ctx.ellipse(-r * 0.36, -r * 0.46, r * 0.3, r * 0.15, -0.6, 0, TAU);
-  ctx.fill();
-  ctx.fillStyle = "rgba(255,255,255,.8)";
-  ctx.beginPath();
-  ctx.arc(-r * 0.46, -r * 0.5, r * 0.06, 0, TAU);
-  ctx.fill();
-  ctx.restore();
+/** Cubic Hermite: from p0 moving at v0 to p1 moving at v1, over `duration` seconds. */
+function hermite(p0: number, v0: number, p1: number, v1: number, t: number, duration: number) {
+  const t2 = t * t;
+  const t3 = t2 * t;
+  return (2 * t3 - 3 * t2 + 1) * p0 + (t3 - 2 * t2 + t) * v0 * duration + (-2 * t3 + 3 * t2) * p1 + (t3 - t2) * v1 * duration;
 }
 
-/** Where a ball is on its way from the catcher to `slotX`, `ms` after the draw. */
-function tubePosition(ms: number, slotX: number): { x: number; y: number; spin: number } {
-  const mouthY = CY - R + BALL_R + 2;
+const ENTER_SPEED = 650; // px/s up into the collar
+
+/** Where the drawn ball is `c` ms after it was caught, on its way to `slotX`. */
+function afterCatch(c: number, caught: Catch, slotX: number): { x: number; y: number; spin: number } {
   const bendY = TUBE_Y + TUBE_BEND;
-  if (ms < RISE_END) {
-    const e = easeIn(seg(ms, CATCH_END, RISE_END));
-    return { x: CX, y: lerp(mouthY, bendY, e), spin: 0 };
+  if (c < ENTER_MS) {
+    const t = c / ENTER_MS;
+    const d = ENTER_MS / 1000;
+    return { x: hermite(caught.x, caught.vx, CX, 0, t, d), y: hermite(caught.y, caught.vy, MOUTH_Y, -ENTER_SPEED, t, d), spin: 0 };
   }
-  if (ms < TURN_END) {
-    const a = seg(ms, RISE_END, TURN_END) * (Math.PI / 2);
-    // A quarter turn from going up to going left, around (CX - TUBE_BEND, bendY).
-    return { x: CX - TUBE_BEND + Math.cos(a) * TUBE_BEND, y: bendY - Math.sin(a) * TUBE_BEND, spin: a };
+  c -= ENTER_MS;
+  if (c < RISE_MS) {
+    // Keeps rising at the entry speed and is sucked faster as it goes.
+    const t = c / 1000;
+    const T = RISE_MS / 1000;
+    const distance = MOUTH_Y - bendY;
+    const accel = (2 * (distance - ENTER_SPEED * T)) / (T * T);
+    return { x: CX, y: MOUTH_Y - (ENTER_SPEED * t + 0.5 * accel * t * t), spin: 0 };
   }
+  c -= RISE_MS;
+  if (c < TURN_MS) {
+    const a = (c / TURN_MS) * (Math.PI / 2);
+    return { x: CX - TUBE_BEND + Math.cos(a) * TUBE_BEND, y: bendY - Math.sin(a) * TUBE_BEND, spin: -a };
+  }
+  c -= TURN_MS;
   const startX = CX - TUBE_BEND;
-  if (ms < ROLL_END) {
-    const e = easeOut(seg(ms, TURN_END, ROLL_END));
-    const x = lerp(startX, slotX + 6, e);
-    return { x, y: TUBE_Y, spin: -(x - startX) / BALL_R };
+  if (c < ROLL_MS) {
+    const x = lerp(startX, slotX + 5, easeOut(c / ROLL_MS));
+    return { x, y: TUBE_Y, spin: -(startX - x) / BALL_R };
   }
-  const b = seg(ms, ROLL_END, SETTLE_END);
-  const x = slotX + 6 * (1 - b) * Math.cos(b * Math.PI * 3);
-  return { x, y: TUBE_Y, spin: -(x - startX) / BALL_R };
+  c -= ROLL_MS;
+  const b = clamp(c / SETTLE_MS, 0, 1);
+  const x = slotX + 5 * (1 - b) * Math.cos(b * Math.PI * 3);
+  return { x, y: TUBE_Y, spin: -(startX - x) / BALL_R };
 }
 
-export default function GGAirLottery({ state, clock }: { state: GGState; clock: () => number }) {
+export default function GGAirLottery({
+  state,
+  clock,
+  avatars,
+  onLanded,
+}: {
+  state: GGState;
+  clock: () => number;
+  avatars: Record<string, string>;
+  /** Called once per draw, when the drawn ball reaches its slot on this page. */
+  onLanded?: (seq: number) => void;
+}) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const stateRef = useRef(state);
+  const avatarsRef = useRef(avatars);
+  const landedRef = useRef(onLanded);
   useEffect(() => {
     stateRef.current = state;
-  }, [state]);
+    avatarsRef.current = avatars;
+    landedRef.current = onLanded;
+  }, [state, avatars, onLanded]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -175,8 +182,22 @@ export default function GGAirLottery({ state, clock }: { state: GGState; clock: 
     const observer = new ResizeObserver(fit);
     observer.observe(canvas);
 
+    const pictures = new Map<string, HTMLImageElement>();
+    const picture = (url: string | undefined) => {
+      if (!url) return null;
+      let image = pictures.get(url);
+      if (!image) {
+        image = new Image();
+        image.decoding = "async";
+        image.src = url;
+        pictures.set(url, image);
+      }
+      return image.complete && image.naturalWidth ? image : null;
+    };
+
     const balls = new Map<string, Ball>();
     const particles: Particle[] = [];
+    let caught: Catch | null = null;
     let air = 1;
     let last = performance.now();
     let frame = 0;
@@ -190,14 +211,81 @@ export default function GGAirLottery({ state, clock }: { state: GGState; clock: 
       spin: Math.random() * TAU,
     });
 
-    const step = (dt: number, time: number, power: number, guide: { id: string; pull: number } | null) => {
+    const drawBall = (x: number, y: number, team: GGTeam, label: string, avatar: string | undefined, spin: number, glow = 0) => {
+      const r = BALL_R;
+      ctx.save();
+      ctx.translate(x, y);
+      if (glow > 0) {
+        ctx.shadowColor = team.color;
+        ctx.shadowBlur = 24 * glow;
+      }
+      const body = ctx.createRadialGradient(-r * 0.35, -r * 0.42, r * 0.08, 0, 0, r);
+      body.addColorStop(0, shade(team.color, 0.6));
+      body.addColorStop(0.5, team.color);
+      body.addColorStop(0.92, shade(team.color, -0.55));
+      body.addColorStop(1, shade(team.color, -0.7));
+      ctx.fillStyle = body;
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, TAU);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      // The face (picture or initial) turns with the ball, squashing as it turns away.
+      const face = Math.cos(spin * 0.5);
+      ctx.save();
+      ctx.rotate(spin * 0.15);
+      ctx.scale(0.55 + 0.45 * Math.abs(face), 1);
+      const disc = r * 0.62;
+      ctx.fillStyle = "rgba(255,255,255,.95)";
+      ctx.beginPath();
+      ctx.arc(0, 0, disc + 2, 0, TAU);
+      ctx.fill();
+      const image = picture(avatar);
+      if (image) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(0, 0, disc, 0, TAU);
+        ctx.clip();
+        ctx.drawImage(image, -disc, -disc, disc * 2, disc * 2);
+        ctx.restore();
+      } else {
+        ctx.fillStyle = "#120a24";
+        ctx.font = `900 ${Math.round(r * 0.68)}px "Big Shoulders Display", "Arial Narrow", sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(label, 0, r * 0.05);
+      }
+      ctx.restore();
+      // Glossy shell over the picture, a pink rim light and a highlight.
+      const gloss = ctx.createRadialGradient(-r * 0.3, -r * 0.4, 0, 0, 0, r);
+      gloss.addColorStop(0, "rgba(255,255,255,.28)");
+      gloss.addColorStop(0.45, "rgba(255,255,255,0)");
+      gloss.addColorStop(1, "rgba(0,0,0,.25)");
+      ctx.fillStyle = gloss;
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, TAU);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(255,79,224,.35)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0, 0, r - 1, Math.PI * 0.15, Math.PI * 0.85);
+      ctx.stroke();
+      ctx.fillStyle = "rgba(255,255,255,.55)";
+      ctx.beginPath();
+      ctx.ellipse(-r * 0.4, -r * 0.5, r * 0.26, r * 0.12, -0.6, 0, TAU);
+      ctx.fill();
+      ctx.restore();
+    };
+
+    const step = (dt: number, time: number, power: number, drawn: { id: string; ms: number } | null) => {
       const live = [...balls.values()];
       const steps = 4;
       const h = dt / steps;
+      // The drawn ball catches more of the jet: more lift, and drift towards the jet's core.
+      const lift = drawn ? smooth(seg(drawn.ms, LIFT_FROM, CATCH_FROM + 400)) : 0;
+      const gather = drawn ? smooth(seg(drawn.ms, GATHER_FROM, CATCH_BY)) : 0;
       for (let s = 0; s < steps; s++) {
         for (const b of live) {
           b.vy += 900 * h;
-          // The jet: strongest at the bottom centre, with turbulence so the balls swirl.
           const depth = (b.y - (CY + R * 0.1)) / R;
           if (depth > 0) {
             const centred = 1 - Math.min(1, Math.abs(b.x - CX) / (R * 0.9));
@@ -205,12 +293,10 @@ export default function GGAirLottery({ state, clock }: { state: GGState; clock: 
           }
           b.vx += (Math.sin(b.y * 0.021 + time * 1.7) * 900 + Math.sin(b.x * 0.013 - time * 1.1) * 520) * power * h;
           b.vy += Math.cos(b.x * 0.017 + time * 1.3) * 380 * power * h;
-          if (guide && b.id === guide.id) {
-            // The drawn ball rides the air up to the catcher.
-            const tx = CX;
-            const ty = CY - R + BALL_R + 2;
-            b.vx += (tx - b.x) * 60 * guide.pull * h - b.vx * 6 * guide.pull * h;
-            b.vy += (ty - b.y) * 60 * guide.pull * h - b.vy * 6 * guide.pull * h;
+          if (drawn && b.id === drawn.id) {
+            b.vy -= (2600 * lift + 3200 * gather) * h;
+            b.vx += (CX - b.x) * (8 * lift + 20 * gather) * h;
+            b.vx *= 1 - 2.5 * gather * h;
           }
           const damp = 1 - 0.12 * h;
           b.vx *= damp;
@@ -264,7 +350,7 @@ export default function GGAirLottery({ state, clock }: { state: GGState; clock: 
           }
         }
       }
-      // Air bubbles rising from the nozzle.
+      // Air streaks rising from the nozzle, fanning out with the turbulence.
       const want = power * (still ? 0 : 1.6);
       for (let k = 0; k < want; k++) {
         if (Math.random() < want - k) {
@@ -286,7 +372,9 @@ export default function GGAirLottery({ state, clock }: { state: GGState; clock: 
       ctx.setTransform(k, 0, 0, k, 0, 0);
       ctx.clearRect(0, 0, W, H);
       const teamOf = new Map(current.teams.map((team) => [team.id, team]));
+      const pics = avatarsRef.current;
       const initial = (team: GGTeam) => (person(current, team.captain)?.name ?? team.name).trim().charAt(0).toUpperCase() || "?";
+      const avatar = (team: GGTeam) => (team.captain ? pics[team.captain] : undefined);
 
       // Spotlight and floor.
       const spot = ctx.createRadialGradient(CX, CY + 20, 20, CX, CY + 20, 190);
@@ -323,31 +411,27 @@ export default function GGAirLottery({ state, clock }: { state: GGState; clock: 
       const tubeLeft = 14;
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
-      const tubePath = () => {
-        ctx.beginPath();
-        ctx.moveTo(CX, CY - R + 8);
-        ctx.lineTo(CX, TUBE_Y + TUBE_BEND);
-        ctx.arc(CX - TUBE_BEND, TUBE_Y + TUBE_BEND, TUBE_BEND, 0, -Math.PI / 2, true);
-        ctx.lineTo(tubeLeft, TUBE_Y);
-      };
       ctx.strokeStyle = "rgba(170,210,255,.12)";
       ctx.lineWidth = BALL_R * 2 + 8;
-      tubePath();
+      ctx.beginPath();
+      ctx.moveTo(CX, CY - R + 8);
+      ctx.lineTo(CX, TUBE_Y + TUBE_BEND);
+      ctx.arc(CX - TUBE_BEND, TUBE_Y + TUBE_BEND, TUBE_BEND, 0, -Math.PI / 2, true);
+      ctx.lineTo(tubeLeft, TUBE_Y);
       ctx.stroke();
 
       // Slot numbers under the tube; a filled slot glows in its team's colour.
       ctx.font = '800 11px "Orbitron", "Segoe UI", sans-serif';
       for (let i = 0; i < current.teams.length; i++) {
-        const x = SLOT_X0 + i * SLOT_GAP;
         const team = queue[i];
         ctx.fillStyle = team ? team.color : "rgba(185,174,224,.55)";
-        ctx.fillText(String(i + 1), x, TUBE_Y + BALL_R + 18);
+        ctx.fillText(String(i + 1), SLOT_X0 + i * SLOT_GAP, TUBE_Y + BALL_R + 18);
       }
 
       // Balls already drawn, resting in the tube.
       queue.forEach((team, i) => {
-        if (drawn && team.id === drawn.team.id && drawn.ms < SETTLE_END) return;
-        drawBall(ctx, SLOT_X0 + i * SLOT_GAP, TUBE_Y, BALL_R, team.color, initial(team), -i * 1.3);
+        if (drawn && team.id === drawn.team.id) return;
+        drawBall(SLOT_X0 + i * SLOT_GAP, TUBE_Y, team, initial(team), avatar(team), -i * 1.3);
       });
 
       // Sphere: back glass.
@@ -367,7 +451,7 @@ export default function GGAirLottery({ state, clock }: { state: GGState; clock: 
         ctx.stroke();
       }
 
-      // Nozzle and the air.
+      // The air and the nozzle.
       ctx.save();
       ctx.beginPath();
       ctx.arc(CX, CY, R - 2, 0, TAU);
@@ -391,17 +475,22 @@ export default function GGAirLottery({ state, clock }: { state: GGState; clock: 
       ctx.fill();
 
       // Balls in the air, back to front.
-      const live = [...balls.values()].sort((a, b) => a.y - b.y);
-      for (const b of live) {
+      for (const b of [...balls.values()].sort((a, c) => a.y - c.y)) {
         const team = teamOf.get(b.id);
-        if (team) drawBall(ctx, b.x, b.y, BALL_R, team.color, initial(team), b.spin);
+        if (team) drawBall(b.x, b.y, team, initial(team), avatar(team), b.spin);
       }
 
-      // The drawn ball on its way.
-      if (drawn && drawn.ms >= CATCH_END && drawn.ms < SETTLE_END) {
-        const slot = queue.findIndex((team) => team.id === drawn.team.id);
-        const p = tubePosition(drawn.ms, SLOT_X0 + Math.max(0, slot) * SLOT_GAP);
-        drawBall(ctx, p.x, p.y, BALL_R, drawn.team.color, initial(drawn.team), p.spin, 1);
+      // The drawn ball, once caught.
+      if (drawn && caught && caught.at !== null) {
+        const c = drawn.ms - caught.at;
+        if (c < DONE_MS) {
+          const slot = Math.max(0, queue.findIndex((team) => team.id === drawn.team.id));
+          const p = afterCatch(c, caught, SLOT_X0 + slot * SLOT_GAP);
+          drawBall(p.x, p.y, drawn.team, initial(drawn.team), avatar(drawn.team), p.spin, 1 - seg(c, LANDED_MS, DONE_MS));
+        } else {
+          const slot = Math.max(0, queue.findIndex((team) => team.id === drawn.team.id));
+          drawBall(SLOT_X0 + slot * SLOT_GAP, TUBE_Y, drawn.team, initial(drawn.team), avatar(drawn.team), -slot * 1.3);
+        }
       }
 
       // Front glass.
@@ -459,14 +548,18 @@ export default function GGAirLottery({ state, clock }: { state: GGState; clock: 
       ctx.beginPath();
       ctx.roundRect(tubeLeft - 10, TUBE_Y - BALL_R - 7, 12, BALL_R * 2 + 14, 4);
       ctx.fill();
-      const catching = drawn && drawn.ms > SURGE_END - 250 && drawn.ms < RISE_END;
+      // The collar's light wakes as the draw starts and flashes at the catch.
+      const sinceCatch = drawn && caught?.at != null ? drawn.ms - caught.at : null;
+      const armed = drawn ? smooth(seg(drawn.ms, 0, CATCH_FROM)) : 0;
+      const flash = sinceCatch !== null ? 1 - seg(sinceCatch, 0, ENTER_MS + RISE_MS) : 0;
       ctx.fillStyle = chrome(ctx, CX - 34, 0, CX + 34, 0);
       ctx.beginPath();
       ctx.roundRect(CX - 34, CY - R - 8, 68, 16, 6);
       ctx.fill();
-      ctx.fillStyle = catching ? "#22e5ff" : "rgba(34,229,255,.35)";
+      const light = sinceCatch !== null ? flash : armed * (0.55 + 0.45 * Math.sin((drawn?.ms ?? 0) / 90));
+      ctx.fillStyle = `rgba(34,229,255,${0.35 + 0.65 * light})`;
       ctx.shadowColor = "#22e5ff";
-      ctx.shadowBlur = catching ? 18 : 0;
+      ctx.shadowBlur = 20 * light;
       ctx.fillRect(CX - 24, CY - R - 2, 48, 4);
       ctx.shadowBlur = 0;
     };
@@ -479,33 +572,41 @@ export default function GGAirLottery({ state, clock }: { state: GGState; clock: 
       const time = now / 1000;
       const draw = current.last_draw?.kind === "drum" ? current.last_draw : null;
       const ms = draw ? now - draw.at : Infinity;
-      const drawnTeam = draw && ms < SETTLE_END ? (current.teams.find((team) => team.id === draw.team) ?? null) : null;
+      const drawnTeam = draw && ms < DRUM_MS ? (current.teams.find((team) => team.id === draw.team) ?? null) : null;
+      if (draw && (!caught || caught.seq !== draw.seq)) caught = { seq: draw.seq, at: null, x: CX, y: MOUTH_Y, vx: 0, vy: -ENTER_SPEED, landedSent: false };
+      // Opened long after this draw: treat it as caught at the latest moment.
+      if (drawnTeam && caught && caught.at === null && ms >= CATCH_BY && !balls.has(drawnTeam.id)) caught.at = CATCH_BY;
       const queue = current.order.map((id) => current.teams.find((team) => team.id === id)).filter((team): team is GGTeam => Boolean(team));
-      // In the sphere: every team not yet drawn, plus the drawn one until it's caught.
-      const inDrum = current.teams.filter((team) => !current.order.includes(team.id) || (drawnTeam?.id === team.id && ms < CATCH_END));
+      // In the sphere: every team not yet drawn, plus the drawn one until this page catches it.
+      const waiting = drawnTeam && caught && caught.at === null;
+      const inDrum = current.teams.filter((team) => !current.order.includes(team.id) || (waiting && drawnTeam?.id === team.id));
       const want = new Set(inDrum.map((team) => team.id));
       for (const id of [...balls.keys()]) if (!want.has(id)) balls.delete(id);
       inDrum.forEach((team, i) => {
         if (!balls.has(team.id)) balls.set(team.id, spawn(team.id, i));
       });
 
-      // Air: idle, then a surge while the drawn ball is carried up, easing back after the catch.
-      const surge = drawnTeam ? Math.sin(Math.PI * seg(ms, 0, SURGE_END + 500)) : 0;
-      const target = 1 + 0.9 * surge;
-      air += (target - air) * Math.min(1, dt * 4);
-      const pull = drawnTeam && ms < CATCH_END ? easeInOut(seg(ms, 350, SURGE_END)) : 0;
-      if (drawnTeam && ms >= SURGE_END && ms < CATCH_END) {
-        // Into the collar.
+      // The catch: the drawn ball reaches the collar moving up (or the latest moment arrives).
+      if (drawnTeam && caught && caught.at === null) {
         const b = balls.get(drawnTeam.id);
-        if (b) {
-          const e = easeOut(seg(ms, SURGE_END, CATCH_END));
-          b.x = lerp(b.x, CX, e);
-          b.y = lerp(b.y, CY - R + BALL_R + 2, e);
-          b.vx = 0;
-          b.vy = 0;
+        if (b && ms >= CATCH_FROM && ((Math.abs(b.x - CX) < 36 && b.y < MOUTH_Y + 50 && b.vy < 120) || ms >= CATCH_BY)) {
+          caught.at = ms;
+          caught.x = b.x;
+          caught.y = b.y;
+          caught.vx = b.vx;
+          caught.vy = Math.min(b.vy, -200);
+          balls.delete(drawnTeam.id);
         }
       }
-      step(still ? 0 : dt, time, air, drawnTeam && pull > 0 ? { id: drawnTeam.id, pull } : null);
+      if (draw && caught && caught.at !== null && !caught.landedSent && ms - caught.at >= LANDED_MS) {
+        caught.landedSent = true;
+        landedRef.current?.(draw.seq);
+      }
+
+      // Air: idle, a surge while the drawn ball rides up, easing back after the catch.
+      const surging = drawnTeam && caught && (caught.at === null || ms - caught.at < 400);
+      air += ((surging ? 1.5 : 1) - air) * Math.min(1, dt * 3);
+      step(still ? 0 : dt, time, air, drawnTeam && caught?.at === null ? { id: drawnTeam.id, ms } : null);
       render(drawnTeam ? { team: drawnTeam, ms } : null, queue, current);
       frame = requestAnimationFrame(loop);
     };
