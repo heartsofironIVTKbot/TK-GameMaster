@@ -35,19 +35,52 @@ function neonPath(width: number): string {
 }
 
 /**
- * Light snakes running left to right along the whole edge. Each snake is a few
- * stacked dashes that end at the same point (the head): a long faint tail, a
- * brighter body and a white-hot head. Lengths are in pathLength units (the
- * whole edge is 1000), so they look the same on any screen.
+ * Soft pulses of light running left to right along the whole edge (one path,
+ * so a pulse leaving the left side carries on around the notch and out to the
+ * right). Each pulse is a few stacked dashes centred near the same point, then
+ * blurred: a wide diffuse cyan haze, and on the line itself a long pale-pink
+ * wash, a white core and a cyan heart just behind it. Lengths are in
+ * pathLength units (the whole edge is 1000), so they look the same on any
+ * screen; `shift` moves a layer's centre forward along the path.
  */
-const SNAKES = 3;
-const SNAKE_PERIOD = 1000 / SNAKES;
-const SNAKE_LAYERS = [
-  { len: 130, width: 10, color: "#ff5ce4", opacity: 0.3 },
-  { len: 90, width: 3.2, color: "#ffc8f7", opacity: 1 },
-  { len: 32, width: 10, color: "#22e5ff", opacity: 0.5 },
-  { len: 26, width: 3.2, color: "#f2fdff", opacity: 1 },
+const PULSES = 3;
+const PULSE_PERIOD = 1000 / PULSES;
+const PULSE_HAZE = [
+  { len: 190, width: 12, color: "#22e5ff", opacity: 0.45, shift: 0 },
+  { len: 90, width: 8, color: "#7ff3ff", opacity: 0.55, shift: 0 },
 ];
+const PULSE_CORE = [
+  { len: 170, width: 2.6, color: "#ffc6f5", opacity: 0.55, shift: 0 },
+  { len: 80, width: 2.8, color: "#ffe9fc", opacity: 0.9, shift: 10 },
+  { len: 60, width: 3, color: "#22e5ff", opacity: 1, shift: -14 },
+];
+
+function Pulses({ path, layers }: { path: string; layers: typeof PULSE_CORE }) {
+  return (
+    <g>
+      {layers.map((layer) => {
+        // A dash at offset o covers [-o, -o + len]; centred on `shift` that's o = len/2 - shift.
+        const from = layer.len / 2 - layer.shift;
+        return (
+          <path
+            key={`${layer.len}-${layer.width}`}
+            className="gg-pulse-dash"
+            d={path}
+            pathLength={1000}
+            fill="none"
+            stroke={layer.color}
+            strokeOpacity={layer.opacity}
+            strokeWidth={layer.width}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeDasharray={`${layer.len} ${PULSE_PERIOD - layer.len}`}
+            style={{ ["--from" as string]: from, ["--to" as string]: from - PULSE_PERIOD }}
+          />
+        );
+      })}
+    </g>
+  );
+}
 
 export function bannerFor(state: GGState, now: number): Banner {
   const team = teamById(state, state.turn.team);
@@ -153,31 +186,20 @@ export default function GGTopBar({
         }}
       />
 
-      {/* The neon edge: one line along the band and around the notch, glowing, with light snakes running along it. */}
+      {/* The neon edge: one glowing line along the band and around the notch, with soft pulses of cyan light running along it. */}
       {width > 0 && (
         <>
-          <svg className="gg-neon-base absolute left-0 top-0 overflow-visible" width={width} height={NOTCH_H + 8} aria-hidden>
-            <path d={path} fill="none" stroke="#ff2bd6" strokeOpacity=".12" strokeWidth="12" strokeLinejoin="round" />
-            <path d={path} fill="none" stroke="#ff2bd6" strokeOpacity=".3" strokeWidth="6" strokeLinejoin="round" />
-            <path d={path} fill="none" stroke="#ff4fe0" strokeWidth="2.5" strokeLinejoin="round" />
+          <svg className="gg-neon-glow absolute left-0 top-0 overflow-visible" width={width} height={NOTCH_H + 8} aria-hidden>
+            <path d={path} fill="none" stroke="#ff2bd6" strokeOpacity=".7" strokeWidth="7" strokeLinejoin="round" />
           </svg>
           <svg className="absolute left-0 top-0 overflow-visible" width={width} height={NOTCH_H + 8} aria-hidden>
-            {SNAKE_LAYERS.map((layer) => (
-              <path
-                key={layer.len}
-                className="gg-snake"
-                d={path}
-                pathLength={1000}
-                fill="none"
-                stroke={layer.color}
-                strokeOpacity={layer.opacity}
-                strokeWidth={layer.width}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeDasharray={`${layer.len} ${SNAKE_PERIOD - layer.len}`}
-                style={{ ["--from" as string]: layer.len, ["--to" as string]: layer.len - SNAKE_PERIOD }}
-              />
-            ))}
+            <path d={path} fill="none" stroke="#ff2bd6" strokeWidth="2.5" strokeLinejoin="round" />
+          </svg>
+          <svg className="gg-pulse-haze absolute left-0 top-0 overflow-visible" width={width} height={NOTCH_H + 8} aria-hidden>
+            <Pulses path={path} layers={PULSE_HAZE} />
+          </svg>
+          <svg className="gg-pulse-core absolute left-0 top-0 overflow-visible" width={width} height={NOTCH_H + 8} aria-hidden>
+            <Pulses path={path} layers={PULSE_CORE} />
           </svg>
         </>
       )}

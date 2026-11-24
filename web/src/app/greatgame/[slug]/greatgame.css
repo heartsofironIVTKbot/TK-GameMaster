@@ -149,16 +149,27 @@
   100% { background-position: 250% 0, 0 0; }
 }
 
-/* The neon edge: a glowing line that breathes (opacity only) with light snakes running along it. */
-.gg-neon-base {
+/* The neon edge: a pink line whose blurred glow breathes (opacity only), with
+   soft pulses of cyan light running along it. The blurs sit on their own
+   layers, so the GPU applies them. */
+.gg-neon-glow {
+  filter: blur(5px);
   animation: gg-breathe 3.2s ease-in-out infinite;
   will-change: opacity;
 }
 @keyframes gg-breathe {
-  50% { opacity: 0.72; }
+  50% { opacity: 0.55; }
 }
-.gg-snake {
-  animation: gg-snake 5.5s linear infinite;
+.gg-pulse-haze {
+  filter: blur(7px);
+  will-change: transform;
+}
+.gg-pulse-core {
+  filter: blur(1.4px);
+  will-change: transform;
+}
+.gg-pulse-dash {
+  animation: gg-snake 6s linear infinite;
 }
 @keyframes gg-snake {
   from { stroke-dashoffset: var(--from); }
@@ -323,8 +334,8 @@
   .gg-leds-win,
   .gg-leds-lit,
   .gg-road,
-  .gg-neon-base,
-  .gg-snake,
+  .gg-neon-glow,
+  .gg-pulse-dash,
   .gg-sun-halo,
   .gg-sun-gap {
     animation: none;
