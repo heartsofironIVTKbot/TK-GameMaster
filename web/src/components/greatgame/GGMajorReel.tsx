@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import type { GGState } from "@/lib/greatGame/model";
+import * as sound from "./ggSound";
 
 /**
  * Step 2's slot-machine reel of major cards (it replaced the wheel). Between
@@ -117,6 +118,8 @@ export default function GGMajorReel({ state, clock }: { state: GGState; clock: (
       return image;
     };
     let plan: { seq: number; at: (ms: number) => number } | null = null;
+    let lastCard: number | null = null;
+    let rang = -1;
     let frame = 0;
 
     const loop = () => {
@@ -135,6 +138,16 @@ export default function GGMajorReel({ state, clock }: { state: GGState; clock: (
         angle = plan.at(ms);
       }
       const landed = spinning && ms >= LAND_END;
+      // A tick each time a card passes the window; a bell when a spin lands.
+      if (faces.length) {
+        const card = Math.round(angle / (TAU / faces.length));
+        if (lastCard !== null && card !== lastCard) sound.tick(spinning ? 1 : 0.45);
+        lastCard = card;
+      }
+      if (landed && draw && rang !== draw.seq) {
+        if (ms < LAND_END + 400) sound.bell();
+        rang = draw.seq;
+      }
       const team = spinning ? current.teams.find((entry) => entry.id === draw.team) : null;
       const speed = spinning ? (ms < ACCEL_END ? TOP_SPEED * (ms / ACCEL_END) : TOP_SPEED * Math.pow(1 - seg(ms, ACCEL_END, LAND_END), 2)) : IDLE_SPEED;
 

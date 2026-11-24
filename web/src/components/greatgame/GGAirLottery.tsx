@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import type { GGState, GGTeam } from "@/lib/greatGame/model";
 import { person } from "./ggUi";
+import * as sound from "./ggSound";
 
 /**
  * Step 1's lottery machine: a glass sphere where air keeps the team balls
@@ -75,6 +76,8 @@ interface Catch {
   vx: number;
   vy: number;
   landedSent: boolean;
+  /** Sounds already played for this draw. */
+  heard: Set<string>;
 }
 
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
@@ -199,6 +202,9 @@ export default function GGAirLottery({
     const particles: Particle[] = [];
     let caught: Catch | null = null;
     let air = 1;
+    let fan = 0;
+    let lastSound = 0;
+    const impacts: { kind: "clack" | "tink"; strength: number; x: number }[] = [];
     let last = performance.now();
     let frame = 0;
 
@@ -229,11 +235,9 @@ export default function GGAirLottery({
       ctx.arc(0, 0, r, 0, TAU);
       ctx.fill();
       ctx.shadowBlur = 0;
-      // The face (picture or initial) turns with the ball, squashing as it turns away.
-      const face = Math.cos(spin * 0.5);
+      // The face (picture or initial) turns with the ball, always round.
       ctx.save();
       ctx.rotate(spin * 0.15);
-      ctx.scale(0.55 + 0.45 * Math.abs(face), 1);
       const disc = r * 0.62;
       ctx.fillStyle = "rgba(255,255,255,.95)";
       ctx.beginPath();
@@ -323,6 +327,7 @@ export default function GGAirLottery({
               c.y += ny * overlap;
               const rv = (c.vx - a.vx) * nx + (c.vy - a.vy) * ny;
               if (rv < 0) {
+                if (rv < -140) impacts.push({ kind: "clack", strength: -rv / 650, x: (a.x + c.x) / 2 });
                 const impulse = (-(1 + 0.88) * rv) / 2;
                 a.vx -= impulse * nx;
                 a.vy -= impulse * ny;
@@ -344,17 +349,25 @@ export default function GGAirLottery({
             b.y = CY + ny * limit;
             const vn = b.vx * nx + b.vy * ny;
             if (vn > 0) {
+              if (vn > 160) impacts.push({ kind: "tink", strength: vn / 700, x: b.x });
               b.vx -= 1.8 * vn * nx;
               b.vy -= 1.8 * vn * ny;
             }
           }
         }
       }
-      // Air streaks rising from the nozzle, fanning out with the turbulence.
-      const want = power * (still ? 0 : 1.6);
+      // Air streaks rising from the blower, fanning out with the turbulence; many more and faster in a surge.
+      const boost = clamp((power - 1) / 0.5, 0, 1);
+      const want = still ? 0 : 1.2 + 5 * boost;
       for (let k = 0; k < want; k++) {
         if (Math.random() < want - k) {
-          particles.push({ x: CX + (Math.random() - 0.5) * 30, y: CY + R - 16, vx: (Math.random() - 0.5) * 340, vy: -(220 + Math.random() * 240) * power, life: 0.6 + Math.random() * 0.4 });
+          particles.push({
+            x: CX + (Math.random() - 0.5) * 30,
+            y: CY + R - 18,
+            vx: (Math.random() - 0.5) * 340 * (1 + boost),
+            vy: -(220 + Math.random() * 240) * (1 + 1.6 * boost),
+            life: 0.6 + Math.random() * 0.4,
+          });
         }
       }
       for (let i = particles.length - 1; i >= 0; i--) {
@@ -457,7 +470,7 @@ export default function GGAirLottery({
       ctx.arc(CX, CY, R - 2, 0, TAU);
       ctx.clip();
       for (const p of particles) {
-        ctx.strokeStyle = `rgba(200,245,255,${0.18 * p.life})`;
+        ctx.strokeStyle = `rgba(200,245,255,${(0.16 + 0.16 * clamp((air - 1) / 0.5, 0, 1)) * p.life})`;
         ctx.lineWidth = 1.2;
         ctx.beginPath();
         ctx.moveTo(p.x, p.y);
@@ -465,14 +478,42 @@ export default function GGAirLottery({
         ctx.stroke();
       }
       ctx.restore();
-      ctx.fillStyle = chrome(ctx, CX - 22, 0, CX + 22, 0);
+      // The blower: a turbine under a chrome cowl, its blades a blur when the air surges.
+      const fx = CX;
+      const fy = CY + R - 14;
+      const boostNow = clamp((air - 1) / 0.5, 0, 1);
+      ctx.fillStyle = chrome(ctx, fx - 30, 0, fx + 30, 0);
       ctx.beginPath();
-      ctx.moveTo(CX - 24, CY + R - 4);
-      ctx.lineTo(CX - 10, CY + R - 20);
-      ctx.lineTo(CX + 10, CY + R - 20);
-      ctx.lineTo(CX + 24, CY + R - 4);
-      ctx.closePath();
+      ctx.ellipse(fx, fy + 4, 30, 11, 0, 0, TAU);
       ctx.fill();
+      ctx.fillStyle = "#120a24";
+      ctx.beginPath();
+      ctx.ellipse(fx, fy, 23, 8, 0, 0, TAU);
+      ctx.fill();
+      ctx.save();
+      ctx.beginPath();
+      ctx.ellipse(fx, fy, 23, 8, 0, 0, TAU);
+      ctx.clip();
+      const trails = 1 + Math.round(3 * boostNow);
+      for (let tr = 0; tr < trails; tr++) {
+        for (let blade = 0; blade < 6; blade++) {
+          const a = fan - tr * 0.09 + (blade * TAU) / 6;
+          ctx.strokeStyle = `rgba(230,225,242,${0.85 / (1 + tr * 1.4)})`;
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(fx, fy);
+          ctx.lineTo(fx + Math.cos(a) * 22, fy + Math.sin(a) * 8);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+      ctx.fillStyle = `rgba(34,229,255,${0.35 + 0.6 * boostNow})`;
+      ctx.shadowColor = "#22e5ff";
+      ctx.shadowBlur = 12 * boostNow;
+      ctx.beginPath();
+      ctx.arc(fx, fy, 3.5, 0, TAU);
+      ctx.fill();
+      ctx.shadowBlur = 0;
 
       // Balls in the air, back to front.
       for (const b of [...balls.values()].sort((a, c) => a.y - c.y)) {
@@ -573,7 +614,7 @@ export default function GGAirLottery({
       const draw = current.last_draw?.kind === "drum" ? current.last_draw : null;
       const ms = draw ? now - draw.at : Infinity;
       const drawnTeam = draw && ms < DRUM_MS ? (current.teams.find((team) => team.id === draw.team) ?? null) : null;
-      if (draw && (!caught || caught.seq !== draw.seq)) caught = { seq: draw.seq, at: null, x: CX, y: MOUTH_Y, vx: 0, vy: -ENTER_SPEED, landedSent: false };
+      if (draw && (!caught || caught.seq !== draw.seq)) caught = { seq: draw.seq, at: null, x: CX, y: MOUTH_Y, vx: 0, vy: -ENTER_SPEED, landedSent: false, heard: new Set() };
       // Opened long after this draw: treat it as caught at the latest moment.
       if (drawnTeam && caught && caught.at === null && ms >= CATCH_BY && !balls.has(drawnTeam.id)) caught.at = CATCH_BY;
       const queue = current.order.map((id) => current.teams.find((team) => team.id === id)).filter((team): team is GGTeam => Boolean(team));
@@ -606,7 +647,34 @@ export default function GGAirLottery({
       // Air: idle, a surge while the drawn ball rides up, easing back after the catch.
       const surging = drawnTeam && caught && (caught.at === null || ms - caught.at < 400);
       air += ((surging ? 1.5 : 1) - air) * Math.min(1, dt * 3);
+      const boost = clamp((air - 1) / 0.5, 0, 1);
+      if (!still) fan += dt * (7 + 38 * boost);
+      impacts.length = 0;
       step(still ? 0 : dt, time, air, drawnTeam && caught?.at === null ? { id: drawnTeam.id, ms } : null);
+
+      // Sounds: the blower all the time, the loudest few impacts of this frame, and the draw's moments.
+      sound.airLevel(still ? null : boost);
+      if (impacts.length && wall - lastSound > 28) {
+        impacts.sort((a, b) => b.strength - a.strength);
+        for (const hit of impacts.slice(0, 2)) {
+          const pan = (hit.x - W / 2) / (W / 2);
+          if (hit.kind === "clack") sound.clack(hit.strength, pan);
+          else sound.tink(hit.strength, pan);
+        }
+        lastSound = wall;
+      }
+      if (drawnTeam && caught && caught.at !== null) {
+        const c = ms - caught.at;
+        const once = (key: string, at: number, play: () => void) => {
+          // Only moments that happen while the page watches (not ones long past on a late join).
+          if (!caught!.heard.has(key) && c >= at && c < at + 400) play();
+          if (c >= at) caught!.heard.add(key);
+        };
+        once("catch", 0, () => sound.thunk(0.3));
+        once("suck", ENTER_MS * 0.5, () => sound.whoosh((ENTER_MS * 0.5 + RISE_MS + TURN_MS) / 1000, 0.3));
+        once("roll", ENTER_MS + RISE_MS + TURN_MS, () => sound.roll(ROLL_MS / 1000));
+        once("settle", LANDED_MS, () => sound.clack(0.7, -0.6));
+      }
       render(drawnTeam ? { team: drawnTeam, ms } : null, queue, current);
       frame = requestAnimationFrame(loop);
     };
@@ -614,6 +682,7 @@ export default function GGAirLottery({
     return () => {
       cancelAnimationFrame(frame);
       observer.disconnect();
+      sound.airLevel(null);
     };
   }, [clock]);
 

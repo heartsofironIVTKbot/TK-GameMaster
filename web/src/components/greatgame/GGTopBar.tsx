@@ -1,9 +1,10 @@
 "use client";
 
-import { ScrollText, SlidersHorizontal } from "lucide-react";
+import { ScrollText, SlidersHorizontal, Volume2, VolumeX } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { PHASE_LABEL, PHASES, type GGState } from "@/lib/greatGame/model";
 import { clock, Flag, hexA, nationName, secondsLeft, Sun, teamById } from "./ggUi";
+import { useSoundSwitch } from "./ggSound";
 
 /**
  * The top bar (concept 01 with banner A): a riveted steel band, the event's
@@ -130,6 +131,7 @@ export default function GGTopBar({
   onOpenControls: (() => void) | null;
 }) {
   const banner = bannerFor(state, now);
+  const [soundOn, setSoundOn] = useSoundSwitch();
   const header = useRef<HTMLElement | null>(null);
   const [width, setWidth] = useState(() => window.innerWidth);
   useEffect(() => {
@@ -252,6 +254,16 @@ export default function GGTopBar({
               Step {step} · {PHASE_LABEL[state.phase]}
             </span>
           </div>
+        <button
+          type="button"
+          className="gg-btn px-2.5"
+          onClick={() => setSoundOn(!soundOn)}
+          aria-pressed={soundOn}
+          aria-label={soundOn ? "Sound on" : "Sound off"}
+          title={soundOn ? "Sound is on (click to mute)" : "Sound is off (click to turn on)"}
+        >
+          {soundOn ? <Volume2 size={16} aria-hidden /> : <VolumeX size={16} aria-hidden />}
+        </button>
         <button type="button" className="gg-btn" onClick={onOpenLog} title="Everything that happened, in order">
           <ScrollText size={16} aria-hidden /> <span className="hidden sm:inline">Log</span>
         </button>
