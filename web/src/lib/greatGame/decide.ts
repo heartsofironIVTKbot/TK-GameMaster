@@ -18,6 +18,8 @@ export interface GGActor {
   organizer: boolean;
   /** The team this person captains, if any. */
   captainOf: string | null;
+  /** The team this person plays on, if any (an organizer who also plays). */
+  teamOf?: string | null;
 }
 
 export type Decision = { ok: true; action: Omit<GGAction, "seq" | "at"> } | { ok: false; error: string };
@@ -103,6 +105,36 @@ function unplaced(state: GGState, role: GGPerson["role"]): string[] {
  * @param seed the event's secret seed; @param nextSeq the seq this action gets
  */
 export function decide(state: GGState, actor: GGActor, body: Record<string, unknown>, seed: string, nextSeq: number): Decision {
+  const decision = decideTurn(state, actor, body, seed, nextSeq);
+  if (decision.ok && actor.organizer && actor.teamOf && touchesOwnTeam(state, decision.action, actor.teamOf)) {
+    return no("You play in this event, so this fix needs another organizer.");
+  }
+  return decision;
+}
+
+/**
+ * Fixes an organizer who also plays may not make: anything outside the normal
+ * turn that touches their own team, and the ranking or captain order (they
+ * decide everyone's order, their team's included). Random draws, pausing and
+ * moving between steps stay allowed.
+ */
+function touchesOwnTeam(state: GGState, action: Omit<GGAction, "seq" | "at">, team: string): boolean {
+  if (action.kind === "config.set" || action.kind === "order.set") return true;
+  if (!action.override) return false;
+  const p = action.payload;
+  if (p.team === team) return true;
+  if (action.kind === "undo") {
+    const target = state.log.find((entry) => entry.seq === Number(p.seq));
+    return Boolean(target && (target.payload.team === team || target.kind === "config.set" || target.kind === "order.set"));
+  }
+  if (action.kind === "person.set" && typeof p.replaces === "string") {
+    const own = state.teams.find((entry) => entry.id === team);
+    return Boolean(own && [own.captain, own.vice, ...own.recruits].includes(p.replaces));
+  }
+  return false;
+}
+
+function decideTurn(state: GGState, actor: GGActor, body: Record<string, unknown>, seed: string, nextSeq: number): Decision {
   const kind = String(body.kind ?? "") as GGActionKind;
   const reason = cleanReason(body.reason);
   const org = actor.organizer;

@@ -16,6 +16,7 @@ export interface GGViewerInfo {
   role: "organizer" | "captain" | "vice" | "recruit" | "caster" | "admin";
   organizer: boolean;
   captainOf: string | null;
+  teamOf: string | null;
 }
 
 export type Considering = Record<string, { tag: string; by: string; at: number } | null>;

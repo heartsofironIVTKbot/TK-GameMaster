@@ -34,6 +34,12 @@ export interface GGPerson {
   channel?: string | null;
   /** A stand-in until the real person is known (an organizer swaps them in). */
   filler?: boolean;
+  /**
+   * Also an organizer while playing (e.g. a recruit who helps run the night).
+   * They get the controls, but any fix touching their own team, the ranking or
+   * the captain order needs another organizer (decide.ts).
+   */
+  organizer?: boolean;
 }
 
 export interface GGTeamConfig {

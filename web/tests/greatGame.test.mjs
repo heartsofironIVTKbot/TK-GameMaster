@@ -192,3 +192,27 @@ test("a replacement takes over a player's place everywhere", () => {
   assert.equal(after.recruits[0], "123456789012345678");
   assert.ok(!e.state().config.people.some((p) => p.id === leaving));
 });
+
+test("an organizer who also plays can run the night but can't fix their own team", () => {
+  const e = makeEvent();
+  playToDraft(e);
+  const s = e.state();
+  const playerOrg = e.config.people.find((p) => p.organizer && p.role === "recruit");
+  const own = s.teams.find((t) => t.recruits.includes(playerOrg.id));
+  const other = s.teams.find((t) => t.id !== own.id && t.id !== s.turn.team);
+  const actor = { id: playerOrg.id, organizer: true, captainOf: null, teamOf: own.id };
+  const nextSeq = () => e.log.length + 1;
+  // Fixing their own team, the ranking or the order: refused.
+  for (const body of [
+    { kind: "ban.set", team: own.id, tag: "FIN", reason: "x" },
+    { kind: "config.set", majors: [...e.config.majors].reverse(), reason: "x" },
+    { kind: "member.set", team: own.id, slot: "vice", person: "", reason: "x" },
+  ]) {
+    const d = decide(s, actor, body, e.seed, nextSeq());
+    assert.equal(d.ok, false, JSON.stringify(body));
+    assert.match(d.error, /another organizer/);
+  }
+  // Fixing another team, pausing, moving on: allowed.
+  assert.equal(decide(s, actor, { kind: "ban.set", team: other.id, tag: "FIN", reason: "x" }, e.seed, nextSeq()).ok, true);
+  assert.equal(decide(s, actor, { kind: "pause.set", on: true }, e.seed, nextSeq()).ok, true);
+});

@@ -8,7 +8,10 @@ import { createEvent, SLUG_RE } from "@/lib/greatGame/store";
  * POST /api/greatgame: create a Great Game event (GameMaster's owners only).
  *
  *   {slug: "gg2026", title?: "Great Game 2026",
- *    people: [{id, name, role: organizer|captain|vice|recruit|caster, channel?}]}
+ *    people: [{id, name, role: organizer|captain|vice|recruit|caster, channel?, organizer?}]}
+ *
+ * organizer: true on a player makes them an organizer too (they can't fix
+ * their own team: decide.ts).
  *
  * Needs exactly 7 captains (one team each, in the order given), 7
  * vice-captains (a missing one can be a filler: id "filler:<name>") and 14
@@ -40,6 +43,7 @@ export async function POST(request: Request) {
       role: role as GGPerson["role"],
       channel: typeof entry.channel === "string" && entry.channel ? entry.channel.slice(0, 200) : null,
       filler: id.startsWith("filler:"),
+      ...(entry.organizer === true && role !== "organizer" ? { organizer: true } : {}),
     });
   }
   const count = (role: GGPerson["role"]) => people.filter((person) => person.role === role).length;

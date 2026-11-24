@@ -22,6 +22,8 @@ export interface GGViewer {
   role: GGRole | "admin";
   organizer: boolean;
   captainOf: string | null;
+  /** The team this person plays on (any slot), if any. */
+  teamOf: string | null;
 }
 
 export type ViewerResult = { ok: true; viewer: GGViewer } | { ok: false; status: 401 | 403; error: string };
@@ -44,18 +46,20 @@ export async function viewerFor(state: GGState): Promise<ViewerResult> {
     return { ok: false, status: 403, error: "This draft is private to the players, casters and organizers. Watch it live on the streams." };
   }
   const captainOf = state.teams.find((team) => team.captain === id)?.id ?? null;
+  const teamOf = state.teams.find((team) => [team.captain, team.vice, ...team.recruits].includes(id))?.id ?? null;
   return {
     ok: true,
     viewer: {
       id,
       name: person?.name ?? fallbackName,
       role: person?.role ?? "admin",
-      organizer: person?.role === "organizer" || admin,
+      organizer: person?.role === "organizer" || person?.organizer === true || admin,
       captainOf,
+      teamOf,
     },
   };
 }
 
 export function actorOf(viewer: GGViewer): GGActor {
-  return { id: viewer.id, organizer: viewer.organizer, captainOf: viewer.captainOf };
+  return { id: viewer.id, organizer: viewer.organizer, captainOf: viewer.captainOf, teamOf: viewer.teamOf };
 }

@@ -23,7 +23,8 @@ export function demoConfig(): GGConfig {
   captains.forEach((name, i) => people.push({ id: id(10 + i), name, role: "captain" }));
   vices.forEach((name, i) => people.push({ id: id(20 + i), name, role: "vice", channel: `https://www.youtube.com/@${name}` }));
   people.push({ id: "filler:vice7", name: "Vice-captain TBA", role: "vice", filler: true });
-  recruits.forEach((name, i) => people.push({ id: id(30 + i), name, role: "recruit" }));
+  // The first recruit also helps organize (like a real organizer who plays).
+  recruits.forEach((name, i) => people.push({ id: id(30 + i), name, role: "recruit", ...(i === 0 ? { organizer: true } : {}) }));
   return {
     title: "Great Game 2026",
     majors: [...R56_MAJORS],
