@@ -8,8 +8,9 @@ import { Sky, type SkyOptions } from "./skyEngine";
  * The night sky behind every page (Niko's pick, 2026-11-07: stars, a faint
  * green haze, a shooting star now and then; compare the rest at
  * /lab/background). Pages leave their background clear so it shows in the
- * margins and gaps; panels stay solid. The full-screen map and the two map
- * editors cover the screen, so the sky doesn't run there at all. Like the
+ * margins and gaps; panels stay solid. The full-screen map, the two map
+ * editors and the Great Game room cover the screen, so the sky doesn't run
+ * there at all. Like the
  * front page's globe, it keeps moving even with reduced motion on.
  */
 
@@ -23,7 +24,9 @@ const SITE_SKY: Partial<SkyOptions> = {
   aurora: false,
 };
 
-const COVERED = [/^\/map(\/|$)/, /^\/schedule\/(new|edit)(\/|$)/, /^\/presets\/(new|edit)(\/|$)/, /^\/lab\//];
+// The Great Game draft room is a full-screen map too: a hidden sky redrawn
+// every frame under it took GPU time from the map and made drags stutter.
+const COVERED = [/^\/map(\/|$)/, /^\/greatgame(\/|$)/, /^\/schedule\/(new|edit)(\/|$)/, /^\/presets\/(new|edit)(\/|$)/, /^\/lab\//];
 
 export default function SkyBackground() {
   const pathname = usePathname() ?? "/";
