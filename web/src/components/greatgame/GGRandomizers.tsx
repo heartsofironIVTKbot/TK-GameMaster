@@ -1,9 +1,11 @@
 "use client";
 
+import { Volume1, Volume2, VolumeX } from "lucide-react";
 import { useCallback, useState } from "react";
 import { strengthOrder } from "@/lib/greatGame/engine";
 import type { GGState, GGTeam } from "@/lib/greatGame/model";
 import GGAirLottery, { DRUM_MS } from "./GGAirLottery";
+import { useSoundSwitch, useSoundVolume } from "./ggSound";
 import GGMajorReel, { REEL_MS } from "./GGMajorReel";
 import { Avatar, Flag, hexA, nationName, person, teamById } from "./ggUi";
 import type { GGViewerInfo } from "./useGreatGame";
@@ -53,12 +55,54 @@ function Shell({ title, sub, children, footer }: { title: string; sub: string; c
         <div className="px-6 pb-4 pt-2">{children}</div>
         <div className="flex flex-wrap items-center justify-between gap-2 border-t px-6 py-3" style={{ borderColor: "var(--gg-line)" }}>
           {footer}
-          <button type="button" className="gg-btn" onClick={() => setHidden(true)}>
-            Hide to see the map
-          </button>
+          <span className="flex flex-wrap items-center gap-3">
+            <SoundControl />
+            <button type="button" className="gg-btn" onClick={() => setHidden(true)}>
+              Hide to see the map
+            </button>
+          </span>
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * Mute and volume for the effects, beside the machine: a streamer can turn
+ * them down without losing them. The same switch as the top bar's speaker.
+ */
+function SoundControl() {
+  const [on, setOn] = useSoundSwitch();
+  const [volume, setVolume] = useSoundVolume();
+  const Icon = !on || volume === 0 ? VolumeX : volume < 0.5 ? Volume1 : Volume2;
+  return (
+    <span className="flex items-center gap-2">
+      <button
+        type="button"
+        className="gg-btn h-9 min-h-0 px-2.5"
+        onClick={() => setOn(!on)}
+        aria-pressed={!on}
+        aria-label={on ? "Mute sound effects" : "Turn sound effects on"}
+        title={on ? "Mute sound effects" : "Turn sound effects on"}
+      >
+        <Icon size={16} aria-hidden />
+      </button>
+      <input
+        id="gg-sound-volume"
+        type="range"
+        min={0}
+        max={100}
+        step={5}
+        value={Math.round(volume * 100)}
+        disabled={!on}
+        onChange={(event) => setVolume(Number(event.target.value) / 100)}
+        aria-label="Sound effects volume"
+        className="w-24 accent-[#ff2bd6] disabled:opacity-40"
+      />
+      <span className="gg-digit w-9 text-right text-xs" style={{ color: "var(--gg-fg-2)" }}>
+        {on ? `${Math.round(volume * 100)}%` : "off"}
+      </span>
+    </span>
   );
 }
 

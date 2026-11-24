@@ -9,19 +9,32 @@ import { useSyncExternalStore } from "react";
  * sound is a small function, so a sound designer's files can replace them one
  * by one later.
  *
- * One switch per viewer (remembered in this browser). Browsers only start
- * audio after a click or key press on the page, so sound begins with the
- * viewer's first interaction.
+ * Per viewer and remembered in this browser: a switch (on by default) and a
+ * volume for the effects (100% by default, so a streamer can turn them down
+ * without losing them). Browsers only start audio after a click or key press
+ * on the page, so sound begins with the viewer's first interaction.
  */
 
 const STORAGE_KEY = "gg-sound";
+const VOLUME_KEY = "gg-sound-volume";
 const MASTER = 0.55;
 
 let context: AudioContext | null = null;
 let master: GainNode | null = null;
 let noise: AudioBuffer | null = null;
 let enabled = readEnabled();
+let volume = readVolume();
 const listeners = new Set<() => void>();
+
+function readVolume(): number {
+  if (typeof window === "undefined") return 1;
+  try {
+    const saved = Number(window.localStorage.getItem(VOLUME_KEY));
+    return window.localStorage.getItem(VOLUME_KEY) !== null && Number.isFinite(saved) ? Math.max(0, Math.min(1, saved)) : 1;
+  } catch {
+    return 1;
+  }
+}
 
 function readEnabled(): boolean {
   if (typeof window === "undefined") return true;
@@ -39,7 +52,7 @@ function audio(): { ctx: AudioContext; out: GainNode } | null {
     if (!Ctor) return null;
     context = new Ctor();
     master = context.createGain();
-    master.gain.value = MASTER;
+    master.gain.value = MASTER * volume;
     master.connect(context.destination);
     // Two seconds of white noise, reused by every noisy sound.
     noise = context.createBuffer(1, context.sampleRate * 2, context.sampleRate);
@@ -77,17 +90,35 @@ export function setSound(on: boolean) {
   for (const listener of listeners) listener();
 }
 
+/** Effects volume, 0..1 (1 is the default level). */
+export function setVolume(value: number) {
+  volume = Math.max(0, Math.min(1, value));
+  try {
+    window.localStorage.setItem(VOLUME_KEY, String(volume));
+  } catch {
+    // Private window: the choice lasts for this visit.
+  }
+  if (context && master) master.gain.setTargetAtTime(MASTER * volume, context.currentTime, 0.03);
+  for (const listener of listeners) listener();
+}
+
+const subscribe = (listener: () => void) => {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+};
+
 /** The switch's state, for a button. */
 export function useSoundSwitch(): [boolean, (on: boolean) => void] {
-  const on = useSyncExternalStore(
-    (listener) => {
-      listeners.add(listener);
-      return () => listeners.delete(listener);
-    },
-    () => enabled,
-    () => true,
-  );
+  const on = useSyncExternalStore(subscribe, () => enabled, () => true);
   return [on, setSound];
+}
+
+/** The effects volume, for a slider. */
+export function useSoundVolume(): [number, (value: number) => void] {
+  const value = useSyncExternalStore(subscribe, () => volume, () => 1);
+  return [value, setVolume];
 }
 
 function panned(ctx: AudioContext, out: AudioNode, pan: number): AudioNode {
@@ -106,48 +137,58 @@ function noiseSource(ctx: AudioContext): AudioBufferSourceNode {
 }
 
 /**
- * A lottery ball hitting another: hollow rubbery plastic, so a soft, low
- * "thock" that bends down in pitch, with a muffled knock and no ring.
+ * A lottery ball hitting another: solid, dense rubbery plastic. A low body
+ * with only a slight drop in pitch (a big drop sounded hollow), a mid layer
+ * for weight, a muffled knock and a tiny contact click. Soft attack, short.
  */
 export function clack(strength: number, pan = 0) {
   const a = audio();
   if (!a) return;
   const { ctx, out } = a;
   const t = ctx.currentTime;
-  const level = Math.min(1, strength) * 0.3;
+  const level = Math.min(1, strength) * 0.32;
   if (level < 0.015) return;
   const dest = panned(ctx, out, pan);
-  const pitch = 430 + Math.random() * 140;
-  // The body: a quick downward bend, soft attack (squish), short decay.
+  const pitch = 230 + Math.random() * 70;
   for (const [ratio, share, decay] of [
-    [1, 1, 0.075],
-    [1.6, 0.35, 0.04],
+    [1, 0.9, 0.055],
+    [2.1, 0.4, 0.03],
   ]) {
     const tone = ctx.createOscillator();
     tone.type = "sine";
     tone.frequency.setValueAtTime(pitch * ratio, t);
-    tone.frequency.exponentialRampToValueAtTime(pitch * ratio * 0.55, t + decay);
+    tone.frequency.exponentialRampToValueAtTime(pitch * ratio * 0.82, t + decay);
     const gain = ctx.createGain();
     gain.gain.setValueAtTime(0.0001, t);
-    gain.gain.exponentialRampToValueAtTime(level * share, t + 0.004);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t + decay + 0.02);
+    gain.gain.exponentialRampToValueAtTime(level * share, t + 0.003);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + decay + 0.015);
     tone.connect(gain).connect(dest);
     tone.start(t);
-    tone.stop(t + decay + 0.03);
+    tone.stop(t + decay + 0.025);
   }
-  // A muffled knock on top.
   const knock = noiseSource(ctx);
   const low = ctx.createBiquadFilter();
   low.type = "lowpass";
-  low.frequency.value = 1300;
-  low.Q.value = 0.7;
+  low.frequency.value = 1800;
+  low.Q.value = 0.5;
   const knockGain = ctx.createGain();
   knockGain.gain.setValueAtTime(0.0001, t);
-  knockGain.gain.exponentialRampToValueAtTime(level * 0.55, t + 0.003);
-  knockGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
+  knockGain.gain.exponentialRampToValueAtTime(level * 0.7, t + 0.002);
+  knockGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.022);
   knock.connect(low).connect(knockGain).connect(dest);
   knock.start(t);
-  knock.stop(t + 0.04);
+  knock.stop(t + 0.03);
+  const contact = noiseSource(ctx);
+  const band = ctx.createBiquadFilter();
+  band.type = "bandpass";
+  band.frequency.value = 2600;
+  band.Q.value = 1.5;
+  const contactGain = ctx.createGain();
+  contactGain.gain.setValueAtTime(level * 0.25, t);
+  contactGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.008);
+  contact.connect(band).connect(contactGain).connect(dest);
+  contact.start(t);
+  contact.stop(t + 0.012);
 }
 
 /**
