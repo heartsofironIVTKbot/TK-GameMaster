@@ -90,7 +90,7 @@ export function hexA(hex: string, alpha: number): string {
 
 /**
  * The poster's striped sun. Gaps in its lower half drift down and widen, the
- * way a synthwave sun does, and it glows softly. `frac` of it is lit (the turn
+ * way a synthwave sun does (its glow is a separate halo, .gg-sun-halo). `frac` of it is lit (the turn
  * clock drains it from the top); the rest stays as a faint outline.
  */
 export function Sun({ size, frac, id }: { size: number; frac: number; id: string }) {
@@ -100,7 +100,7 @@ export function Sun({ size, frac, id }: { size: number; frac: number; id: string
   ));
   const disc = <rect x="0" y="0" width="100" height="100" fill={`url(#${id}s)`} />;
   return (
-    <svg width={size} height={size} viewBox="0 0 100 100" aria-hidden className="gg-sun">
+    <svg width={size} height={size} viewBox="0 0 100 100" aria-hidden className="relative">
       <defs>
         <linearGradient id={`${id}s`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="#ffd36e" />

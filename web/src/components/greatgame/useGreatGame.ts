@@ -132,10 +132,11 @@ export function useGreatGame(slug: string) {
   return { state, viewer, error, considering, viewers, live, demo, act, consider, reveal, serverNow, reload: load };
 }
 
-/** Ticks every `ms` so clocks re-render. */
+/** Ticks every `ms` so clocks re-render; 0 stops it (nothing on screen is counting). */
 export function useTick(ms = 250) {
   const [, setN] = useState(0);
   useEffect(() => {
+    if (ms <= 0) return undefined;
     const id = setInterval(() => setN((n) => n + 1), ms);
     return () => clearInterval(id);
   }, [ms]);

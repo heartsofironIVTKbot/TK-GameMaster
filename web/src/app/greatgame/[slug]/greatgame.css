@@ -1,5 +1,5 @@
 /* The Great Game 2026 draft room: the poster's synthwave look (neon pink to
-   cyan, riveted steel, chrome lettering). Everything is scoped under .gg. */
+   cyan, brushed steel, chrome lettering). Everything is scoped under .gg. */
 
 .gg {
   --gg-ink: #0b0618;
@@ -69,71 +69,114 @@
   box-shadow: inset 0 1px 0 #8f88aa, inset 0 -12px 18px rgba(255, 43, 214, 0.06);
 }
 
-/* Neon LEDs along the top of the band: dim pink dots with a cyan light chasing across them. */
+/* Animations here move with transform and opacity where they can, so they
+   don't repaint the page every frame; the few that must repaint (the snakes,
+   the sun's stripes, the shine on the subtitle) pause while the map moves
+   (.gg[data-moving], set by the map). */
+
+/* Neon LEDs along the top of the band: dim pink dots; a window slides across
+   and shows lit cyan dots through it (the dots inside slide back, so they stay
+   on the same spots). */
 .gg-leds {
   height: 6px;
+  overflow: hidden;
   background: radial-gradient(circle, rgba(255, 43, 214, 0.35) 0 2px, transparent 2.6px) 0 0 / 22px 6px repeat-x;
   pointer-events: none;
 }
-.gg-leds::after {
-  content: "";
+.gg-leds-win {
   position: absolute;
-  inset: 0;
-  background: radial-gradient(circle, #9ff6ff 0 2px, rgba(34, 229, 255, 0.6) 2.4px, transparent 3px) 0 0 / 22px 6px repeat-x;
-  filter: drop-shadow(0 0 4px #22e5ff);
-  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 8%, #000 14%, transparent 22%);
-  mask-image: linear-gradient(90deg, transparent 0, #000 8%, #000 14%, transparent 22%);
-  -webkit-mask-size: 200% 100%;
-  mask-size: 200% 100%;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  animation: gg-leds-chase 5s linear infinite;
+  top: 0;
+  left: 0;
+  width: 220px;
+  height: 6px;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 35%, #000 65%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 35%, #000 65%, transparent);
+  animation: gg-leds-win 6s linear infinite;
+  will-change: transform;
 }
-@keyframes gg-leds-chase {
-  from { -webkit-mask-position: 120% 0; mask-position: 120% 0; }
-  to { -webkit-mask-position: -120% 0; mask-position: -120% 0; }
+.gg-leds-lit {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: calc(100vw + 440px);
+  height: 6px;
+  background: radial-gradient(circle, #e6fdff 0 1.4px, #22e5ff 2.2px, rgba(34, 229, 255, 0.35) 2.8px, transparent 3px) 0 0 / 22px 6px repeat-x;
+  animation: gg-leds-lit 6s linear infinite;
+  will-change: transform;
 }
-
-/* The neon edge between the bar and the map. */
-.gg-neon {
-  background: linear-gradient(90deg, #ff2bd6 0%, #ff2bd6 42%, #ffe4fb 49%, #22e5ff 52%, #ff2bd6 60%, #ff2bd6 100%) 0 0 / 300% 100%;
-  box-shadow: 0 0 6px #ff2bd6, 0 0 16px rgba(255, 43, 214, 0.65), 0 0 32px rgba(255, 43, 214, 0.3);
-  animation: gg-neon-run 7s linear infinite, gg-neon-breathe 3.2s ease-in-out infinite;
-  pointer-events: none;
+@keyframes gg-leds-win {
+  from { transform: translateX(-220px); }
+  to { transform: translateX(100vw); }
 }
-.gg-neon-right {
-  animation-direction: reverse, normal;
-}
-@keyframes gg-neon-run {
-  from { background-position: 100% 0; }
-  to { background-position: 0 0; }
-}
-@keyframes gg-neon-breathe {
-  50% { box-shadow: 0 0 4px #ff2bd6, 0 0 10px rgba(255, 43, 214, 0.5), 0 0 22px rgba(255, 43, 214, 0.2); }
-}
-.gg-neon-path {
-  stroke: #ff2bd6;
-  filter: drop-shadow(0 0 5px #ff2bd6) drop-shadow(0 0 12px rgba(255, 43, 214, 0.6));
-  animation: gg-neon-breathe-svg 3.2s ease-in-out infinite;
-}
-.gg-neon-spark {
-  stroke: #e9fcff;
-  stroke-dasharray: 36 520;
-  filter: drop-shadow(0 0 6px #22e5ff);
-  animation: gg-neon-spark 3.5s linear infinite;
-}
-@keyframes gg-neon-breathe-svg {
-  50% { filter: drop-shadow(0 0 3px #ff2bd6) drop-shadow(0 0 8px rgba(255, 43, 214, 0.45)); }
-}
-@keyframes gg-neon-spark {
-  from { stroke-dashoffset: 556; }
-  to { stroke-dashoffset: 0; }
+@keyframes gg-leds-lit {
+  from { transform: translateX(220px); }
+  to { transform: translateX(-100vw); }
 }
 
-/* The sun: gaps drift down its lower half and widen; a slow glow. */
-.gg-sun {
-  filter: drop-shadow(0 0 10px rgba(255, 94, 126, 0.55));
-  animation: gg-sun-glow 4s ease-in-out infinite;
+/* The subtitle: a neon year tag and the mod's name in 80s chrome, sky over sunset, with a shine passing over it. */
+.gg-year {
+  font: 800 11px/1 var(--gg-digit);
+  letter-spacing: 0.2em;
+  color: #c9fbff;
+  padding: 4px 5px 4px 8px;
+  border: 1.5px solid var(--gg-cyan);
+  border-radius: 3px;
+  background: rgba(34, 229, 255, 0.08);
+  box-shadow: 0 0 8px rgba(34, 229, 255, 0.55), inset 0 0 6px rgba(34, 229, 255, 0.3);
+  text-shadow: 0 0 6px #22e5ff;
+  transform: skewX(-12deg);
+}
+.gg-road {
+  font-family: var(--gg-display);
+  font-weight: 900;
+  font-size: 20px;
+  line-height: 1;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  background:
+    linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.95) 50%, transparent 60%) -150% 0 / 250% 100% no-repeat,
+    linear-gradient(180deg, #ffffff 0%, #e4ddff 30%, #9d8fd6 52%, #ffd36e 53%, #ff8a4c 72%, #ff2bd6 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 1px 0 #1a1030) drop-shadow(0 0 7px rgba(255, 43, 214, 0.55));
+  transform: skewX(-10deg);
+  animation: gg-shine 7s ease-in-out infinite;
+}
+@keyframes gg-shine {
+  0%, 62% { background-position: -150% 0, 0 0; }
+  100% { background-position: 250% 0, 0 0; }
+}
+
+/* The neon edge: a glowing line that breathes (opacity only) with light snakes running along it. */
+.gg-neon-base {
+  animation: gg-breathe 3.2s ease-in-out infinite;
+  will-change: opacity;
+}
+@keyframes gg-breathe {
+  50% { opacity: 0.72; }
+}
+.gg-snake {
+  animation: gg-snake 5.5s linear infinite;
+}
+@keyframes gg-snake {
+  from { stroke-dashoffset: var(--from); }
+  to { stroke-dashoffset: var(--to); }
+}
+
+/* The sun: gaps drift down its lower half and widen; a halo breathes behind it. */
+.gg-sun-halo {
+  position: absolute;
+  inset: -16px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 94, 126, 0.55) 0 38%, rgba(197, 59, 255, 0.22) 55%, transparent 70%);
+  animation: gg-halo 4s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+@keyframes gg-halo {
+  0%, 100% { opacity: 0.7; transform: scale(0.94); }
+  50% { opacity: 1; transform: scale(1.06); }
 }
 .gg-sun-gap {
   transform-box: fill-box;
@@ -144,8 +187,11 @@
   0% { transform: translateY(0) scaleY(0.15); }
   100% { transform: translateY(46px) scaleY(1.7); }
 }
-@keyframes gg-sun-glow {
-  50% { filter: drop-shadow(0 0 16px rgba(255, 94, 126, 0.85)) drop-shadow(0 0 30px rgba(197, 59, 255, 0.35)); }
+
+/* While the map is dragged or zoomed, everything decorative holds still. */
+.gg[data-moving] *,
+.gg[data-moving] *::after {
+  animation-play-state: paused !important;
 }
 
 .gg-panel {
@@ -274,12 +320,16 @@
   .gg-pulse,
   .gg-glow,
   .gg-pop,
-  .gg-leds::after,
-  .gg-neon,
-  .gg-neon-path,
-  .gg-neon-spark,
-  .gg-sun,
+  .gg-leds-win,
+  .gg-leds-lit,
+  .gg-road,
+  .gg-neon-base,
+  .gg-snake,
+  .gg-sun-halo,
   .gg-sun-gap {
     animation: none;
+  }
+  .gg-leds-win {
+    display: none;
   }
 }

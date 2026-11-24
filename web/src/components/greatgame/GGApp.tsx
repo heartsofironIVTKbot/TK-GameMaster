@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { useCallback, useState } from "react";
+import { turnDeadline } from "@/lib/greatGame/engine";
 import GGControlPanel from "./GGControlPanel";
 import GGLog from "./GGLog";
 import GGNationPanel from "./GGNationPanel";
@@ -25,8 +26,12 @@ export default function GGApp({ slug }: { slug: string }) {
   const [selected, setSelected] = useState<string | null>(null);
   const [panel, setPanel] = useState<"log" | "controls" | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(true);
-  useTick(200);
   const now = serverNow();
+  // Re-render 5 times a second only while something counts: a turn clock or a draw animation.
+  const counting = Boolean(
+    state && (turnDeadline(state) !== null || (state.last_draw && now - state.last_draw.at < (ANIM_MS[state.last_draw.kind] ?? 0) + 1000)),
+  );
+  useTick(counting ? 200 : 0);
 
   const canAct = Boolean(
     state && viewer && state.turn.team && (viewer.organizer || viewer.captainOf === state.turn.team) && (state.phase === "bans" || state.phase === "draft"),

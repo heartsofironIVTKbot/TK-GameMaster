@@ -1,7 +1,7 @@
 "use client";
 
 import { ScrollText, SlidersHorizontal } from "lucide-react";
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { PHASE_LABEL, PHASES, type GGState } from "@/lib/greatGame/model";
 import { clock, Flag, hexA, nationName, secondsLeft, Sun, teamById } from "./ggUi";
 
@@ -26,7 +26,28 @@ const BAND_H = 83.25;
 const NOTCH_W = 340;
 const NOTCH_H = 128;
 const NOTCH_SLOPE = 46;
-const NOTCH_POINTS = `0,${BAND_H} ${NOTCH_SLOPE},${NOTCH_H} ${NOTCH_W - NOTCH_SLOPE},${NOTCH_H} ${NOTCH_W},${BAND_H}`;
+
+/** The neon edge as one path: along the band, down and around the notch, on to the right edge. */
+function neonPath(width: number): string {
+  const left = width / 2 - NOTCH_W / 2;
+  const right = width / 2 + NOTCH_W / 2;
+  return `M0 ${BAND_H} H${left} L${left + NOTCH_SLOPE} ${NOTCH_H} H${right - NOTCH_SLOPE} L${right} ${BAND_H} H${width}`;
+}
+
+/**
+ * Light snakes running left to right along the whole edge. Each snake is a few
+ * stacked dashes that end at the same point (the head): a long faint tail, a
+ * brighter body and a white-hot head. Lengths are in pathLength units (the
+ * whole edge is 1000), so they look the same on any screen.
+ */
+const SNAKES = 3;
+const SNAKE_PERIOD = 1000 / SNAKES;
+const SNAKE_LAYERS = [
+  { len: 130, width: 10, color: "#ff5ce4", opacity: 0.3 },
+  { len: 90, width: 3.2, color: "#ffc8f7", opacity: 1 },
+  { len: 32, width: 10, color: "#22e5ff", opacity: 0.5 },
+  { len: 26, width: 3.2, color: "#f2fdff", opacity: 1 },
+];
 
 export function bannerFor(state: GGState, now: number): Banner {
   const team = teamById(state, state.turn.team);
@@ -87,22 +108,37 @@ export default function GGTopBar({
   onOpenControls: (() => void) | null;
 }) {
   const banner = bannerFor(state, now);
+  const header = useRef<HTMLElement | null>(null);
+  const [width, setWidth] = useState(() => window.innerWidth);
+  useEffect(() => {
+    const element = header.current;
+    if (!element) return undefined;
+    const observer = new ResizeObserver(() => setWidth(element.clientWidth));
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  const path = neonPath(width);
   const step = PHASES.indexOf(state.phase);
   const colored = Boolean(banner.color);
   const ink = colored ? "#120a24" : "#fff";
   return (
-    <header className="pointer-events-none absolute inset-x-0 top-0 z-[1100]" style={{ height: 230 }}>
+    <header ref={header} className="pointer-events-none absolute inset-x-0 top-0 z-[1100]" style={{ height: 230 }}>
       {/* The band: brushed steel, a row of neon LEDs along the top with a light chasing across them. */}
       <div className="gg-steel pointer-events-auto absolute inset-x-0 top-0" style={{ height: 84 }} />
-      <div className="gg-leds absolute inset-x-0 top-[5px]" aria-hidden />
+      <div className="gg-leds absolute inset-x-0 top-[5px]" aria-hidden>
+        <div className="gg-leds-win">
+          <div className="gg-leds-lit" />
+        </div>
+      </div>
 
       {/* Left: the wordmark. */}
       <div className="pointer-events-auto absolute left-5 top-[16px] hidden md:block">
         <div className="gg-brush" style={{ fontSize: 34, lineHeight: 1 }}>
           The Great Game
         </div>
-        <div className="gg-chrome" style={{ fontWeight: 900, fontSize: 15, letterSpacing: ".3em", marginTop: 2 }}>
-          2026 · Road to 56
+        <div className="mt-[5px] flex items-center gap-2.5 pl-1">
+          <span className="gg-year">2026</span>
+          <span className="gg-road">Road to 56</span>
         </div>
       </div>
 
@@ -117,15 +153,37 @@ export default function GGTopBar({
         }}
       />
 
-      {/* The neon edge: one line along the band and around the notch, with a pulse of light running along it. */}
-      <div className="gg-neon absolute left-0 top-[82px] h-[2.5px]" style={{ right: `calc(50% + ${NOTCH_W / 2}px)` }} aria-hidden />
-      <div className="gg-neon gg-neon-right absolute right-0 top-[82px] h-[2.5px]" style={{ left: `calc(50% + ${NOTCH_W / 2}px)` }} aria-hidden />
-      <svg className="absolute left-1/2 top-0 -translate-x-1/2 overflow-visible" width={NOTCH_W} height={NOTCH_H + 4} aria-hidden>
-        <polyline className="gg-neon-path" points={NOTCH_POINTS} fill="none" strokeWidth="2.5" strokeLinejoin="round" />
-        <polyline className="gg-neon-spark" points={NOTCH_POINTS} fill="none" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" />
-      </svg>
+      {/* The neon edge: one line along the band and around the notch, glowing, with light snakes running along it. */}
+      {width > 0 && (
+        <>
+          <svg className="gg-neon-base absolute left-0 top-0 overflow-visible" width={width} height={NOTCH_H + 8} aria-hidden>
+            <path d={path} fill="none" stroke="#ff2bd6" strokeOpacity=".12" strokeWidth="12" strokeLinejoin="round" />
+            <path d={path} fill="none" stroke="#ff2bd6" strokeOpacity=".3" strokeWidth="6" strokeLinejoin="round" />
+            <path d={path} fill="none" stroke="#ff4fe0" strokeWidth="2.5" strokeLinejoin="round" />
+          </svg>
+          <svg className="absolute left-0 top-0 overflow-visible" width={width} height={NOTCH_H + 8} aria-hidden>
+            {SNAKE_LAYERS.map((layer) => (
+              <path
+                key={layer.len}
+                className="gg-snake"
+                d={path}
+                pathLength={1000}
+                fill="none"
+                stroke={layer.color}
+                strokeOpacity={layer.opacity}
+                strokeWidth={layer.width}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeDasharray={`${layer.len} ${SNAKE_PERIOD - layer.len}`}
+                style={{ ["--from" as string]: layer.len, ["--to" as string]: layer.len - SNAKE_PERIOD }}
+              />
+            ))}
+          </svg>
+        </>
+      )}
 
       <div className="absolute left-1/2 top-[3px] -translate-x-1/2">
+        <div className="gg-sun-halo" aria-hidden />
         <Sun size={78} frac={banner.frac} id="gg-top-sun" />
       </div>
       <div
@@ -157,8 +215,11 @@ export default function GGTopBar({
       </div>
 
       {/* Right: the step rail and buttons. */}
-      <div className="pointer-events-auto absolute right-4 top-4 flex items-center gap-2">
-        <div className="hidden items-center gap-1 lg:flex" aria-label={`Step ${step} of ${PHASES.length - 1}`}>
+      {/* Right: only the space right of the notch. The step (dots over its name) shows when there's room. */}
+      <div className="@container pointer-events-none absolute right-4 top-[18px] flex justify-end" style={{ left: `calc(50% + ${NOTCH_W / 2 + 18}px)` }}>
+        <div className="pointer-events-auto flex min-w-0 items-center gap-2">
+          <div className="mr-2 hidden flex-col items-end gap-1.5 @min-[520px]:flex">
+            <div className="flex items-center gap-1" aria-label={`Step ${step} of ${PHASES.length - 1}`}>
           {PHASES.map((phase, index) => (
             <span
               key={phase}
@@ -173,9 +234,10 @@ export default function GGTopBar({
             />
           ))}
         </div>
-        <span className="gg-disp mx-2 hidden xl:inline" style={{ fontWeight: 800, fontSize: 18, color: "var(--gg-cyan)" }}>
-          Step {step} · {PHASE_LABEL[state.phase]}
-        </span>
+            <span className="gg-disp whitespace-nowrap" style={{ fontWeight: 800, fontSize: 15, lineHeight: 1, color: "var(--gg-cyan)", textShadow: "0 0 10px rgba(34,229,255,.55)" }}>
+              Step {step} · {PHASE_LABEL[state.phase]}
+            </span>
+          </div>
         <button type="button" className="gg-btn" onClick={onOpenLog} title="Everything that happened, in order">
           <ScrollText size={16} aria-hidden /> <span className="hidden sm:inline">Log</span>
         </button>
@@ -185,6 +247,7 @@ export default function GGTopBar({
           </button>
         )}
         {right}
+        </div>
       </div>
     </header>
   );
