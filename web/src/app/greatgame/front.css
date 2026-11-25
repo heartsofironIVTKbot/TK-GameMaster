@@ -314,34 +314,6 @@
   color: var(--ggf-fg-2);
   text-shadow: 0 1px 6px #000;
 }
-/* Temporary: the floor switcher while we choose (?floor=...). */
-.ggf-floors {
-  position: absolute;
-  left: 50%;
-  bottom: 48px;
-  z-index: 2;
-  display: flex;
-  gap: 4px;
-  padding: 4px;
-  transform: translateX(-50%);
-  border-radius: 999px;
-  border: 1px solid var(--ggf-line);
-  background: rgba(10, 4, 24, 0.75);
-  backdrop-filter: blur(6px);
-}
-.ggf-floors a {
-  padding: 7px 14px;
-  border-radius: 999px;
-  font: 800 14px/1 var(--ggf-display);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--ggf-fg-2);
-  white-space: nowrap;
-}
-.ggf-floors a.is-on {
-  background: var(--ggf-pink);
-  color: #fff;
-}
 .ggf-scroll {
   position: absolute;
   left: 50%;
@@ -745,6 +717,11 @@
 @media (max-width: 640px) {
   .ggf-nav-links {
     display: none;
+  }
+  .ggf-status {
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
   }
   .ggf-steps,
   .ggf-majors {

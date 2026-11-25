@@ -2,12 +2,11 @@
 
 import { ArrowRight, Ban, ChevronDown, Crosshair, Film, Layers, Lock, Orbit, Rows3, ShieldCheck, Ticket, Users } from "lucide-react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { PHASE_LABEL, PHASES } from "@/lib/greatGame/model";
 import type { GGPublic } from "@/lib/greatGame/public";
 import { displayName, Flag } from "../ggUi";
-import GGFrontScene, { type FloorStyle, type SceneMajor } from "./GGFrontScene";
+import GGFrontScene, { type SceneMajor } from "./GGFrontScene";
 
 /**
  * The Great Game 2026 front page (/greatgame): the poster as a live scene,
@@ -85,24 +84,11 @@ export default function GGFront() {
     return tags.map((tag, i) => ({ tag, color: event?.teams?.find((team) => team.major === tag)?.color ?? MAJOR_GLOW[i % MAJOR_GLOW.length] }));
   }, [event]);
   const room = event ? `/greatgame/${event.slug}` : null;
-  // While we choose: ?floor=terrain|sea|table picks the floor and shows a switcher.
-  const params = useSearchParams();
-  const asked = params.get("floor");
-  const floor: FloorStyle = asked === "sea" || asked === "table" ? asked : "terrain";
 
   return (
     <div className="ggf">
       <section className="ggf-hero">
-        <GGFrontScene majors={sceneMajors} floor={floor} />
-        {asked && (
-          <div className="ggf-floors" role="group" aria-label="Floor">
-            {(["terrain", "sea", "table"] as const).map((option) => (
-              <a key={option} href={`?floor=${option}`} className={option === floor ? "is-on" : ""}>
-                {option === "terrain" ? "Neon terrain" : option === "sea" ? "Mirror sea" : "War table"}
-              </a>
-            ))}
-          </div>
-        )}
+        <GGFrontScene majors={sceneMajors} />
         <nav className="ggf-nav" aria-label="Great Game">
           <Link href="/" className="ggf-nav-home">
             GameMaster
