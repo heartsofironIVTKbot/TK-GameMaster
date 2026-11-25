@@ -363,7 +363,7 @@ function GGMap({
   const [world, setWorld] = useState<PixelWorld | null>(null);
   const [error, setError] = useState<string | null>(null);
   const mapKey = useMapRemountKey();
-  const mapStep = state.phase === "bans" || state.phase === "draft" || state.phase === "assign";
+  const mapStep = state.phase === "bans" || state.phase === "draft" || state.phase === "assign" || state.phase === "locked";
   const viewRef = useRef<ViewIntent | null>(mapStep ? EUROPE_CLOSE : EUROPE);
   const baseRef = useRef<L.GeoJSON | null>(null);
   const renderer = useMemo(() => new PanOnlySVG({ padding: 1 }), []);

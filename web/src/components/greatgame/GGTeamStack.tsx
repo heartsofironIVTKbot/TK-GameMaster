@@ -341,7 +341,7 @@ function FinalTable({ state }: { state: GGState }) {
   );
 }
 
-function finalText(state: GGState): string {
+export function finalText(state: GGState): string {
   return strengthOrder(state.teams, state.config.majors)
     .map((team) => {
       const lines = teamMembers(team).map((id) => {

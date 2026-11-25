@@ -8,9 +8,10 @@ import GGControlPanel from "./GGControlPanel";
 import GGLog from "./GGLog";
 import GGNationPanel from "./GGNationPanel";
 import GGRandomizers, { ANIM_MS } from "./GGRandomizers";
-import GGTeamStack from "./GGTeamStack";
+import GGTeamStack, { finalText } from "./GGTeamStack";
 import { scratchHeld } from "./ggScratch";
 import GGBanSlam from "./GGBanSlam";
+import GGFinale from "./GGFinale";
 import GGLineupBoard from "./GGLineupBoard";
 import GGPoolPanel from "./GGPoolPanel";
 import GGTopBar from "./GGTopBar";
@@ -146,6 +147,7 @@ export default function GGApp({ slug }: { slug: string }) {
       {(state.phase === "bans" || state.phase === "draft") && !selected && !panel && <GGPoolPanel state={state} onSelect={select} />}
       <GGBanSlam state={state} now={now} />
       {state.phase === "assign" && !selected && !panel && <GGLineupBoard state={state} viewer={viewer} act={act} />}
+      {state.phase === "locked" && !panel && <GGFinale state={state} viewer={viewer} now={now} reveal={reveal} copyText={finalText(state)} />}
       {selected && !panel && <GGNationPanel key={selected} state={state} viewer={viewer} tag={selected} act={act} onClose={() => select(null)} />}
       {panel === "log" && <GGLog state={state} organizer={viewer.organizer} act={act} onClose={() => setPanel(null)} />}
       {panel === "controls" && viewer.organizer && <GGControlPanel state={state} act={act} reveal={reveal} onClose={() => setPanel(null)} />}
