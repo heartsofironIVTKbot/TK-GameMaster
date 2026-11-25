@@ -173,11 +173,11 @@ function Shell({
             </div>
           </div>
           <StageAnchorContext.Provider value={anchorRef}>
-            <div className="relative flex flex-1 flex-col justify-center px-7 pb-8 pt-1">{children}</div>
+            <div className="relative flex flex-1 flex-col justify-center px-7 pb-4 pt-1">{children}</div>
           </StageAnchorContext.Provider>
+          {/* The one action, centred over the road at the bottom of the stage. */}
+          <div className="absolute bottom-5 left-1/2 z-[2] flex -translate-x-1/2 justify-center">{action}</div>
         </div>
-        {/* The one action straddles the stage's bottom edge, centred under the machine. */}
-        <div className="absolute bottom-0 left-1/2 z-[2] flex -translate-x-1/2 translate-y-1/2 justify-center">{action}</div>
       </section>
     </div>
   );
