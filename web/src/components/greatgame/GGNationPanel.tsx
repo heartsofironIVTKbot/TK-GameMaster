@@ -1,23 +1,21 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState } from "react";
+import { useState } from "react";
 import CountryDetailsDrawer from "@/components/CountryDetailsDrawer";
 import type { GGState } from "@/lib/greatGame/model";
-import { X } from "lucide-react";
-import { Flag, hexA, nationName, teamById } from "./ggUi";
+import { Flag, nationName, teamById } from "./ggUi";
 import type { GGViewerInfo } from "./useGreatGame";
 
 /**
- * The right drawer: the live map's own nation drawer, unchanged (leader,
- * stats, spirits), with the Great Game's action under it: "Ban <nation>"
- * during bans and "Lock in <nation>" during the draft, for the captain on the
- * clock and the organizers. Everyone else sees who has the nation.
+ * A selected nation, the way the live map shows one: the live nation drawer
+ * on the right (leader, stats, spirits) with the Great Game status as its
+ * header chip, and the action at the bottom centre over the map, like the
+ * live map's Reserve button: a status plate and a big glowing "Ban <nation>"
+ * during bans or "Lock in <nation>" during the draft, for the captain on the
+ * clock and the organizers. Everyone else sees the status plate only.
  */
 
 type Act = (body: Record<string, unknown>) => Promise<string | null>;
-
-/** Where the live drawer's own panel starts inside its box (its top-14). */
-const DRAWER_TOP = 56;
 
 export default function GGNationPanel({
   state,
@@ -35,18 +33,6 @@ export default function GGNationPanel({
   const [minimized, setMinimized] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // The card fits what it shows (a status line only, or the Ban button and a note too); the details sit right under it.
-  const cardRef = useRef<HTMLDivElement | null>(null);
-  const [cardH, setCardH] = useState(120);
-  useLayoutEffect(() => {
-    const card = cardRef.current;
-    if (!card) return undefined;
-    const measure = () => setCardH(card.offsetHeight);
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(card);
-    return () => observer.disconnect();
-  }, [minimized]);
   const name = nationName(state, tag);
   const owner = state.teams.find((team) => team.major === tag || team.picks.includes(tag)) ?? null;
   const bannedBy = state.teams.find((team) => team.ban === tag) ?? null;
@@ -56,54 +42,52 @@ export default function GGNationPanel({
   const free = inPool && !owner && !bannedBy;
   const mode = state.phase === "bans" ? "ban" : state.phase === "draft" ? "pick" : null;
 
-  let status: { text: string; color: string };
-  if (owner) status = { text: `${owner.name}${owner.major === tag ? "'s major" : ""}`, color: owner.color };
-  else if (bannedBy) status = { text: `Banned by ${bannedBy.name}`, color: "#ff3b3b" };
-  else if (!inPool) status = { text: "Not in the Great Game pool", color: "var(--gg-fg-3)" };
-  else status = { text: mode === "ban" ? "In the pool · bannable" : mode === "pick" ? "In the pool · free to pick" : "In the pool", color: "var(--gg-ok)" };
+  // The status: one line on the plate, and the drawer's header chip.
+  let status: { text: string; color: string; chip: string };
+  if (owner) status = { text: `${owner.name}${owner.major === tag ? "'s major" : ""}`, color: owner.color, chip: "bg-sky-950/80 text-sky-200" };
+  else if (bannedBy) status = { text: `Banned by ${bannedBy.name}`, color: "#ff3b3b", chip: "bg-rose-950/80 text-rose-300" };
+  else if (!inPool) status = { text: "Not in the Great Game pool", color: "var(--gg-fg-3)", chip: "bg-ink-800 text-ink-300" };
+  else
+    status = {
+      text: mode === "ban" ? "In the pool · bannable" : mode === "pick" ? "In the pool · free to pick" : "In the pool",
+      color: "var(--gg-ok)",
+      chip: "bg-emerald-950/80 text-emerald-300",
+    };
+  const showAction = mode && canAct && free && turn;
 
   return (
-    <div className="absolute inset-x-0 bottom-0 top-[28px] z-[1000]" style={{ pointerEvents: "none" }}>
-      {/* The nation's details (the live map's drawer), below the Great Game card. */}
-      <div className="absolute bottom-0 right-0" style={{ pointerEvents: "auto", top: minimized ? 0 : cardH, width: minimized ? 48 : 380 }}>
-        <CountryDetailsDrawer
-          selected={{ tag, name, slot_key: null }}
-          selectionKind="pending"
-          statusTag={null}
-          ownerLabel={null}
-          minimized={minimized}
-          scenarioId="road_to_56"
-          onToggleMinimized={() => setMinimized((value) => !value)}
-          onClose={onClose}
-        />
+    <>
+      <div className="absolute inset-x-0 bottom-0 top-[28px] z-[1000]" style={{ pointerEvents: "none" }}>
+        <div style={{ pointerEvents: "auto" }}>
+          <CountryDetailsDrawer
+            selected={{ tag, name, slot_key: null }}
+            selectionKind="pending"
+            statusTag={{ label: status.text, className: status.chip }}
+            ownerLabel={null}
+            minimized={minimized}
+            scenarioId="road_to_56"
+            onToggleMinimized={() => setMinimized((value) => !value)}
+            onClose={onClose}
+          />
+        </div>
       </div>
-      {!minimized && (
-        <div
-          ref={cardRef}
-          className="gg-nation-card absolute right-0 z-[1001] w-[380px] p-4"
-          style={{ pointerEvents: "auto", top: DRAWER_TOP }}
-          role="region"
-          aria-label={`${name}: Great Game`}
-        >
-          <div className="mb-2.5 flex items-center gap-3">
-            <Flag tag={tag} w={44} h={28} />
-            <span className="gg-disp min-w-0 flex-1 truncate" style={{ fontWeight: 900, fontSize: 24, lineHeight: 1 }}>
-              {name}
-            </span>
-            <button type="button" className="gg-btn h-8 min-h-0 px-2" onClick={onClose} aria-label="Close">
-              <X size={15} aria-hidden />
-            </button>
-          </div>
-          <div className="flex items-center gap-2 rounded-lg px-3 py-2 text-[13px]" style={{ background: hexA("#1a1030", 0.9), border: "1px solid var(--gg-line)" }}>
-            <span className="h-2.5 w-2.5 rounded-full" style={{ background: status.color }} />
-            <span>
-              {name}: <b style={{ color: status.color }}>{status.text}</b>
-            </span>
-          </div>
-          {mode && canAct && free && (
+
+      {/* The action, bottom centre over the map (like the live map's Reserve button). */}
+      <div className="gg-dock" role="region" aria-label={`${name}: Great Game`}>
+        <p className="gg-dock-plate">
+          <Flag tag={tag} w={26} h={17} />
+          <span>
+            {name}: <b style={{ color: status.color }}>{status.text}</b>
+          </span>
+        </p>
+        {showAction && (
+          <div className={`gg-dock-glow ${mode === "ban" ? "is-ban" : ""}`}>
+            <span aria-hidden className="gg-dock-halo" />
+            <span aria-hidden className="gg-dock-halo" />
+            <span aria-hidden className="gg-dock-halo" />
             <button
               type="button"
-              className={`gg-btn gg-btn-big mt-3 w-full ${mode === "ban" ? "gg-btn-danger" : "gg-btn-primary"}`}
+              className={`gg-dock-btn ${mode === "ban" ? "is-ban" : ""}`}
               disabled={busy}
               onClick={async () => {
                 setBusy(true);
@@ -113,26 +97,26 @@ export default function GGNationPanel({
                 if (!result) onClose();
               }}
             >
-              {mode === "ban" ? `Ban ${name}` : `Lock in ${name}`}
+              {busy ? (mode === "ban" ? "Banning…" : "Locking in…") : mode === "ban" ? `Ban ${name}` : `Lock in ${name}`}
             </button>
-          )}
-          {mode && canAct && free && turn && viewer.captainOf !== turn.id && (
-            <p className="mt-2 text-xs" style={{ color: "var(--gg-fg-3)" }}>
-              You&apos;re an organizer: this {mode === "ban" ? "bans" : "picks"} for {turn.name}, on their turn.
-            </p>
-          )}
-          {mode && !canAct && turn && (
-            <p className="mt-2 text-xs" style={{ color: "var(--gg-fg-3)" }}>
-              {turn.name} is on the clock. Only their captain and the organizers can {mode === "ban" ? "ban" : "pick"}.
-            </p>
-          )}
-          {error && (
-            <p role="alert" className="mt-2 text-xs" style={{ color: "#ff9b9b" }}>
-              {error}
-            </p>
-          )}
-        </div>
-      )}
-    </div>
+          </div>
+        )}
+        {showAction && viewer.captainOf !== turn.id && (
+          <p className="gg-dock-note">
+            You&apos;re an organizer: this {mode === "ban" ? "bans" : "picks"} for {turn.name}, on their turn.
+          </p>
+        )}
+        {mode && free && !canAct && turn && (
+          <p className="gg-dock-note">
+            {turn.name} {mode === "ban" ? "ban" : "pick"} now. Only their captain and the organizers can {mode === "ban" ? "ban" : "pick"}.
+          </p>
+        )}
+        {error && (
+          <p role="alert" className="gg-dock-note" style={{ color: "#ff9b9b" }}>
+            {error}
+          </p>
+        )}
+      </div>
+    </>
   );
 }

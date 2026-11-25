@@ -348,14 +348,98 @@
   text-decoration-color: #ff3b3b;
   text-decoration-thickness: 2px;
 }
-/* The nation card on top of the right drawer (status and the Ban / Lock in button). */
-.gg-nation-card {
-  background: linear-gradient(180deg, #1c0f3a, #120a26);
-  border-left: 1px solid var(--gg-line-2);
-  border-bottom: 1px solid var(--gg-line-2);
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+/* A selected nation's action: bottom centre over the map, like the live map's Reserve button
+   (centred on the map between the team drawer and the nation drawer). */
+.gg-dock {
+  position: absolute;
+  bottom: 28px;
+  left: calc(50% - 20px);
+  z-index: 1010;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: max-content;
+  max-width: min(560px, calc(100vw - 760px));
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.gg-dock > * {
+  pointer-events: auto;
+}
+.gg-dock-plate {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--gg-line-2);
+  background: rgba(14, 8, 30, 0.94);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
+  font-size: 14px;
   color: var(--gg-fg);
 }
+.gg-dock-note {
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: rgba(14, 8, 30, 0.86);
+  font-size: 12px;
+  color: var(--gg-fg-3);
+  text-align: center;
+}
+.gg-dock-glow {
+  --halo: #ff2bd6;
+  position: relative;
+  isolation: isolate;
+}
+.gg-dock-glow.is-ban {
+  --halo: #ff3b3b;
+}
+.gg-dock-halo {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: 18px;
+  background: var(--halo);
+  filter: blur(14px);
+  pointer-events: none;
+  animation: gg-dock-halo 2.6s ease-in-out infinite;
+}
+.gg-dock-halo:nth-of-type(1) { --lo: 1.02; --hi: 1.1; --a-lo: 0.22; --a-hi: 0.45; }
+.gg-dock-halo:nth-of-type(2) { --lo: 1.08; --hi: 1.22; --a-lo: 0.1; --a-hi: 0.28; animation-delay: 0.32s; }
+.gg-dock-halo:nth-of-type(3) { --lo: 1.16; --hi: 1.38; --a-lo: 0.03; --a-hi: 0.15; animation-delay: 0.64s; }
+@keyframes gg-dock-halo {
+  0%, 100% { transform: scale(var(--lo)); opacity: var(--a-lo); }
+  45% { transform: scale(var(--hi)); opacity: var(--a-hi); }
+}
+.gg-dock-btn {
+  height: 70px;
+  padding: 0 52px;
+  border: 0;
+  border-radius: 18px;
+  font: 900 32px/1 var(--gg-display);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: #fff;
+  background: linear-gradient(180deg, #ff4fe0, #c21aa8);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 10px 26px rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+  transition: transform 0.15s, filter 0.15s;
+}
+.gg-dock-btn.is-ban {
+  background: linear-gradient(180deg, #ff5a5a, #d11f2f);
+}
+.gg-dock-btn:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.08);
+}
+.gg-dock-btn:disabled {
+  opacity: 0.7;
+  cursor: default;
+  transform: none;
+}
+
 /* A ban: the stamp slams across the middle of the screen. */
 .gg-banslam {
   position: absolute;
@@ -1249,6 +1333,7 @@
   .gg-stamp.is-new,
   .gg-eye,
   .gg-clock-urgent,
+  .gg-dock-halo,
   .gg-ticket,
   .gg-ticket-prize,
   .gg-spincard-result,

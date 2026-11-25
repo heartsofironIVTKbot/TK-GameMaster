@@ -50,9 +50,10 @@ export default function GGApp({ slug }: { slug: string }) {
     (tag: string | null) => {
       setSelected(tag);
       if (tag) setPanel(null);
-      if (canAct) consider(tag ?? "");
+      // The glow follows the captain's look; a nation they can't take (a major, outside the pool) clears it.
+      if (canAct) consider(tag && state?.config.pool.includes(tag) ? tag : "");
     },
-    [canAct, consider],
+    [canAct, consider, state?.config.pool],
   );
 
   if (error) {
