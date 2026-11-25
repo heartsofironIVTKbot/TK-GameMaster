@@ -390,20 +390,8 @@ export default function GGFrontScene({ majors }: { majors: SceneMajor[] }) {
       ctx.restore();
       horizonLine(horizon);
       if (!narrow) {
-        // The shore on the left with the tank on it; the battleship out on the water.
-        drawShore(t, gx, horizon, floorH, F);
-        const tankW = unit * 0.19;
-        const tankY = horizon + floorH * 0.32;
-        const shade = ctx.createRadialGradient(W * 0.03 + tankW / 2, tankY, 0, W * 0.03 + tankW / 2, tankY, tankW * 0.6);
-        shade.addColorStop(0, "rgba(0, 0, 0, 0.55)");
-        shade.addColorStop(1, "rgba(0, 0, 0, 0)");
-        ctx.save();
-        ctx.translate(0, tankY);
-        ctx.scale(1, 0.14);
-        ctx.fillStyle = shade;
-        ctx.fillRect(W * 0.03 - tankW * 0.2, -tankW * 0.6, tankW * 1.4, tankW * 1.2);
-        ctx.restore();
-        silhouette(TANK, W * 0.03, tankY, tankW, "#ff4fd8");
+        // A rocky headland on the left with the tank on top against the sky; the battleship out on the water.
+        drawHeadland(t, horizon, unit);
         const shipW = unit * 0.3;
         const shipX = W * 0.97 - shipW;
         const bob = still ? 0 : Math.sin(t / 1300) * 1.6;
@@ -451,92 +439,81 @@ export default function GGFrontScene({ majors }: { majors: SceneMajor[] }) {
       ctx.globalAlpha = 1;
     };
 
-    /** The coast: x of the shoreline at depth s (0 = the horizon, 1 = the bottom of the screen). */
-    const coastX = (s: number) => W * (0.3 + 0.07 * s + 0.016 * Math.sin(s * 5.5 + 1.2));
-
-    /** Land on the left: low hills on the horizon, a neon grid on the ground, and a glowing surf line where it meets the sea. */
-    const drawShore = (t: number, gx: number, horizon: number, floorH: number, F: number) => {
-      const top = coastX(0);
-      const land = new Path2D();
-      // Hills along the horizon, tapering into the coast.
-      land.moveTo(0, horizon + 1);
-      for (let x = 0; x <= top; x += 6) {
-        const fade = 1 - x / top;
-        const hill = H * 0.034 * fade * (0.55 + 0.3 * Math.sin(x * 0.019 + 0.8) + 0.15 * Math.sin(x * 0.061));
-        land.lineTo(x, horizon - hill);
-      }
-      for (let k = 0; k <= 40; k++) {
-        const s = k / 40;
-        land.lineTo(coastX(s), horizon + floorH * s);
-      }
-      land.lineTo(0, H);
-      land.closePath();
-      const ground = ctx.createLinearGradient(0, horizon, 0, H);
-      ground.addColorStop(0, "#1a0532");
-      ground.addColorStop(1, "#060110");
-      ctx.save();
-      ctx.fillStyle = ground;
-      ctx.fill(land);
-      ctx.clip(land);
-      const pink = ctx.createLinearGradient(0, 0, top, 0);
-      pink.addColorStop(0, "#ff2bd6");
-      pink.addColorStop(1, "#b46bff");
-      ctx.strokeStyle = pink;
-      ctx.globalAlpha = 0.38;
-      grid(gx, horizon, F, t, 0.5);
-      const haze = ctx.createLinearGradient(0, horizon - H * 0.04, 0, horizon + floorH * 0.22);
-      haze.addColorStop(0, "rgba(26, 5, 50, 1)");
-      haze.addColorStop(1, "rgba(26, 5, 50, 0)");
-      ctx.fillStyle = haze;
-      ctx.fillRect(0, horizon - H * 0.04, top + 20, floorH * 0.26 + H * 0.04);
-      ctx.restore();
-      // The hills' rim, lit by the sun.
-      ctx.save();
-      ctx.beginPath();
-      for (let x = 0; x <= top; x += 6) {
-        const fade = 1 - x / top;
-        const hill = H * 0.034 * fade * (0.55 + 0.3 * Math.sin(x * 0.019 + 0.8) + 0.15 * Math.sin(x * 0.061));
-        if (x === 0) ctx.moveTo(x, horizon - hill);
-        else ctx.lineTo(x, horizon - hill);
-      }
-      ctx.strokeStyle = "rgba(255, 120, 200, 0.8)";
-      ctx.shadowColor = "#ff2bd6";
-      ctx.shadowBlur = 10;
-      ctx.lineWidth = 1.3;
-      ctx.stroke();
-      // The surf: a glowing line, and foam running along it.
-      ctx.beginPath();
+    /** The headland's skyline: a plateau, then cliffs stepping down into the sea, and a few rocks. */
+    const headland = (horizon: number) => {
+      const L = W * 0.27;
+      const top = H * 0.085;
+      const path = new Path2D();
+      const rim = new Path2D();
+      path.moveTo(0, horizon);
+      const plateau = 0.62;
       for (let k = 0; k <= 60; k++) {
-        const s = k / 60;
-        const y = horizon + floorH * s;
-        const lap = still ? 0 : Math.sin(t / 900 + s * 7) * (0.6 + s * 1.6);
-        if (k === 0) ctx.moveTo(coastX(s) + lap, y);
-        else ctx.lineTo(coastX(s) + lap, y);
+        const f = k / 60;
+        const x = f * L;
+        let h: number;
+        if (f < plateau) h = top * (0.92 + 0.05 * Math.sin(f * 17) + 0.03 * Math.sin(f * 41));
+        else {
+          const g = (f - plateau) / (1 - plateau);
+          // Cliffs in steps, falling to the water.
+          h = top * Math.max(0, 1 - g * 1.05) * (g < 0.35 ? 0.95 : g < 0.6 ? 0.62 : 0.3) + top * 0.04 * Math.sin(f * 53);
+        }
+        path.lineTo(x, horizon - Math.max(0, h));
+        if (k === 0) rim.moveTo(x, horizon - Math.max(0, h));
+        else rim.lineTo(x, horizon - Math.max(0, h));
       }
-      ctx.strokeStyle = "rgba(127, 243, 255, 0.85)";
-      ctx.shadowColor = "#22e5ff";
-      ctx.shadowBlur = 12;
-      ctx.lineWidth = 1.8;
-      ctx.stroke();
-      ctx.shadowBlur = 0;
-      ctx.setLineDash([2, 16]);
-      ctx.lineDashOffset = still ? 0 : -t / 70;
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.55)";
-      ctx.lineWidth = 2.5;
-      ctx.stroke();
-      ctx.setLineDash([]);
-      // Wet sand just inside the surf.
+      path.lineTo(L, horizon);
+      // Rocks off the point.
+      path.moveTo(L * 1.03, horizon);
+      path.quadraticCurveTo(L * 1.05, horizon - top * 0.18, L * 1.08, horizon);
+      path.moveTo(L * 1.11, horizon);
+      path.quadraticCurveTo(L * 1.12, horizon - top * 0.09, L * 1.14, horizon);
+      return { path, rim, plateauEnd: L * plateau, ground: horizon - top * 0.92 };
+    };
+
+    const drawHeadland = (t: number, horizon: number, unit: number) => {
+      const land = headland(horizon);
+      const tankW = Math.min(unit * 0.13, land.plateauEnd * 0.8);
+      const tankX = land.plateauEnd * 0.12;
+      const paint = () => {
+        const rock = ctx.createLinearGradient(0, horizon - H * 0.085, 0, horizon);
+        rock.addColorStop(0, "#1c0a32");
+        rock.addColorStop(1, "#06020e");
+        ctx.save();
+        ctx.shadowColor = "#ff2bd6";
+        ctx.shadowBlur = 14;
+        ctx.fillStyle = rock;
+        ctx.fill(land.path);
+        ctx.shadowBlur = 0;
+        // Sunlit rim along the top, and faint strata in the rock.
+        ctx.strokeStyle = "rgba(255, 120, 200, 0.85)";
+        ctx.lineWidth = 1.4;
+        ctx.stroke(land.rim);
+        ctx.clip(land.path);
+        ctx.strokeStyle = "rgba(255, 43, 214, 0.12)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (let k = 1; k < 6; k++) {
+          const y = horizon - H * 0.07 * (k / 6);
+          ctx.moveTo(0, y + Math.sin(k * 3.1) * 3);
+          ctx.lineTo(W * 0.3, y - Math.sin(k * 1.7) * 3);
+        }
+        ctx.stroke();
+        ctx.restore();
+        silhouette(TANK, tankX, land.ground + 1, tankW, "#ff4fd8");
+      };
+      paint();
+      // Mirrored in the sea, squashed and faint, rippling a little.
+      ctx.save();
       ctx.beginPath();
-      for (let k = 0; k <= 40; k++) {
-        const sd = k / 40;
-        const x = coastX(sd) - 5 - sd * 16;
-        if (k === 0) ctx.moveTo(x, horizon + floorH * sd);
-        else ctx.lineTo(x, horizon + floorH * sd);
-      }
-      ctx.strokeStyle = "rgba(34, 229, 255, 0.22)";
-      ctx.lineWidth = 1;
-      ctx.stroke();
+      ctx.rect(0, horizon, W, H - horizon);
+      ctx.clip();
+      ctx.translate(still ? 0 : Math.sin(t / 700) * 1.5, horizon);
+      ctx.scale(1, -0.75);
+      ctx.translate(0, -horizon);
+      ctx.globalAlpha = 0.35;
+      paint();
       ctx.restore();
+      ctx.globalAlpha = 1;
     };
 
     /** White water along the battleship's waterline and a bow wave. */
