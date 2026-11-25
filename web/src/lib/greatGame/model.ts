@@ -84,7 +84,7 @@ export type GGActionKind =
   | "phase.set" // {phase}
   | "pause.set" // {on}
   | "drum.draw" // {team} (result)
-  | "wheel.spin" // {team, tag} (result)
+  | "wheel.spin" // {team, tag, then?: {team, tag}} (result; `then` is the last major going to the last team)
   | "vice.draw" // {team, person} (result)
   | "recruit.draw" // {team, person, slot} (result)
   | "ban.set" // {team, tag} ("" = ban lost)
@@ -144,7 +144,8 @@ export interface GGState {
   /** Whether everything this phase needs is done (the organizer can move on). */
   phase_done: boolean;
   /** The last randomizer result, for the animation: {kind, seq, at, team, value}. */
-  last_draw: { kind: string; seq: number; at: number; team: string; value: string } | null;
+  /** `then`: the last major, handed to the last team by the same spin (no spin needed for it). */
+  last_draw: { kind: string; seq: number; at: number; team: string; value: string; then?: { team: string; value: string } } | null;
   log: GGAction[];
   fairness: { commit: string; seed: string | null };
   /** Server time when this state was built (the page corrects its clock with it). */

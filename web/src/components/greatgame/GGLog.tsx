@@ -35,7 +35,11 @@ export function describe(state: GGState, action: GGAction): string {
     case "order.set":
       return "Captain order changed";
     case "wheel.spin":
-      return `Reel: ${team} drew ${nation(p.tag)}`;
+    {
+      const then = p.then as { team?: string; tag?: string } | undefined;
+      const last = then?.team ? teamById(state, then.team)?.name : null;
+      return `Reel: ${team} drew ${nation(p.tag)}${last ? `; ${last} take ${nation(then?.tag)}, the last major` : ""}`;
+    }
     case "major.set":
       return p.tag ? `${team}'s major set to ${nation(p.tag)}` : `${team}'s major cleared`;
     case "vice.draw":

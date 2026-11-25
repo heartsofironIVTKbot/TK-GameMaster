@@ -157,7 +157,16 @@ export function buildState(
         if (!team || typeof p.tag !== "string") break;
         for (const other of teams) if (other.major === p.tag) other.major = null;
         team.major = p.tag || null;
-        if (action.kind === "wheel.spin") lastDraw = { kind: "wheel", seq: action.seq, at: action.at, team: team.id, value: p.tag };
+        if (action.kind === "wheel.spin") {
+          lastDraw = { kind: "wheel", seq: action.seq, at: action.at, team: team.id, value: p.tag };
+          // The last major goes straight to the last team.
+          const then = p.then as { team?: unknown; tag?: unknown } | undefined;
+          const last = typeof then?.team === "string" ? byId.get(then.team) : undefined;
+          if (last && typeof then?.tag === "string" && then.tag && !last.major && !teams.some((other) => other.major === then.tag)) {
+            last.major = then.tag;
+            lastDraw.then = { team: last.id, value: then.tag };
+          }
+        }
         break;
       case "vice.draw":
       case "recruit.draw":

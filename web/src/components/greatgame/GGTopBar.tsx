@@ -108,7 +108,7 @@ export function bannerFor(state: GGState, now: number): Banner {
       if (drawing) return neutral("Lottery drum", `DRAWING · BALL ${state.order.length} OF ${state.teams.length}`);
       return neutral("Lottery drum", state.phase_done ? "CAPTAIN ORDER DRAWN" : `BALL ${state.order.length + 1} OF ${state.teams.length}`);
     case "wheel":
-      if (reeling && team) return { ...teamBanner(`SPINNING · MAJOR ${state.teams.filter((t) => t.major).length} OF 7`), flag: null, timer: null, frac: 1, late: false };
+      if (reeling && team) return { ...teamBanner(`SPINNING · MAJOR ${state.teams.filter((t) => t.major).length - (draw.then ? 1 : 0)} OF 7`), flag: null, timer: null, frac: 1, late: false };
       return team ? { ...teamBanner(`SPIN ${state.teams.filter((t) => t.major).length + 1} OF 7 · MAJOR`), flag: null } : neutral("Major reel", "ALL MAJORS DRAWN");
     case "vice":
       return team ? teamBanner("SCRATCHING · VICE-CAPTAIN") : neutral("Vice-captains", "ALL REVEALED");

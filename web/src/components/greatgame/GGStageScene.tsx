@@ -525,13 +525,21 @@ function palmsAt(travel: number): { side: number; x: number; z: number; tall: nu
  * The palms, far to near. With `reflected`, each palm's reflection instead:
  * flipped at its own base, shorter and faint, inside the wet strip.
  */
+interface Rect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
 function drawPalms(
   ctx: CanvasRenderingContext2D,
   v: View,
   travel: number,
   sprites: { left: HTMLCanvasElement; right: HTMLCanvasElement },
   reflected = false,
-  only: "all" | "behind-tank" | "before-tank" = "all",
+  layer: "all" | "back" | "front" = "all",
+  machine: Rect | null = null,
 ) {
   if (reflected) {
     ctx.save();
@@ -539,10 +547,17 @@ function drawPalms(
     ctx.clip();
   }
   for (const palm of palmsAt(travel)) {
-    const tankZ = tankDistance(v);
-    if ((only === "behind-tank" && palm.z < tankZ) || (only === "before-tank" && palm.z >= tankZ)) continue;
     const [sx, sy] = project(v, palm.x, 0, palm.z);
     const k = (palm.tall * v.f) / palm.z / 280;
+    if (layer !== "all") {
+      // A palm comes to the front layer (over the tank) once it's nearer than
+      // the tank and clear of the machine, so it never jumps from behind the
+      // machine to in front of it: it slides out from behind it first.
+      const clear =
+        !machine || sx + 130 * k < machine.x || sx - 130 * k > machine.x + machine.w || sy - 370 * k > machine.y + machine.h || sy + 10 * k < machine.y;
+      const front = palm.z < tankDistance(v) && clear;
+      if (front !== (layer === "front")) continue;
+    }
     ctx.globalAlpha = palm.fade * (reflected ? 0.3 : 1);
     ctx.save();
     ctx.translate(sx, sy);
@@ -669,13 +684,23 @@ export default function GGStageScene({ anchorRef }: { anchorRef: MutableRefObjec
       drawPalms(ctx, view, travel, sprites, true);
       if (withTank) drawTank(ctx, view, time, withTank, ratio, true);
       drawDashes(ctx, view, travel);
-      drawPalms(ctx, view, travel, sprites, false, withTank ? "behind-tank" : "all");
+      // The machine's body on the stage (the moon, the reel's cabinet), which far palms pass behind.
+      const body: Rect | null =
+        anchor?.mirror && machineBox
+          ? {
+              x: machineBox.left + anchor.mirror.x * machineBox.width,
+              y: machineBox.top + anchor.mirror.y * machineBox.height,
+              w: anchor.mirror.w * machineBox.width,
+              h: anchor.mirror.h * machineBox.height,
+            }
+          : null;
+      drawPalms(ctx, view, travel, sprites, false, withTank ? "back" : "all", body);
       fctx.setTransform(1, 0, 0, 1, 0, 0);
       fctx.clearRect(0, 0, front.width, front.height);
       if (withTank) {
         fctx.setTransform(ratio, 0, 0, ratio, 0, 0);
         drawTank(fctx, view, time, withTank, ratio);
-        drawPalms(fctx, view, travel, sprites, false, "before-tank");
+        drawPalms(fctx, view, travel, sprites, false, "front", body);
         // The nearest palms fade out under the stage's header, so their crowns never run through the title.
         fctx.save();
         fctx.globalCompositeOperation = "destination-out";

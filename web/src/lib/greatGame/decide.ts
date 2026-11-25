@@ -206,7 +206,13 @@ function decideTurn(state: GGState, actor: GGActor, body: Record<string, unknown
       const taken = new Set(state.teams.map((team) => team.major).filter(Boolean));
       const left = state.config.majors.filter((tag) => !taken.has(tag));
       if (!left.length) return no("Every major is taken.");
-      return action({ team: turnTeam, tag: drawFrom(seed, nextSeq, kind, left) });
+      const tag = drawFrom(seed, nextSeq, kind, left);
+      // With two majors and two teams left, this spin settles both: the last team takes the last major.
+      const waiting = state.teams.filter((team) => !team.major && team.id !== turnTeam);
+      if (left.length === 2 && waiting.length === 1) {
+        return action({ team: turnTeam, tag, then: { team: waiting[0].id, tag: left.find((other) => other !== tag) } });
+      }
+      return action({ team: turnTeam, tag });
     }
     case "major.set": {
       const team = teamOf(state, body.team);

@@ -151,9 +151,15 @@ export default function GGMajorReel({ state, clock }: { state: GGState; clock: (
       const ms = draw ? now - draw.at : Infinity;
       const spinning = draw !== null && ms < REEL_MS;
       const taken = new Set(current.teams.map((team) => team.major).filter((tag): tag is string => Boolean(tag)));
-      // During a spin its own result is still on the reel.
-      if (spinning) taken.delete(draw.value);
-      const faces = facesOf(current.config.majors.filter((tag) => !taken.has(tag)));
+      // During a spin its results are still on the reel.
+      if (spinning) {
+        taken.delete(draw.value);
+        if (draw.then) taken.delete(draw.then.value);
+      }
+      // With every major drawn, the reel keeps turning through all of them, each with its team.
+      const done = !spinning && current.config.majors.every((tag) => taken.has(tag));
+      const faces = facesOf(done ? current.config.majors : current.config.majors.filter((tag) => !taken.has(tag)));
+      const ownerOf = (tag: string) => (done ? current.teams.find((entry) => entry.major === tag) : undefined);
       let angle = idleAngle(now, faces.length);
       if (spinning) {
         if (!plan || plan.seq !== draw.seq) plan = { seq: draw.seq, at: spinPlan(idleAngle(draw.at, faces.length), faces, draw.value) };
@@ -258,7 +264,13 @@ export default function GGMajorReel({ state, clock }: { state: GGState; clock: (
         ctx.textBaseline = "middle";
         ctx.font = `900 ${Math.round(cardH * 0.4)}px "Big Shoulders Display", "Arial Narrow", sans-serif`;
         const name = displayName(current.config.names[f.tag] ?? f.tag).toUpperCase();
-        ctx.fillText(name, -CARD_W / 2 + 40 + fw, 0, CARD_W - fw - 60);
+        const owner = ownerOf(f.tag);
+        ctx.fillText(name, -CARD_W / 2 + 40 + fw, owner ? -cardH * 0.13 : 0, CARD_W - fw - 60);
+        if (owner) {
+          ctx.fillStyle = owner.color;
+          ctx.font = `800 ${Math.round(cardH * 0.21)}px "Big Shoulders Display", "Arial Narrow", sans-serif`;
+          ctx.fillText(owner.name.toUpperCase(), -CARD_W / 2 + 40 + fw, cardH * 0.24, CARD_W - fw - 60);
+        }
         ctx.restore();
         // Darker towards the top and bottom of the drum, and a blur while it's fast.
         ctx.fillStyle = `rgba(13,8,32,${Math.min(0.9, (1 - f.c) * 0.62 + blur * 0.3)})`;
