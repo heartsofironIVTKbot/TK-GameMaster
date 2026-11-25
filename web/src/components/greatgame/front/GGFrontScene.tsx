@@ -447,19 +447,29 @@ export default function GGFrontScene({ majors }: { majors: SceneMajor[] }) {
       const rim = new Path2D();
       path.moveTo(0, horizon);
       const plateau = 0.62;
-      // Where the tank stands the ground is flat, so its tracks sit on it with no gap.
+      // Under the tank the ground is a gentle slope it climbs (it tilts to match, so its tracks sit on it);
+      // around it, mounds and rough ground.
       const tankX = L * plateau * 0.12;
       const tankW = Math.min(unit * 0.13, L * plateau * 0.8);
-      for (let k = 0; k <= 60; k++) {
-        const f = k / 60;
+      const rise = top * 0.08;
+      const slopeAt = (x: number) => top * 0.9 + (rise * (x - tankX)) / tankW;
+      const mound = (x: number, at: number, height: number, width: number) => height * Math.exp(-(((x - at) / width) ** 2));
+      for (let k = 0; k <= 120; k++) {
+        const f = k / 120;
         const x = f * L;
         let h: number;
         if (f < plateau) {
-          const bumpy = top * (0.92 + 0.05 * Math.sin(f * 17) + 0.03 * Math.sin(f * 41));
-          const pad = tankW * 0.12;
+          const bumpy =
+            top * (0.92 + 0.05 * Math.sin(f * 17) + 0.035 * Math.sin(f * 41) + 0.02 * Math.sin(f * 97)) +
+            mound(x, tankX + tankW * 1.2, top * 0.3, tankW * 0.1) +
+            mound(x, tankX + tankW * 1.36, top * 0.14, tankW * 0.05) +
+            mound(x, tankX - tankW * 0.12, top * 0.2, tankW * 0.08) +
+            mound(x, tankX + tankW * 1.62, top * 0.1, tankW * 0.06);
+          const pad = tankW * 0.06;
           const d = x < tankX - pad ? tankX - pad - x : x > tankX + tankW + pad ? x - (tankX + tankW + pad) : 0;
-          const blend = Math.min(1, d / (tankW * 0.15));
-          h = top * 0.92 + (bumpy - top * 0.92) * blend;
+          const blend = Math.min(1, d / (tankW * 0.1));
+          const base = slopeAt(Math.min(Math.max(x, tankX), tankX + tankW));
+          h = base + (bumpy - base) * blend;
         }
         else {
           const g = (f - plateau) / (1 - plateau);
@@ -476,7 +486,7 @@ export default function GGFrontScene({ majors }: { majors: SceneMajor[] }) {
       path.quadraticCurveTo(L * 1.05, horizon - top * 0.18, L * 1.08, horizon);
       path.moveTo(L * 1.11, horizon);
       path.quadraticCurveTo(L * 1.12, horizon - top * 0.09, L * 1.14, horizon);
-      return { path, rim, tankX, tankW, ground: horizon - top * 0.92 };
+      return { path, rim, tankX, tankW, ground: horizon - slopeAt(tankX), angle: Math.atan(rise / tankW) };
     };
 
     const drawHeadland = (t: number, horizon: number, unit: number) => {
@@ -507,7 +517,32 @@ export default function GGFrontScene({ majors }: { majors: SceneMajor[] }) {
         }
         ctx.stroke();
         ctx.restore();
-        silhouette(TANK, tankX, land.ground + 2, tankW, "#ff4fd8");
+        ctx.save();
+        ctx.translate(tankX, land.ground + 2);
+        ctx.rotate(-land.angle);
+        silhouette(TANK, 0, 0, tankW, "#ff4fd8");
+        // Rocks and clods in front of the tracks, so it sits in rough ground.
+        const rocks = new Path2D();
+        for (const [at, height, width] of [
+          [0.01, 0.045, 0.05],
+          [0.1, 0.03, 0.035],
+          [0.33, 0.022, 0.03],
+          [0.56, 0.035, 0.045],
+          [0.8, 0.026, 0.03],
+          [0.92, 0.05, 0.06],
+        ]) {
+          const x = at * tankW;
+          rocks.moveTo(x - width * tankW, 2);
+          rocks.quadraticCurveTo(x - width * tankW * 0.3, -height * tankW * 1.6, x + width * tankW * 0.2, -height * tankW * 0.9);
+          rocks.quadraticCurveTo(x + width * tankW * 0.8, -height * tankW * 0.4, x + width * tankW, 2);
+          rocks.closePath();
+        }
+        ctx.fillStyle = "#12061f";
+        ctx.fill(rocks);
+        ctx.strokeStyle = "rgba(255, 120, 200, 0.7)";
+        ctx.lineWidth = 1;
+        ctx.stroke(rocks);
+        ctx.restore();
       };
       paint();
       // Mirrored in the sea, squashed and faint, rippling a little.
