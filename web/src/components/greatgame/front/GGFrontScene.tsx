@@ -5,14 +5,22 @@ import { useEffect, useRef } from "react";
 /**
  * The front page's poster scene, on one canvas: a synthwave sky with a striped
  * sun setting behind a spinning neon globe (the coasts glow; arcs fly between
- * the majors' capitals), a perspective grid floor with the world map glowing
- * on it (pink in the west, cyan in the east), a tank and a battleship on the
- * horizon and bombers crossing the sky.
+ * the majors' capitals), a tank and a battleship with neon rim light, bombers
+ * crossing the sky, and one of three floors:
  *
- * Map data: public/landing/globe-vanilla.json (coast polylines as flat
- * lon, lat lists; capitals by tag). It stops drawing while off screen, and
- * draws one still frame for viewers who asked for reduced motion.
+ *  - "terrain": the Road to 56 world raised into glowing wireframe mountains,
+ *    rows running to the horizon, wrapping round the world and turning with
+ *    the globe (so it never ends at an edge);
+ *  - "sea": a dark ocean mirroring the sun and globe in ripples;
+ *  - "table": a holographic war table showing the Road to 56 map, projecting
+ *    the globe above it.
+ *
+ * Map data: public/landing/globe-vanilla.json (the globe's coasts, capitals)
+ * and public/greatgame/front-map.json (Road to 56 nations, thinned). It stops
+ * drawing while off screen, and draws one still frame for reduced motion.
  */
+
+export type FloorStyle = "terrain" | "sea" | "table";
 
 export interface SceneMajor {
   tag: string;
@@ -20,18 +28,22 @@ export interface SceneMajor {
 }
 
 interface Lines {
-  /** Point data: longitude (deg), and sin/cos of latitude. */
   lon: Float32Array;
   lat: Float32Array;
   sinLat: Float32Array;
   cosLat: Float32Array;
-  /** Where each polyline starts in the point arrays (plus the end). */
   starts: Uint32Array;
 }
 
 interface GlobeJson {
   coast: number[][];
   capitals: Record<string, [number, number]>;
+}
+
+interface FrontMap {
+  w: number;
+  h: number;
+  nations: { tag: string; rings: number[][] }[];
 }
 
 const D2R = Math.PI / 180;
@@ -69,13 +81,188 @@ function prepare(source: number[][], step: number): Lines {
   };
 }
 
-// Silhouettes, as SVG paths in their own little boxes (bottom = the ground or the water line).
-const TANK_PATH =
-  "M5 38 Q5 30 13 30 L87 30 Q95 30 95 38 Q95 45 87 45 L13 45 Q5 45 5 38 Z M8 30 L13 20 L86 20 L95 27 L93 30 Z M34 20 L38 10 L62 9 L67 12 L67 20 Z M66 11.5 L104 11 L104 14 L66 14.5 Z M45 10 L46 5 L53 5 L54 10 Z";
-const SHIP_PATH =
-  "M0 33 L12 50 L186 50 L200 37 L200 34 Z M80 34 L80 24 L88 24 L88 14 L95 14 L95 6 L99 6 L99 0 L101 0 L101 6 L105 6 L105 14 L112 14 L112 24 L120 24 L120 34 Z M124 34 L126 18 L137 18 L138 34 Z M36 34 L38 28 L52 28 L54 34 Z M18 29 L38 29 L38 31.5 L18 31.5 Z M58 31 L60 25 L72 25 L74 31 Z M42 26 L60 26 L60 28.5 L42 28.5 Z M150 34 L152 28 L166 28 L168 34 Z M166 29 L186 29 L186 31.5 L166 31.5 Z M140 34 L141 8 L142 8 L143 34 Z";
-const PLANE_PATH =
-  "M2 12 Q12 7.5 40 8.5 L53 9.5 Q60 12 53 14.5 L40 15.5 Q12 16.5 2 12 Z M21 11 L36 11 L31 23.5 L25 23.5 Z M24 10 L33 10 L30 2.5 L27.5 2.5 Z M3 12 L0 2.5 L6.5 2.5 L11 10 Z M3 12.5 L10 12.5 L7 16.5 L2 16.5 Z";
+/** Smooth value noise in 0..1 (hashed lattice, smoothstep blend). */
+function noise(x: number, y: number): number {
+  const hash = (i: number, j: number) => {
+    const s = Math.sin(i * 127.1 + j * 311.7) * 43758.5453;
+    return s - Math.floor(s);
+  };
+  const xi = Math.floor(x);
+  const yi = Math.floor(y);
+  const fx = x - xi;
+  const fy = y - yi;
+  const sx = fx * fx * (3 - 2 * fx);
+  const sy = fy * fy * (3 - 2 * fy);
+  const a = hash(xi, yi);
+  const b = hash(xi + 1, yi);
+  const c = hash(xi, yi + 1);
+  const d = hash(xi + 1, yi + 1);
+  return a + (b - a) * sx + (c - a) * sy + (a - b - c + d) * sx * sy;
+}
+
+/** The world as a height field: land raised (higher inland, rugged), sea flat. u = west→east, v = north→south. */
+interface HeightField {
+  w: number;
+  h: number;
+  data: Float32Array;
+}
+
+function heightField(map: FrontMap): HeightField {
+  const w = 360;
+  const h = Math.round((360 * map.h) / map.w);
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = "#fff";
+  ctx.beginPath();
+  for (const nation of map.nations) {
+    for (const ring of nation.rings) {
+      for (let i = 0; i < ring.length; i += 2) {
+        const x = (ring[i] / map.w) * w;
+        const y = h - (ring[i + 1] / map.h) * h;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+    }
+  }
+  ctx.fill();
+  const pixels = ctx.getImageData(0, 0, w, h).data;
+  let field = new Float32Array(w * h);
+  for (let i = 0; i < w * h; i++) field[i] = pixels[i * 4] / 255;
+  const mask = field.slice();
+  // Blur so the land rises from the coast towards the middle.
+  for (let pass = 0; pass < 3; pass++) {
+    const next = new Float32Array(w * h);
+    const r = 2;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        let sum = 0;
+        let n = 0;
+        for (let dy = -r; dy <= r; dy++) {
+          const yy = y + dy;
+          if (yy < 0 || yy >= h) continue;
+          for (let dx = -r; dx <= r; dx++) {
+            sum += field[yy * w + ((x + dx + w) % w)];
+            n++;
+          }
+        }
+        next[y * w + x] = sum / n;
+      }
+    }
+    field = next;
+  }
+  const data = new Float32Array(w * h);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = y * w + x;
+      const inland = Math.min(1, field[i] * 1.15) * mask[i];
+      const rugged = 0.35 + 0.65 * (0.55 * noise(x / 6, y / 6) + 0.3 * noise(x / 2.5, y / 2.5) + 0.15 * noise(x / 1.2, y / 1.2));
+      data[i] = inland * rugged + mask[i] * 0.04;
+    }
+  }
+  return { w, h, data };
+}
+
+function sampleHeight(field: HeightField, u: number, v: number): number {
+  const x = (((u % 1) + 1) % 1) * field.w;
+  const y = Math.min(field.h - 1.001, Math.max(0, v * field.h));
+  const x0 = Math.floor(x);
+  const y0 = Math.floor(y);
+  const fx = x - x0;
+  const fy = y - y0;
+  const x1 = (x0 + 1) % field.w;
+  const d = field.data;
+  const a = d[y0 * field.w + x0];
+  const b = d[y0 * field.w + x1];
+  const c = d[(y0 + 1) * field.w + x0];
+  const e = d[(y0 + 1) * field.w + x1];
+  return a + (b - a) * fx + (c - a) * fy + (a - b - c + e) * fx * fy;
+}
+
+// ---------- Silhouettes: a body (filled dark, lit at the rim) and detail lines, in their own boxes (bottom = ground). ----------
+
+interface Art {
+  w: number;
+  h: number;
+  body: string;
+  detail: string;
+}
+
+const circle = (x: number, y: number, r: number) => `M${x + r} ${y} A${r} ${r} 0 1 0 ${x - r} ${y} A${r} ${r} 0 1 0 ${x + r} ${y} Z `;
+
+/** A WW2 heavy tank, facing right. */
+const TANK_ART: Art = {
+  w: 236,
+  h: 92,
+  body: [
+    "M18 66 L196 66 Q208 66 211 74 L203 86 Q199 91 192 91 L30 91 Q23 91 19 86 L9 74 Q9 66 18 66 Z",
+    "M12 66 L16 50 L40 46 L150 46 L196 54 L214 66 Z",
+    "M12 66 L214 66 L209 73 L17 73 Z",
+    "M70 46 L76 30 Q78 26 86 25 L132 25 Q140 26 144 32 L152 46 Z",
+    "M146 31 L160 30 Q165 35 160 41 L148 43 Z",
+    "M158 33.5 L222 32.5 L222 37 L158 38 Z",
+    "M220 30 L232 30 L232 39.5 L220 39.5 Z",
+    "M92 25 L94 17 Q95 15 98 15 L108 15 Q111 15 111 17 L112 25 Z",
+    "M112 18 L121 9 L123 11 L114 20 Z",
+    "M84 25 L65 -14 L66.2 -14.5 L86 25 Z",
+    "M20 50 L44 47 L44 40 L24 41 Z",
+    "M8 55 L14 55 L14 60 L8 60 Z",
+  ].join(" "),
+  detail: [
+    [34, 56, 78, 100, 122, 144, 166, 186].map((x) => circle(x, 80, 8)).join(""),
+    [34, 56, 78, 100, 122, 144, 166, 186].map((x) => circle(x, 80, 2.4)).join(""),
+    circle(20, 77, 7),
+    circle(204, 76, 6),
+    "M17 73 L209 73 M42 55 L196 59 M82 40 L146 40 M150 52 L172 55 M96 33 L128 33 M58 50 L58 46",
+  ].join(" "),
+};
+
+/** A battleship, bow to the left. */
+const SHIP_ART: Art = {
+  w: 420,
+  h: 112,
+  body: [
+    "M0 72 Q50 82 100 84 L372 84 Q400 84 420 80 L416 98 Q412 106 400 108 L70 110 Q28 100 0 72 Z",
+    "M86 84 L90 72 Q92 70 96 70 L122 70 Q126 70 128 74 L132 84 Z",
+    "M44 73 L92 72 L92 74.5 L44 75.5 Z M46 77 L92 76 L92 78.5 L46 79.5 Z",
+    "M120 84 L120 68 L152 68 L152 84 Z",
+    "M118 68 L122 57 Q124 55 128 55 L150 55 Q154 55 155 58 L158 68 Z",
+    "M80 58 L124 57 L124 59.5 L80 60.5 Z M82 62 L124 61 L124 63.5 L82 64.5 Z",
+    "M160 84 L160 62 L168 62 L168 48 L176 48 L176 36 L182 36 L182 24 L186 24 L186 6 L189 6 L189 24 L194 24 L194 36 L200 36 L200 48 L208 48 L208 62 L216 62 L216 84 Z",
+    "M172 30 L206 30 L206 33 L172 33 Z",
+    "M222 84 L226 50 Q228 44 236 44 L250 44 Q256 44 257 50 L260 84 Z",
+    "M223 46 L259 46 L259 40 L223 40 Z",
+    "M270 84 L272 12 L275 12 L278 84 Z M260 28 L288 28 L288 30.5 L260 30.5 Z",
+    "M282 84 L282 66 L318 66 L318 84 Z M292 66 L292 54 L308 54 L308 66 Z",
+    "M330 84 L333 72 Q335 70 339 70 L362 70 Q366 70 368 72 L372 84 Z",
+    "M366 73 L410 72 L410 74.5 L366 75.5 Z M366 77 L408 76 L408 78.5 L366 79.5 Z",
+    "M140 84 L140 79 L147 79 L147 84 Z M262 84 L262 78 L268 78 L268 84 Z M322 84 L322 78 L328 78 L328 84 Z",
+  ].join(" "),
+  detail: [
+    "M8 84 L416 84 M168 54 L208 54 M176 42 L200 42 M226 60 L258 60 M100 96 L380 96",
+    Array.from({ length: 22 }, (_, i) => circle(110 + i * 12, 90, 1.2)).join(""),
+  ].join(" "),
+};
+
+/** A four-engined bomber, facing right. */
+const PLANE_ART: Art = {
+  w: 64,
+  h: 26,
+  body: [
+    "M2 13 Q8 9 24 9 L50 9.5 Q60 10.5 63 13 Q60 15.5 50 16 L24 16.5 Q8 16.5 2 13 Z",
+    "M2 13 L4 2 Q5 0.5 7 1 L14 9 Z",
+    "M4 13.5 L14 13.5 L10 17 L3 17 Z",
+    "M26 12.5 L42 12.5 L36 25 L29 25 Z",
+    "M30 15 L41 15 L41 18.5 L30 18.5 Z M33 20 L39 20 L38.5 22.5 L33 22.5 Z",
+    "M28 10 L40 10 L35 4 L31 4 Z",
+    "M48 9.5 Q52 6.5 56 9.8 Z",
+  ].join(" "),
+  detail: "M20 12 L48 12 M58 12.5 L62 12.5",
+};
 
 interface Star {
   x: number;
@@ -84,12 +271,14 @@ interface Star {
   phase: number;
 }
 
-export default function GGFrontScene({ majors }: { majors: SceneMajor[] }) {
+export default function GGFrontScene({ majors, floor = "terrain" }: { majors: SceneMajor[]; floor?: FloorStyle }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const majorsRef = useRef(majors);
+  const floorRef = useRef(floor);
   useEffect(() => {
     majorsRef.current = majors;
-  }, [majors]);
+    floorRef.current = floor;
+  }, [majors, floor]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -97,12 +286,16 @@ export default function GGFrontScene({ majors }: { majors: SceneMajor[] }) {
     if (!canvas || !ctx) return undefined;
     const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     // Built here: Path2D only exists in the browser.
-    const TANK = new Path2D(TANK_PATH);
-    const SHIP = new Path2D(SHIP_PATH);
-    const PLANE = new Path2D(PLANE_PATH);
+    const art = (a: Art) => ({ ...a, bodyPath: new Path2D(a.body), detailPath: new Path2D(a.detail) });
+    const TANK = art(TANK_ART);
+    const SHIP = art(SHIP_ART);
+    const PLANE = art(PLANE_ART);
+    type Built = ReturnType<typeof art>;
+
     let globe: Lines | null = null;
-    let floor: Lines | null = null;
     let capitals: Record<string, [number, number]> = {};
+    let worldMap: FrontMap | null = null;
+    let field: HeightField | null = null;
     let W = 0;
     let H = 0;
     let ratio = 1;
@@ -110,6 +303,8 @@ export default function GGFrontScene({ majors }: { majors: SceneMajor[] }) {
     let visible = true;
     const sun = document.createElement("canvas");
     const sunCtx = sun.getContext("2d")!;
+    const table = document.createElement("canvas");
+    let tableFor = "";
     let stars: Star[] = [];
     const start = performance.now();
 
@@ -120,28 +315,221 @@ export default function GGFrontScene({ majors }: { majors: SceneMajor[] }) {
       ratio = Math.min(window.devicePixelRatio || 1, W < 700 ? 1.5 : 1.25);
       canvas.width = Math.round(W * ratio);
       canvas.height = Math.round(H * ratio);
-      // Stars: fixed per size, seeded so they don't jump on resize.
       let seed = 7;
-      const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+      const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
       stars = Array.from({ length: Math.round((W * H) / 9000) }, () => ({ x: rnd() * W, y: rnd() * H * 0.5, r: 0.4 + rnd() * 1.2, phase: rnd() * 6.28 }));
       if (still || !frame) draw(still ? 12000 : 0);
     };
 
-    // An arc between two majors' capitals: which pair, and when it started.
     let arc: { a: string; b: string; at: number } | null = null;
     let nextArc = 1500;
 
+    /** A silhouette: rim glow, a dark body lit from the top, then its detail lines. `x` is its left edge, `y` the ground. */
+    const silhouette = (piece: Built, x: number, y: number, width: number, rim: string, flip = false, reflect = 0) => {
+      const s = width / piece.w;
+      const paint = (mirror: boolean) => {
+        ctx.save();
+        ctx.translate(flip ? x + width : x, mirror ? y : y - piece.h * s);
+        ctx.scale(flip ? -s : s, mirror ? -s * 0.7 : s);
+        if (mirror) ctx.translate(0, -piece.h);
+        if (!mirror) {
+          ctx.shadowColor = rim;
+          ctx.shadowBlur = 18;
+          ctx.strokeStyle = rim;
+          ctx.lineWidth = 3 / s;
+          ctx.lineJoin = "round";
+          ctx.stroke(piece.bodyPath);
+          ctx.shadowBlur = 0;
+        }
+        const body = ctx.createLinearGradient(0, 0, 0, piece.h);
+        body.addColorStop(0, "#1a0b30");
+        body.addColorStop(0.5, "#0a0418");
+        body.addColorStop(1, "#030008");
+        ctx.fillStyle = body;
+        ctx.fill(piece.bodyPath);
+        ctx.save();
+        ctx.clip(piece.bodyPath);
+        const light = ctx.createLinearGradient(0, 0, 0, piece.h * 0.5);
+        light.addColorStop(0, `${rim}38`);
+        light.addColorStop(1, `${rim}00`);
+        ctx.fillStyle = light;
+        ctx.fillRect(-10, -20, piece.w + 20, piece.h * 0.5 + 20);
+        ctx.strokeStyle = rim;
+        ctx.globalAlpha = mirror ? 0.15 : 0.28;
+        ctx.lineWidth = 1 / s;
+        ctx.stroke(piece.detailPath);
+        ctx.globalAlpha = mirror ? 0.3 : 0.7;
+        ctx.lineWidth = 1.3 / s;
+        ctx.stroke(piece.bodyPath);
+        ctx.restore();
+        ctx.restore();
+      };
+      paint(false);
+      if (reflect > 0) {
+        ctx.save();
+        ctx.globalAlpha = reflect;
+        paint(true);
+        ctx.restore();
+      }
+    };
+
+    /** The war table's top (the Road to 56 map on a tilted glass panel), drawn once per size. */
+    const buildTable = (geo: { gx: number; horizon: number; floorH: number; F: number }) => {
+      if (!worldMap) return;
+      const key = `${W}x${H}`;
+      if (tableFor === key) return;
+      tableFor = key;
+      table.width = Math.round(W * ratio);
+      table.height = Math.round(H * ratio);
+      const t = table.getContext("2d")!;
+      t.setTransform(ratio, 0, 0, ratio, 0, 0);
+      t.clearRect(0, 0, W, H);
+      const corners = tableCorners(geo);
+      const at = (u: number, v: number) => {
+        // Bilinear across the panel's four corners (tl, tr, br, bl) in screen space, after a perspective-correct depth.
+        const top = { x: corners.tl.x + (corners.tr.x - corners.tl.x) * u, y: corners.tl.y + (corners.tr.y - corners.tl.y) * u };
+        const bottom = { x: corners.bl.x + (corners.br.x - corners.bl.x) * u, y: corners.bl.y + (corners.br.y - corners.bl.y) * u };
+        // Far rows are closer together: weight by the depth ratio.
+        const k = corners.depth;
+        const vv = (v * k) / (1 + v * (k - 1));
+        return { x: top.x + (bottom.x - top.x) * vv, y: top.y + (bottom.y - top.y) * vv };
+      };
+      // Glass.
+      t.beginPath();
+      t.moveTo(corners.tl.x, corners.tl.y);
+      t.lineTo(corners.tr.x, corners.tr.y);
+      t.lineTo(corners.br.x, corners.br.y);
+      t.lineTo(corners.bl.x, corners.bl.y);
+      t.closePath();
+      const glass = t.createLinearGradient(0, corners.tl.y, 0, corners.bl.y);
+      glass.addColorStop(0, "rgba(16, 30, 90, 0.85)");
+      glass.addColorStop(1, "rgba(30, 10, 70, 0.92)");
+      t.fillStyle = glass;
+      t.fill();
+      t.save();
+      t.clip();
+      // A fine grid on the glass.
+      t.strokeStyle = "rgba(34, 229, 255, 0.12)";
+      t.lineWidth = 1;
+      t.beginPath();
+      for (let i = 0; i <= 24; i++) {
+        const a = at(i / 24, 0);
+        const b = at(i / 24, 1);
+        t.moveTo(a.x, a.y);
+        t.lineTo(b.x, b.y);
+      }
+      for (let j = 0; j <= 9; j++) {
+        const a = at(0, j / 9);
+        const b = at(1, j / 9);
+        t.moveTo(a.x, a.y);
+        t.lineTo(b.x, b.y);
+      }
+      t.stroke();
+      // The nations: the majors tinted in their colours, the rest violet glass.
+      const tint = new Map(majorsRef.current.map((m) => [m.tag, m.color]));
+      for (const nation of worldMap.nations) {
+        t.beginPath();
+        for (const ring of nation.rings) {
+          for (let i = 0; i < ring.length; i += 2) {
+            const p = at(ring[i] / worldMap.w, 1 - ring[i + 1] / worldMap.h);
+            if (i === 0) t.moveTo(p.x, p.y);
+            else t.lineTo(p.x, p.y);
+          }
+          t.closePath();
+        }
+        const color = tint.get(nation.tag);
+        t.fillStyle = color ? `${color}66` : "rgba(150, 110, 255, 0.22)";
+        t.fill();
+        t.strokeStyle = color ?? "rgba(255, 120, 220, 0.75)";
+        t.lineWidth = color ? 1.3 : 0.8;
+        t.stroke();
+      }
+      t.restore();
+      // The frame.
+      const frameGrad = t.createLinearGradient(corners.bl.x, 0, corners.br.x, 0);
+      frameGrad.addColorStop(0, "#ff2bd6");
+      frameGrad.addColorStop(1, "#22e5ff");
+      t.strokeStyle = frameGrad;
+      t.shadowColor = "#ff2bd6";
+      t.shadowBlur = 16;
+      t.lineWidth = 2.5;
+      t.beginPath();
+      t.moveTo(corners.tl.x, corners.tl.y);
+      t.lineTo(corners.tr.x, corners.tr.y);
+      t.lineTo(corners.br.x, corners.br.y);
+      t.lineTo(corners.bl.x, corners.bl.y);
+      t.closePath();
+      t.stroke();
+      t.shadowBlur = 0;
+      // The table's front edge and its stand.
+      const thick = Math.max(8, (corners.bl.y - corners.tl.y) * 0.08);
+      const front = t.createLinearGradient(0, corners.bl.y, 0, corners.bl.y + thick);
+      front.addColorStop(0, "#5a5f78");
+      front.addColorStop(0.5, "#22253a");
+      front.addColorStop(1, "#0c0a18");
+      t.fillStyle = front;
+      t.beginPath();
+      t.moveTo(corners.bl.x, corners.bl.y);
+      t.lineTo(corners.br.x, corners.br.y);
+      t.lineTo(corners.br.x - 4, corners.br.y + thick);
+      t.lineTo(corners.bl.x + 4, corners.bl.y + thick);
+      t.closePath();
+      t.fill();
+      const stand = { top: corners.bl.y + thick, bottom: corners.ground };
+      const sw = (corners.br.x - corners.bl.x) * 0.18;
+      const standGrad = t.createLinearGradient(geo.gx - sw, 0, geo.gx + sw, 0);
+      standGrad.addColorStop(0, "#0a0614");
+      standGrad.addColorStop(0.5, "#2a2440");
+      standGrad.addColorStop(1, "#0a0614");
+      t.fillStyle = standGrad;
+      t.beginPath();
+      t.moveTo(geo.gx - sw * 0.6, stand.top);
+      t.lineTo(geo.gx + sw * 0.6, stand.top);
+      t.lineTo(geo.gx + sw, stand.bottom);
+      t.lineTo(geo.gx - sw, stand.bottom);
+      t.closePath();
+      t.fill();
+      t.strokeStyle = "rgba(255, 43, 214, 0.6)";
+      t.lineWidth = 1.5;
+      t.stroke();
+    };
+
+    /** Where the war table's tilted panel sits: its corners on screen, the floor under it, and how much nearer its bottom is than its top. */
+    const tableCorners = (geo: { gx: number; horizon: number; floorH: number; F: number }) => {
+      const hc = 1; // camera height
+      const tilt = 62 * D2R; // from upright, top leaning away
+      const zc = 2.7;
+      const yc = 0.6;
+      // Tall enough to stand between the floor and eye level, as wide as the map's shape needs.
+      const halfH = 0.35 / Math.cos(tilt);
+      const halfW = halfH * 2.75;
+      const project = (X: number, Y: number, Z: number) => ({ x: geo.gx + (X / Z) * geo.F, y: geo.horizon + (geo.F * (hc - Y)) / Z });
+      const corner = (s: number, t: number) => {
+        const Y = yc + t * halfH * Math.cos(tilt);
+        const Z = zc + t * halfH * Math.sin(tilt);
+        return { p: project(s * halfW, Y, Z), Z };
+      };
+      const tl = corner(-1, 1);
+      const tr = corner(1, 1);
+      const bl = corner(-1, -1);
+      const br = corner(1, -1);
+      return { tl: tl.p, tr: tr.p, bl: bl.p, br: br.p, depth: bl.Z / tl.Z, ground: project(0, 0, zc - halfH * Math.sin(tilt) * 0.2).y };
+    };
+
     const draw = (t: number) => {
+      const style = floorRef.current;
       ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
       const narrow = W < 700;
-      // Portrait (phones): the globe up top, the title below it over the floor.
       const portrait = W / H < 0.75;
       const R = portrait ? Math.min(W * 0.4, H * 0.2) : Math.min(H * 0.25, W * 0.38);
       const gx = W / 2;
       const gy = portrait ? H * 0.25 : H * 0.66 - R * 1.04;
       const horizon = gy + R * 1.04;
+      const floorH = H - horizon;
+      const F = floorH * 1.05;
       const lon0 = 12 + (still ? 0 : (t / 1000) * 3.2);
       const lat0 = 30;
+      const unit = Math.min(W, H * 1.8);
 
       // Sky.
       const sky = ctx.createLinearGradient(0, 0, 0, horizon);
@@ -153,13 +541,11 @@ export default function GGFrontScene({ majors }: { majors: SceneMajor[] }) {
       ctx.fillRect(0, 0, W, horizon);
       for (const star of stars) {
         const a = 0.35 + 0.45 * Math.sin(star.phase + t / 900);
-        ctx.globalAlpha = Math.max(0, a) * (1 - star.y / (H * 0.55));
+        ctx.globalAlpha = Math.max(0, a) * Math.max(0, 1 - star.y / (horizon * 0.85));
         ctx.fillStyle = "#fff";
         ctx.fillRect(star.x, star.y, star.r, star.r);
       }
       ctx.globalAlpha = 1;
-
-      // Soft pink clouds drifting along the horizon.
       for (let k = 0; k < 6; k++) {
         const speed = 6 + k * 2.5;
         const x = ((k * 0.23 * W + (t / 1000) * speed) % (W * 1.4)) - W * 0.2;
@@ -177,7 +563,7 @@ export default function GGFrontScene({ majors }: { majors: SceneMajor[] }) {
         ctx.restore();
       }
 
-      // The sun: behind the globe, cut by the horizon, its stripes sliding down.
+      // The sun.
       const sR = R * 1.45;
       const sx = gx;
       const sy = gy + R * 0.3;
@@ -208,8 +594,7 @@ export default function GGFrontScene({ majors }: { majors: SceneMajor[] }) {
       for (let k = -1; k < 9; k++) {
         const y = 0.42 + (k + slide) * 0.07;
         if (y < 0.4 || y > 1) continue;
-        const thick = 0.006 + (y - 0.4) * 0.07;
-        sunCtx.fillRect(0, y * size, size, thick * size);
+        sunCtx.fillRect(0, y * size, size, (0.006 + (y - 0.4) * 0.07) * size);
       }
       ctx.save();
       ctx.beginPath();
@@ -218,121 +603,285 @@ export default function GGFrontScene({ majors }: { majors: SceneMajor[] }) {
       ctx.drawImage(sun, sx - sR, sy - sR, sR * 2, sR * 2);
       ctx.restore();
 
-      // The floor: a grid running towards you and the world map laid on it.
-      const floorH = H - horizon;
-      const ground = ctx.createLinearGradient(0, horizon, 0, H);
-      ground.addColorStop(0, "#1c0532");
-      ground.addColorStop(1, "#060110");
-      ctx.fillStyle = ground;
-      ctx.fillRect(0, horizon, W, floorH);
-      const F = floorH * 1.05;
-      const zNear = 1;
       const neon = ctx.createLinearGradient(0, 0, W, 0);
       neon.addColorStop(0, "#ff2bd6");
       neon.addColorStop(0.5, "#b46bff");
       neon.addColorStop(1, "#22e5ff");
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(0, horizon, W, floorH);
-      ctx.clip();
-      ctx.strokeStyle = neon;
-      // Vertical lines to the vanishing point.
-      ctx.globalAlpha = 0.35;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      const spread = (W / F) * 1.6;
-      for (let i = -22; i <= 22; i++) {
-        const X = (i / 22) * spread * 2.2;
-        ctx.moveTo(gx + (X / 60) * F, horizon + F / 60);
-        ctx.lineTo(gx + (X / zNear) * F, horizon + F / zNear);
-      }
-      ctx.stroke();
-      // Horizontal lines, sliding towards you.
-      const dz = 0.55;
-      const shift = still ? 0 : ((t / 1000) * 0.5) % dz;
-      ctx.beginPath();
-      for (let z = 40; z > zNear; z -= dz) {
-        const Z = z - shift;
-        if (Z <= zNear * 0.98) continue;
-        const y = horizon + F / Z;
-        ctx.moveTo(0, y);
-        ctx.lineTo(W, y);
-      }
-      ctx.stroke();
-      // The map: west to east across, north far away, centred on the globe's longitude.
-      if (floor) {
-        const latMin = -58;
-        const latMax = 80;
-        const zFar = 7.5;
-        const spanX = ((W * 1.05) / F) * 1.05;
-        const project = (i: number): [number, number] => {
-          let d = floor!.lon[i] - lon0;
-          d = ((((d + 180) % 360) + 360) % 360) - 180;
-          const Z = 1.05 + ((floor!.lat[i] - latMin) / (latMax - latMin)) * (zFar - 1.05);
-          return [gx + (((d / 180) * spanX) / Z) * F, horizon + F / Z];
-        };
-        ctx.beginPath();
-        for (let l = 0; l < floor.starts.length - 1; l++) {
-          let prevLon = 0;
-          for (let i = floor.starts[l]; i < floor.starts[l + 1]; i++) {
-            const [x, y] = project(i);
-            let d = floor.lon[i] - lon0;
-            d = ((((d + 180) % 360) + 360) % 360) - 180;
-            if (i === floor.starts[l] || Math.abs(d - prevLon) > 90) ctx.moveTo(x, y);
-            else ctx.lineTo(x, y);
-            prevLon = d;
-          }
+
+      const drawGlobe = () => drawTheGlobe(t, gx, gy, R, lon0, lat0);
+
+      if (style === "sea") {
+        // The globe first: the sea mirrors everything above the horizon.
+        drawGlobe();
+        ctx.fillStyle = "#07021a";
+        ctx.fillRect(0, horizon, W, floorH);
+        const strip = 3;
+        for (let y = horizon; y < H; y += strip) {
+          const dy = y - horizon;
+          const src = horizon - dy * 1.35 - strip * 1.35;
+          if (src < 0) break;
+          const wave = still ? 0 : Math.sin(y * 0.11 + t * 0.0021) * (1.2 + dy * 0.035) + Math.sin(y * 0.031 - t * 0.0013) * dy * 0.02;
+          ctx.drawImage(canvas, 0, src * ratio, canvas.width, strip * 1.35 * ratio, wave, y, W, strip + 0.5);
         }
-        ctx.lineJoin = "round";
-        ctx.globalAlpha = 0.22;
-        ctx.lineWidth = 3.2;
+        const deep = ctx.createLinearGradient(0, horizon, 0, H);
+        deep.addColorStop(0, "rgba(10, 3, 30, 0.25)");
+        deep.addColorStop(1, "rgba(5, 1, 14, 0.86)");
+        ctx.fillStyle = deep;
+        ctx.fillRect(0, horizon, W, floorH);
+        // Glints under the sun.
+        ctx.fillStyle = "#ffd0ea";
+        for (let k = 0; k < 40; k++) {
+          const yy = horizon + 4 + ((k * 37) % 100) / 100 * floorH * 0.55;
+          const phase = Math.sin(k * 12.9 + t * 0.004 * (0.6 + (k % 5) * 0.2));
+          if (phase < 0.35) continue;
+          const len = (8 + (k % 7) * 6) * (1 + (yy - horizon) / floorH);
+          const off = Math.sin(k * 7.3) * sR * 0.55 * (1 - (yy - horizon) / floorH * 0.4);
+          ctx.globalAlpha = (phase - 0.35) * 0.9;
+          ctx.fillRect(gx + off - len / 2, yy, len, 1.2);
+        }
+        ctx.globalAlpha = 1;
+        // A faint grid over the water.
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0, horizon, W, floorH);
+        ctx.clip();
+        ctx.strokeStyle = neon;
+        ctx.globalAlpha = 0.12;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (let i = -22; i <= 22; i++) {
+          const X = (i / 22) * (W / F) * 3.5;
+          ctx.moveTo(gx + (X / 60) * F, horizon + F / 60);
+          ctx.lineTo(gx + X * F, horizon + F);
+        }
+        const dz = 0.55;
+        const shift = still ? 0 : ((t / 1000) * 0.35) % dz;
+        for (let z = 40; z > 1; z -= dz) {
+          const y = horizon + F / (z - shift);
+          ctx.moveTo(0, y);
+          ctx.lineTo(W, y);
+        }
         ctx.stroke();
-        ctx.globalAlpha = 0.85;
-        ctx.lineWidth = 1.1;
-        ctx.stroke();
+        ctx.restore();
+        horizonLine(horizon);
+        // A dark headland on the left with the tank on it; the battleship out on the water.
+        if (!narrow) {
+          const land = new Path2D();
+          const lw = W * 0.3;
+          land.moveTo(0, horizon - H * 0.045);
+          land.bezierCurveTo(lw * 0.35, horizon - H * 0.05, lw * 0.55, horizon - H * 0.03, lw * 0.75, horizon + floorH * 0.04);
+          land.bezierCurveTo(lw * 0.85, horizon + floorH * 0.09, lw * 0.95, horizon + floorH * 0.12, lw, horizon + floorH * 0.14);
+          land.lineTo(0, horizon + floorH * 0.2);
+          land.closePath();
+          ctx.save();
+          ctx.shadowColor = "#ff2bd6";
+          ctx.shadowBlur = 16;
+          ctx.fillStyle = "#0a0316";
+          ctx.fill(land);
+          ctx.shadowBlur = 0;
+          ctx.strokeStyle = "rgba(255, 43, 214, 0.8)";
+          ctx.lineWidth = 1.5;
+          ctx.stroke(land);
+          ctx.restore();
+          silhouette(TANK, W * 0.04, horizon - H * 0.043, unit * 0.15, "#ff4fd8");
+          const shipW = unit * 0.3;
+          silhouette(SHIP, W * 0.96 - shipW, horizon + floorH * 0.05, shipW, "#22e5ff", false, 0.28);
+          smoke(W * 0.96 - shipW + (241 / 420) * shipW, horizon + floorH * 0.05 - (72 / 112) * (shipW / 420) * 112, shipW / 420, t);
+        }
+      } else {
+        // The ground.
+        const ground = ctx.createLinearGradient(0, horizon, 0, H);
+        ground.addColorStop(0, "#1c0532");
+        ground.addColorStop(1, "#060110");
+        ctx.fillStyle = ground;
+        ctx.fillRect(0, horizon, W, floorH);
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0, horizon, W, floorH);
+        ctx.clip();
+        if (style === "terrain" && field) {
+          drawTerrain(t, gx, horizon, floorH, F, lon0, neon);
+        } else {
+          // The plain grid (under the war table, or while the map loads).
+          ctx.strokeStyle = neon;
+          ctx.globalAlpha = 0.35;
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          for (let i = -22; i <= 22; i++) {
+            const X = (i / 22) * (W / F) * 3.5;
+            ctx.moveTo(gx + (X / 60) * F, horizon + F / 60);
+            ctx.lineTo(gx + X * F, horizon + F);
+          }
+          const dz = 0.55;
+          const shift = still ? 0 : ((t / 1000) * 0.5) % dz;
+          for (let z = 40; z > 1; z -= dz) {
+            const y = horizon + F / (z - shift);
+            ctx.moveTo(0, y);
+            ctx.lineTo(W, y);
+          }
+          ctx.stroke();
+          ctx.globalAlpha = 1;
+        }
+        const haze = ctx.createLinearGradient(0, horizon, 0, horizon + floorH * 0.25);
+        haze.addColorStop(0, "rgba(28, 5, 50, 1)");
+        haze.addColorStop(1, "rgba(28, 5, 50, 0)");
+        ctx.fillStyle = haze;
+        ctx.fillRect(0, horizon, W, floorH * 0.25);
+        ctx.restore();
+        horizonLine(horizon);
+        if (!narrow) {
+          const tankW = unit * 0.17;
+          silhouette(TANK, W * 0.03, horizon + floorH * 0.2, tankW, "#ff4fd8");
+          const shipW = unit * 0.28;
+          silhouette(SHIP, W * 0.97 - shipW, horizon + floorH * 0.035, shipW, "#22e5ff");
+          smoke(W * 0.97 - shipW + (241 / 420) * shipW, horizon + floorH * 0.035 - (72 / 112) * (shipW / 420) * 112, shipW / 420, t);
+        }
+        if (style === "table" && worldMap) {
+          const geo = { gx, horizon, floorH, F };
+          buildTable(geo);
+          const corners = tableCorners(geo);
+          // The projector's light rising from the table into the globe.
+          ctx.save();
+          ctx.globalCompositeOperation = "lighter";
+          const beam = ctx.createLinearGradient(0, corners.tl.y, 0, gy);
+          beam.addColorStop(0, "rgba(34, 229, 255, 0.28)");
+          beam.addColorStop(1, "rgba(180, 107, 255, 0)");
+          ctx.fillStyle = beam;
+          ctx.beginPath();
+          ctx.moveTo(corners.tl.x + (corners.tr.x - corners.tl.x) * 0.2, corners.tl.y);
+          ctx.lineTo(corners.tl.x + (corners.tr.x - corners.tl.x) * 0.8, corners.tl.y);
+          ctx.lineTo(gx + R * 0.95, gy + R * 0.3);
+          ctx.lineTo(gx - R * 0.95, gy + R * 0.3);
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
+          drawGlobe();
+          ctx.drawImage(table, 0, 0, W, H);
+          // A scan line sweeping across the map.
+          const sweep = still ? 0.5 : ((t / 3600) % 1.4) - 0.2;
+          if (sweep > 0 && sweep < 1) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(corners.tl.x, corners.tl.y);
+            ctx.lineTo(corners.tr.x, corners.tr.y);
+            ctx.lineTo(corners.br.x, corners.br.y);
+            ctx.lineTo(corners.bl.x, corners.bl.y);
+            ctx.closePath();
+            ctx.clip();
+            const y = corners.tl.y + (corners.bl.y - corners.tl.y) * sweep;
+            const band = ctx.createLinearGradient(0, y - 18, 0, y + 4);
+            band.addColorStop(0, "rgba(34, 229, 255, 0)");
+            band.addColorStop(1, "rgba(160, 250, 255, 0.55)");
+            ctx.fillStyle = band;
+            ctx.fillRect(0, y - 18, W, 22);
+            ctx.restore();
+          }
+        } else {
+          drawGlobe();
+        }
       }
-      ctx.globalAlpha = 1;
-      // Fade into the haze at the horizon.
-      const haze = ctx.createLinearGradient(0, horizon, 0, horizon + floorH * 0.32);
-      haze.addColorStop(0, "rgba(28, 5, 50, 1)");
-      haze.addColorStop(1, "rgba(28, 5, 50, 0)");
-      ctx.fillStyle = haze;
-      ctx.fillRect(0, horizon, W, floorH * 0.32);
-      ctx.restore();
-      // The horizon line.
+
+      // Bombers crossing high up, fighters lower and faster the other way.
+      const cross = (period: number, offset: number) => (still ? offset : ((t / period + offset) % 1)) * W * 1.3 - W * 0.15;
+      const planeW = Math.max(36, unit * 0.045);
+      const bx = cross(52000, 0.15);
+      silhouette(PLANE, bx, H * 0.12, planeW, "#ff6fd8");
+      silhouette(PLANE, bx - planeW * 1.15, H * 0.155, planeW * 0.9, "#ff6fd8");
+      silhouette(PLANE, bx - planeW * 1.05, H * 0.085, planeW * 0.85, "#ff6fd8");
+      const fx = W - cross(30000, 0.6);
+      silhouette(PLANE, fx, H * 0.26, planeW * 0.7, "#7ff3ff", true);
+      silhouette(PLANE, fx + planeW * 0.8, H * 0.235, planeW * 0.62, "#7ff3ff", true);
+
+      const vignette = ctx.createRadialGradient(W / 2, H * 0.45, Math.min(W, H) * 0.45, W / 2, H * 0.45, Math.max(W, H) * 0.85);
+      vignette.addColorStop(0, "rgba(0, 0, 0, 0)");
+      vignette.addColorStop(1, "rgba(3, 0, 10, 0.6)");
+      ctx.fillStyle = vignette;
+      ctx.fillRect(0, 0, W, H);
+    };
+
+    const horizonLine = (horizon: number) => {
       const line = ctx.createLinearGradient(0, horizon - 6, 0, horizon + 6);
       line.addColorStop(0, "rgba(255, 90, 160, 0)");
       line.addColorStop(0.5, "rgba(255, 150, 190, 0.95)");
       line.addColorStop(1, "rgba(255, 90, 160, 0)");
       ctx.fillStyle = line;
       ctx.fillRect(0, horizon - 6, W, 12);
+    };
 
-      // On the horizon: a tank on the left, a battleship on the right.
-      const silhouette = (path: Path2D, x: number, y: number, scale: number, flip: boolean, rim: string) => {
-        ctx.save();
-        ctx.translate(x, y);
-        ctx.scale(flip ? -scale : scale, scale);
-        ctx.shadowColor = rim;
-        ctx.shadowBlur = 14;
-        ctx.fillStyle = "#0b0316";
-        ctx.fill(path);
-        ctx.shadowBlur = 0;
-        ctx.strokeStyle = rim;
-        ctx.globalAlpha = 0.75;
-        ctx.lineWidth = 1 / scale;
-        ctx.stroke(path);
-        ctx.restore();
-        ctx.globalAlpha = 1;
-      };
-      const unit = Math.min(W, H * 1.8);
-      if (!narrow) {
-        const tankS = (unit * 0.1) / 100;
-        silhouette(TANK, W * 0.09, horizon + floorH * 0.12 - 45 * tankS, tankS, false, "#ff2bd6");
-        const shipS = (unit * 0.17) / 200;
-        silhouette(SHIP, W * 0.9 - unit * 0.17, horizon + floorH * 0.04 - 50 * shipS, shipS, false, "#22e5ff");
+    /** Soft smoke drifting back from the battleship's funnel. */
+    const smoke = (x: number, y: number, s: number, t: number) => {
+      for (let k = 0; k < 7; k++) {
+        const life = still ? k / 7 : ((t / 5200 + k / 7) % 1);
+        const px = x + life * 120 * s * 2.2;
+        const py = y - life * 60 * s * 1.6;
+        const r = (6 + life * 26) * s * 1.6;
+        const puff = ctx.createRadialGradient(px, py, 0, px, py, r);
+        puff.addColorStop(0, `rgba(120, 90, 160, ${0.32 * (1 - life)})`);
+        puff.addColorStop(1, "rgba(120, 90, 160, 0)");
+        ctx.fillStyle = puff;
+        ctx.fillRect(px - r, py - r, r * 2, r * 2);
       }
+    };
 
-      // The globe.
+    /** The Road to 56 world as wireframe mountains: rows from the horizon to you, the land rising, wrapping round. */
+    const drawTerrain = (t: number, gx: number, horizon: number, floorH: number, F: number, lon0: number, neon: CanvasGradient) => {
+      if (!field) return;
+      const rows = W < 700 ? 44 : 64;
+      const step = Math.max(5, W / 150);
+      const lift = 0.24; // how high the tallest land stands (world units)
+      const lonSpan = 46; // degrees across the nearest row
+      const kx = lonSpan / 360 / (W / F);
+      const u0 = (lon0 + 180) / 360;
+      const vFar = 0.12;
+      const vNear = 0.5;
+      const zNear = 1.05;
+      const zMid = 9;
+      ctx.lineJoin = "round";
+      for (let r = 0; r < rows; r++) {
+        const f = (r + 1) / rows;
+        const base = horizon + floorH * f;
+        const Z = F / (floorH * f);
+        const v = Z >= zMid ? vFar : vNear + ((Z - zNear) / (zMid - zNear)) * (vFar - vNear);
+        const path = new Path2D();
+        const fill = new Path2D();
+        let first = true;
+        let peak = 0;
+        for (let x = -step; x <= W + step; x += step) {
+          const u = u0 + (x - gx) * (Z / F) * kx;
+          const h = sampleHeight(field, u, v);
+          peak = Math.max(peak, h);
+          const y = base - (F * h * lift) / Z;
+          if (first) {
+            path.moveTo(x, y);
+            fill.moveTo(x, y);
+            first = false;
+          } else {
+            path.lineTo(x, y);
+            fill.lineTo(x, y);
+          }
+        }
+        // Hide the rows behind this one's mountains.
+        if (peak > 0.01) {
+          fill.lineTo(W + step, base + 2);
+          fill.lineTo(-step, base + 2);
+          fill.closePath();
+          ctx.globalAlpha = 1;
+          ctx.fillStyle = "#12042a";
+          ctx.fill(fill);
+        }
+        const near = f;
+        ctx.strokeStyle = neon;
+        ctx.globalAlpha = 0.16 * near + 0.05;
+        ctx.lineWidth = 3;
+        ctx.stroke(path);
+        ctx.globalAlpha = 0.35 + 0.6 * near;
+        ctx.lineWidth = 0.6 + near * 0.9;
+        ctx.stroke(path);
+      }
+      ctx.globalAlpha = 1;
+    };
+
+    const drawTheGlobe = (t: number, gx: number, gy: number, R: number, lon0: number, lat0: number) => {
       const halo2 = ctx.createRadialGradient(gx, gy, R * 0.85, gx, gy, R * 1.4);
       halo2.addColorStop(0, "rgba(60, 140, 255, 0.35)");
       halo2.addColorStop(1, "rgba(60, 140, 255, 0)");
@@ -346,18 +895,13 @@ export default function GGFrontScene({ majors }: { majors: SceneMajor[] }) {
       ctx.beginPath();
       ctx.arc(gx, gy, R, 0, Math.PI * 2);
       ctx.fill();
-
       const s0 = Math.sin(lat0 * D2R);
       const c0 = Math.cos(lat0 * D2R);
       const toScreen = (lon: number, sinLat: number, cosLat: number): [number, number, number] => {
         const d = (lon - lon0) * D2R;
         const cd = Math.cos(d);
-        const x = cosLat * Math.sin(d);
-        const y = c0 * sinLat - s0 * cosLat * cd;
-        const z = s0 * sinLat + c0 * cosLat * cd;
-        return [gx + R * x, gy - R * y, z];
+        return [gx + R * cosLat * Math.sin(d), gy - R * (c0 * sinLat - s0 * cosLat * cd), s0 * sinLat + c0 * cosLat * cd];
       };
-      // Graticule.
       ctx.save();
       ctx.beginPath();
       ctx.arc(gx, gy, R, 0, Math.PI * 2);
@@ -390,7 +934,6 @@ export default function GGFrontScene({ majors }: { majors: SceneMajor[] }) {
         }
       }
       ctx.stroke();
-      // Coasts.
       if (globe) {
         ctx.beginPath();
         for (let l = 0; l < globe.starts.length - 1; l++) {
@@ -414,7 +957,6 @@ export default function GGFrontScene({ majors }: { majors: SceneMajor[] }) {
         ctx.lineWidth = 1.15;
         ctx.stroke();
       }
-      // The light: a sheen top left, the night side bottom right.
       const sheen = ctx.createRadialGradient(gx - R * 0.45, gy - R * 0.5, 0, gx - R * 0.45, gy - R * 0.5, R * 1.2);
       sheen.addColorStop(0, "rgba(160, 200, 255, 0.16)");
       sheen.addColorStop(0.5, "rgba(160, 200, 255, 0)");
@@ -422,19 +964,17 @@ export default function GGFrontScene({ majors }: { majors: SceneMajor[] }) {
       ctx.fillStyle = sheen;
       ctx.fillRect(gx - R, gy - R, R * 2, R * 2);
 
-      // The majors' capitals, and an arc flying between two of them now and then.
       const list = majorsRef.current;
       const spot = (tag: string) => {
         const c = capitals[tag];
-        if (!c) return null;
-        return { lon: c[0], lat: c[1] };
+        return c ? { lon: c[0], lat: c[1] } : null;
       };
       for (const major of list) {
         const c = spot(major.tag);
         if (!c) continue;
         const [x, y, z] = toScreen(c.lon, Math.sin(c.lat * D2R), Math.cos(c.lat * D2R));
         if (z <= 0.05) continue;
-        const pulse = still ? 0.5 : ((t / 1600 + major.tag.charCodeAt(0) / 10) % 1);
+        const pulse = still ? 0.5 : (t / 1600 + major.tag.charCodeAt(0) / 10) % 1;
         ctx.globalAlpha = z * (1 - pulse);
         ctx.strokeStyle = major.color;
         ctx.lineWidth = 1.5;
@@ -481,18 +1021,17 @@ export default function GGFrontScene({ majors }: { majors: SceneMajor[] }) {
             const color = list.find((major) => major.tag === arc!.a)?.color ?? "#22e5ff";
             ctx.beginPath();
             let last: [number, number] | null = null;
-            const steps = 40;
-            for (let k = 0; k <= steps; k++) {
-              const f = tail + ((head - tail) * k) / steps;
+            for (let k = 0; k <= 40; k++) {
+              const f = tail + ((head - tail) * k) / 40;
               const sa = Math.sin((1 - f) * omega) / Math.sin(omega || 1);
               const sb = Math.sin(f * omega) / Math.sin(omega || 1);
               const v = [va[0] * sa + vb[0] * sb, va[1] * sa + vb[1] * sb, va[2] * sa + vb[2] * sb];
               const lat = Math.asin(Math.max(-1, Math.min(1, v[2])));
               const lon = Math.atan2(v[1], v[0]) / D2R;
               const [x, y, z] = toScreen(lon, Math.sin(lat), Math.cos(lat));
-              const lift = 1 + 0.22 * Math.sin(Math.PI * f) * omega;
-              const px = gx + (x - gx) * lift;
-              const py = gy + (y - gy) * lift;
+              const up = 1 + 0.22 * Math.sin(Math.PI * f) * omega;
+              const px = gx + (x - gx) * up;
+              const py = gy + (y - gy) * up;
               if (z < -0.1) {
                 last = null;
                 continue;
@@ -519,7 +1058,6 @@ export default function GGFrontScene({ majors }: { majors: SceneMajor[] }) {
         }
       }
       ctx.restore();
-      // The rim: cyan on top, pink below.
       const rim = ctx.createLinearGradient(gx, gy - R, gx, gy + R);
       rim.addColorStop(0, "#7ff3ff");
       rim.addColorStop(0.55, "#8f7bff");
@@ -532,25 +1070,6 @@ export default function GGFrontScene({ majors }: { majors: SceneMajor[] }) {
       ctx.arc(gx, gy, R, 0, Math.PI * 2);
       ctx.stroke();
       ctx.shadowBlur = 0;
-
-      // Bombers crossing high up, fighters lower and faster the other way.
-      const plane = (x: number, y: number, s: number, flip: boolean, rim: string) => silhouette(PLANE, x, y, s, flip, rim);
-      const cross = (period: number, offset: number) => (still ? offset : ((t / period + offset) % 1)) * W * 1.3 - W * 0.15;
-      const bomberS = Math.max(0.55, unit / 1500);
-      const bx = cross(52000, 0.15);
-      plane(bx, H * 0.1, bomberS, false, "#ff6fd8");
-      plane(bx - 70 * bomberS, H * 0.135, bomberS * 0.9, false, "#ff6fd8");
-      plane(bx - 64 * bomberS, H * 0.07, bomberS * 0.85, false, "#ff6fd8");
-      const fx = W - cross(30000, 0.6);
-      plane(fx, H * 0.24, bomberS * 0.7, true, "#7ff3ff");
-      plane(fx + 46 * bomberS, H * 0.215, bomberS * 0.62, true, "#7ff3ff");
-
-      // Vignette.
-      const vignette = ctx.createRadialGradient(W / 2, H * 0.45, Math.min(W, H) * 0.45, W / 2, H * 0.45, Math.max(W, H) * 0.85);
-      vignette.addColorStop(0, "rgba(0, 0, 0, 0)");
-      vignette.addColorStop(1, "rgba(3, 0, 10, 0.6)");
-      ctx.fillStyle = vignette;
-      ctx.fillRect(0, 0, W, H);
     };
 
     const loop = () => {
@@ -568,13 +1087,16 @@ export default function GGFrontScene({ majors }: { majors: SceneMajor[] }) {
     resize();
 
     let cancelled = false;
-    fetch("/landing/globe-vanilla.json")
-      .then((response) => response.json() as Promise<GlobeJson>)
-      .then((data) => {
+    void Promise.all([
+      fetch("/landing/globe-vanilla.json").then((response) => response.json() as Promise<GlobeJson>),
+      fetch("/greatgame/front-map.json").then((response) => response.json() as Promise<FrontMap>),
+    ])
+      .then(([globeData, mapData]) => {
         if (cancelled) return;
-        globe = prepare(data.coast, 0.3);
-        floor = prepare(data.coast, 0.9);
-        capitals = data.capitals;
+        globe = prepare(globeData.coast, 0.3);
+        capitals = globeData.capitals;
+        worldMap = mapData;
+        field = heightField(mapData);
         if (still) draw(12000);
       })
       .catch(() => undefined);

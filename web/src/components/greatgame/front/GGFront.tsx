@@ -2,11 +2,12 @@
 
 import { ArrowRight, Ban, ChevronDown, Crosshair, Film, Layers, Lock, Orbit, Rows3, ShieldCheck, Ticket, Users } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { PHASE_LABEL, PHASES } from "@/lib/greatGame/model";
 import type { GGPublic } from "@/lib/greatGame/public";
 import { displayName, Flag } from "../ggUi";
-import GGFrontScene, { type SceneMajor } from "./GGFrontScene";
+import GGFrontScene, { type FloorStyle, type SceneMajor } from "./GGFrontScene";
 
 /**
  * The Great Game 2026 front page (/greatgame): the poster as a live scene,
@@ -84,11 +85,24 @@ export default function GGFront() {
     return tags.map((tag, i) => ({ tag, color: event?.teams?.find((team) => team.major === tag)?.color ?? MAJOR_GLOW[i % MAJOR_GLOW.length] }));
   }, [event]);
   const room = event ? `/greatgame/${event.slug}` : null;
+  // While we choose: ?floor=terrain|sea|table picks the floor and shows a switcher.
+  const params = useSearchParams();
+  const asked = params.get("floor");
+  const floor: FloorStyle = asked === "sea" || asked === "table" ? asked : "terrain";
 
   return (
     <div className="ggf">
       <section className="ggf-hero">
-        <GGFrontScene majors={sceneMajors} />
+        <GGFrontScene majors={sceneMajors} floor={floor} />
+        {asked && (
+          <div className="ggf-floors" role="group" aria-label="Floor">
+            {(["terrain", "sea", "table"] as const).map((option) => (
+              <a key={option} href={`?floor=${option}`} className={option === floor ? "is-on" : ""}>
+                {option === "terrain" ? "Neon terrain" : option === "sea" ? "Mirror sea" : "War table"}
+              </a>
+            ))}
+          </div>
+        )}
         <nav className="ggf-nav" aria-label="Great Game">
           <Link href="/" className="ggf-nav-home">
             GameMaster
@@ -106,16 +120,35 @@ export default function GGFront() {
             <i aria-hidden />
             {status.text}
           </div>
-          <h1 className="ggf-h1">
-            <span className="ggf-chrome" data-text="Road to 56">
-              Road to 56
-            </span>
+          <h1 className="ggf-h1" aria-label="The Great Game 2026 · Road to 56">
             <span className="ggf-bars" aria-hidden>
               <b />
-              <span className="ggf-bars-text">7 teams · 28 players</span>
+              <span className="ggf-chrome" data-text="Road to 56">
+                Road to 56
+              </span>
               <b />
             </span>
-            <span className="ggf-brush">The Great Game</span>
+            <span className="ggf-brush-wrap" aria-hidden>
+              {/* Paint strokes under the title, like the poster's. */}
+              <svg className="ggf-swoosh" viewBox="0 0 1000 120" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="ggf-swoosh-a" x1="0" x2="1">
+                    <stop offset="0" stopColor="#ff2bd6" stopOpacity="0" />
+                    <stop offset="0.25" stopColor="#ff2bd6" />
+                    <stop offset="0.7" stopColor="#b46bff" />
+                    <stop offset="1" stopColor="#22e5ff" stopOpacity="0.2" />
+                  </linearGradient>
+                  <linearGradient id="ggf-swoosh-b" x1="0" x2="1">
+                    <stop offset="0" stopColor="#22e5ff" stopOpacity="0.1" />
+                    <stop offset="0.5" stopColor="#22e5ff" />
+                    <stop offset="1" stopColor="#ff2bd6" stopOpacity="0" />
+                  </linearGradient>
+                </defs>
+                <path d="M30 78 C 220 52, 560 40, 975 44 L 968 60 C 640 58, 330 70, 44 96 Z" fill="url(#ggf-swoosh-a)" />
+                <path d="M120 98 C 360 82, 640 76, 900 80 L 892 88 C 660 88, 400 96, 132 108 Z" fill="url(#ggf-swoosh-b)" />
+              </svg>
+              <span className="ggf-brush">The Great Game</span>
+            </span>
             <span className="ggf-year">
               <i aria-hidden />
               2026
