@@ -1,7 +1,8 @@
 "use client";
 
-import { Maximize2, Minimize2, Volume1, Volume2, VolumeX } from "lucide-react";
-import { useCallback, useRef, useState } from "react";
+import { Expand, Maximize2, Minus, Shrink, Volume1, Volume2, VolumeX } from "lucide-react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { strengthOrder } from "@/lib/greatGame/engine";
 import type { GGState, GGTeam } from "@/lib/greatGame/model";
 import GGAirLottery, { DRUM_MS } from "./GGAirLottery";
@@ -37,9 +38,9 @@ function progressOf(state: GGState, kind: string, now: number): number | null {
 /**
  * The stage each randomizer stands on: centred on the screen under the sun, a
  * neon-framed outrun scene with the step, one line saying what's being
- * decided, the progress, sound and a minimise button at the top, and the one
- * action (Draw, Spin…) centred at the bottom. Sized from the screen, so it
- * fits 1080p, 1440p and 4K.
+ * decided, the progress, sound, full screen and minimise at the top, and the
+ * one action (Draw, Spin…) centred at the bottom. Sized from the screen, so it
+ * fits 1080p, 1440p and 4K. Full screen and minimise animate smoothly.
  */
 function Shell({
   step,
@@ -58,19 +59,87 @@ function Shell({
   action: React.ReactNode;
 }) {
   const [hidden, setHidden] = useState(false);
+  const [full, setFull] = useState(false);
   const anchorRef = useRef<StageAnchor | null>(null);
+  const stageRef = useRef<HTMLElement | null>(null);
+  const dimRef = useRef<HTMLDivElement | null>(null);
+  const restoring = useRef(false);
+  const calm = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // Coming back from minimised: grow up from where the "Show" button was.
+  useLayoutEffect(() => {
+    if (hidden || !restoring.current) return;
+    restoring.current = false;
+    if (calm()) return;
+    stageRef.current?.animate(
+      [
+        { opacity: 0, transform: "translateY(40%) scale(0.5)" },
+        { opacity: 1, transform: "none" },
+      ],
+      { duration: 320, easing: "cubic-bezier(.2,.8,.2,1)" },
+    );
+    dimRef.current?.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 320 });
+  }, [hidden]);
+
+  // Full screen and back: the stage glides from its old box to its new one.
+  const toggleFull = () => {
+    const stage = stageRef.current;
+    if (!stage || calm()) {
+      setFull((value) => !value);
+      return;
+    }
+    const before = stage.getBoundingClientRect();
+    flushSync(() => setFull((value) => !value));
+    const after = stage.getBoundingClientRect();
+    stage.animate(
+      [
+        {
+          transformOrigin: "top left",
+          transform: `translate(${before.left - after.left}px, ${before.top - after.top}px) scale(${before.width / after.width}, ${before.height / after.height})`,
+        },
+        { transformOrigin: "top left", transform: "none" },
+      ],
+      { duration: 420, easing: "cubic-bezier(.2,.8,.2,1)" },
+    );
+  };
+
+  // Minimise: shrink away towards the "Show" button at the bottom.
+  const minimise = () => {
+    const stage = stageRef.current;
+    if (!stage || calm()) {
+      setHidden(true);
+      return;
+    }
+    dimRef.current?.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 260, fill: "forwards" });
+    const shrink = stage.animate(
+      [
+        { opacity: 1, transform: "none" },
+        { opacity: 0, transform: "translateY(40%) scale(0.5)" },
+      ],
+      { duration: 260, easing: "cubic-bezier(.5,0,.8,.4)", fill: "forwards" },
+    );
+    void shrink.finished.then(() => setHidden(true), () => setHidden(true));
+  };
+
   if (hidden) {
     return (
-      <button type="button" className="gg-btn gg-btn-primary absolute bottom-6 left-1/2 z-[1050] -translate-x-1/2 gap-2" onClick={() => setHidden(false)}>
+      <button
+        type="button"
+        className="gg-btn gg-btn-primary gg-pop absolute bottom-6 left-1/2 z-[1050] -translate-x-1/2 gap-2"
+        onClick={() => {
+          restoring.current = true;
+          setHidden(false);
+        }}
+      >
         <Maximize2 size={16} aria-hidden /> Show the {name}
       </button>
     );
   }
   return (
-    <div className="absolute inset-0 z-[1050]" style={{ top: 84 }}>
-      <div className="gg-overlay-dim" />
-      <section className="gg-stage absolute left-1/2 top-[136px] -translate-x-1/2" style={{ width: "clamp(min(720px, calc(100vw - 32px)), calc(100vw - 720px), 2200px)" }}>
-        <div className="gg-stage-inner">
+    <div className={`absolute inset-0 ${full ? "z-[1080]" : "z-[1050]"}`} style={{ top: 84 }}>
+      <div ref={dimRef} className="gg-overlay-dim" style={full ? { background: "rgba(8,4,18,.85)" } : undefined} />
+      <section ref={stageRef} className={`gg-stage absolute ${full ? "gg-stage-full" : "gg-stage-normal"}`}>
+        <div className="gg-stage-inner flex flex-col">
           <GGStageScene anchorRef={anchorRef} />
           <div className="relative flex items-start justify-between gap-4 px-7 pt-5">
             <div className="min-w-0">
@@ -84,13 +153,23 @@ function Shell({
                   {progress}
                 </div>
               )}
-              <button type="button" className="gg-btn h-9 min-h-0 px-2.5" onClick={() => setHidden(true)} aria-label="Minimise to see the map" title="Minimise to see the map">
-                <Minimize2 size={16} aria-hidden />
+              <button
+                type="button"
+                className="gg-btn h-9 min-h-0 px-2.5"
+                onClick={toggleFull}
+                aria-pressed={full}
+                aria-label={full ? "Leave full screen" : "Full screen"}
+                title={full ? "Leave full screen" : "Full screen"}
+              >
+                {full ? <Shrink size={16} aria-hidden /> : <Expand size={16} aria-hidden />}
+              </button>
+              <button type="button" className="gg-btn h-9 min-h-0 px-2.5" onClick={minimise} aria-label="Minimise to see the map" title="Minimise to see the map">
+                <Minus size={16} aria-hidden />
               </button>
             </div>
           </div>
           <StageAnchorContext.Provider value={anchorRef}>
-            <div className="relative px-7 pb-2 pt-1">{children}</div>
+            <div className="relative flex flex-1 flex-col justify-center px-7 pb-2 pt-1">{children}</div>
           </StageAnchorContext.Provider>
           <div className="relative flex justify-center px-7 pb-5 pt-1">{action}</div>
         </div>
@@ -218,7 +297,7 @@ function Drum({ state, viewer, act, now, clock, avatars }: { state: GGState; vie
         />
       }
     >
-      <div className="relative mx-auto" style={{ maxWidth: "calc((100vh - 430px) * 1000 / 540)" }}>
+      <div className="relative mx-auto w-full" style={{ maxWidth: "calc((100vh - var(--gg-stage-room)) * 1000 / 540)" }}>
         <GGAirLottery state={state} clock={clock} avatars={avatars} onLanded={onLanded} />
         <div className="absolute right-0 top-[46%] w-[clamp(190px,22%,300px)] -translate-y-1/2">
           {newest && ballOut ? (
@@ -286,7 +365,7 @@ function Majors({ state, viewer, act, now, clock }: { state: GGState; viewer: GG
         />
       }
     >
-      <div className="relative mx-auto" style={{ maxWidth: "calc((100vh - 430px) * 1000 / 440)" }}>
+      <div className="relative mx-auto w-full" style={{ maxWidth: "calc((100vh - var(--gg-stage-room)) * 1000 / 440)" }}>
         <div className="mx-auto w-[52%] min-w-[300px]">
           <GGMajorReel state={state} clock={clock} />
         </div>

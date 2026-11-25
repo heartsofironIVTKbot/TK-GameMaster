@@ -312,6 +312,26 @@
   border-radius: 20px;
   background: #0b0618;
 }
+/* Normal: centred under the sun, as wide as the screen allows, height from its content.
+   --gg-stage-room is the height the machines leave for everything else. */
+.gg-stage-normal {
+  --gg-stage-w: clamp(min(720px, calc(100vw - 32px)), calc(100vw - 720px), 2200px);
+  --gg-stage-room: 430px;
+  top: 136px;
+  left: calc(50% - var(--gg-stage-w) / 2);
+  width: var(--gg-stage-w);
+}
+/* Full screen: the whole room under the top bar. */
+.gg-stage-full {
+  --gg-stage-room: 290px;
+  top: 14px;
+  left: 14px;
+  right: 14px;
+  bottom: 14px;
+}
+.gg-stage-full .gg-stage-inner {
+  height: 100%;
+}
 
 .gg-eyebrow {
   font: 800 12px/1 var(--gg-digit);

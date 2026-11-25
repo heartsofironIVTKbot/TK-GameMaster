@@ -63,7 +63,7 @@ function terrain(x: number, z: number, time: number): number {
   if (out <= 0) return 0;
   const ridge = 0.6 + 0.4 * Math.sin(z * 0.32 + x * 0.6) * Math.cos(z * 0.17 - x * 0.29);
   const bumps = 0.35 * Math.sin(z * 0.9 + x * 1.7) + 0.22 * Math.cos(z * 1.6 - x * 1.2);
-  const swell = 0.72 + 0.42 * Math.sin(time * 1.5 + z * 0.4 + x * 0.55) + 0.12 * Math.sin(time * 2.7 - x * 0.9);
+  const swell = 0.72 + 0.42 * Math.sin(time * 0.55 + z * 0.4 + x * 0.55) + 0.12 * Math.sin(time * 1.0 - x * 0.9);
   return Math.max(0, Math.pow(out, 1.15) * 0.55 * (ridge + bumps * 0.5) * swell);
 }
 

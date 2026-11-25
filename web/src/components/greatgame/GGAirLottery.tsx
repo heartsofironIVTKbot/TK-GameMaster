@@ -52,8 +52,8 @@ const H = 540;
 const CX = W / 2;
 const CY = 250;
 const R = 170;
-/** Where the road meets the moon: a little above its bottom, so the road runs in behind it. */
-const ROAD_END_Y = CY + R * 0.78;
+/** Where the road ends: right behind the blower at the moon's foot, which covers it. */
+const ROAD_END_Y = CY + R - 12;
 const BALL_R = 22;
 const TUBE_Y = 44;
 const TUBE_BEND = 30;
