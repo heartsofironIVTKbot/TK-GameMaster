@@ -10,6 +10,7 @@ import GGNationPanel from "./GGNationPanel";
 import GGRandomizers, { ANIM_MS } from "./GGRandomizers";
 import GGTeamStack from "./GGTeamStack";
 import GGTopBar from "./GGTopBar";
+import { AvatarsContext } from "./ggUi";
 import { useGreatGame, useTick } from "./useGreatGame";
 
 const GGMap = dynamic(() => import("./GGMap"), { ssr: false });
@@ -74,6 +75,7 @@ export default function GGApp({ slug }: { slug: string }) {
   const animating = state.last_draw ? now - state.last_draw.at < (ANIM_MS[state.last_draw.kind] ?? 0) : false;
 
   return (
+    <AvatarsContext.Provider value={avatars}>
     <main className="gg" data-animating={animating || undefined}>
       <div className="absolute inset-0">
         <GGMap state={state} considering={considering} selected={selected} onSelect={select} />
@@ -139,5 +141,6 @@ export default function GGApp({ slug }: { slug: string }) {
         </div>
       )}
     </main>
+    </AvatarsContext.Provider>
   );
 }

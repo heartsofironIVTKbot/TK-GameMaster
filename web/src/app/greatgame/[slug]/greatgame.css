@@ -298,6 +298,113 @@
 }
 
 /* Randomizer overlays. */
+
+/* The stage: a gradient neon frame, a deep violet floor with a faint grid. */
+.gg-stage {
+  padding: 2px;
+  border-radius: 22px;
+  background: linear-gradient(135deg, #ff2bd6 0%, #8a2be2 45%, #22e5ff 100%);
+  box-shadow: 0 0 0 1px #000, 0 0 34px rgba(255, 43, 214, 0.32), 0 24px 70px rgba(0, 0, 0, 0.65);
+}
+.gg-stage-inner {
+  position: relative;
+  overflow: hidden;
+  border-radius: 20px;
+  background: radial-gradient(120% 90% at 50% 0%, #2a1650 0%, #150b2c 50%, #0b0618 100%);
+}
+.gg-stage-inner::before {
+  content: "";
+  position: absolute;
+  left: -20%;
+  right: -20%;
+  bottom: 52px;
+  height: 46%;
+  background:
+    linear-gradient(rgba(255, 43, 214, 0.22) 1px, transparent 1px) 0 0 / 46px 46px,
+    linear-gradient(90deg, rgba(255, 43, 214, 0.22) 1px, transparent 1px) 0 0 / 46px 46px;
+  transform: perspective(380px) rotateX(62deg);
+  transform-origin: bottom;
+  -webkit-mask-image: linear-gradient(to top, #000 10%, transparent 85%);
+  mask-image: linear-gradient(to top, #000 10%, transparent 85%);
+  pointer-events: none;
+}
+.gg-stage-inner::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(60% 40% at 50% 100%, rgba(255, 43, 214, 0.14), transparent 70%);
+  pointer-events: none;
+}
+.gg-eyebrow {
+  font: 800 12px/1 var(--gg-digit);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--gg-cyan);
+  text-shadow: 0 0 10px rgba(34, 229, 255, 0.5);
+}
+.gg-stage-title {
+  margin: 8px 0 0;
+  font: 900 34px/1 var(--gg-display);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: #fff;
+  text-shadow: 0 2px 0 #1a1030, 0 0 18px rgba(255, 43, 214, 0.55);
+  text-wrap: balance;
+}
+.gg-progress {
+  flex-shrink: 0;
+  font: 800 20px/1 var(--gg-digit);
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+  padding: 9px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 43, 214, 0.55);
+  background: rgba(255, 43, 214, 0.1);
+  box-shadow: 0 0 14px rgba(255, 43, 214, 0.25) inset;
+}
+.gg-stage-foot {
+  border-top: 1px solid rgba(255, 43, 214, 0.25);
+  background: rgba(8, 4, 18, 0.55);
+}
+
+/* The result beside a machine. */
+.gg-result {
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  border-radius: 18px;
+  padding: 18px 16px 20px;
+  border: 2px solid var(--team, var(--gg-line-2));
+  background: linear-gradient(165deg, color-mix(in srgb, var(--team, #34265a) 30%, transparent), rgba(16, 9, 32, 0.92) 58%);
+  box-shadow: 0 0 30px color-mix(in srgb, var(--team, #34265a) 45%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+.gg-result-kicker {
+  font: 800 12px/1.2 var(--gg-digit);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--team, var(--gg-fg-3));
+}
+.gg-result-title {
+  font: 900 32px/1 var(--gg-display);
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+.gg-result-sub {
+  margin-top: 6px;
+  font-size: 14px;
+  color: var(--gg-fg-2);
+}
+.gg-result-waiting {
+  gap: 10px;
+  min-height: 200px;
+  align-content: center;
+  border-style: dashed;
+  background: rgba(16, 9, 32, 0.55);
+  box-shadow: none;
+  color: var(--gg-fg-2);
+  font-size: 14px;
+}
+
 .gg-overlay-dim {
   position: absolute;
   inset: 0;

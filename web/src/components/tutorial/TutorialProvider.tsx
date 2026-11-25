@@ -319,7 +319,8 @@ export default function TutorialProvider({ children }: { children: ReactNode }) 
           <PathWatcher onPath={setPathname} />
         </Suspense>
         {children}
-        {progress && <HelpButton />}
+        {/* The Great Game room is its own full-screen show: no site help button there. */}
+        {progress && !pathname?.startsWith("/greatgame") && <HelpButton />}
         {active && activeTour && (
           <TutorialOverlay
             key={`${active.tourId}:${active.index}`}

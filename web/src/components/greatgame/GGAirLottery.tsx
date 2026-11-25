@@ -424,7 +424,7 @@ export default function GGAirLottery({
       ctx.font = '800 12px "Orbitron", "Segoe UI", sans-serif';
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText("CAPTAIN ORDER", CX, H - 30);
+      ctx.fillText("THE GREAT GAME", CX, H - 30);
 
       // Tube: back wall.
       const tubeLeft = 14;

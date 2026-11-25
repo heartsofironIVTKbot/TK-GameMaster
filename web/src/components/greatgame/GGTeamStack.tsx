@@ -149,7 +149,7 @@ function AssignList({ state, team, act, canEdit }: { state: GGState; team: GGTea
         const current = team.assign[id] ?? "";
         return (
           <div key={id} className="flex items-center gap-2 text-[12.5px]">
-            <Avatar name={who?.name ?? "?"} color={team.color} size={20} />
+            <Avatar id={who?.id} name={who?.name ?? "?"} color={team.color} size={20} />
             <span className="min-w-0 flex-1 truncate font-semibold">{who?.name ?? id}</span>
             <span className="w-[74px] shrink-0 text-[11px]" style={{ color: "var(--gg-fg-3)" }}>
               {SLOT_ROLE[index]}
@@ -357,7 +357,14 @@ export default function GGTeamStack({ state, viewer, act }: { state: GGState; vi
             <span className="gg-digit w-3 shrink-0 text-[11px]" style={{ color: "var(--gg-fg-3)" }}>
               {index + 1}
             </span>
-            <Flag tag={team.major} w={isOpen ? 36 : 30} h={isOpen ? 23 : 19} title={nationName(state, team.major)} />
+            {team.major ? (
+              <Flag tag={team.major} w={isOpen ? 36 : 30} h={isOpen ? 23 : 19} title={nationName(state, team.major)} />
+            ) : (
+              // No major yet: the captain's picture stands for the team.
+              <span className="flex w-[30px] shrink-0 justify-center">
+                <Avatar id={team.captain} name={person(state, team.captain)?.name ?? team.name} color={team.color} size={isOpen ? 28 : 24} />
+              </span>
+            )}
             <span className="min-w-0 flex-1 text-left">
               <span className="gg-disp block truncate leading-none" style={{ fontWeight: isOpen ? 800 : 700, fontSize: isOpen ? 22 : 18 }}>
                 {team.name}
@@ -402,7 +409,7 @@ export default function GGTeamStack({ state, viewer, act }: { state: GGState; vi
                     <div key={slot} className="flex h-6 items-center gap-2 text-[12.5px]">
                       {who ? (
                         <>
-                          <Avatar name={who.name} color={team.color} size={20} />
+                          <Avatar id={who.id} name={who.name} color={team.color} size={20} />
                           <span className="min-w-0 truncate font-semibold">{who.name}</span>
                           {who.filler && <span className="text-[10px]" style={{ color: "var(--gg-pending)" }}>to be named</span>}
                         </>

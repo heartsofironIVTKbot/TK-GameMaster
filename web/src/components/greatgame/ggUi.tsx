@@ -1,7 +1,7 @@
 "use client";
 
 /* eslint-disable @next/next/no-img-element */
-import { useEffect, useRef } from "react";
+import { createContext, useContext, useEffect, useRef } from "react";
 import { turnDeadline } from "@/lib/greatGame/engine";
 import type { GGPerson, GGState, GGTeam } from "@/lib/greatGame/model";
 
@@ -72,7 +72,24 @@ export function EmptySlot({ w = 24, h = 16, pulse = false, label }: { w?: number
   );
 }
 
-export function Avatar({ name, color, size = 22 }: { name: string; color: string; size?: number }) {
+/** Discord profile pictures by person id (from the event's GET); empty when unknown. */
+export const AvatarsContext = createContext<Record<string, string>>({});
+
+/** A person's round picture with a ring in `color`, or their initial when GameMaster has no picture. */
+export function Avatar({ name, color, size = 22, id }: { name: string; color: string; size?: number; id?: string | null }) {
+  const src = useContext(AvatarsContext)[id ?? ""];
+  if (src) {
+    return (
+      <img
+        src={src}
+        alt=""
+        width={size}
+        height={size}
+        className="shrink-0 rounded-full object-cover"
+        style={{ width: size, height: size, boxShadow: `0 0 0 ${size >= 36 ? 3 : 2}px ${color}` }}
+      />
+    );
+  }
   return (
     <span
       aria-hidden

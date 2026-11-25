@@ -7,7 +7,7 @@ import type { GGState, GGTeam } from "@/lib/greatGame/model";
 import GGAirLottery, { DRUM_MS } from "./GGAirLottery";
 import { useSoundSwitch, useSoundVolume } from "./ggSound";
 import GGMajorReel, { REEL_MS } from "./GGMajorReel";
-import { Avatar, Flag, hexA, nationName, person, teamById } from "./ggUi";
+import { Avatar, Flag, nationName, person, teamById } from "./ggUi";
 import type { GGViewerInfo } from "./useGreatGame";
 
 /**
@@ -33,38 +33,80 @@ function progressOf(state: GGState, kind: string, now: number): number | null {
   return t >= 0 && t < 1 ? t : null;
 }
 
-function Shell({ title, sub, children, footer }: { title: string; sub: string; children: React.ReactNode; footer: React.ReactNode }) {
+/**
+ * The stage each randomizer stands on: a neon-framed panel over the map with
+ * the step, one line saying what's being decided, and a progress counter.
+ */
+function Shell({
+  step,
+  title,
+  progress,
+  name,
+  children,
+  footer,
+}: {
+  step: string;
+  title: string;
+  progress?: string;
+  /** What "Show the …" brings back after hiding. */
+  name: string;
+  children: React.ReactNode;
+  footer: React.ReactNode;
+}) {
   const [hidden, setHidden] = useState(false);
   if (hidden) {
     return (
       <button type="button" className="gg-btn gg-btn-primary absolute bottom-6 left-1/2 z-[1050] -translate-x-1/2" onClick={() => setHidden(false)}>
-        Show the {title.toLowerCase()}
+        Show the {name}
       </button>
     );
   }
   return (
     <div className="absolute inset-0 z-[1050]" style={{ top: 84 }}>
       <div className="gg-overlay-dim" />
-      <div className="gg-panel absolute left-1/2 top-[160px] w-[min(900px,calc(100%-32px))] -translate-x-1/2 overflow-hidden rounded-2xl lg:left-[calc(50%+170px)] lg:w-[min(900px,calc(100%-380px))]">
-        <div className="flex items-baseline justify-between gap-3 px-6 pt-4">
-          <span className="gg-chrome text-[32px] font-black tracking-wider">{title}</span>
-          <span className="text-[13px]" style={{ color: "var(--gg-fg-2)" }}>
-            {sub}
-          </span>
+      <section className="gg-stage absolute left-1/2 top-[150px] w-[min(960px,calc(100%-32px))] -translate-x-1/2 lg:left-[calc(50%+170px)] lg:w-[min(960px,calc(100%-380px))]">
+        <div className="gg-stage-inner">
+          <div className="relative flex items-end justify-between gap-4 px-7 pt-5">
+            <div className="min-w-0">
+              <div className="gg-eyebrow">{step}</div>
+              <h2 className="gg-stage-title">{title}</h2>
+            </div>
+            {progress && (
+              <div className="gg-progress" aria-label={`Progress ${progress}`}>
+                {progress}
+              </div>
+            )}
+          </div>
+          <div className="relative px-7 pb-3 pt-2">{children}</div>
+          <div className="gg-stage-foot relative flex flex-wrap items-center justify-between gap-3 px-7 py-3.5">
+            {footer}
+            <span className="flex flex-wrap items-center gap-3">
+              <SoundControl />
+              <button type="button" className="gg-btn" onClick={() => setHidden(true)}>
+                Hide to see the map
+              </button>
+            </span>
+          </div>
         </div>
-        <div className="px-6 pb-4 pt-2">{children}</div>
-        <div className="flex flex-wrap items-center justify-between gap-2 border-t px-6 py-3" style={{ borderColor: "var(--gg-line)" }}>
-          {footer}
-          <span className="flex flex-wrap items-center gap-3">
-            <SoundControl />
-            <button type="button" className="gg-btn" onClick={() => setHidden(true)}>
-              Hide to see the map
-            </button>
-          </span>
-        </div>
-      </div>
+      </section>
     </div>
   );
+}
+
+/** The result beside a machine: a card glowing in the team's colour. */
+function ResultCard({ color, kicker, title, sub, media }: { color: string; kicker: string; title: string; sub: React.ReactNode; media: React.ReactNode }) {
+  return (
+    <div className="gg-result gg-pop" style={{ ["--team" as string]: color }}>
+      <div className="gg-result-kicker">{kicker}</div>
+      <div className="my-3 flex justify-center">{media}</div>
+      <div className="gg-result-title">{title}</div>
+      <div className="gg-result-sub">{sub}</div>
+    </div>
+  );
+}
+
+function ResultWaiting({ children }: { children: React.ReactNode }) {
+  return <div className="gg-result gg-result-waiting">{children}</div>;
 }
 
 /**
@@ -151,71 +193,57 @@ function Drum({ state, viewer, act, now, clock, avatars }: { state: GGState; vie
   const [landedSeq, setLandedSeq] = useState<number | null>(null);
   const onLanded = useCallback((seq: number) => setLandedSeq(seq), []);
   const ballOut = playing ? landedSeq === state.last_draw?.seq : state.order.length > 0;
-  // While the newest ball is on its way, its slot still shows as open.
-  const shownOrder = playing && !ballOut ? state.order.slice(0, -1) : state.order;
+  const shown = playing && !ballOut ? state.order.length - 1 : state.order.length;
   const newest = teamById(state, state.order.at(-1));
+  const captain = newest ? person(state, newest.captain) : null;
   return (
     <Shell
-      title="Captain order"
-      sub="Who rolls their major first"
+      step="Step 1 · Captain order"
+      title={state.phase_done && ballOut ? "The order is set" : "Who rolls their major first?"}
+      progress={`${shown} / ${state.teams.length}`}
+      name="drum"
       footer={
         <ActButton
           label={state.order.length === 0 ? "Draw the first ball" : "Draw the next ball"}
           can={viewer.organizer && !state.phase_done && !playing}
           act={act}
           body={{ kind: "drum.draw" }}
-          waiting={state.phase_done ? "Every ball is drawn." : playing ? "Drawing…" : "Tommy draws the next ball."}
+          waiting={state.phase_done && (ballOut || !playing) ? "Every ball is drawn." : playing ? (ballOut ? "Ball in. The next draw is ready in a moment." : "Drawing…") : "Tommy draws the next ball."}
         />
       }
     >
-      <div className="flex flex-wrap items-center justify-center gap-4">
-        <div className="min-w-0 max-w-[620px] flex-[1_1_480px]">
+      <div className="flex flex-wrap items-center justify-center gap-5">
+        <div className="min-w-0 max-w-[640px] flex-[1_1_500px]">
           <GGAirLottery state={state} clock={clock} avatars={avatars} onLanded={onLanded} />
         </div>
-        <div className="w-[210px] text-center">
+        <div className="w-[230px]">
           {newest && ballOut ? (
-            <div key={state.order.length} className="gg-pop">
-              <div className="gg-label">Ball {state.order.length}</div>
-              <div
-                className="mx-auto my-3 flex h-[110px] w-[110px] items-center justify-center rounded-full"
-                style={{ background: newest.color, boxShadow: `0 0 30px ${hexA(newest.color, 0.8)}` }}
-              >
-                {newest.captain && avatars[newest.captain] ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={avatars[newest.captain]} alt="" width={72} height={72} className="h-[72px] w-[72px] rounded-full object-cover" style={{ boxShadow: "0 0 0 3px #fff" }} />
-                ) : (
-                  <span className="gg-disp flex h-16 w-16 items-center justify-center rounded-full text-4xl font-black" style={{ background: "#120a24", color: newest.color }}>
-                    {(person(state, newest.captain)?.name ?? "?").charAt(0).toUpperCase()}
-                  </span>
-                )}
-              </div>
-              <div className="gg-disp text-3xl font-black">{newest.name}</div>
-              <div style={{ color: "var(--gg-fg-2)" }}>
-                Captain {person(state, newest.captain)?.name} rolls {ordinal(state.order.length)}
-              </div>
-            </div>
+            <ResultCard
+              key={state.order.length}
+              color={newest.color}
+              kicker={`${ordinal(state.order.length)} to roll`}
+              title={newest.name}
+              sub={`Captain ${captain?.name ?? "?"}`}
+              media={<Avatar id={newest.captain} name={captain?.name ?? newest.name} color={newest.color} size={104} />}
+            />
           ) : (
-            <div className="gg-label">{playing ? "Drawing…" : "Waiting for the first ball"}</div>
+            <ResultWaiting>
+              {playing ? (
+                <>
+                  <span className="gg-result-kicker" style={{ color: "var(--gg-cyan)" }}>
+                    Drawing
+                  </span>
+                  <span>The air is up. One ball is about to be caught.</span>
+                </>
+              ) : (
+                <>
+                  <span className="gg-result-kicker">Ball 1</span>
+                  <span>The first ball caught rolls their major first.</span>
+                </>
+              )}
+            </ResultWaiting>
           )}
         </div>
-      </div>
-      <div className="mt-2 flex flex-wrap justify-center gap-2">
-        {state.teams.map((_, i) => {
-          const team = teamById(state, shownOrder[i]);
-          return (
-            <div key={i} className="w-[104px] text-center">
-              <span className="gg-digit text-xs" style={{ color: "var(--gg-fg-3)" }}>
-                {i + 1}
-              </span>
-              <div
-                className="gg-disp mt-1 flex h-10 items-center justify-center rounded-full px-2 text-sm font-black"
-                style={team ? { background: team.color, color: "#120a24" } : { border: "1.5px dashed var(--gg-line-2)", color: "var(--gg-fg-3)" }}
-              >
-                <span className="truncate">{team ? team.name : "?"}</span>
-              </div>
-            </div>
-          );
-        })}
       </div>
     </Shell>
   );
@@ -240,15 +268,17 @@ function Majors({ state, viewer, act, now, clock }: { state: GGState; viewer: GG
   const onReel = majors.filter((tag) => !owner(tag) || (p !== null && !landed && draw?.value === tag));
   return (
     <Shell
-      title="Major reel"
-      sub={spinning ? `Spin ${state.teams.filter((t) => t.major).length + (p !== null ? 0 : 1)} of 7 · ${p !== null && resultTeam ? resultTeam.name : spinning.name}` : "Every major is drawn"}
+      step="Step 2 · Majors"
+      title={p !== null && resultTeam && draw ? (landed ? `${resultTeam.name} get ${nationName(state, draw.value)}` : `Spinning for ${resultTeam.name}`) : spinning ? `${spinning.name} spins next` : "Every major is drawn"}
+      progress={`${state.teams.filter((t) => t.major).length - (p !== null && !landed ? 1 : 0)} / ${state.teams.length}`}
+      name="reel"
       footer={
         <ActButton
           label={`Spin for ${spinning?.name ?? ""}`}
           can={viewer.organizer && Boolean(spinning) && p === null}
           act={act}
           body={{ kind: "wheel.spin" }}
-          waiting={p !== null ? "Spinning…" : spinning ? `Tommy spins for ${spinning.name}.` : "All seven majors are taken."}
+          waiting={p !== null ? (landed ? (spinning ? `Next up: ${spinning.name}.` : "All seven majors are taken.") : "Spinning…") : spinning ? `Tommy spins for ${spinning.name}.` : "All seven majors are taken."}
         />
       }
     >
@@ -256,16 +286,23 @@ function Majors({ state, viewer, act, now, clock }: { state: GGState; viewer: GG
         <div className="min-w-0 flex-[1_1_380px]">
           <GGMajorReel state={state} clock={clock} />
         </div>
-        <div className="w-[260px]">
-          <div className="gg-label">{landed ? "Result" : p !== null ? "Spinning…" : "Waiting for the first spin"}</div>
-          {landed && resultTeam && draw && (
-            <div key={draw.seq} className="gg-pop mt-2 rounded-xl p-4" style={{ background: hexA(resultTeam.color, 0.12), border: `1px solid ${hexA(resultTeam.color, 0.6)}` }}>
-              <Flag tag={draw.value} w={72} h={46} />
-              <div className="gg-disp mt-2 text-3xl font-black">{nationName(state, draw.value)}</div>
-              <div className="font-bold" style={{ color: resultTeam.color }}>
-                {resultTeam.name}
-              </div>
-            </div>
+        <div className="w-[250px]">
+          {landed && resultTeam && draw ? (
+            <ResultCard
+              key={draw.seq}
+              color={resultTeam.color}
+              kicker={`${resultTeam.name} plays`}
+              title={nationName(state, draw.value)}
+              sub={`${ordinal(state.config.majors.indexOf(draw.value) + 1)} strongest of ${state.config.majors.length}`}
+              media={<Flag tag={draw.value} w={112} h={72} />}
+            />
+          ) : (
+            <ResultWaiting>
+              <span className="gg-result-kicker" style={p !== null ? { color: "var(--gg-cyan)" } : undefined}>
+                {p !== null ? "Spinning" : "Next spin"}
+              </span>
+              <span>{p !== null ? "Watch the window." : spinning ? `${spinning.name}'s major is drawn next.` : "Every team has its major."}</span>
+            </ResultWaiting>
           )}
           <div className="gg-label mt-4">Still on the reel</div>
           <div className="mt-2 flex flex-wrap gap-1.5">
@@ -300,8 +337,10 @@ function Cards({ state, viewer, act, now, kind }: { state: GGState; viewer: GGVi
   const cardH = kind === "vice" ? 150 : 124;
   return (
     <Shell
-      title={title}
-      sub={kind === "vice" ? "One content creator per team" : `Two rounds · one card per team per round`}
+      step={kind === "vice" ? "Step 3 · Vice-captains" : "Step 4 · Recruits"}
+      title={kind === "vice" ? "One content creator per team" : "Two recruits per team, one per round"}
+      progress={`${draws.length} / ${total}`}
+      name={title.toLowerCase()}
       footer={
         <ActButton
           label={kind === "vice" ? `Scratch for ${turn?.name ?? ""}` : `Flip for ${turn?.name ?? ""}`}
@@ -353,7 +392,7 @@ function Cards({ state, viewer, act, now, kind }: { state: GGState; viewer: GGVi
                   transform: kind === "recruit" && isNewest ? `rotateY(${(1 - reveal) * 180}deg)` : undefined,
                 }}
               >
-                <Avatar name={who?.name ?? "?"} color={team.color} size={40} />
+                <Avatar id={who?.id} name={who?.name ?? "?"} color={team.color} size={40} />
                 <div className="px-1 text-[12.5px] font-bold leading-tight">{who?.name ?? "?"}</div>
                 <div className="text-[10.5px] font-bold" style={{ color: team.color }}>
                   {team.name}
