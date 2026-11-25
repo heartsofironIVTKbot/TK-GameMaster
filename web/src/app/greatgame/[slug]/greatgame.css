@@ -54,6 +54,30 @@
   filter: drop-shadow(0 0 8px rgba(255, 43, 214, 0.5));
 }
 
+/* The top bar's wordmark, alive: the neon colours flow through the letters, the glow breathes,
+   and now and then it flickers like a real neon sign. */
+.gg-brush-live {
+  position: relative;
+  background-image: linear-gradient(90deg, var(--gg-pink), #b46bff, var(--gg-cyan), #b46bff, var(--gg-pink));
+  background-size: 300% 100%;
+  animation:
+    gg-brush-flow 7s linear infinite,
+    gg-brush-glow 3.2s ease-in-out infinite,
+    gg-brush-flicker 9s steps(1) infinite;
+}
+@keyframes gg-brush-flow {
+  to { background-position: -300% 0; }
+}
+@keyframes gg-brush-glow {
+  0%, 100% { filter: drop-shadow(0 0 6px rgba(255, 43, 214, 0.45)); }
+  50% { filter: drop-shadow(0 0 14px rgba(255, 43, 214, 0.85)) drop-shadow(0 0 22px rgba(34, 229, 255, 0.35)); }
+}
+@keyframes gg-brush-flicker {
+  0%, 61%, 64%, 66%, 100% { opacity: 1; }
+  62% { opacity: 0.35; }
+  65% { opacity: 0.6; }
+}
+
 .gg-chrome {
   font-family: var(--gg-display);
   text-transform: uppercase;
@@ -156,25 +180,6 @@
 }
 @keyframes gg-breathe {
   50% { opacity: 0.55; }
-}
-.gg-light {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 52px;
-  height: 11px;
-  border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(150, 245, 255, 0.85), rgba(34, 229, 255, 0.55) 40%, rgba(34, 229, 255, 0.18) 75%, transparent);
-  offset-rotate: auto;
-  offset-anchor: center;
-  animation-name: gg-light;
-  animation-timing-function: linear;
-  animation-iteration-count: infinite;
-  pointer-events: none;
-}
-@keyframes gg-light {
-  from { offset-distance: 0%; }
-  to { offset-distance: 100%; }
 }
 
 /* The sun's glow: a halo breathing behind it (the sun itself is a canvas, ggUi.tsx). */
@@ -1802,7 +1807,7 @@
   .gg-leds-lit,
   .gg-road,
   .gg-neon-glow,
-  .gg-light,
+  .gg-brush-live,
   .gg-sun-halo,
   .gg-spincard,
   .gg-spincard-q,
@@ -1826,8 +1831,7 @@
   .gg-act {
     animation: none;
   }
-  .gg-leds-win,
-  .gg-light {
+  .gg-leds-win {
     display: none;
   }
 }
