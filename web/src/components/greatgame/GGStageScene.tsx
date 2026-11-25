@@ -8,7 +8,7 @@ import { createContext, useEffect, useRef, type MutableRefObject } from "react";
  * both sides, neon palms (cyan on the left, pink on the right) lining a wet
  * road that mirrors everything above the horizon (the machine at its end
  * too), and a cyan grid floor, all flying
- * towards the viewer at one speed, out of a haze on the horizon. A shooting
+ * towards the viewer at one speed, fading in from the distance. A shooting
  * star crosses the sky about every ten seconds.
  *
  * A machine can stand at the end of the road: it registers an anchor (the
@@ -193,11 +193,11 @@ function drawFloor(ctx: CanvasRenderingContext2D, v: View, travel: number) {
 const NEAR = 0.55;
 const FAR = 60;
 
-function roadPath(ctx: CanvasRenderingContext2D, v: View) {
-  const [nl, ny] = project(v, -ROAD, 0, NEAR);
-  const [nr] = project(v, ROAD, 0, NEAR);
-  const [fl, fy] = project(v, -ROAD, 0, FAR);
-  const [fr] = project(v, ROAD, 0, FAR);
+function roadPath(ctx: CanvasRenderingContext2D, v: View, half = ROAD) {
+  const [nl, ny] = project(v, -half, 0, NEAR);
+  const [nr] = project(v, half, 0, NEAR);
+  const [fl, fy] = project(v, -half, 0, FAR);
+  const [fr] = project(v, half, 0, FAR);
   ctx.beginPath();
   ctx.moveTo(nl, ny);
   ctx.lineTo(nr, ny);
@@ -206,10 +206,14 @@ function roadPath(ctx: CanvasRenderingContext2D, v: View) {
   ctx.closePath();
 }
 
+/** The wet strip: the road and its shoulders where the palms stand, up to the mountains' feet. */
+const WET = ROAD + 0.9;
+
 /**
- * The wet road: everything above the horizon (sky glow, mountains, palms, and
- * the machine at the road's end) mirrored into the asphalt, fading out
- * towards the viewer.
+ * The wet road: everything above the horizon (sky glow, mountains, palms)
+ * mirrored into the road and the palms' shoulders, fading out towards the
+ * viewer. The machine at the road's end is mirrored smaller and fainter,
+ * squashed like a reflection in water, so it doesn't crowd the road.
  */
 function drawReflection(
   ctx: CanvasRenderingContext2D,
@@ -222,7 +226,7 @@ function drawReflection(
   const height = v.hy - top;
   if (height <= 1) return;
   ctx.save();
-  roadPath(ctx, v);
+  roadPath(ctx, v, WET);
   ctx.clip();
   ctx.globalAlpha = 0.36;
   // Mirror about the horizon.
@@ -230,7 +234,10 @@ function drawReflection(
   ctx.drawImage(source, 0, top * ratio, source.width, height * ratio, 0, top, v.w, height);
   if (machine) {
     const { canvas, box, part } = machine;
-    ctx.globalAlpha = 0.42;
+    // Mirrored about the horizon and squashed to 45% of its height.
+    const squash = 0.45;
+    ctx.setTransform(ratio, 0, 0, -ratio * squash, 0, v.hy * ratio * (1 + squash));
+    ctx.globalAlpha = 0.28;
     ctx.drawImage(
       canvas,
       part.x * canvas.width,
@@ -245,12 +252,12 @@ function drawReflection(
   }
   ctx.restore();
   ctx.save();
-  roadPath(ctx, v);
+  roadPath(ctx, v, WET);
   ctx.clip();
   const fade = ctx.createLinearGradient(0, v.hy, 0, v.h);
   fade.addColorStop(0, "rgba(10,4,22,0)");
-  fade.addColorStop(0.5, "rgba(10,4,22,.5)");
-  fade.addColorStop(1, "rgba(10,4,22,.88)");
+  fade.addColorStop(0.5, "rgba(10,4,22,.35)");
+  fade.addColorStop(1, "rgba(10,4,22,.62)");
   ctx.fillStyle = fade;
   ctx.fillRect(0, v.hy, v.w, v.h - v.hy);
   ctx.restore();
@@ -323,22 +330,6 @@ function drawMountains(ctx: CanvasRenderingContext2D, v: View, travel: number, t
     }
   }
   ctx.globalAlpha = 1;
-}
-
-/**
- * Haze along the horizon, over the far end of the floor, the road and the
- * mountains, so everything rises out of the distance instead of appearing.
- */
-function drawHaze(ctx: CanvasRenderingContext2D, v: View) {
-  const band = v.h * 0.06;
-  const haze = ctx.createLinearGradient(0, v.hy - band, 0, v.hy + band);
-  haze.addColorStop(0, "rgba(106,23,118,0)");
-  haze.addColorStop(0.3, "rgba(106,23,118,.3)");
-  haze.addColorStop(0.5, "rgba(106,23,118,.42)");
-  haze.addColorStop(0.7, "rgba(80,18,100,.3)");
-  haze.addColorStop(1, "rgba(58,15,92,0)");
-  ctx.fillStyle = haze;
-  ctx.fillRect(0, v.hy - band, v.w, band * 2);
 }
 
 /** A shooting star now and then: a bright head and a fading tail, in a random direction. */
@@ -543,7 +534,6 @@ export default function GGStageScene({ anchorRef }: { anchorRef: MutableRefObjec
       if (!anchorRef.current) drawPlanet(ctx, view, time);
       drawFloor(ctx, view, travel);
       drawMountains(ctx, view, travel, time);
-      drawHaze(ctx, view);
       drawPalms(ctx, view, travel, sprites);
       const anchor = anchorRef.current;
       drawReflection(
