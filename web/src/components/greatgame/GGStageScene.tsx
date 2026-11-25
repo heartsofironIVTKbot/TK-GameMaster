@@ -424,6 +424,8 @@ function palmSprite(color: string): HTMLCanvasElement {
   return sprite;
 }
 
+/** Palms stand in one straight row on each side, a little off the road's edge line. */
+const PALM_X = ROAD + 0.3;
 const PALM_SPAN = 54; // palms repeat every this many units along the road
 const PALMS = 7; // per side
 
@@ -434,7 +436,7 @@ function palmsAt(travel: number): { side: number; x: number; z: number; tall: nu
       const start = (i * PALM_SPAN) / PALMS + (side > 0 ? PALM_SPAN / PALMS / 2 : 0);
       const z = 1.2 + ((((start - travel) % PALM_SPAN) + PALM_SPAN) % PALM_SPAN);
       const fade = Math.min(1, (z - 1.2) / 0.5, (PALM_SPAN + 1.2 - z) / 8);
-      if (fade > 0) palms.push({ side, x: side * (ROAD + 0.08 + rand(i * 7 + side) * 0.14), z, tall: 1.8 + rand(i * 13 + side * 3) * 0.6, fade });
+      if (fade > 0) palms.push({ side, x: side * PALM_X, z, tall: 1.8 + rand(i * 13 + side * 3) * 0.6, fade });
     }
   }
   return palms.sort((a, b) => b.z - a.z);
