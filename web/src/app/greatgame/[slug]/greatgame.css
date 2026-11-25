@@ -747,68 +747,6 @@
   color: #fff;
 }
 
-/* ---------- Step 3's backdrop: a plain retro pattern (no outrun scene) ---------- */
-.gg-pattern {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-  background: radial-gradient(120% 90% at 50% 0%, #2a0f52 0%, #150a2e 55%, #0b0618 100%);
-}
-.gg-pattern-grid {
-  position: absolute;
-  inset: -64px;
-  background-image:
-    linear-gradient(rgba(180, 107, 255, 0.15) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(180, 107, 255, 0.15) 1px, transparent 1px);
-  background-size: 48px 48px;
-  -webkit-mask-image: radial-gradient(ellipse 70% 65% at 50% 45%, #000 30%, transparent 90%);
-  mask-image: radial-gradient(ellipse 70% 65% at 50% 45%, #000 30%, transparent 90%);
-  animation: gg-grid-drift 16s linear infinite;
-}
-@keyframes gg-grid-drift {
-  to { transform: translate(48px, 48px); }
-}
-.gg-pattern-dots {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 42%;
-  background-image: radial-gradient(circle, rgba(255, 43, 214, 0.42) 1.3px, transparent 1.7px);
-  background-size: 14px 14px;
-  -webkit-mask-image: linear-gradient(to top, #000 10%, transparent);
-  mask-image: linear-gradient(to top, #000 10%, transparent);
-}
-.gg-pattern-stripes {
-  position: absolute;
-  top: -12%;
-  right: -6%;
-  width: 34%;
-  height: 58%;
-  background: repeating-linear-gradient(-45deg, rgba(34, 229, 255, 0.16) 0 9px, transparent 9px 22px);
-  -webkit-mask-image: radial-gradient(circle at 70% 30%, #000 20%, transparent 70%);
-  mask-image: radial-gradient(circle at 70% 30%, #000 20%, transparent 70%);
-}
-.gg-pattern-stripes.is-left {
-  top: auto;
-  right: auto;
-  bottom: -14%;
-  left: -6%;
-  background: repeating-linear-gradient(45deg, rgba(255, 179, 71, 0.13) 0 9px, transparent 9px 22px);
-  -webkit-mask-image: radial-gradient(circle at 30% 70%, #000 20%, transparent 70%);
-  mask-image: radial-gradient(circle at 30% 70%, #000 20%, transparent 70%);
-}
-.gg-shape {
-  position: absolute;
-  overflow: visible;
-  animation: gg-float var(--dur, 9s) ease-in-out infinite alternate;
-}
-@keyframes gg-float {
-  from { transform: translateY(-8px) rotate(calc(var(--turn, 8deg) * -1)); }
-  to { transform: translateY(10px) rotate(var(--turn, 8deg)); }
-}
-
 /* The result beside a machine. */
 .gg-result {
   display: grid;
@@ -876,8 +814,6 @@
   .gg-spincard-q,
   .gg-ticket,
   .gg-ticket-prize,
-  .gg-pattern-grid,
-  .gg-shape,
   .gg-spincard-result,
   .gg-flag-in,
   .gg-spincard-last,
