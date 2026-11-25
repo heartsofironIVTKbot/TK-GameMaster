@@ -35,10 +35,17 @@ export interface GGScratch {
 /** Enough for a thorough scratch; anything past it is ignored. */
 const MAX_SCRATCH_POINTS = 6000;
 
+/** Step 4: the face-down card the captain on the clock is pointing at. */
+export interface GGHover {
+  team: string;
+  card: number;
+}
+
 interface Room {
   clients: Set<GGClient>;
   considering: Record<string, { tag: string; by: string; at: number } | null>;
   scratch: GGScratch | null;
+  hover: GGHover | null;
 }
 
 const frame = (event: string, data: unknown) => `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
@@ -60,7 +67,7 @@ class GGHub {
   private room(slug: string): Room {
     let room = this.rooms.get(slug);
     if (!room) {
-      room = { clients: new Set(), considering: {}, scratch: null };
+      room = { clients: new Set(), considering: {}, scratch: null, hover: null };
       this.rooms.set(slug, room);
     }
     return room;
@@ -73,6 +80,7 @@ class GGHub {
     if (state) client.send(frame("state", state));
     client.send(frame("considering", room.considering));
     if (room.scratch) client.send(frame("scratch", room.scratch));
+    client.send(frame("hover", room.hover));
     this.broadcast(slug, "viewers", { count: room.clients.size });
     return () => {
       room.clients.delete(client);
@@ -105,6 +113,11 @@ class GGHub {
     }
     this.broadcast(slug, "state", state);
     this.broadcast(slug, "considering", room.considering);
+    // A flip (or a new turn) ends the pointing.
+    if (room.hover && (state.phase !== "recruits" || state.turn.team !== room.hover.team)) {
+      room.hover = null;
+      this.broadcast(slug, "hover", null);
+    }
   }
 
   /** A team's captain (or an organizer) is looking at a nation; "" clears it. */
@@ -112,6 +125,15 @@ class GGHub {
     const room = this.room(slug);
     room.considering[team] = tag ? { tag, by, at: Date.now() } : null;
     this.broadcast(slug, "considering", room.considering);
+  }
+
+  /** The captain on the clock points at face-down card `card` (null: none). */
+  hover(slug: string, team: string, card: number | null) {
+    const room = this.room(slug);
+    const next = card === null ? null : { team, card };
+    if (room.hover?.team === next?.team && room.hover?.card === next?.card) return;
+    room.hover = next;
+    this.broadcast(slug, "hover", next);
   }
 
   /** Strokes on the ticket of vice draw `seq` (a new seq starts a fresh ticket); `done`: scratched clear. */

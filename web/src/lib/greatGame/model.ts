@@ -145,7 +145,18 @@ export interface GGState {
   phase_done: boolean;
   /** The last randomizer result, for the animation: {kind, seq, at, team, value}. */
   /** `then`: the last major, handed to the last team by the same spin (no spin needed for it). */
-  last_draw: { kind: string; seq: number; at: number; team: string; value: string; then?: { team: string; value: string } } | null;
+  last_draw: {
+    kind: string;
+    seq: number;
+    at: number;
+    team: string;
+    value: string;
+    /** A recruit's round (1 or 2). */
+    slot?: number;
+    /** Which face-down card the captain picked (step 4; only for the show). */
+    card?: number;
+    then?: { team: string; value: string; slot?: number };
+  } | null;
   log: GGAction[];
   fairness: { commit: string; seed: string | null };
   /** Server time when this state was built (the page corrects its clock with it). */

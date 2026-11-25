@@ -181,6 +181,19 @@ export function buildState(
         else if (slot === "captain" && value) team.captain = value;
         if (action.kind !== "member.set" && value) {
           lastDraw = { kind: action.kind === "vice.draw" ? "vice" : "recruit", seq: action.seq, at: action.at, team: team.id, value };
+          if (action.kind === "recruit.draw") {
+            lastDraw.slot = Number(p.slot) === 2 ? 2 : 1;
+            if (typeof p.card === "number") lastDraw.card = p.card;
+            // The last recruit goes straight to the last empty slot.
+            const then = p.then as { team?: unknown; slot?: unknown; person?: unknown } | undefined;
+            const last = typeof then?.team === "string" ? byId.get(then.team) : undefined;
+            const index = Number(then?.slot) === 2 ? 1 : 0;
+            const placedAlready = teams.some((other) => membersOf(other).includes(String(then?.person)));
+            if (last && typeof then?.person === "string" && then.person && !last.recruits[index] && !placedAlready) {
+              last.recruits[index] = then.person;
+              lastDraw.then = { team: last.id, value: then.person, slot: index + 1 };
+            }
+          }
         }
         break;
       }

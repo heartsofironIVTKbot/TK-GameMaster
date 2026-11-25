@@ -30,7 +30,7 @@ export default function GGApp({ slug }: { slug: string }) {
   // The team drawer: shown by default, except during the drum and the reel,
   // whose stage has its own team box (it can still be opened).
   const [drawerChoice, setDrawerChoice] = useState<{ map: boolean | null; stage: boolean | null }>({ map: null, stage: null });
-  const onStage = state?.phase === "drum" || state?.phase === "wheel" || state?.phase === "vice";
+  const onStage = state?.phase === "drum" || state?.phase === "wheel" || state?.phase === "vice" || state?.phase === "recruits";
   const drawerOpen = (onStage ? drawerChoice.stage : drawerChoice.map) ?? !onStage;
   const setDrawerOpen = (open: boolean) => setDrawerChoice((choice) => ({ ...choice, [onStage ? "stage" : "map"]: open }));
   const now = serverNow();
@@ -87,7 +87,7 @@ export default function GGApp({ slug }: { slug: string }) {
         <GGMap state={state} considering={considering} selected={selected} onSelect={select} />
       </div>
 
-      <GGRandomizers state={state} viewer={viewer} act={act} now={now} clock={serverNow} avatars={avatars} scratch={game.scratch} sendScratch={game.sendScratch} />
+      <GGRandomizers state={state} viewer={viewer} act={act} now={now} clock={serverNow} avatars={avatars} scratch={game.scratch} sendScratch={game.sendScratch} hover={game.hover} sendHover={game.sendHover} />
 
       <GGTopBar
         state={state}

@@ -747,6 +747,203 @@
   color: #fff;
 }
 
+/* ---------- Step 4: the recruit card table ---------- */
+.gg-rtable {
+  position: absolute;
+  inset: 0;
+  container-type: size;
+}
+.gg-rtable-cols {
+  position: absolute;
+  top: 0.5cqh;
+  left: 50%;
+  display: flex;
+  gap: 2.2cqh;
+  transform: translateX(-50%);
+}
+.gg-rtable-cols.is-done {
+  top: 22cqh;
+  transition: top 0.6s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+.gg-rtable-col {
+  display: flex;
+  flex-direction: column;
+  width: 13.5cqh;
+}
+.gg-rtable-head {
+  height: 4.4cqh;
+  overflow: hidden;
+  font: 900 2.3cqh/1 var(--gg-display);
+  text-align: center;
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--team);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--team) 60%, transparent);
+}
+.gg-rslot {
+  position: relative;
+  height: 19.5cqh;
+  border-radius: 1.3cqh;
+  border: 0.3cqh dashed color-mix(in srgb, var(--team) 55%, transparent);
+  background: rgba(8, 4, 20, 0.45);
+}
+.gg-rslot + .gg-rslot {
+  margin-top: 1.6cqh;
+}
+.gg-rslot.is-filled {
+  border: 0;
+  background: none;
+}
+.gg-rslot.is-next {
+  border-style: solid;
+  border-color: var(--team);
+  box-shadow: 0 0 2.4cqh color-mix(in srgb, var(--team) 60%, transparent);
+  animation: gg-rslot-call 1.4s ease-in-out infinite;
+}
+@keyframes gg-rslot-call {
+  50% { box-shadow: 0 0 4.4cqh color-mix(in srgb, var(--team) 85%, transparent); }
+}
+.gg-rslot-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8cqh;
+  font: 900 3.4cqh/1 var(--gg-display);
+  color: color-mix(in srgb, var(--team) 55%, transparent);
+}
+.gg-rslot-empty b {
+  font: 800 1.35cqh/1 var(--gg-digit);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #fff;
+}
+
+/* A card: the back (the deck's design) and the front (the recruit). */
+.gg-rcard {
+  width: 13.5cqh;
+  height: 19.5cqh;
+  border-radius: 1.3cqh;
+}
+.gg-rcard-back {
+  position: relative;
+  border: 0.35cqh solid #ff2bd6;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255, 43, 214, 0.35) 0 12%, transparent 13%),
+    repeating-linear-gradient(45deg, rgba(34, 229, 255, 0.16) 0 0.5cqh, transparent 0.5cqh 2cqh),
+    repeating-linear-gradient(-45deg, rgba(34, 229, 255, 0.16) 0 0.5cqh, transparent 0.5cqh 2cqh),
+    linear-gradient(160deg, #2c1060, #12082a);
+  box-shadow: inset 0 0 0 0.6cqh #12082a, inset 0 0 0 0.85cqh rgba(255, 211, 107, 0.55), 0 1cqh 2.4cqh rgba(0, 0, 0, 0.55);
+}
+.gg-rcard-back::after {
+  content: "GG";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font: 900 3.2cqh/1 var(--gg-display);
+  color: #ffd36b;
+  text-shadow: 0 0 1.2cqh rgba(255, 211, 107, 0.7);
+}
+.gg-rfan {
+  position: absolute;
+  left: 50%;
+  top: 58cqh;
+  width: 0;
+  height: 0;
+}
+.gg-rfan .gg-rcard {
+  position: absolute;
+  left: -6.75cqh;
+  top: 0;
+  padding: 0;
+  transform-origin: 50% 90cqh;
+  transition: transform 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.2), box-shadow 0.22s, opacity 0.2s;
+}
+.gg-rfan .gg-rcard:disabled {
+  cursor: default;
+}
+.gg-rfan .gg-rcard.is-pickable {
+  cursor: pointer;
+}
+.gg-rfan .gg-rcard.is-lifted {
+  box-shadow: inset 0 0 0 0.6cqh #12082a, inset 0 0 0 0.85cqh rgba(255, 211, 107, 0.8), 0 0 3cqh rgba(255, 43, 214, 0.8), 0 1.6cqh 3cqh rgba(0, 0, 0, 0.6);
+  border-color: #ffd36b;
+}
+.gg-rcard-front {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.9cqh;
+  padding: 1cqh;
+  border-radius: 1.3cqh;
+  border: 0.35cqh solid var(--team);
+  background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--team) 32%, #1d0f3c), #0f0722 80%);
+  box-shadow: 0 0 2.2cqh color-mix(in srgb, var(--team) 45%, transparent);
+  text-align: center;
+}
+.gg-rcard-round {
+  position: absolute;
+  top: 0.8cqh;
+  left: 1cqh;
+  font: 800 1.3cqh/1 var(--gg-digit);
+  color: var(--team);
+}
+.gg-rcard-name {
+  max-width: 100%;
+  font: 900 2.3cqh/1.05 var(--gg-display);
+  text-transform: uppercase;
+  color: #fff;
+  overflow-wrap: normal;
+  text-wrap: balance;
+}
+.gg-rcard-team {
+  font: 700 1.25cqh/1 var(--gg-digit);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--team);
+}
+/* The picked card in flight. */
+.gg-rfly {
+  position: absolute;
+  left: calc(50% - 6.75cqh);
+  top: 58cqh;
+  z-index: 5;
+  width: 13.5cqh;
+  height: 19.5cqh;
+  perspective: 80cqh;
+  pointer-events: none;
+}
+.gg-rfly-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+}
+.gg-rfly-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.gg-rfly-front {
+  transform: rotateY(180deg);
+}
+.gg-rfly-flash {
+  position: absolute;
+  inset: -20%;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle, #fff 0%, rgba(255, 255, 255, 0.4) 30%, transparent 70%);
+  animation: gg-ticket-flash 0.8s ease-out both;
+}
+
 /* The result beside a machine. */
 .gg-result {
   display: grid;

@@ -52,6 +52,8 @@ export function useGreatGame(slug: string) {
   const [considering, setConsidering] = useState<Considering>({});
   const [viewers, setViewers] = useState(0);
   const [scratch, setScratch] = useState<GGScratch | null>(null);
+  /** Step 4: the face-down card the captain on the clock points at. */
+  const [hover, setHover] = useState<{ team: string; card: number } | null>(null);
   const [live, setLive] = useState(false);
   const [demo, setDemo] = useState(false);
   /** Discord profile pictures by person id (missing for people GameMaster's bot hasn't seen). */
@@ -91,6 +93,7 @@ export function useGreatGame(slug: string) {
       source.addEventListener("error", () => setLive(false));
       source.addEventListener("state", (event) => take(JSON.parse((event as MessageEvent).data) as GGState));
       source.addEventListener("considering", (event) => setConsidering(JSON.parse((event as MessageEvent).data) as Considering));
+      source.addEventListener("hover", (event) => setHover(JSON.parse((event as MessageEvent).data) as { team: string; card: number } | null));
       source.addEventListener("scratch", (event) => setScratch(JSON.parse((event as MessageEvent).data) as GGScratch));
       source.addEventListener("scratch-add", (event) => {
         const add = JSON.parse((event as MessageEvent).data) as { seq: number; line: number[] | null; done: boolean };
@@ -158,9 +161,21 @@ export function useGreatGame(slug: string) {
     [slug],
   );
 
+  /** Step 4: point at face-down card `card` (null: none); it lifts on every page. */
+  const sendHover = useCallback(
+    (card: number | null) => {
+      void fetch(`/api/greatgame/${slug}/hover`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ card }),
+      }).catch(() => undefined);
+    },
+    [slug],
+  );
+
   const serverNow = useCallback(() => Date.now() + offset.current, []);
 
-  return { state, viewer, error, considering, viewers, live, demo, avatars, scratch, act, consider, reveal, sendScratch, serverNow, reload: load };
+  return { state, viewer, error, considering, viewers, live, demo, avatars, scratch, hover, act, consider, reveal, sendScratch, sendHover, serverNow, reload: load };
 }
 
 /** Ticks every `ms` so clocks re-render; 0 stops it (nothing on screen is counting). */

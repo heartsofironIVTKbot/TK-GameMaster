@@ -6,6 +6,7 @@ import { PHASE_LABEL, PHASES, type GGState } from "@/lib/greatGame/model";
 import { clock, Flag, hexA, nationName, secondsLeft, Sun, teamById } from "./ggUi";
 import { DRUM_MS } from "./GGAirLottery";
 import { LAND_END } from "./GGMajorReel";
+import { FLIGHT } from "./GGRecruitTable";
 import { useSoundSwitch } from "./ggSound";
 
 /**
@@ -81,8 +82,9 @@ export function bannerFor(state: GGState, now: number, scratchTeam: string | nul
   const since = draw ? now - draw.at : Infinity;
   const drawing = state.phase === "drum" && draw?.kind === "drum" && since >= 0 && since < DRUM_MS;
   const reeling = state.phase === "wheel" && draw?.kind === "wheel" && since >= 0 && since < LAND_END;
+  const turning = state.phase === "recruits" && draw?.kind === "recruit" && since >= 0 && since < FLIGHT.shown;
   // A vice-captain ticket still being scratched keeps its team on the banner.
-  const team = teamById(state, reeling ? draw.team : scratchTeam && state.phase === "vice" ? scratchTeam : state.turn.team);
+  const team = teamById(state, reeling || turning ? draw!.team : scratchTeam && state.phase === "vice" ? scratchTeam : state.turn.team);
   const left = secondsLeft(state, now);
   const timer = left === null ? null : clock(left);
   const frac = left === null || !state.turn.seconds ? 1 : Math.max(0, left / state.turn.seconds);
@@ -115,7 +117,8 @@ export function bannerFor(state: GGState, now: number, scratchTeam: string | nul
       if (scratchTeam && team) return teamBanner("SCRATCHING · VICE-CAPTAIN");
       return team ? teamBanner("SCRATCHES NEXT · VICE-CAPTAIN") : neutral("Vice-captains", "ALL REVEALED");
     case "recruits":
-      return team ? teamBanner(`FLIPPING · RECRUIT · ROUND ${state.turn.slot ?? 1}`) : neutral("Recruits", "ALL FLIPPED");
+      if (turning && team) return teamBanner(`TURNING A CARD · RECRUIT · ROUND ${draw?.slot ?? 1}`);
+      return team ? teamBanner(`PICKS A CARD · RECRUIT · ROUND ${state.turn.slot ?? 1}`) : neutral("Recruits", "ALL DRAWN");
     case "bans":
       return team ? teamBanner(`BANNING · ${state.teams.filter((t) => t.ban !== null).length + 1} OF 7`) : neutral("Bans", "ALL BANS IN");
     case "draft":

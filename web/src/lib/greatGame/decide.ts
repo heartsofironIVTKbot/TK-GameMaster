@@ -228,7 +228,16 @@ function decideTurn(state: GGState, actor: GGActor, body: Record<string, unknown
       const left = unplaced(state, kind === "vice.draw" ? "vice" : "recruit");
       if (!left.length) return no("Nobody is left to draw.");
       const person = drawFrom(seed, nextSeq, kind, left);
-      return action(kind === "vice.draw" ? { team: turnTeam, person } : { team: turnTeam, person, slot: state.turn.slot ?? 1 });
+      if (kind === "vice.draw") return action({ team: turnTeam, person });
+      const slot = state.turn.slot ?? 1;
+      const card = Number.isInteger(body.card) && Number(body.card) >= 0 && Number(body.card) < 100 ? Number(body.card) : undefined;
+      // With two recruits and two empty slots left, this flip settles both: the last slot takes the last recruit.
+      const empty = state.teams.flatMap((team) => team.recruits.map((id, i) => (id ? null : { team: team.id, slot: i + 1 }))).filter((entry): entry is { team: string; slot: number } => entry !== null);
+      const others = empty.filter((entry) => !(entry.team === turnTeam && entry.slot === slot));
+      if (left.length === 2 && others.length === 1) {
+        return action({ team: turnTeam, person, slot, card, then: { ...others[0], person: left.find((id) => id !== person) } });
+      }
+      return action({ team: turnTeam, person, slot, card });
     }
     case "member.set": {
       const team = teamOf(state, body.team);

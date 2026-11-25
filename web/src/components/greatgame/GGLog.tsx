@@ -45,7 +45,11 @@ export function describe(state: GGState, action: GGAction): string {
     case "vice.draw":
       return `${team} scratched ${who(p.person)} (vice-captain)`;
     case "recruit.draw":
-      return `${team} flipped ${who(p.person)} (recruit)`;
+    {
+      const then = p.then as { team?: string; person?: string } | undefined;
+      const last = then?.team ? teamById(state, then.team)?.name : null;
+      return `${team} turned over ${who(p.person)} (recruit)${last ? `; ${last} take ${who(then?.person)}, the last one` : ""}`;
+    }
     case "member.set":
       return p.person ? `${who(p.person)} put in ${team} (${String(p.slot)})` : `${team}'s ${String(p.slot)} slot emptied`;
     case "person.set": {

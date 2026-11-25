@@ -11,6 +11,8 @@ import GGMajorReel, { REEL_MS } from "./GGMajorReel";
 import GGStageScene, { StageAnchorContext, type StageAnchor } from "./GGStageScene";
 import { Avatar, Flag, nationName, person, teamById } from "./ggUi";
 import GGPatternScene from "./GGPatternScene";
+import GGRecruitTable, { FLIGHT, LAST_FLIGHT, RECRUIT_MS } from "./GGRecruitTable";
+import GGTableScene from "./GGTableScene";
 import GGScratchTicket, { type TicketState } from "./GGScratchTicket";
 import { scratchHeld } from "./ggScratch";
 import type { GGScratch, GGViewerInfo } from "./useGreatGame";
@@ -24,11 +26,9 @@ import type { GGScratch, GGViewerInfo } from "./useGreatGame";
 
 type Act = (body: Record<string, unknown>) => Promise<string | null>;
 
-export const ANIM_MS: Record<string, number> = { drum: DRUM_MS, wheel: REEL_MS, vice: 2200, recruit: 1300 };
+export const ANIM_MS: Record<string, number> = { drum: DRUM_MS, wheel: REEL_MS, vice: 2200, recruit: RECRUIT_MS };
 /** When the result shows beside the machine (share of the animation): the ball is in the tube, the reel has stopped. */
 const SHOW_AT: Record<string, number> = { wheel: 3700 / REEL_MS };
-
-const ease = (t: number) => 1 - Math.pow(1 - t, 3);
 
 /** 0..1 of the latest draw's animation for `kind`, or null when nothing is playing. */
 function progressOf(state: GGState, kind: string, now: number): number | null {
@@ -57,8 +57,8 @@ function Shell({
 }: {
   /** No team drawer beside it (the drum and the reel): the stage can use more of the screen. */
   wide?: boolean;
-  /** The backdrop: the outrun road (steps 1 and 2) or the plain retro pattern (step 3). */
-  scene?: "outrun" | "pattern";
+  /** The backdrop: the outrun road (steps 1 and 2), the retro pattern (step 3) or the card table (step 4). */
+  scene?: "outrun" | "pattern" | "table";
   step: string;
   title: string;
   progress?: string;
@@ -149,7 +149,7 @@ function Shell({
       <div ref={dimRef} className="gg-overlay-dim" style={full ? { background: "rgba(8,4,18,.85)" } : undefined} />
       <section ref={stageRef} className={`gg-stage absolute ${full ? "gg-stage-full" : `gg-stage-normal ${wide ? "gg-stage-wide" : ""}`}`}>
         <div className="gg-stage-inner flex flex-col">
-          {scene === "pattern" ? <GGPatternScene /> : <GGStageScene anchorRef={anchorRef} />}
+          {scene === "pattern" ? <GGPatternScene /> : scene === "table" ? <GGTableScene /> : <GGStageScene anchorRef={anchorRef} />}
           {/* Above the scene's front layer (z-[1]). */}
           <div className="relative z-[2] flex items-start justify-between gap-4 px-7 pt-5">
             <div className="min-w-0">
@@ -683,101 +683,128 @@ function Vice({
   );
 }
 
-/* ---------- Steps 3 and 4: cards ---------- */
-function drawsOf(state: GGState, kind: "vice.draw" | "recruit.draw") {
-  // Results in the order they were drawn (fixes that cleared a slot drop out).
-  const placed = new Set(state.teams.flatMap((team) => (kind === "vice.draw" ? [team.vice] : team.recruits)).filter(Boolean));
-  const undone = new Set(state.log.filter((a) => a.kind === "undo").map((a) => Number(a.payload.seq)));
-  return state.log
-    .filter((a) => a.kind === kind && !undone.has(a.seq) && placed.has(String(a.payload.person)))
-    .map((a) => ({ seq: a.seq, at: a.at, team: String(a.payload.team), person: String(a.payload.person) }));
-}
-
-function Cards({ state, viewer, act, now, kind }: { state: GGState; viewer: GGViewerInfo; act: Act; now: number; kind: "vice" | "recruit" }) {
-  const total = kind === "vice" ? state.teams.length : state.teams.length * 2;
-  const draws = drawsOf(state, kind === "vice" ? "vice.draw" : "recruit.draw");
-  const p = progressOf(state, kind, now);
-  const turn = teamById(state, state.turn.team);
-  const can = Boolean(turn) && (viewer.organizer || viewer.captainOf === turn?.id) && p === null;
-  const title = kind === "vice" ? "Vice-captains" : "Recruits";
-  const cardW = kind === "vice" ? 104 : 92;
-  const cardH = kind === "vice" ? 150 : 124;
+/* ---------- Step 4: pick a card, it turns over ---------- */
+function Recruits({
+  state,
+  viewer,
+  act,
+  now,
+  hover,
+  sendHover,
+}: {
+  state: GGState;
+  viewer: GGViewerInfo;
+  act: Act;
+  now: number;
+  hover: { team: string; card: number } | null;
+  sendHover: (card: number | null) => void;
+}) {
+  const order = strengthOrder(state.teams, state.config.majors);
+  const draw = state.last_draw?.kind === "recruit" ? state.last_draw : null;
+  const elapsed = draw ? now - draw.at : Infinity;
+  const flying = draw !== null && elapsed < RECRUIT_MS;
+  // Who is still a secret (not turned over yet) and who hasn't landed in a slot yet.
+  const secret = new Set<string>();
+  const hidden = new Set<string>();
+  if (draw) {
+    if (elapsed < FLIGHT.shown) secret.add(draw.value);
+    if (elapsed < FLIGHT.landed) hidden.add(draw.value);
+    if (draw.then) {
+      if (elapsed < LAST_FLIGHT.shown) secret.add(draw.then.value);
+      if (elapsed < LAST_FLIGHT.landed) hidden.add(draw.then.value);
+    }
+  }
+  const placed = new Set(state.teams.flatMap((team) => team.recruits).filter((id): id is string => Boolean(id)));
+  const recruits = state.config.people.filter((entry) => entry.role === "recruit");
+  const pool = recruits.filter((entry) => !placed.has(entry.id) || secret.has(entry.id));
+  const fanCount = recruits.filter((entry) => !placed.has(entry.id) || hidden.has(entry.id)).length;
+  const turn = flying ? null : teamById(state, state.turn.team);
+  const canPick = Boolean(turn) && (viewer.organizer || viewer.captainOf === turn?.id) && !flying;
+  const flipTeam = draw && elapsed < FLIGHT.shown ? teamById(state, draw.team) : null;
+  const landedTeam = draw && flying && elapsed >= FLIGHT.shown ? teamById(state, draw.team) : null;
+  const shownCount = [...placed].filter((id) => !secret.has(id)).length;
+  const picking = useRef(false);
+  const captainName = (team: GGTeam | null) => (team ? (person(state, team.captain)?.name ?? "The captain") : "");
   return (
     <Shell
-      step={kind === "vice" ? "Step 3 · Vice-captains" : "Step 4 · Recruits"}
-      title={kind === "vice" ? "One content creator per team" : "Two recruits per team, one per round"}
-      progress={`${draws.length} / ${total}`}
-      name={title.toLowerCase()}
+      wide
+      scene="table"
+      step="Step 4 · Recruits"
+      title={
+        draw?.then && flying && elapsed >= LAST_FLIGHT.start
+          ? elapsed >= LAST_FLIGHT.shown
+            ? `${teamById(state, draw.then.team)?.name ?? "The last team"} take ${person(state, draw.then.value)?.name ?? "?"}, the last one`
+            : `The last card goes to ${teamById(state, draw.then.team)?.name ?? "the last team"}`
+          : flipTeam
+          ? `Turning a card for ${flipTeam.name}`
+          : landedTeam && draw
+            ? `${landedTeam.name} get ${person(state, draw.value)?.name ?? "?"}`
+            : turn
+              ? `${turn.name} pick a card`
+              : "Every recruit is drawn"
+      }
+      progress={`${shownCount} / ${state.teams.length * 2}`}
+      name="card table"
       action={
-        <ActButton
-          label={kind === "vice" ? `Scratch for ${turn?.name ?? ""}` : `Flip for ${turn?.name ?? ""}`}
-          can={can}
-          act={act}
-          body={{ kind: kind === "vice" ? "vice.draw" : "recruit.draw" }}
-          waiting={p !== null ? "Revealing…" : turn ? `${turn.name}'s captain ${kind === "vice" ? "scratches" : "flips"} next.` : "Every card is revealed."}
-        />
+        <span className="gg-waiting" role="status">
+          {flying ? "Turning it over…" : turn ? (canPick ? "Pick any card from the deck" : `${captainName(turn)} is picking a card…`) : "Every recruit has a team."}
+        </span>
       }
     >
-      <div className="flex flex-wrap justify-center gap-3 py-4">
-        {Array.from({ length: total }, (_, i) => {
-          const draw = draws[i];
-          const style = { width: cardW, height: cardH };
-          if (!draw) {
-            const next = i === draws.length && turn;
-            return kind === "vice" ? (
-              <div
-                key={i}
-                className={`gg-disp flex items-center justify-center rounded-[10px] text-lg font-black tracking-widest ${next ? "gg-pulse" : ""}`}
-                style={{ ...style, background: "repeating-linear-gradient(135deg,#d9d5e6 0 6px,#b9b4c9 6px 12px)", color: "#5d5873" }}
-              >
-                Scratch
-              </div>
-            ) : (
-              <div
-                key={i}
-                className={`rounded-[10px] ${next ? "gg-pulse" : ""}`}
-                style={{
-                  ...style,
-                  background: "radial-gradient(circle at 50% 46%,#ffb347 0 18px,#ff5e7e 18px 22px,transparent 22px),linear-gradient(180deg,#2a0f45,#120a24)",
-                  border: "2px solid #ff2bd6",
-                  boxShadow: "inset 0 0 0 4px #120a24",
-                }}
-              />
-            );
-          }
-          const team = teamById(state, draw.team) as GGTeam;
-          const who = person(state, draw.person);
-          const isNewest = i === draws.length - 1 && p !== null;
-          const reveal = isNewest ? ease(p!) : 1;
-          return (
-            <div key={i} className="relative overflow-hidden rounded-[10px]" style={{ ...style, perspective: 600 }}>
-              <div
-                className="flex h-full flex-col items-center justify-center gap-1.5 rounded-[10px] text-center"
-                style={{
-                  background: "linear-gradient(160deg,#2a1d4d,#160d2e)",
-                  border: `2px solid ${team.color}`,
-                  transform: kind === "recruit" && isNewest ? `rotateY(${(1 - reveal) * 180}deg)` : undefined,
-                }}
-              >
-                <Avatar id={who?.id} name={who?.name ?? "?"} color={team.color} size={40} />
-                <div className="px-1 text-[12.5px] font-bold leading-tight">{who?.name ?? "?"}</div>
-                <div className="text-[10.5px] font-bold" style={{ color: team.color }}>
-                  {team.name}
+      <div className="relative w-full" style={MACHINE_FRAME}>
+        <GGRecruitTable
+          state={state}
+          order={order}
+          now={now}
+          hidden={hidden}
+          fanCount={fanCount}
+          pickedCard={draw && flying ? Math.min(Math.max(0, draw.card ?? Math.floor(fanCount / 2)), Math.max(0, fanCount - 1)) : null}
+          canPick={canPick}
+          hover={hover && turn && hover.team === turn.id ? hover.card : null}
+          onHover={sendHover}
+          onPick={(card) => {
+            if (picking.current) return;
+            picking.current = true;
+            void act({ kind: "recruit.draw", card }).finally(() => {
+              picking.current = false;
+            });
+          }}
+        />
+        {/* Left: who is still in the deck. */}
+        <div className="absolute left-0 z-[2] top-[40%] -translate-y-1/2">
+          <div className="gg-teambox" style={{ width: "clamp(210px, 15vw, 260px)" }}>
+            <div className="gg-teambox-label">Still in the deck · {pool.length}</div>
+            <div className="grid gap-1">
+              {pool.map((entry) => (
+                <div key={entry.id} className="gg-pool-row">
+                  <Avatar id={entry.id} name={entry.name} color="#22e5ff" size={24} />
+                  <span className="truncate">{entry.name}</span>
                 </div>
-                {who?.filler && <div className="text-[10px]" style={{ color: "var(--gg-pending)" }}>to be named</div>}
-              </div>
-              {kind === "vice" && isNewest && (
-                <div
-                  className="absolute inset-0"
-                  style={{
-                    background: "repeating-linear-gradient(135deg,#d9d5e6 0 6px,#b9b4c9 6px 12px)",
-                    clipPath: `inset(${reveal * 100}% 0 0 0)`,
-                  }}
-                />
-              )}
+              ))}
+              {pool.length === 0 && <div className="gg-teambox-sub px-2">The deck is empty.</div>}
             </div>
-          );
-        })}
+          </div>
+        </div>
+        {/* Right: every team's recruits so far. */}
+        <div className="absolute right-0 z-[2] top-[40%] -translate-y-1/2">
+          <TeamBox
+            label="Recruits"
+            rows={order.map((team, i) => {
+              const names = team.recruits.map((id) => (id && !secret.has(id) ? person(state, id)?.name : null)).filter(Boolean);
+              const flippingHere = Boolean(flipTeam && flipTeam.id === team.id) || Boolean(draw?.then && draw.then.team === team.id && flying && elapsed < LAST_FLIGHT.shown);
+              return {
+                team,
+                place: i + 1,
+                side: flippingHere ? "Turning…" : turn?.id === team.id ? "Picks next" : `${names.length}/2`,
+                sub: names.length ? names.join(" · ") : undefined,
+                lit: Boolean(landedTeam && landedTeam.id === team.id),
+                dim: Boolean(turn) && !flippingHere && turn?.id !== team.id && names.length === 2,
+                next: turn?.id === team.id,
+              };
+            })}
+            state={state}
+          />
+        </div>
       </div>
     </Shell>
   );
@@ -792,6 +819,8 @@ export default function GGRandomizers({
   avatars,
   scratch,
   sendScratch,
+  hover,
+  sendHover,
 }: {
   state: GGState;
   viewer: GGViewerInfo;
@@ -801,6 +830,8 @@ export default function GGRandomizers({
   avatars: Avatars;
   scratch: GGScratch | null;
   sendScratch: (seq: number, line: number[] | null, done?: boolean) => void;
+  hover: { team: string; card: number } | null;
+  sendHover: (card: number | null) => void;
 }) {
   switch (state.phase) {
     case "drum":
@@ -810,7 +841,7 @@ export default function GGRandomizers({
     case "vice":
       return <Vice state={state} viewer={viewer} act={act} now={now} scratch={scratch} sendScratch={sendScratch} />;
     case "recruits":
-      return <Cards key="recruits" state={state} viewer={viewer} act={act} now={now} kind="recruit" />;
+      return <Recruits state={state} viewer={viewer} act={act} now={now} hover={hover} sendHover={sendHover} />;
     default:
       return null;
   }
