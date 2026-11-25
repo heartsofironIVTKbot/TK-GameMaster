@@ -66,6 +66,13 @@ function Shell({
       <div className="gg-overlay-dim" />
       <section className="gg-stage absolute left-1/2 top-[150px] w-[min(960px,calc(100%-32px))] -translate-x-1/2 lg:left-[calc(50%+170px)] lg:w-[min(960px,calc(100%-380px))]">
         <div className="gg-stage-inner">
+          <div className="gg-grid" aria-hidden>
+            <div className="gg-grid-sky" />
+            <div className="gg-grid-floor">
+              <div className="gg-grid-plane" />
+            </div>
+            <div className="gg-grid-horizon" />
+          </div>
           <div className="relative flex items-end justify-between gap-4 px-7 pt-5">
             <div className="min-w-0">
               <div className="gg-eyebrow">{step}</div>
