@@ -126,6 +126,34 @@ export default function GGTopBar({
     return () => observer.disconnect();
   }, []);
   const path = neonPath(width);
+
+  // The wordmark rolls its colours on while the LED chase light passes over it: the same 6 s
+  // cycle, started from the LED animation's own clock, with the roll placed where the light is.
+  const wordmark = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const word = wordmark.current;
+    const window_ = header.current?.querySelector(".gg-leds-win") as HTMLElement | null;
+    if (!word || !window_ || !width || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return undefined;
+    const led = window_.getAnimations()[0];
+    const box = word.getBoundingClientRect();
+    // The light (the middle of a 220px window) runs from x = -110 to 100vw + 110 over the cycle.
+    const span = width + 220;
+    const from = Math.min(0.98, Math.max(0, (box.left + 110) / span));
+    const to = Math.min(0.995, Math.max(from + 0.01, (box.right + 110) / span));
+    const mid = (from + to) / 2;
+    const roll = word.animate(
+      [
+        { offset: 0, backgroundPosition: "100% 0", filter: "drop-shadow(0 0 7px rgba(255,43,214,.5))" },
+        { offset: from, backgroundPosition: "100% 0", filter: "drop-shadow(0 0 7px rgba(255,43,214,.5))" },
+        { offset: mid, filter: "drop-shadow(0 0 14px rgba(255,43,214,.95)) drop-shadow(0 0 22px rgba(34,229,255,.55))" },
+        { offset: to, backgroundPosition: "50% 0", filter: "drop-shadow(0 0 7px rgba(255,43,214,.5))" },
+        { offset: 1, backgroundPosition: "50% 0", filter: "drop-shadow(0 0 7px rgba(255,43,214,.5))" },
+      ],
+      { duration: 6000, iterations: Infinity },
+    );
+    if (led?.startTime !== null && led?.startTime !== undefined) roll.startTime = led.startTime;
+    return () => roll.cancel();
+  }, [width]);
   const step = PHASES.indexOf(state.phase);
   const colored = Boolean(banner.color);
   const ink = colored ? "#120a24" : "#fff";
@@ -149,7 +177,7 @@ export default function GGTopBar({
 
       {/* Left: the wordmark. */}
       <div className="pointer-events-auto absolute left-5 top-[16px] hidden md:block">
-        <div className="gg-brush gg-brush-live" style={{ fontSize: 34, lineHeight: 1 }} data-text="The Great Game">
+        <div ref={wordmark} className="gg-brush gg-brush-live" style={{ fontSize: 34, lineHeight: 1 }}>
           The Great Game
         </div>
         <div className="mt-[5px] flex items-center gap-2.5 pl-1">
