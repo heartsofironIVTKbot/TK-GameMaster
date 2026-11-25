@@ -1,12 +1,13 @@
 "use client";
 
-import { ArrowRight, Ban, ChevronDown, Crosshair, Film, Layers, Lock, Orbit, Rows3, ShieldCheck, Ticket, Users } from "lucide-react";
+import { ArrowRight, ChevronDown, Film, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { PHASE_LABEL, PHASES } from "@/lib/greatGame/model";
 import type { GGPublic } from "@/lib/greatGame/public";
 import { displayName, Flag } from "../ggUi";
 import GGFrontScene, { type SceneMajor } from "./GGFrontScene";
+import GGFrontSteps from "./GGFrontSteps";
 
 /**
  * The Great Game 2026 front page (/greatgame): the poster as a live scene,
@@ -19,17 +20,6 @@ import GGFrontScene, { type SceneMajor } from "./GGFrontScene";
 export const GG_DATES: { key: string; label: string; date: string; time: string | null; confirmed: boolean; note: string }[] = [
   { key: "draft", label: "The draft", date: "2026-11-29", time: null, confirmed: false, note: "Captains, majors, bans and picks, live on stream" },
   { key: "game", label: "Game day", date: "2026-12-27", time: null, confirmed: true, note: "Seven teams, one map, Road to 56" },
-];
-
-const STEPS: { icon: ReactNode; title: string; text: string }[] = [
-  { icon: <Orbit size={22} />, title: "Captain order", text: "The lottery drum draws the seven captains, one ball at a time." },
-  { icon: <Rows3 size={22} />, title: "Majors", text: "In drum order, the reel hands each captain a major." },
-  { icon: <Ticket size={22} />, title: "Vice-captains", text: "Each team scratches a ticket to reveal its content-creator vice." },
-  { icon: <Layers size={22} />, title: "Recruits", text: "Two rounds of face-down cards deal out the fourteen recruits." },
-  { icon: <Ban size={22} />, title: "Bans", text: "One ban per team, from the strongest major to the weakest." },
-  { icon: <Crosshair size={22} />, title: "Minor draft", text: "Three snake rounds, weakest major first: 21 minors taken." },
-  { icon: <Users size={22} />, title: "Assign players", text: "Ten minutes for every team to put its players on its nations." },
-  { icon: <Lock size={22} />, title: "Teams locked", text: "The final lobby is set and the fairness seed is revealed." },
 ];
 
 // Neon colours for the majors on the globe before teams own them.
@@ -264,27 +254,12 @@ function Format({ event }: { event: GGPublic | null }) {
 }
 
 function Steps({ event }: { event: GGPublic | null }) {
-  const current = event?.started ? PHASES.indexOf(event.phase) : -1;
   return (
     <section id="draft" className="ggf-section">
-      <SectionHead kicker="The draft" title="Eight steps, all on stream">
-        Every random result comes from a seed sealed before the night, so nobody, organizers included, can steer a draw.
+      <SectionHead kicker="The draft" title="How it works, step by step">
+        Eight steps, all live on stream. Every random result comes from a seed sealed before the night, so nobody, organizers included, can steer a draw.
       </SectionHead>
-      <ol className="ggf-steps">
-        {STEPS.map((step, i) => {
-          const n = i + 1;
-          const state = n < current || (n === current && event?.phaseDone) || event?.phase === "locked" ? "is-done" : n === current ? "is-now" : "";
-          return (
-            <li key={step.title} className={`ggf-step ${state}`}>
-              <span className="ggf-step-icon">{step.icon}</span>
-              <span className="ggf-step-n">{String(n).padStart(2, "0")}</span>
-              <h3>{step.title}</h3>
-              <p>{step.text}</p>
-              {state === "is-now" && <span className="ggf-step-live">Live</span>}
-            </li>
-          );
-        })}
-      </ol>
+      <GGFrontSteps event={event} />
     </section>
   );
 }
