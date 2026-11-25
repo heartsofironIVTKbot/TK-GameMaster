@@ -49,7 +49,10 @@ function Shell({
   name,
   children,
   action,
+  wide = false,
 }: {
+  /** No team drawer beside it (the drum and the reel): the stage can use more of the screen. */
+  wide?: boolean;
   step: string;
   title: string;
   progress?: string;
@@ -138,7 +141,7 @@ function Shell({
   return (
     <div className={`absolute inset-0 ${full ? "z-[1080]" : "z-[1050]"}`} style={{ top: 84 }}>
       <div ref={dimRef} className="gg-overlay-dim" style={full ? { background: "rgba(8,4,18,.85)" } : undefined} />
-      <section ref={stageRef} className={`gg-stage absolute ${full ? "gg-stage-full" : "gg-stage-normal"}`}>
+      <section ref={stageRef} className={`gg-stage absolute ${full ? "gg-stage-full" : `gg-stage-normal ${wide ? "gg-stage-wide" : ""}`}`}>
         <div className="gg-stage-inner flex flex-col">
           <GGStageScene anchorRef={anchorRef} />
           <div className="relative flex items-start justify-between gap-4 px-7 pt-5">
@@ -178,20 +181,48 @@ function Shell({
   );
 }
 
-/** The result beside a machine: a card glowing in the team's colour. */
-function ResultCard({ color, kicker, title, sub, media }: { color: string; kicker: string; title: string; sub: React.ReactNode; media: React.ReactNode }) {
-  return (
-    <div className="gg-result gg-pop" style={{ ["--team" as string]: color }}>
-      <div className="gg-result-kicker">{kicker}</div>
-      <div className="my-3 flex justify-center">{media}</div>
-      <div className="gg-result-title">{title}</div>
-      <div className="gg-result-sub">{sub}</div>
-    </div>
-  );
+/**
+ * The team box on the stage's right (in place of the left drawer during the
+ * drum and the reel): every team with its captain's picture, in order, the
+ * newest result lit up in the team's colour.
+ */
+interface TeamRow {
+  team: GGTeam;
+  place: number | null;
+  side: React.ReactNode;
+  sub?: string;
+  lit: boolean;
+  dim: boolean;
+  next?: boolean;
 }
 
-function ResultWaiting({ children }: { children: React.ReactNode }) {
-  return <div className="gg-result gg-result-waiting">{children}</div>;
+function TeamBox({ label, rows, state, footer }: { label: string; rows: TeamRow[]; state: GGState; footer?: React.ReactNode }) {
+  return (
+    <div className="gg-teambox">
+      <div className="gg-teambox-label">{label}</div>
+      <div className="grid gap-1">
+        {rows.map((row) => {
+          const captain = person(state, row.team.captain);
+          return (
+            <div
+              key={`${row.team.id}:${row.lit ? "lit" : ""}`}
+              className={`gg-teambox-row ${row.lit ? "is-lit gg-pop" : ""} ${row.dim ? "is-dim" : ""} ${row.next ? "is-next" : ""}`}
+              style={{ ["--team" as string]: row.team.color }}
+            >
+              <span className="gg-teambox-place">{row.place ?? "·"}</span>
+              <Avatar id={row.team.captain} name={captain?.name ?? row.team.name} color={row.team.color} size={30} />
+              <span className="min-w-0 flex-1">
+                <span className="gg-teambox-name">{row.team.name}</span>
+                <span className="gg-teambox-sub">{row.sub ?? `Captain ${captain?.name ?? "?"}`}</span>
+              </span>
+              <span className="gg-teambox-side">{row.side}</span>
+            </div>
+          );
+        })}
+      </div>
+      {footer}
+    </div>
+  );
 }
 
 /**
@@ -279,10 +310,9 @@ function Drum({ state, viewer, act, now, clock, avatars }: { state: GGState; vie
   const onLanded = useCallback((seq: number) => setLandedSeq(seq), []);
   const ballOut = playing ? landedSeq === state.last_draw?.seq : state.order.length > 0;
   const shown = playing && !ballOut ? state.order.length - 1 : state.order.length;
-  const newest = teamById(state, state.order.at(-1));
-  const captain = newest ? person(state, newest.captain) : null;
   return (
     <Shell
+      wide
       step="Step 1 · Captain order"
       title={state.phase_done && ballOut ? "The order is set" : "Who rolls their major first?"}
       progress={`${shown} / ${state.teams.length}`}
@@ -297,35 +327,23 @@ function Drum({ state, viewer, act, now, clock, avatars }: { state: GGState; vie
         />
       }
     >
-      <div className="relative mx-auto w-full" style={{ maxWidth: "calc((100vh - var(--gg-stage-room)) * 1000 / 540)" }}>
+      <div className="mx-auto w-full" style={{ maxWidth: "calc((100vh - var(--gg-stage-room)) * 1000 / 540)" }}>
         <GGAirLottery state={state} clock={clock} avatars={avatars} onLanded={onLanded} />
-        <div className="absolute right-0 top-[46%] w-[clamp(190px,22%,300px)] -translate-y-1/2">
-          {newest && ballOut ? (
-            <ResultCard
-              key={state.order.length}
-              color={newest.color}
-              kicker={`${ordinal(state.order.length)} to roll`}
-              title={newest.name}
-              sub={`Captain ${captain?.name ?? "?"}`}
-              media={<Avatar id={newest.captain} name={captain?.name ?? newest.name} color={newest.color} size={104} />}
-            />
-          ) : (
-            <ResultWaiting>
-              {playing ? (
-                <>
-                  <span className="gg-result-kicker" style={{ color: "var(--gg-cyan)" }}>
-                    Drawing
-                  </span>
-                  <span>The air is up. One ball is about to be caught.</span>
-                </>
-              ) : (
-                <>
-                  <span className="gg-result-kicker">Ball 1</span>
-                  <span>The first ball caught rolls their major first.</span>
-                </>
-              )}
-            </ResultWaiting>
-          )}
+        {/* Pinned to the stage's right edge (the content area), clear of the machine. */}
+        <div className="absolute right-7 top-[46%] -translate-y-1/2">
+          <TeamBox
+            label={playing && !ballOut ? "Drawing…" : state.phase_done ? "The order" : "Roll order"}
+            rows={[
+              ...state.order.slice(0, shown).map((id, i) => {
+                const team = teamById(state, id)!;
+                return { team, place: i + 1, side: ordinal(i + 1), lit: ballOut && i === shown - 1, dim: false };
+              }),
+              ...state.teams
+                .filter((team) => !state.order.slice(0, shown).includes(team.id))
+                .map((team) => ({ team, place: null, side: "In the moon", lit: false, dim: true })),
+            ]}
+            state={state}
+          />
         </div>
       </div>
     </Shell>
@@ -351,6 +369,7 @@ function Majors({ state, viewer, act, now, clock }: { state: GGState; viewer: GG
   const onReel = majors.filter((tag) => !owner(tag) || (p !== null && !landed && draw?.value === tag));
   return (
     <Shell
+      wide
       step="Step 2 · Majors"
       title={p !== null && resultTeam && draw ? (landed ? `${resultTeam.name} get ${nationName(state, draw.value)}` : `Spinning for ${resultTeam.name}`) : spinning ? `${spinning.name} spins next` : "Every major is drawn"}
       progress={`${state.teams.filter((t) => t.major).length - (p !== null && !landed ? 1 : 0)} / ${state.teams.length}`}
@@ -365,34 +384,43 @@ function Majors({ state, viewer, act, now, clock }: { state: GGState; viewer: GG
         />
       }
     >
-      <div className="relative mx-auto w-full" style={{ maxWidth: "calc((100vh - var(--gg-stage-room)) * 1000 / 440)" }}>
+      <div className="mx-auto w-full" style={{ maxWidth: "calc((100vh - var(--gg-stage-room)) * 1000 / 440)" }}>
         <div className="mx-auto w-[52%] min-w-[300px]">
           <GGMajorReel state={state} clock={clock} />
         </div>
-        <div className="absolute right-0 top-1/2 w-[clamp(190px,22%,300px)] -translate-y-1/2">
-          {landed && resultTeam && draw ? (
-            <ResultCard
-              key={draw.seq}
-              color={resultTeam.color}
-              kicker={`${resultTeam.name} plays`}
-              title={nationName(state, draw.value)}
-              sub={`${ordinal(state.config.majors.indexOf(draw.value) + 1)} strongest of ${state.config.majors.length}`}
-              media={<Flag tag={draw.value} w={112} h={72} />}
-            />
-          ) : (
-            <ResultWaiting>
-              <span className="gg-result-kicker" style={p !== null ? { color: "var(--gg-cyan)" } : undefined}>
-                {p !== null ? "Spinning" : "Next spin"}
-              </span>
-              <span>{p !== null ? "Watch the window." : spinning ? `${spinning.name}'s major is drawn next.` : "Every team has its major."}</span>
-            </ResultWaiting>
-          )}
-          <div className="gg-label mt-4">Still on the reel</div>
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {onReel.map((tag) => (
-              <Flag key={tag} tag={tag} w={40} h={26} title={nationName(state, tag)} />
-            ))}
-          </div>
+        <div className="absolute right-7 top-1/2 -translate-y-1/2">
+          <TeamBox
+            label="Majors"
+            rows={state.order
+              .map((id) => teamById(state, id))
+              .filter((team): team is GGTeam => Boolean(team))
+              .map((team, i) => {
+                const rolling = p !== null && !landed && draw?.team === team.id;
+                const major = rolling ? null : team.major;
+                return {
+                  team,
+                  place: i + 1,
+                  side: major ? <Flag tag={major} w={30} h={19} title={nationName(state, major)} /> : rolling ? "Spinning…" : spinning?.id === team.id ? "Spins next" : "",
+                  sub: major ? nationName(state, major) : undefined,
+                  lit: landed && draw?.team === team.id && p !== null,
+                  dim: !major && !rolling && spinning?.id !== team.id,
+                  next: spinning?.id === team.id && p === null,
+                };
+              })}
+            state={state}
+            footer={
+              onReel.length > 0 && (
+                <>
+                  <div className="gg-label mb-1.5 mt-3">Still on the reel</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {onReel.map((tag) => (
+                      <Flag key={tag} tag={tag} w={34} h={22} title={nationName(state, tag)} />
+                    ))}
+                  </div>
+                </>
+              )
+            }
+          />
         </div>
       </div>
     </Shell>

@@ -26,7 +26,12 @@ export default function GGApp({ slug }: { slug: string }) {
   const { state, viewer, error, considering, act, consider, reveal, serverNow, demo, avatars } = game;
   const [selected, setSelected] = useState<string | null>(null);
   const [panel, setPanel] = useState<"log" | "controls" | null>(null);
-  const [drawerOpen, setDrawerOpen] = useState(true);
+  // The team drawer: shown by default, except during the drum and the reel,
+  // whose stage has its own team box (it can still be opened).
+  const [drawerChoice, setDrawerChoice] = useState<{ map: boolean | null; stage: boolean | null }>({ map: null, stage: null });
+  const onStage = state?.phase === "drum" || state?.phase === "wheel";
+  const drawerOpen = (onStage ? drawerChoice.stage : drawerChoice.map) ?? !onStage;
+  const setDrawerOpen = (open: boolean) => setDrawerChoice((choice) => ({ ...choice, [onStage ? "stage" : "map"]: open }));
   const now = serverNow();
   // Re-render 5 times a second only while something counts: a turn clock or a draw animation.
   const counting = Boolean(

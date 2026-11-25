@@ -316,6 +316,11 @@
    --gg-stage-room is the height the machines leave for everything else. */
 .gg-stage-normal {
   --gg-stage-w: clamp(min(720px, calc(100vw - 32px)), calc(100vw - 720px), 2200px);
+}
+.gg-stage-normal.gg-stage-wide {
+  --gg-stage-w: clamp(min(720px, calc(100vw - 32px)), calc(100vw - 160px), 2200px);
+}
+.gg-stage-normal {
   --gg-stage-room: 430px;
   top: 136px;
   left: calc(50% - var(--gg-stage-w) / 2);
@@ -399,6 +404,76 @@
   color: var(--gg-fg-2);
   font-size: 14px;
   text-align: center;
+}
+
+/* The team box on the stage's right. */
+.gg-teambox {
+  width: clamp(250px, 24vw, 330px);
+  padding: 14px 12px 14px;
+  border-radius: 18px;
+  background: rgba(14, 7, 30, 0.94);
+  border: 2px solid rgba(255, 43, 214, 0.45);
+  box-shadow: 0 0 26px rgba(255, 43, 214, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+.gg-teambox-label {
+  margin: 0 4px 8px;
+  font: 800 12px/1 var(--gg-digit);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--gg-cyan);
+}
+.gg-teambox-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  border-left: 3px solid var(--team);
+  background: rgba(255, 255, 255, 0.03);
+  transition: background 0.3s, box-shadow 0.3s, opacity 0.3s;
+}
+.gg-teambox-row.is-lit {
+  background: color-mix(in srgb, var(--team) 24%, #120a24);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--team) 55%, transparent);
+}
+.gg-teambox-row.is-next {
+  box-shadow: 0 0 0 1px var(--gg-cyan), 0 0 14px rgba(34, 229, 255, 0.35);
+}
+.gg-teambox-row.is-dim {
+  opacity: 0.55;
+}
+.gg-teambox-place {
+  width: 16px;
+  flex-shrink: 0;
+  text-align: center;
+  font: 800 13px/1 var(--gg-digit);
+  color: var(--gg-fg-2);
+}
+.gg-teambox-name {
+  display: block;
+  font: 800 17px/1.05 var(--gg-display);
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.gg-teambox-sub {
+  display: block;
+  font-size: 11.5px;
+  color: var(--gg-fg-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.gg-teambox-side {
+  flex-shrink: 0;
+  font: 700 11px/1 var(--gg-digit);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--team);
+}
+.gg-teambox-row.is-dim .gg-teambox-side {
+  color: var(--gg-fg-3);
 }
 
 /* The result beside a machine. */

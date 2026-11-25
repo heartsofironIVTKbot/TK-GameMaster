@@ -5,8 +5,8 @@ import { createContext, useEffect, useRef, type MutableRefObject } from "react";
 /**
  * The randomizer stage's backdrop: an outrun night like the event poster,
  * always on the move. A starry violet sky, wireframe mountains rolling past on
- * both sides, neon palms (cyan on the left, pink on the right) lining a wet
- * road that mirrors the light at its end, and a cyan grid floor, all flying
+ * both sides, neon palms (cyan on the left, pink on the right) lining a road
+ * with glowing edges, and a cyan grid floor, all flying
  * towards the viewer at one speed, out of a haze on the horizon. A shooting
  * star crosses the sky about every ten seconds.
  *
@@ -134,8 +134,9 @@ function drawPlanet(ctx: CanvasRenderingContext2D, v: View, time: number) {
 function drawFloor(ctx: CanvasRenderingContext2D, v: View, travel: number) {
   const { w, h, hy } = v;
   const floor = ctx.createLinearGradient(0, hy, 0, h);
-  floor.addColorStop(0, "#2a0b48");
-  floor.addColorStop(0.25, "#120725");
+  floor.addColorStop(0, "#6a1776");
+  floor.addColorStop(0.06, "#3a0f5c");
+  floor.addColorStop(0.3, "#120725");
   floor.addColorStop(1, "#070312");
   ctx.fillStyle = floor;
   ctx.fillRect(0, hy, w, h - hy);
@@ -194,37 +195,14 @@ function drawFloor(ctx: CanvasRenderingContext2D, v: View, travel: number) {
       ctx.stroke();
     }
   }
-  // Reflection: the glow at the road's end mirrored down the wet asphalt.
-  const [rl, ry] = project(v, -ROAD * 0.55, 0, near);
-  const [rr] = project(v, ROAD * 0.55, 0, near);
-  const shine = ctx.createLinearGradient(0, fy, 0, ry);
-  shine.addColorStop(0, "rgba(255,150,240,.55)");
-  shine.addColorStop(0.25, "rgba(255,79,224,.22)");
-  shine.addColorStop(1, "rgba(255,79,224,0)");
-  ctx.fillStyle = shine;
-  ctx.beginPath();
-  ctx.moveTo(v.cx, fy);
-  ctx.lineTo(rr, ry);
-  ctx.lineTo(rl, ry);
-  ctx.closePath();
-  ctx.fill();
-  // The edge lights mirrored faintly just inside the road.
-  ctx.strokeStyle = "rgba(255,79,224,.16)";
-  ctx.lineWidth = 3;
-  for (const side of [-1, 1]) {
-    const [ax, ay] = project(v, side * ROAD * 0.86, 0, near);
-    const [bx, by] = project(v, side * ROAD * 0.86, 0, far);
-    ctx.beginPath();
-    ctx.moveTo(ax, ay);
-    ctx.lineTo(bx, by);
-    ctx.stroke();
-  }
   const dash = travel % 4;
-  ctx.fillStyle = "rgba(255,214,247,.85)";
-  for (let z = 4 - dash; z < far; z += 4) {
-    if (z < 1.6) continue;
-    const [ax, ay] = project(v, -0.05, 0, z);
-    const [cx] = project(v, 0.05, 0, z);
+  for (let z = -dash; z < far; z += 4) {
+    if (z + 1.6 <= near) continue;
+    // Clipped at the camera so a dash slides out of view instead of vanishing.
+    const z0 = Math.max(z, near);
+    ctx.fillStyle = `rgba(255,214,247,${0.85 * Math.min(1, (far - z) / 24)})`;
+    const [ax, ay] = project(v, -0.05, 0, z0);
+    const [cx] = project(v, 0.05, 0, z0);
     const [bx, by] = project(v, 0.05, 0, z + 1.6);
     const [dx] = project(v, -0.05, 0, z + 1.6);
     ctx.beginPath();
@@ -289,13 +267,14 @@ function drawMountains(ctx: CanvasRenderingContext2D, v: View, travel: number, t
  */
 function drawHaze(ctx: CanvasRenderingContext2D, v: View) {
   const band = v.h * 0.06;
-  const haze = ctx.createLinearGradient(0, v.hy - band, 0, v.hy + band * 0.6);
-  haze.addColorStop(0, "rgba(122,26,125,0)");
-  haze.addColorStop(0.62, "rgba(122,26,125,.5)");
-  haze.addColorStop(0.76, "rgba(90,20,110,.38)");
-  haze.addColorStop(1, "rgba(42,11,72,0)");
+  const haze = ctx.createLinearGradient(0, v.hy - band, 0, v.hy + band);
+  haze.addColorStop(0, "rgba(106,23,118,0)");
+  haze.addColorStop(0.3, "rgba(106,23,118,.3)");
+  haze.addColorStop(0.5, "rgba(106,23,118,.42)");
+  haze.addColorStop(0.7, "rgba(80,18,100,.3)");
+  haze.addColorStop(1, "rgba(58,15,92,0)");
   ctx.fillStyle = haze;
-  ctx.fillRect(0, v.hy - band, v.w, band * 1.6);
+  ctx.fillRect(0, v.hy - band, v.w, band * 2);
 }
 
 /** A shooting star now and then: a bright head and a fading tail, in a random direction. */
