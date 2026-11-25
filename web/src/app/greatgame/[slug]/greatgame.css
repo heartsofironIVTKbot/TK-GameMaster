@@ -54,28 +54,20 @@
   filter: drop-shadow(0 0 8px rgba(255, 43, 214, 0.5));
 }
 
-/* The top bar's wordmark: its neon colours roll on (one step to the right, with a brighter glow)
-   exactly while the light chasing along the LEDs above passes over it (timed in GGTopBar). The
-   gradient repeats every third, so each roll ends looking like the start. */
+/* The top bar's wordmark, alive: the neon colours flow through the letters and the glow breathes. */
 .gg-brush-live {
-  background-image: linear-gradient(
-    90deg,
-    var(--gg-pink) 0%,
-    #b46bff 8.33%,
-    var(--gg-cyan) 16.67%,
-    #b46bff 25%,
-    var(--gg-pink) 33.33%,
-    #b46bff 41.67%,
-    var(--gg-cyan) 50%,
-    #b46bff 58.33%,
-    var(--gg-pink) 66.67%,
-    #b46bff 75%,
-    var(--gg-cyan) 83.33%,
-    #b46bff 91.67%,
-    var(--gg-pink) 100%
-  );
+  background-image: linear-gradient(90deg, var(--gg-pink), #b46bff, var(--gg-cyan), #b46bff, var(--gg-pink));
   background-size: 300% 100%;
-  background-position: 100% 0;
+  animation:
+    gg-brush-flow 7s linear infinite,
+    gg-brush-glow 3.2s ease-in-out infinite;
+}
+@keyframes gg-brush-flow {
+  to { background-position: -300% 0; }
+}
+@keyframes gg-brush-glow {
+  0%, 100% { filter: drop-shadow(0 0 6px rgba(255, 43, 214, 0.45)); }
+  50% { filter: drop-shadow(0 0 14px rgba(255, 43, 214, 0.85)) drop-shadow(0 0 22px rgba(34, 229, 255, 0.35)); }
 }
 
 .gg-chrome {
