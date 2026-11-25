@@ -27,11 +27,11 @@ export default function GGPoolPanel({ state, onSelect }: { state: GGState; onSel
     <aside className="gg-pool gg-scroll" aria-label="Minors still in the pool">
       <div className="gg-pool-head">
         <div className="gg-teambox-label" style={{ margin: 0 }}>
-          Still bannable · {free.length}
+          {state.phase === "draft" ? "Still free" : "Still bannable"} · {free.length}
         </div>
         {turn && (
           <div className="gg-pool-turn" style={{ ["--team" as string]: turn.color }}>
-            {turn.name} ban next
+            {turn.name} {state.phase === "draft" ? "pick next" : "ban next"}
           </div>
         )}
         <label className="gg-pool-search">

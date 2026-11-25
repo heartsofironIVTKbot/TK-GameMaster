@@ -31,10 +31,11 @@ import type { Considering } from "./useGreatGame";
  *  - from the assignment window on, every unclaimed nation is AI grey, and
  *    once the teams lock each team's nations go solid in its colour.
  *
- * During the bans the map is painted for reading at a glance: the minors
- * still in the pool keep their bright colours, banned ones go dark red with
- * a red cross-hatch and a BANNED stamp, the majors sit calm in their team's
- * colour, and everything outside the pool is grey.
+ * During the bans and the draft the map is painted for reading at a glance:
+ * the minors still free keep their bright colours, banned ones go dark red
+ * with a red cross-hatch and a BANNED stamp, the majors sit calm in their
+ * team's colour, a drafted minor goes solid in its team's colour, and
+ * everything outside the pool is grey.
  */
 
 const AI = "#3b3650";
@@ -76,11 +77,13 @@ export function paintFor(state: GGState): (tag: string, base: string) => MapPain
   const color = new Map(state.teams.map((team) => [team.id, team.color]));
   const late = state.phase === "assign" || state.phase === "locked";
   const locked = state.phase === "locked";
-  if (state.phase === "bans") {
+  if (state.phase === "bans" || state.phase === "draft") {
     const pool = new Set(state.config.pool);
+    const majors = new Set(state.teams.map((team) => team.major).filter(Boolean));
     return (tag, base) => {
       const team = owner.get(tag);
-      if (team) return { fill: calm(color.get(team) ?? base), hatch: null, stamp: false };
+      // Majors calm in their team's colour; a drafted minor solid in it, so each team's bloc shows.
+      if (team) return { fill: majors.has(tag) ? calm(color.get(team) ?? base) : (color.get(team) ?? base), hatch: null, stamp: false };
       if (banned.has(tag)) return { fill: BANNED_FILL, hatch: "banned", stamp: true };
       return { fill: pool.has(tag) ? base : OUT, hatch: null, stamp: false };
     };
@@ -423,7 +426,7 @@ function GGMap({
       out.push({
         key: `${teamId}:${entry.tag}`,
         at: anchorMap.get(entry.tag)!,
-        icon: L.divIcon({ className: "", html: `<div class="gg-eye" style="--team:${team.color}"><b>${name}</b> eyeing…</div>`, iconSize: [0, 0], iconAnchor: [0, 34] }),
+        icon: L.divIcon({ className: "", html: `<div class="gg-eye" style="--team:${team.color}"><b>${name}</b> eyeing…</div>`, iconSize: [0, 0], iconAnchor: [0, 60] }),
       });
     }
     return out;
@@ -432,6 +435,17 @@ function GGMap({
     if (!data || !glowTags.size) return null;
     return { type: "FeatureCollection" as const, features: data.features.filter((feature) => glowTags.has(feature.properties.tag)) };
   }, [data, glowTags]);
+
+  // A nation drafted just now flashes white in its team's colour outline.
+  const flash = useMemo(() => {
+    if (!data) return null;
+    const undone = new Set(state.log.filter((entry) => entry.kind === "undo").map((entry) => Number(entry.payload.seq)));
+    const latest = [...state.log].reverse().find((entry) => entry.kind === "pick.set" && !undone.has(entry.seq) && entry.payload.tag);
+    if (!latest || state.now - latest.at > 4000) return null;
+    const tag = String(latest.payload.tag);
+    const team = state.teams.find((entry) => entry.id === latest.payload.team);
+    return { key: `${latest.seq}:${tag}`, color: team?.color ?? "#fff", data: { type: "FeatureCollection" as const, features: data.features.filter((feature) => feature.properties.tag === tag) } };
+  }, [data, state.log, state.now, state.teams]);
 
   // A stamp slams down when its ban is fresh; bans already in when the page opened just sit there.
   const stamps = useMemo(() => {
@@ -478,7 +492,7 @@ function GGMap({
       <MapSetup world={world} initialViewRef={viewRef} />
       <RedrawAhead renderer={renderer} />
       <MotionWatch onMoving={onMoving} />
-      <FrameVisible world={world} intent={mapStep ? EUROPE_CLOSE : EUROPE} left={340} top={140} right={state.phase === "bans" ? 300 : 0} />
+      <FrameVisible world={world} intent={mapStep ? EUROPE_CLOSE : EUROPE} left={340} top={140} right={mapStep ? 300 : 0} />
       <Patterns teams={state.teams} />
       <GeoJSON
         ref={baseRef}
@@ -541,6 +555,18 @@ function GGMap({
             (layer as L.Polygon).options.noClip = true;
           }}
           style={{ fillColor: "#ffd23f", fillOpacity: 0.12, color: "#ffd23f", weight: 4, className: "gg-glow" }}
+          {...{ renderer }}
+        />
+      )}
+      {flash && (
+        <GeoJSON
+          key={`f:${flash.key}`}
+          data={flash.data}
+          interactive={false}
+          onEachFeature={(_feature: NationFeature, layer) => {
+            (layer as L.Polygon).options.noClip = true;
+          }}
+          style={{ fillColor: "#ffffff", fillOpacity: 0, color: flash.color, weight: 4, className: "gg-pick-flash" }}
           {...{ renderer }}
         />
       )}

@@ -500,6 +500,23 @@
   60% { transform: translate(-50%, -50%) rotate(-12deg) scale(0.92); opacity: 1; }
   100% { transform: translate(-50%, -50%) rotate(-14deg) scale(1); opacity: 1; }
 }
+.gg-banslam-stamp.is-pick {
+  font-size: 50px;
+  white-space: nowrap;
+  color: var(--team);
+  border-color: var(--team);
+  background: color-mix(in srgb, var(--team) 18%, rgba(14, 8, 30, 0.7));
+  text-shadow: 0 0 18px color-mix(in srgb, var(--team) 80%, transparent);
+  box-shadow: 0 0 30px color-mix(in srgb, var(--team) 60%, transparent), inset 0 0 18px color-mix(in srgb, var(--team) 40%, transparent);
+}
+/* A freshly drafted nation flashes on the map. */
+.gg-pick-flash {
+  animation: gg-pick-flash 1.6s ease-out both;
+}
+@keyframes gg-pick-flash {
+  0% { fill-opacity: 0.95; stroke-opacity: 1; }
+  100% { fill-opacity: 0; stroke-opacity: 0; }
+}
 .gg-shake {
   animation: gg-shake 0.42s 0.3s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
 }
@@ -515,6 +532,81 @@
 @keyframes gg-ban-in {
   0% { transform: scale(2.4) rotate(-12deg); opacity: 0; }
   100% { transform: none; opacity: 1; }
+}
+
+/* ---------- Step 6: the snake wheel (drawer) ---------- */
+.gg-snake {
+  margin: 2px 10px 10px;
+  padding: 12px 8px 10px;
+  border-radius: 16px;
+  background: radial-gradient(circle at 50% 42%, rgba(138, 43, 226, 0.22), rgba(14, 8, 30, 0.2) 70%);
+  border: 1px solid var(--gg-line-2);
+}
+.gg-snake-now {
+  animation: gg-snake-now 1.2s ease-in-out infinite;
+  filter: drop-shadow(0 0 7px #ffd23f);
+}
+@keyframes gg-snake-now {
+  50% { fill-opacity: 0.55; }
+}
+.gg-snake-pointer {
+  transition: transform 0.9s cubic-bezier(0.2, 0.9, 0.3, 1.15);
+}
+.gg-snake-mid {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  pointer-events: none;
+  text-align: center;
+}
+.gg-snake-team {
+  max-width: 128px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 900 18px/1 var(--gg-display);
+  text-transform: uppercase;
+}
+.gg-snake-pick {
+  font: 700 11px/1 var(--gg-digit);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gg-fg-3);
+}
+.gg-snake-pick b {
+  font-size: 15px;
+  color: #fff;
+}
+.gg-snake-next {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  margin-top: 6px;
+}
+.gg-snake-next-label {
+  font: 800 10px/1 var(--gg-digit);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gg-fg-3);
+}
+.gg-snake-chip {
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--team) 60%, transparent);
+  background: color-mix(in srgb, var(--team) 14%, transparent);
+  font: 800 12px/1 var(--gg-display);
+  text-transform: uppercase;
+  color: var(--team);
+}
+.gg-snake-chip b {
+  font-family: var(--gg-digit);
+  color: var(--gg-fg-2);
 }
 
 /* The turn clock's last ten seconds. */
@@ -1334,6 +1426,8 @@
   .gg-eye,
   .gg-clock-urgent,
   .gg-dock-halo,
+  .gg-snake-now,
+  .gg-snake-pointer,
   .gg-ticket,
   .gg-ticket-prize,
   .gg-spincard-result,

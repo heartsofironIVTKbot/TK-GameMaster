@@ -73,7 +73,9 @@ function RowEnd({ state, team }: { state: GGState; team: GGTeam }) {
         <span className="flex gap-1">
           {team.picks.map((pick, index) =>
             pick ? (
-              <Flag key={index} tag={pick} w={24} h={16} title={nationName(state, pick)} />
+              <span key={`${index}:${pick}`} className="gg-ban-in inline-flex">
+                <Flag tag={pick} w={24} h={16} title={nationName(state, pick)} />
+              </span>
             ) : (
               <EmptySlot key={index} pulse={state.turn.team === team.id && state.turn.round === index + 1} />
             ),
@@ -190,68 +192,117 @@ function AssignList({ state, team, act, canEdit }: { state: GGState; team: GGTea
   );
 }
 
+/**
+ * The draft's centrepiece: the 21 picks in snake order round a ring, three
+ * rounds of seven. A picked segment fills with its team's colour and shows
+ * the nation's flag; the pick on the clock glows yellow and pulses, with a
+ * pointer outside the ring that sweeps on to the next segment after every
+ * pick. In the middle: the team on the clock, its captain and the pick
+ * number; under the ring, who picks next.
+ */
 function SnakeWheel({ state }: { state: GGState }) {
   const order = draftOrder(state.teams, state.config.majors);
   const byId = new Map(state.teams.map((team) => [team.id, team]));
-  const cx = 110;
-  const cy = 110;
-  const r1 = 100;
-  const r2 = 72;
-  const P = (r: number, a: number) => `${(cx + r * Math.cos(a)).toFixed(1)},${(cy + r * Math.sin(a)).toFixed(1)}`;
+  const SIZE = 250;
+  const cx = SIZE / 2;
+  const cy = SIZE / 2;
+  const r1 = 118;
+  const r2 = 80;
+  const rad = (deg: number) => (deg * Math.PI) / 180;
+  const P = (r: number, deg: number) => `${(cx + r * Math.cos(rad(deg))).toFixed(1)},${(cy + r * Math.sin(rad(deg))).toFixed(1)}`;
+  const seg = 360 / 21;
   const current = state.turn.pick ? state.turn.pick - 1 : -1;
+  const onClock = current >= 0 ? byId.get(order[current].team) : null;
+  const captain = onClock ? person(state, onClock.captain) : null;
+  const done = current < 0;
+  const next = done ? [] : order.slice(current + 1, current + 4);
   return (
-    <div className="flex items-center gap-3 px-3.5 pb-2">
-      <svg width="190" height="190" viewBox="0 0 220 220" role="img" aria-label={`Snake draft: pick ${state.turn.pick ?? 21} of 21`}>
-        {order.map((slot, i) => {
-          const a0 = ((-90 + (i * 360) / 21 + 1.3) * Math.PI) / 180;
-          const a1 = ((-90 + ((i + 1) * 360) / 21 - 1.3) * Math.PI) / 180;
-          const team = byId.get(slot.team)!;
-          const pick = team.picks[slot.round - 1];
-          const isCurrent = i === current;
-          const am = ((-90 + (i + 0.5) * (360 / 21)) * Math.PI) / 180;
-          return (
-            <g key={i}>
-              <path
-                d={`M${P(r1, a0)} A${r1} ${r1} 0 0 1 ${P(r1, a1)} L${P(r2, a1)} A${r2} ${r2} 0 0 0 ${P(r2, a0)} Z`}
-                fill={pick ? team.color : isCurrent ? "#ffd23f" : "transparent"}
-                fillOpacity={pick ? 0.85 : 1}
-                stroke={isCurrent ? "#ffd23f" : team.color}
-                strokeWidth={isCurrent ? 2 : 1.2}
-                strokeOpacity={pick ? 0 : 0.85}
-                style={isCurrent ? { filter: "drop-shadow(0 0 8px #ffd23f)" } : undefined}
-              >
-                <title>{`Pick ${slot.pick} · ${team.name}${pick ? ` · ${nationName(state, pick)}` : ""}`}</title>
-              </path>
-              {pick && <image href={`/assets_rt56/flags/${pick}.png`} x={cx + 86 * Math.cos(am) - 8} y={cy + 86 * Math.sin(am) - 5} width="16" height="10" />}
+    <div className="gg-snake">
+      <div className="relative mx-auto" style={{ width: SIZE, height: SIZE }}>
+        <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`} role="img" aria-label={done ? "Snake draft: every pick is in" : `Snake draft: pick ${current + 1} of 21`}>
+          {order.map((slot, i) => {
+            const a0 = -90 + i * seg + 0.9;
+            const a1 = -90 + (i + 1) * seg - 0.9;
+            const am = -90 + (i + 0.5) * seg;
+            const team = byId.get(slot.team)!;
+            const pick = team.picks[slot.round - 1];
+            const isNow = i === current;
+            return (
+              <g key={i}>
+                <path
+                  className={isNow ? "gg-snake-now" : undefined}
+                  d={`M${P(r1, a0)} A${r1} ${r1} 0 0 1 ${P(r1, a1)} L${P(r2, a1)} A${r2} ${r2} 0 0 0 ${P(r2, a0)} Z`}
+                  fill={pick ? team.color : isNow ? "#ffd23f" : hexA(team.color, 0.14)}
+                  fillOpacity={pick ? 0.92 : 1}
+                  stroke={isNow ? "#fff3b0" : team.color}
+                  strokeWidth={isNow ? 2 : 1.2}
+                  strokeOpacity={pick ? 0.4 : 0.9}
+                >
+                  <title>{`Pick ${slot.pick} · Round ${slot.round} · ${team.name}${pick ? ` · ${nationName(state, pick)}` : ""}`}</title>
+                </path>
+                {pick && (
+                  <image
+                    href={`/assets_rt56/flags/${pick}.png`}
+                    x={cx + 99 * Math.cos(rad(am)) - 10}
+                    y={cy + 99 * Math.sin(rad(am)) - 6.5}
+                    width="20"
+                    height="13"
+                    preserveAspectRatio="none"
+                  />
+                )}
+              </g>
+            );
+          })}
+          {/* Round boundaries, and their numbers just outside the ring. */}
+          {[0, 7, 14].map((i, round) => {
+            const a = -90 + i * seg;
+            const al = -90 + (i + 3.5) * seg;
+            return (
+              <g key={i}>
+                <line x1={cx + (r2 - 4) * Math.cos(rad(a))} y1={cy + (r2 - 4) * Math.sin(rad(a))} x2={cx + (r1 + 4) * Math.cos(rad(a))} y2={cy + (r1 + 4) * Math.sin(rad(a))} stroke="#fff" strokeWidth="2.2" strokeOpacity=".75" />
+                <text x={cx + 70 * Math.cos(rad(al))} y={cy + 70 * Math.sin(rad(al)) + 3.5} textAnchor="middle" fill="#8a7fb0" fontSize="9.5" fontWeight="800" letterSpacing="1">
+                  R{round + 1}
+                </text>
+              </g>
+            );
+          })}
+          {/* The pointer, sweeping on to the pick on the clock. */}
+          {!done && (
+            <g className="gg-snake-pointer" style={{ transform: `rotate(${(current + 0.5) * seg}deg)`, transformOrigin: `${cx}px ${cy}px` }}>
+              <path d={`M${cx - 7},${cy - r1 - 13} L${cx + 7},${cy - r1 - 13} L${cx},${cy - r1 - 3} Z`} fill="#ffd23f" style={{ filter: "drop-shadow(0 0 5px #ffd23f)" }} />
             </g>
-          );
-        })}
-        {[7, 14].map((i) => {
-          const a = ((-90 + (i * 360) / 21) * Math.PI) / 180;
-          return <line key={i} x1={cx + 66 * Math.cos(a)} y1={cy + 66 * Math.sin(a)} x2={cx + 106 * Math.cos(a)} y2={cy + 106 * Math.sin(a)} stroke="#fff" strokeWidth="1.5" strokeOpacity=".6" />;
-        })}
-        <text x="110" y="100" textAnchor="middle" fill="#b9aee0" fontSize="11" letterSpacing="2">
-          PICK
-        </text>
-        <text x="110" y="132" textAnchor="middle" fill="#fff" fontSize="36" fontWeight="900" fontFamily="var(--gg-display)">
-          {state.turn.pick ?? 21}
-        </text>
-        <text x="110" y="148" textAnchor="middle" fill="#8a7fb0" fontSize="10">
-          of 21
-        </text>
-      </svg>
-      <div className="min-w-0 text-[11.5px] leading-relaxed" style={{ color: "var(--gg-fg-2)" }}>
-        <div>Round {state.turn.round ?? 3}</div>
-        <div style={{ color: "var(--gg-fg-3)" }}>Next</div>
-        {order.slice(current + 1, current + 4).map((slot) => {
-          const team = byId.get(slot.team)!;
-          return (
-            <div key={slot.pick} className="truncate font-bold" style={{ color: team.color }}>
-              {team.name}
-            </div>
-          );
-        })}
+          )}
+        </svg>
+        {/* The middle: who's on the clock. */}
+        <div className="gg-snake-mid">
+          {onClock ? (
+            <>
+              <Avatar id={onClock.captain} name={captain?.name ?? onClock.name} color={onClock.color} size={40} />
+              <span className="gg-snake-team" style={{ color: onClock.color }}>
+                {onClock.name}
+              </span>
+              <span className="gg-snake-pick">
+                Pick <b>{current + 1}</b> / 21
+              </span>
+            </>
+          ) : (
+            <span className="gg-snake-team">All 21 in</span>
+          )}
+        </div>
       </div>
+      {next.length > 0 && (
+        <div className="gg-snake-next">
+          <span className="gg-snake-next-label">Next</span>
+          {next.map((slot) => {
+            const team = byId.get(slot.team)!;
+            return (
+              <span key={slot.pick} className="gg-snake-chip" style={{ ["--team" as string]: team.color }}>
+                <b>{slot.pick}</b> {team.name}
+              </span>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

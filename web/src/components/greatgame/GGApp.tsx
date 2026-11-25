@@ -141,8 +141,8 @@ export default function GGApp({ slug }: { slug: string }) {
         </button>
       )}
 
-      {/* During the bans: the minors still in the pool, on the right (a nation opens its card instead). */}
-      {state.phase === "bans" && !selected && !panel && <GGPoolPanel state={state} onSelect={select} />}
+      {/* During the bans and the draft: the minors still free, on the right (a selected nation shows its drawer instead). */}
+      {(state.phase === "bans" || state.phase === "draft") && !selected && !panel && <GGPoolPanel state={state} onSelect={select} />}
       <GGBanSlam state={state} now={now} />
       {selected && !panel && <GGNationPanel key={selected} state={state} viewer={viewer} tag={selected} act={act} onClose={() => select(null)} />}
       {panel === "log" && <GGLog state={state} organizer={viewer.organizer} act={act} onClose={() => setPanel(null)} />}
