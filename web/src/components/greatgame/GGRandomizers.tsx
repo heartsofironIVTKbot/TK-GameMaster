@@ -173,10 +173,11 @@ function Shell({
             </div>
           </div>
           <StageAnchorContext.Provider value={anchorRef}>
-            <div className="relative flex flex-1 flex-col justify-center px-7 pb-2 pt-1">{children}</div>
+            <div className="relative flex flex-1 flex-col justify-center px-7 pb-8 pt-1">{children}</div>
           </StageAnchorContext.Provider>
-          <div className="relative z-[2] flex justify-center px-7 pb-5 pt-1">{action}</div>
         </div>
+        {/* The one action straddles the stage's bottom edge, centred under the machine. */}
+        <div className="absolute bottom-0 left-1/2 z-[2] flex -translate-x-1/2 translate-y-1/2 justify-center">{action}</div>
       </section>
     </div>
   );
@@ -328,7 +329,7 @@ function Drum({ state, viewer, act, now, clock, avatars }: { state: GGState; vie
         />
       }
     >
-      <div className="mx-auto w-full" style={{ maxWidth: "calc((100vh - var(--gg-stage-room)) * 1000 / 540)" }}>
+      <div className="mx-auto w-full" style={{ maxWidth: "calc((100vh - var(--gg-stage-room)) * 1000 / 620)" }}>
         <GGAirLottery state={state} clock={clock} avatars={avatars} onLanded={onLanded} />
         {/* Pinned to the stage's right edge (the content area), clear of the machine. */}
         <div className="absolute right-7 z-[2] top-[46%] -translate-y-1/2">

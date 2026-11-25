@@ -48,7 +48,7 @@ const DONE_MS = LANDED_MS + SETTLE_MS;
 // The sphere is the scene's moon: it sits on the horizon at the end of the
 // road, and the canvas runs on below it (transparent) so the road shows.
 const W = 1000;
-const H = 540;
+const H = 620; // the moon, then road below it for the tank
 const CX = W / 2;
 const CY = 250;
 const R = 170;

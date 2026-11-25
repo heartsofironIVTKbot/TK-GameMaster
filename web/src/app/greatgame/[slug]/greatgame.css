@@ -321,18 +321,18 @@
   --gg-stage-w: clamp(min(720px, calc(100vw - 32px)), calc(100vw - 160px), 2200px);
 }
 .gg-stage-normal {
-  --gg-stage-room: 430px;
+  --gg-stage-room: 390px;
   top: 136px;
   left: calc(50% - var(--gg-stage-w) / 2);
   width: var(--gg-stage-w);
 }
 /* Full screen: the whole room under the top bar. */
 .gg-stage-full {
-  --gg-stage-room: 290px;
+  --gg-stage-room: 270px;
   top: 14px;
   left: 14px;
   right: 14px;
-  bottom: 14px;
+  bottom: 40px;
 }
 .gg-stage-full .gg-stage-inner {
   height: 100%;
