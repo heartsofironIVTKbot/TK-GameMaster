@@ -30,6 +30,7 @@ const no = (error: string): Decision => ({ ok: false, error });
 const ORGANIZER_ONLY = new Set<string>([
   "phase.set",
   "pause.set",
+  "clock.set",
   "drum.draw",
   "wheel.spin",
   "order.set",
@@ -158,6 +159,13 @@ function decideTurn(state: GGState, actor: GGActor, body: Record<string, unknown
     }
     case "pause.set":
       return action({ on: Boolean(body.on) });
+    case "clock.set": {
+      if (state.turn.seconds === null || state.turn.started_at === null) return no("No clock is running in this step.");
+      if (body.restart === true) return action({ restart: true });
+      const add = Math.round(Number(body.add));
+      if (!Number.isFinite(add) || add === 0 || Math.abs(add) > 3600) return no("Add between 1 second and an hour.");
+      return action({ add });
+    }
     case "undo": {
       const seq = Number(body.seq);
       const target = state.log.find((entry) => entry.seq === seq);

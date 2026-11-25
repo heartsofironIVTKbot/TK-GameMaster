@@ -993,6 +993,310 @@
   color: var(--gg-fg-2);
 }
 
+/* ---------- Organizer controls ---------- */
+.gg-ctl {
+  position: absolute;
+  top: 86px;
+  right: 0;
+  bottom: 0;
+  z-index: 1200;
+  display: flex;
+  flex-direction: column;
+  width: min(520px, 100%);
+  background: linear-gradient(180deg, #170c33, #0e081e 40%);
+  border-left: 2px solid rgba(255, 43, 214, 0.45);
+  box-shadow: -10px 0 40px rgba(0, 0, 0, 0.55), -2px 0 24px rgba(255, 43, 214, 0.18);
+}
+.gg-ctl-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px 0;
+}
+.gg-ctl-head > :first-child {
+  flex: 1;
+}
+.gg-ctl-live {
+  font: 800 11px/1 var(--gg-digit);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gg-ok);
+}
+.gg-ctl-live.is-off {
+  color: var(--gg-pending);
+}
+.gg-ctl-tabs {
+  display: flex;
+  gap: 4px;
+  margin-top: 10px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--gg-line);
+}
+.gg-ctl-tabs button {
+  padding: 8px 12px 9px;
+  border-bottom: 2px solid transparent;
+  font: 800 15px/1 var(--gg-display);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--gg-fg-3);
+}
+.gg-ctl-tabs button.is-on {
+  color: #fff;
+  border-color: var(--gg-pink);
+  text-shadow: 0 0 10px rgba(255, 43, 214, 0.6);
+}
+.gg-ctl-now {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1.5px solid color-mix(in srgb, var(--team) 60%, transparent);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--team) 16%, #160d2e), #120a26);
+}
+.gg-ctl-step {
+  margin-top: 4px;
+  font: 900 28px/1 var(--gg-display);
+  text-transform: uppercase;
+}
+.gg-ctl-sub {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--gg-fg-2);
+}
+.gg-ctl-chip {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--team) 22%, transparent);
+  border: 1px solid var(--team);
+  font: 800 13px/1.3 var(--gg-display);
+  text-transform: uppercase;
+  color: var(--team);
+}
+.gg-ctl-paused {
+  margin-left: 8px;
+  padding: 1px 7px;
+  border-radius: 6px;
+  background: rgba(255, 210, 63, 0.16);
+  color: var(--gg-pending);
+}
+.gg-ctl-clock {
+  font: 900 38px/1 var(--gg-digit);
+  color: #fff;
+  text-shadow: 0 0 14px rgba(34, 229, 255, 0.6);
+}
+.gg-ctl-clock.is-urgent {
+  color: #ff5a6e;
+  text-shadow: 0 0 16px rgba(255, 40, 70, 0.8);
+  animation: gg-clock-urgent 1s ease-in-out infinite;
+}
+.gg-ctl-primary {
+  position: relative;
+  flex: 1;
+  min-height: 58px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 14px;
+  font: 900 22px/1 var(--gg-display);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #fff;
+  background: linear-gradient(180deg, #ff4fe0, #b01d9c);
+  box-shadow: 0 0 22px rgba(255, 43, 214, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+}
+.gg-ctl-primary:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.gg-ctl-primary.is-idle {
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: none;
+  font-size: 15px;
+  color: var(--gg-fg-3);
+}
+.gg-ctl-primary kbd {
+  position: absolute;
+  right: 10px;
+  bottom: 7px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  font: 700 9.5px/1.2 var(--gg-digit);
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.8);
+}
+.gg-ctl-last {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 8px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 13px;
+}
+.gg-ctl-rail {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+.gg-ctl-railstep {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 9px;
+  border-radius: 9px;
+  border: 1px solid var(--gg-line-2);
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 12.5px;
+  color: var(--gg-fg-2);
+  text-align: left;
+}
+.gg-ctl-railstep b {
+  font: 800 12px/1 var(--gg-digit);
+  color: var(--gg-fg-3);
+}
+.gg-ctl-railstep.is-done {
+  color: var(--gg-fg-3);
+}
+.gg-ctl-railstep.is-now {
+  border-color: var(--gg-cyan);
+  background: rgba(34, 229, 255, 0.1);
+  color: #fff;
+  box-shadow: 0 0 12px rgba(34, 229, 255, 0.3);
+}
+.gg-ctl-railstep:not(:disabled):hover {
+  border-color: var(--gg-pink);
+  color: #fff;
+}
+.gg-ctl-help {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--gg-fg-3);
+}
+.gg-ctl-msg {
+  font-size: 12.5px;
+}
+.gg-ctl-teams {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.gg-ctl-teamchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1.5px solid color-mix(in srgb, var(--team) 55%, transparent);
+  font: 800 13px/1 var(--gg-display);
+  text-transform: uppercase;
+  color: var(--team);
+}
+.gg-ctl-teamchip.is-on {
+  background: color-mix(in srgb, var(--team) 22%, transparent);
+  border-color: var(--team);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--team) 40%, transparent);
+}
+.gg-ctl-teamchip b {
+  min-width: 16px;
+  padding: 1px 4px;
+  border-radius: 999px;
+  background: var(--gg-pink);
+  font: 800 10px/1.3 var(--gg-digit);
+  color: #fff;
+}
+.gg-ctl-group {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--gg-line);
+  background: rgba(22, 13, 46, 0.7);
+}
+.gg-ctl-field {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.gg-ctl-field > span {
+  color: var(--gg-fg-2);
+}
+.gg-input.is-changed {
+  border-color: var(--gg-pink);
+  box-shadow: 0 0 0 1px var(--gg-pink), 0 0 10px rgba(255, 43, 214, 0.35);
+}
+.gg-ctl-apply {
+  position: sticky;
+  bottom: -16px;
+  display: flex;
+  gap: 8px;
+  margin: 0 -16px -16px;
+  padding: 12px 16px;
+  background: linear-gradient(180deg, rgba(14, 8, 30, 0.6), #0e081e 40%);
+  border-top: 1px solid var(--gg-line);
+}
+.gg-ctl-person {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+.gg-ctl-person:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+.gg-ctl-tag {
+  flex-shrink: 0;
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--team, #6b5b9a) 60%, transparent);
+  font: 700 10.5px/1.4 var(--gg-digit);
+  text-transform: uppercase;
+  color: var(--team, var(--gg-fg-3));
+}
+.gg-ctl-tag.is-filler {
+  border-color: rgba(255, 210, 63, 0.5);
+  color: var(--gg-pending);
+}
+.gg-ctl-preset {
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--gg-line-2);
+  font: 700 11.5px/1.2 var(--gg-digit);
+  color: var(--gg-fg-2);
+}
+.gg-ctl-preset.is-on {
+  border-color: var(--gg-cyan);
+  background: rgba(34, 229, 255, 0.12);
+  color: #fff;
+}
+.gg-ctl-ask {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px 16px;
+  border-top: 2px solid var(--gg-pink);
+  background: #1a0d38;
+  box-shadow: 0 -12px 30px rgba(0, 0, 0, 0.5);
+}
+.gg-ctl-ask-title {
+  font: 900 20px/1.1 var(--gg-display);
+  text-transform: uppercase;
+}
+.gg-ctl-ask-lines {
+  display: grid;
+  gap: 3px;
+  max-height: 160px;
+  overflow: auto;
+  font-size: 12.5px;
+  color: var(--gg-fg-2);
+}
+
 /* The turn clock's last ten seconds. */
 .gg-clock-urgent {
   display: inline-block;

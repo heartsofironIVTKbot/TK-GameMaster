@@ -83,6 +83,7 @@ export type GGActionKind =
   | "team.set" // {team, name?, color?, approved?}
   | "phase.set" // {phase}
   | "pause.set" // {on}
+  | "clock.set" // {add?: seconds, restart?: true} (the turn clock: more time, or start it again)
   | "drum.draw" // {team} (result)
   | "wheel.spin" // {team, tag, then?: {team, tag}} (result; `then` is the last major going to the last team)
   | "vice.draw" // {team, person} (result)

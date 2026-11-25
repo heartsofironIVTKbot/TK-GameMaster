@@ -150,7 +150,7 @@ export default function GGApp({ slug }: { slug: string }) {
       {state.phase === "locked" && !panel && <GGFinale state={state} viewer={viewer} now={now} reveal={reveal} copyText={finalText(state)} />}
       {selected && !panel && <GGNationPanel key={selected} state={state} viewer={viewer} tag={selected} act={act} onClose={() => select(null)} />}
       {panel === "log" && <GGLog state={state} organizer={viewer.organizer} act={act} onClose={() => setPanel(null)} />}
-      {panel === "controls" && viewer.organizer && <GGControlPanel state={state} act={act} reveal={reveal} onClose={() => setPanel(null)} />}
+      {panel === "controls" && viewer.organizer && <GGControlPanel state={state} act={act} reveal={reveal} onClose={() => setPanel(null)} now={now} viewers={game.viewers} live={game.live} />}
 
       {!game.live && (
         <div className="gg-panel absolute bottom-4 left-1/2 z-[1300] -translate-x-1/2 rounded-full px-4 py-2 text-xs" role="status">

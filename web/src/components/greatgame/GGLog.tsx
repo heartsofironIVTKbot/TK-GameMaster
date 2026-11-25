@@ -30,6 +30,8 @@ export function describe(state: GGState, action: GGAction): string {
       return `Step: ${PHASE_LABEL[p.phase as GGPhase] ?? p.phase}`;
     case "pause.set":
       return p.on ? "Paused" : "Resumed";
+    case "clock.set":
+      return p.restart ? "Clock restarted" : `Clock: ${Number(p.add) > 0 ? "+" : ""}${Number(p.add)} s`;
     case "drum.draw":
       return `Drum: ${team} drawn`;
     case "order.set":

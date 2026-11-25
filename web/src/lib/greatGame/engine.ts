@@ -135,6 +135,15 @@ export function buildState(
           if (paused) pausedAt = action.at;
         }
         break;
+      case "clock.set":
+        // More time on the turn clock, or start it again from now.
+        if (p.restart === true) {
+          turnStartedAt = action.at;
+          if (paused) pausedAt = action.at;
+        } else if (typeof p.add === "number" && turnStartedAt !== null) {
+          turnStartedAt += p.add * 1000;
+        }
+        break;
       case "pause.set":
         if (p.on && !paused) {
           paused = true;
