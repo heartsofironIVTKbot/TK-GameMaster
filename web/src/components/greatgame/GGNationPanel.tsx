@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import CountryDetailsDrawer from "@/components/CountryDetailsDrawer";
 import type { GGState } from "@/lib/greatGame/model";
 import { X } from "lucide-react";
@@ -16,8 +16,8 @@ import type { GGViewerInfo } from "./useGreatGame";
 
 type Act = (body: Record<string, unknown>) => Promise<string | null>;
 
-/** Height of the Great Game card at the top of the drawer. */
-const CARD_H = 206;
+/** Where the live drawer's own panel starts inside its box (its top-14). */
+const DRAWER_TOP = 56;
 
 export default function GGNationPanel({
   state,
@@ -35,6 +35,18 @@ export default function GGNationPanel({
   const [minimized, setMinimized] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // The card fits what it shows (a status line only, or the Ban button and a note too); the details sit right under it.
+  const cardRef = useRef<HTMLDivElement | null>(null);
+  const [cardH, setCardH] = useState(120);
+  useLayoutEffect(() => {
+    const card = cardRef.current;
+    if (!card) return undefined;
+    const measure = () => setCardH(card.offsetHeight);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(card);
+    return () => observer.disconnect();
+  }, [minimized]);
   const name = nationName(state, tag);
   const owner = state.teams.find((team) => team.major === tag || team.picks.includes(tag)) ?? null;
   const bannedBy = state.teams.find((team) => team.ban === tag) ?? null;
@@ -53,7 +65,7 @@ export default function GGNationPanel({
   return (
     <div className="absolute inset-x-0 bottom-0 top-[28px] z-[1000]" style={{ pointerEvents: "none" }}>
       {/* The nation's details (the live map's drawer), below the Great Game card. */}
-      <div className="absolute bottom-0 right-0" style={{ pointerEvents: "auto", top: minimized ? 0 : CARD_H, width: minimized ? 48 : 380 }}>
+      <div className="absolute bottom-0 right-0" style={{ pointerEvents: "auto", top: minimized ? 0 : cardH, width: minimized ? 48 : 380 }}>
         <CountryDetailsDrawer
           selected={{ tag, name, slot_key: null }}
           selectionKind="pending"
@@ -67,8 +79,9 @@ export default function GGNationPanel({
       </div>
       {!minimized && (
         <div
+          ref={cardRef}
           className="gg-nation-card absolute right-0 z-[1001] w-[380px] p-4"
-          style={{ pointerEvents: "auto", top: 56, height: CARD_H }}
+          style={{ pointerEvents: "auto", top: DRAWER_TOP }}
           role="region"
           aria-label={`${name}: Great Game`}
         >
