@@ -585,6 +585,230 @@
   color: var(--gg-fg-2);
 }
 
+/* ---------- Step 3: hand-scratched vice-captain tickets ---------- */
+.gg-ticket {
+  user-select: none;
+  -webkit-user-select: none;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  aspect-ratio: 5 / 7;
+  border-radius: 16px;
+  padding: 3px;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--team) 85%, #fff), color-mix(in srgb, var(--team) 55%, #1a0b33));
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(0, 0, 0, 0.6);
+  transition: transform 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2), box-shadow 0.35s, filter 0.35s;
+}
+.gg-ticket.is-active {
+  transform: translateY(-6px) scale(1.04);
+  box-shadow: 0 0 0 2px #fff, 0 0 34px color-mix(in srgb, var(--team) 80%, transparent), 0 18px 40px rgba(0, 0, 0, 0.6);
+  animation: gg-ticket-call 1.6s ease-in-out infinite;
+}
+@keyframes gg-ticket-call {
+  50% { box-shadow: 0 0 0 2px #fff, 0 0 52px color-mix(in srgb, var(--team) 95%, transparent), 0 18px 40px rgba(0, 0, 0, 0.6); }
+}
+.gg-ticket.is-waiting {
+  filter: saturate(0.55) brightness(0.72);
+}
+.gg-ticket.is-revealed {
+  box-shadow: 0 0 26px color-mix(in srgb, var(--team) 55%, transparent), 0 14px 34px rgba(0, 0, 0, 0.55);
+}
+.gg-ticket-head,
+.gg-ticket-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 6px 10px;
+  background: #140a2a;
+  color: #fff;
+}
+.gg-ticket-head {
+  border-radius: 13px 13px 0 0;
+  font: 900 clamp(13px, 1.05vw, 19px) / 1 var(--gg-display);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  border-bottom: 2px dashed color-mix(in srgb, var(--team) 60%, transparent);
+}
+.gg-ticket-no {
+  flex-shrink: 0;
+  font: 800 11px/1 var(--gg-digit);
+  color: var(--team);
+}
+.gg-ticket-foot {
+  justify-content: center;
+  border-radius: 0 0 13px 13px;
+  border-top: 2px dashed color-mix(in srgb, var(--team) 60%, transparent);
+  font: 800 10.5px/1.15 var(--gg-digit);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--gg-fg-2);
+}
+.gg-ticket.is-active .gg-ticket-foot {
+  color: #fff;
+}
+.gg-ticket-body {
+  position: relative;
+  container-type: size;
+  flex: 1;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--team) 30%, #1d0f3c), #0f0722 75%);
+}
+.gg-ticket-prize {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px;
+  text-align: center;
+}
+.gg-ticket-name {
+  max-width: 100%;
+  font: 900 min(26px, 13cqw) / 1.05 var(--gg-display);
+  text-transform: uppercase;
+  color: #fff;
+  text-shadow: 0 0 14px color-mix(in srgb, var(--team) 80%, transparent);
+  overflow-wrap: normal;
+  text-wrap: balance;
+}
+.gg-ticket-sub {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--gg-fg-3);
+}
+.gg-ticket-q {
+  font: 900 64px/1 var(--gg-display);
+  color: color-mix(in srgb, var(--team) 70%, #fff);
+  opacity: 0.5;
+}
+.gg-ticket.is-revealed .gg-ticket-prize {
+  animation: gg-lock-in 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.25) both;
+}
+.gg-ticket-foil {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  transition: opacity 0.45s ease, transform 0.45s ease;
+}
+.gg-ticket-foil.is-live {
+  cursor:
+    url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='32'%20height='32'%20viewBox='0%200%2032%2032'%3E%3Ccircle%20cx='16'%20cy='16'%20r='13'%20fill='%23FFD700'%20stroke='%238B6508'%20stroke-width='2.5'/%3E%3Ccircle%20cx='16'%20cy='16'%20r='8'%20fill='none'%20stroke='%23B8860B'%20stroke-width='2'/%3E%3C/svg%3E")
+      16 16,
+    crosshair;
+}
+.gg-ticket-foil.is-gone {
+  opacity: 0;
+  transform: scale(1.08);
+  pointer-events: none;
+}
+.gg-ticket-flash {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  background: radial-gradient(circle, #fff 0%, color-mix(in srgb, var(--team) 70%, transparent) 45%, transparent 75%);
+  animation: gg-ticket-flash 0.7s ease-out both;
+}
+@keyframes gg-ticket-flash {
+  0% { opacity: 0.95; transform: scale(0.6); }
+  100% { opacity: 0; transform: scale(1.6); }
+}
+.gg-flake {
+  position: absolute;
+  border-radius: 1px;
+  pointer-events: none;
+  animation: gg-flake 0.65s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+}
+@keyframes gg-flake {
+  0% { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 1; }
+  55% { transform: translate(calc(var(--dx) * 0.6), calc(var(--dy) * 0.45)) rotate(calc(var(--rot) * 0.6)) scale(0.85); opacity: 0.95; }
+  100% { transform: translate(var(--dx), calc(var(--dy) + var(--fall))) rotate(var(--rot)) scale(0.5); opacity: 0; }
+}
+/* The creators still in the pool (left of the tickets). */
+.gg-pool-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  font: 800 15px/1.05 var(--gg-display);
+  text-transform: uppercase;
+  color: #fff;
+}
+
+/* ---------- Step 3's backdrop: a plain retro pattern (no outrun scene) ---------- */
+.gg-pattern {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: radial-gradient(120% 90% at 50% 0%, #2a0f52 0%, #150a2e 55%, #0b0618 100%);
+}
+.gg-pattern-grid {
+  position: absolute;
+  inset: -64px;
+  background-image:
+    linear-gradient(rgba(180, 107, 255, 0.15) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(180, 107, 255, 0.15) 1px, transparent 1px);
+  background-size: 48px 48px;
+  -webkit-mask-image: radial-gradient(ellipse 70% 65% at 50% 45%, #000 30%, transparent 90%);
+  mask-image: radial-gradient(ellipse 70% 65% at 50% 45%, #000 30%, transparent 90%);
+  animation: gg-grid-drift 16s linear infinite;
+}
+@keyframes gg-grid-drift {
+  to { transform: translate(48px, 48px); }
+}
+.gg-pattern-dots {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 42%;
+  background-image: radial-gradient(circle, rgba(255, 43, 214, 0.42) 1.3px, transparent 1.7px);
+  background-size: 14px 14px;
+  -webkit-mask-image: linear-gradient(to top, #000 10%, transparent);
+  mask-image: linear-gradient(to top, #000 10%, transparent);
+}
+.gg-pattern-stripes {
+  position: absolute;
+  top: -12%;
+  right: -6%;
+  width: 34%;
+  height: 58%;
+  background: repeating-linear-gradient(-45deg, rgba(34, 229, 255, 0.16) 0 9px, transparent 9px 22px);
+  -webkit-mask-image: radial-gradient(circle at 70% 30%, #000 20%, transparent 70%);
+  mask-image: radial-gradient(circle at 70% 30%, #000 20%, transparent 70%);
+}
+.gg-pattern-stripes.is-left {
+  top: auto;
+  right: auto;
+  bottom: -14%;
+  left: -6%;
+  background: repeating-linear-gradient(45deg, rgba(255, 179, 71, 0.13) 0 9px, transparent 9px 22px);
+  -webkit-mask-image: radial-gradient(circle at 30% 70%, #000 20%, transparent 70%);
+  mask-image: radial-gradient(circle at 30% 70%, #000 20%, transparent 70%);
+}
+.gg-shape {
+  position: absolute;
+  overflow: visible;
+  animation: gg-float var(--dur, 9s) ease-in-out infinite alternate;
+}
+@keyframes gg-float {
+  from { transform: translateY(-8px) rotate(calc(var(--turn, 8deg) * -1)); }
+  to { transform: translateY(10px) rotate(var(--turn, 8deg)); }
+}
+
 /* The result beside a machine. */
 .gg-result {
   display: grid;
@@ -650,6 +874,10 @@
   .gg-sun-halo,
   .gg-spincard,
   .gg-spincard-q,
+  .gg-ticket,
+  .gg-ticket-prize,
+  .gg-pattern-grid,
+  .gg-shape,
   .gg-spincard-result,
   .gg-flag-in,
   .gg-spincard-last,

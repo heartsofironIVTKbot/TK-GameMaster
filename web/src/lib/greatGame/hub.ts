@@ -8,8 +8,9 @@ import { checkTimeout, getState, onEventChange } from "./store";
  * animation from the time stamped on it, so a page that loads mid-spin
  * shows where the spin is (or its result).
  *
- * "Considering" (the yellow glow while a captain looks at a nation) is the
- * one thing that is not saved: it lives here and goes out to everyone.
+ * "Considering" (the yellow glow while a captain looks at a nation) and the
+ * live scratching of a vice-captain ticket are not saved: they live here and
+ * go out to everyone.
  *
  * It also checks the turn clock of every open event once a second.
  */
@@ -20,9 +21,24 @@ export interface GGClient {
   close(): void;
 }
 
+/**
+ * The vice-captain ticket being scratched by hand: the strokes so far (each a
+ * polyline of x, y pairs in 0..1 of the scratch area) and whether it has been
+ * scratched clear. Only for the latest vice draw.
+ */
+export interface GGScratch {
+  seq: number;
+  lines: number[][];
+  done: boolean;
+}
+
+/** Enough for a thorough scratch; anything past it is ignored. */
+const MAX_SCRATCH_POINTS = 6000;
+
 interface Room {
   clients: Set<GGClient>;
   considering: Record<string, { tag: string; by: string; at: number } | null>;
+  scratch: GGScratch | null;
 }
 
 const frame = (event: string, data: unknown) => `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
@@ -44,7 +60,7 @@ class GGHub {
   private room(slug: string): Room {
     let room = this.rooms.get(slug);
     if (!room) {
-      room = { clients: new Set(), considering: {} };
+      room = { clients: new Set(), considering: {}, scratch: null };
       this.rooms.set(slug, room);
     }
     return room;
@@ -56,6 +72,7 @@ class GGHub {
     const state = await getState(slug);
     if (state) client.send(frame("state", state));
     client.send(frame("considering", room.considering));
+    if (room.scratch) client.send(frame("scratch", room.scratch));
     this.broadcast(slug, "viewers", { count: room.clients.size });
     return () => {
       room.clients.delete(client);
@@ -95,6 +112,19 @@ class GGHub {
     const room = this.room(slug);
     room.considering[team] = tag ? { tag, by, at: Date.now() } : null;
     this.broadcast(slug, "considering", room.considering);
+  }
+
+  /** Strokes on the ticket of vice draw `seq` (a new seq starts a fresh ticket); `done`: scratched clear. */
+  scratch(slug: string, seq: number, line: number[] | null, done: boolean) {
+    const room = this.room(slug);
+    if (!room.scratch || room.scratch.seq !== seq) room.scratch = { seq, lines: [], done: false };
+    const scratch = room.scratch;
+    if (scratch.done) return;
+    const used = scratch.lines.reduce((sum, entry) => sum + entry.length, 0);
+    const add = line && line.length >= 2 && used + line.length <= MAX_SCRATCH_POINTS * 2 ? line : null;
+    if (add) scratch.lines.push(add);
+    if (done) scratch.done = true;
+    if (add || done) this.broadcast(slug, "scratch-add", { seq, line: add, done: scratch.done });
   }
 
   private async tick() {

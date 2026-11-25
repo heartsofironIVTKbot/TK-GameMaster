@@ -10,7 +10,10 @@ import { useSoundSwitch, useSoundVolume } from "./ggSound";
 import GGMajorReel, { REEL_MS } from "./GGMajorReel";
 import GGStageScene, { StageAnchorContext, type StageAnchor } from "./GGStageScene";
 import { Avatar, Flag, nationName, person, teamById } from "./ggUi";
-import type { GGViewerInfo } from "./useGreatGame";
+import GGPatternScene from "./GGPatternScene";
+import GGScratchTicket, { type TicketState } from "./GGScratchTicket";
+import { scratchHeld } from "./ggScratch";
+import type { GGScratch, GGViewerInfo } from "./useGreatGame";
 
 /**
  * The four randomizers (steps 1 to 4), over the map. The server picks the
@@ -50,9 +53,12 @@ function Shell({
   children,
   action,
   wide = false,
+  scene = "outrun",
 }: {
   /** No team drawer beside it (the drum and the reel): the stage can use more of the screen. */
   wide?: boolean;
+  /** The backdrop: the outrun road (steps 1 and 2) or the plain retro pattern (step 3). */
+  scene?: "outrun" | "pattern";
   step: string;
   title: string;
   progress?: string;
@@ -143,7 +149,7 @@ function Shell({
       <div ref={dimRef} className="gg-overlay-dim" style={full ? { background: "rgba(8,4,18,.85)" } : undefined} />
       <section ref={stageRef} className={`gg-stage absolute ${full ? "gg-stage-full" : `gg-stage-normal ${wide ? "gg-stage-wide" : ""}`}`}>
         <div className="gg-stage-inner flex flex-col">
-          <GGStageScene anchorRef={anchorRef} />
+          {scene === "pattern" ? <GGPatternScene /> : <GGStageScene anchorRef={anchorRef} />}
           {/* Above the scene's front layer (z-[1]). */}
           <div className="relative z-[2] flex items-start justify-between gap-4 px-7 pt-5">
             <div className="min-w-0">
@@ -537,6 +543,146 @@ function Majors({ state, viewer, act, now, clock }: { state: GGState; viewer: GG
   );
 }
 
+/* ---------- Step 3: hand-scratched vice-captain tickets ---------- */
+const EMPTY_LINES: number[][] = [];
+
+function Vice({
+  state,
+  viewer,
+  act,
+  now,
+  scratch,
+  sendScratch,
+}: {
+  state: GGState;
+  viewer: GGViewerInfo;
+  act: Act;
+  now: number;
+  scratch: GGScratch | null;
+  sendScratch: (seq: number, line: number[] | null, done?: boolean) => void;
+}) {
+  const order = strengthOrder(state.teams, state.config.majors);
+  const draw = state.last_draw?.kind === "vice" ? state.last_draw : null;
+  // Scratched clear on this page (before the echo comes back).
+  const [doneHere, setDoneHere] = useState<number | null>(null);
+  const held = scratchHeld(state, scratch, now, draw !== null && doneHere === draw.seq);
+  const turn = held ? null : teamById(state, state.turn.team);
+  const shownVice = (team: GGTeam) => (held && held.team === team.id ? null : team.vice);
+  const revealedCount = state.teams.filter((team) => shownVice(team)).length;
+  const canFor = (team: GGTeam) => viewer.organizer || viewer.captainOf === team.id;
+  const drawing = useRef<string | null>(null);
+  // The creators not on a team yet (the one being scratched stays in until it's clear).
+  const placed = new Set(state.teams.map((team) => shownVice(team)).filter(Boolean));
+  const pool = state.config.people.filter((entry) => entry.role === "vice" && !placed.has(entry.id));
+  const heldTeam = held ? teamById(state, held.team) : null;
+  const ticketOf = (team: GGTeam): TicketState =>
+    shownVice(team) ? "revealed" : held?.team === team.id ? "scratching" : turn?.id === team.id ? "ready" : "waiting";
+  const onLine = useCallback((seq: number, line: number[]) => sendScratch(seq, line), [sendScratch]);
+  const onDone = useCallback(
+    (seq: number) => {
+      setDoneHere(seq);
+      sendScratch(seq, null, true);
+    },
+    [sendScratch],
+  );
+  const ticket = (team: GGTeam, i: number) => {
+    const mode = ticketOf(team);
+    const captain = person(state, team.captain);
+    const who = mode === "revealed" ? person(state, team.vice) : mode === "scratching" && held ? person(state, held.value) : null;
+    return (
+      <GGScratchTicket
+        key={team.id}
+        team={team}
+        captain={captain?.name ?? "The captain"}
+        index={i}
+        total={order.length}
+        person={who}
+        state={mode}
+        canScratch={(mode === "ready" || mode === "scratching") && canFor(team)}
+        lines={mode === "scratching" && held && scratch?.seq === held.seq ? scratch.lines : EMPTY_LINES}
+        seq={mode === "scratching" && held ? held.seq : null}
+        onFirstTouch={() => {
+          if (drawing.current === team.id) return;
+          drawing.current = team.id;
+          void act({ kind: "vice.draw" }).then((error) => {
+            if (error) drawing.current = null;
+          });
+        }}
+        onLine={onLine}
+        onDone={onDone}
+      />
+    );
+  };
+  const nextCaptain = turn ? (person(state, turn.captain)?.name ?? "The captain") : null;
+  const heldCaptain = heldTeam ? (person(state, heldTeam.captain)?.name ?? "The captain") : null;
+  return (
+    <Shell
+      wide
+      scene="pattern"
+      step="Step 3 · Vice-captains"
+      title={heldTeam ? `Scratching for ${heldTeam.name}` : turn ? `${turn.name} scratch next` : "Every ticket is scratched"}
+      progress={`${revealedCount} / ${state.teams.length}`}
+      name="tickets"
+      action={
+        <span className="gg-waiting" role="status">
+          {heldTeam
+            ? canFor(heldTeam)
+              ? "Keep scratching, or double-click to shred it"
+              : `${heldCaptain} is scratching…`
+            : turn
+              ? canFor(turn)
+                ? "Scratch your ticket with the mouse"
+                : `${nextCaptain} scratches next`
+              : "Every vice-captain is revealed."}
+        </span>
+      }
+    >
+      <div className="relative w-full" style={MACHINE_FRAME}>
+        {/* The seven tickets as a pyramid, in scratch order: three over four. */}
+        <div className="absolute left-1/2 top-[1%] flex h-[86%] -translate-x-1/2 flex-col items-center justify-center gap-4">
+          <div className="flex h-[calc(50%-8px)] justify-center gap-4">{order.slice(0, 3).map((team, i) => ticket(team, i))}</div>
+          <div className="flex h-[calc(50%-8px)] justify-center gap-4">{order.slice(3).map((team, i) => ticket(team, i + 3))}</div>
+        </div>
+        {/* Left: who is still in the pool. */}
+        <div className="absolute left-0 z-[2] top-[43%] -translate-y-1/2">
+          <div className="gg-teambox" style={{ width: "clamp(210px, 16vw, 270px)" }}>
+            <div className="gg-teambox-label">Still in the pool</div>
+            <div className="grid gap-1">
+              {pool.map((entry) => (
+                <div key={entry.id} className="gg-pool-row">
+                  <Avatar id={entry.id} name={entry.name} color="#b46bff" size={26} />
+                  <span className="truncate">{entry.name}</span>
+                </div>
+              ))}
+              {pool.length === 0 && <div className="gg-teambox-sub px-2">Nobody left.</div>}
+            </div>
+          </div>
+        </div>
+        {/* Right: every team's vice-captain, in scratch order. */}
+        <div className="absolute right-0 z-[2] top-[43%] -translate-y-1/2">
+          <TeamBox
+            label="Vice-captains"
+            rows={order.map((team, i) => {
+              const vice = person(state, shownVice(team));
+              const mode = ticketOf(team);
+              return {
+                team,
+                place: i + 1,
+                side: mode === "scratching" ? "Scratching…" : mode === "ready" ? "Scratches next" : "",
+                sub: vice ? `Vice: ${vice.name}` : undefined,
+                lit: Boolean(vice) && draw?.team === team.id && doneHere === draw.seq,
+                dim: mode === "waiting",
+                next: mode === "ready",
+              };
+            })}
+            state={state}
+          />
+        </div>
+      </div>
+    </Shell>
+  );
+}
+
 /* ---------- Steps 3 and 4: cards ---------- */
 function drawsOf(state: GGState, kind: "vice.draw" | "recruit.draw") {
   // Results in the order they were drawn (fixes that cleared a slot drop out).
@@ -637,14 +783,32 @@ function Cards({ state, viewer, act, now, kind }: { state: GGState; viewer: GGVi
   );
 }
 
-export default function GGRandomizers({ state, viewer, act, now, clock, avatars }: { state: GGState; viewer: GGViewerInfo; act: Act; now: number; clock: Clock; avatars: Avatars }) {
+export default function GGRandomizers({
+  state,
+  viewer,
+  act,
+  now,
+  clock,
+  avatars,
+  scratch,
+  sendScratch,
+}: {
+  state: GGState;
+  viewer: GGViewerInfo;
+  act: Act;
+  now: number;
+  clock: Clock;
+  avatars: Avatars;
+  scratch: GGScratch | null;
+  sendScratch: (seq: number, line: number[] | null, done?: boolean) => void;
+}) {
   switch (state.phase) {
     case "drum":
       return <Drum state={state} viewer={viewer} act={act} now={now} clock={clock} avatars={avatars} />;
     case "wheel":
       return <Majors state={state} viewer={viewer} act={act} now={now} clock={clock} />;
     case "vice":
-      return <Cards key="vice" state={state} viewer={viewer} act={act} now={now} kind="vice" />;
+      return <Vice state={state} viewer={viewer} act={act} now={now} scratch={scratch} sendScratch={sendScratch} />;
     case "recruits":
       return <Cards key="recruits" state={state} viewer={viewer} act={act} now={now} kind="recruit" />;
     default:

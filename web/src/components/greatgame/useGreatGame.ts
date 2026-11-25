@@ -21,6 +21,13 @@ export interface GGViewerInfo {
 
 export type Considering = Record<string, { tag: string; by: string; at: number } | null>;
 
+/** The vice-captain ticket being scratched by hand (see lib/greatGame/hub.ts). */
+export interface GGScratch {
+  seq: number;
+  lines: number[][];
+  done: boolean;
+}
+
 type Loaded =
   | { ok: true; state: GGState; viewer: GGViewerInfo | null; demo: boolean; avatars: Record<string, string> }
   | { ok: false; status: number; message: string };
@@ -44,6 +51,7 @@ export function useGreatGame(slug: string) {
   const [error, setError] = useState<{ status: number; message: string } | null>(null);
   const [considering, setConsidering] = useState<Considering>({});
   const [viewers, setViewers] = useState(0);
+  const [scratch, setScratch] = useState<GGScratch | null>(null);
   const [live, setLive] = useState(false);
   const [demo, setDemo] = useState(false);
   /** Discord profile pictures by person id (missing for people GameMaster's bot hasn't seen). */
@@ -83,6 +91,14 @@ export function useGreatGame(slug: string) {
       source.addEventListener("error", () => setLive(false));
       source.addEventListener("state", (event) => take(JSON.parse((event as MessageEvent).data) as GGState));
       source.addEventListener("considering", (event) => setConsidering(JSON.parse((event as MessageEvent).data) as Considering));
+      source.addEventListener("scratch", (event) => setScratch(JSON.parse((event as MessageEvent).data) as GGScratch));
+      source.addEventListener("scratch-add", (event) => {
+        const add = JSON.parse((event as MessageEvent).data) as { seq: number; line: number[] | null; done: boolean };
+        setScratch((current) => {
+          const base = current && current.seq === add.seq ? current : { seq: add.seq, lines: [], done: false };
+          return { seq: add.seq, lines: add.line ? [...base.lines, add.line] : base.lines, done: base.done || add.done };
+        });
+      });
       source.addEventListener("viewers", (event) => setViewers((JSON.parse((event as MessageEvent).data) as { count: number }).count));
     });
     return () => {
@@ -130,9 +146,21 @@ export function useGreatGame(slug: string) {
     return null;
   }, [slug, take]);
 
+  /** One batch of strokes on the ticket of vice draw `seq`, or `done` once it's scratched clear. */
+  const sendScratch = useCallback(
+    (seq: number, line: number[] | null, done = false) => {
+      void fetch(`/api/greatgame/${slug}/scratch`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ seq, line, done }),
+      }).catch(() => undefined);
+    },
+    [slug],
+  );
+
   const serverNow = useCallback(() => Date.now() + offset.current, []);
 
-  return { state, viewer, error, considering, viewers, live, demo, avatars, act, consider, reveal, serverNow, reload: load };
+  return { state, viewer, error, considering, viewers, live, demo, avatars, scratch, act, consider, reveal, sendScratch, serverNow, reload: load };
 }
 
 /** Ticks every `ms` so clocks re-render; 0 stops it (nothing on screen is counting). */

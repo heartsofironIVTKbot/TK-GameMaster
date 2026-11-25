@@ -403,3 +403,25 @@ export function bell() {
     tone.stop(t + delay + 1.2);
   });
 }
+
+/**
+ * The Casino's paper-scratch loop while a ticket is being scratched: call it
+ * on every stroke (local or arriving live); it stops on its own a moment
+ * after the last one.
+ */
+let scratchLoop: HTMLAudioElement | null = null;
+let scratchStop: number | null = null;
+export function scratching() {
+  if (typeof window === "undefined" || !enabled) return;
+  if (!scratchLoop) {
+    scratchLoop = new Audio("/greatgame-scratching.mp3");
+    scratchLoop.loop = true;
+  }
+  scratchLoop.volume = Math.min(1, 0.55 * volume);
+  if (scratchLoop.paused) void scratchLoop.play().catch(() => undefined);
+  if (scratchStop !== null) window.clearTimeout(scratchStop);
+  scratchStop = window.setTimeout(() => {
+    scratchLoop?.pause();
+    scratchStop = null;
+  }, 220);
+}

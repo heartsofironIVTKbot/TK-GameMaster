@@ -74,14 +74,15 @@ function lightPath(width: number, radius = 18): string {
  */
 const LIGHTS = 3;
 const LIGHT_SECONDS = 9;
-export function bannerFor(state: GGState, now: number): Banner {
+export function bannerFor(state: GGState, now: number, scratchTeam: string | null = null): Banner {
   // While a ball is being drawn or the reel is spinning, the banner keeps to
   // the moment before the result, so it never gives it away early.
   const draw = state.last_draw;
   const since = draw ? now - draw.at : Infinity;
   const drawing = state.phase === "drum" && draw?.kind === "drum" && since >= 0 && since < DRUM_MS;
   const reeling = state.phase === "wheel" && draw?.kind === "wheel" && since >= 0 && since < LAND_END;
-  const team = teamById(state, reeling ? draw.team : state.turn.team);
+  // A vice-captain ticket still being scratched keeps its team on the banner.
+  const team = teamById(state, reeling ? draw.team : scratchTeam && state.phase === "vice" ? scratchTeam : state.turn.team);
   const left = secondsLeft(state, now);
   const timer = left === null ? null : clock(left);
   const frac = left === null || !state.turn.seconds ? 1 : Math.max(0, left / state.turn.seconds);
@@ -111,7 +112,8 @@ export function bannerFor(state: GGState, now: number): Banner {
       if (reeling && team) return { ...teamBanner(`SPINNING · MAJOR ${state.teams.filter((t) => t.major).length - (draw.then ? 1 : 0)} OF 7`), flag: null, timer: null, frac: 1, late: false };
       return team ? { ...teamBanner(`SPIN ${state.teams.filter((t) => t.major).length + 1} OF 7 · MAJOR`), flag: null } : neutral("Major reel", "ALL MAJORS DRAWN");
     case "vice":
-      return team ? teamBanner("SCRATCHING · VICE-CAPTAIN") : neutral("Vice-captains", "ALL REVEALED");
+      if (scratchTeam && team) return teamBanner("SCRATCHING · VICE-CAPTAIN");
+      return team ? teamBanner("SCRATCHES NEXT · VICE-CAPTAIN") : neutral("Vice-captains", "ALL REVEALED");
     case "recruits":
       return team ? teamBanner(`FLIPPING · RECRUIT · ROUND ${state.turn.slot ?? 1}`) : neutral("Recruits", "ALL FLIPPED");
     case "bans":
@@ -133,14 +135,17 @@ export default function GGTopBar({
   right,
   onOpenLog,
   onOpenControls,
+  scratchTeam = null,
 }: {
   state: GGState;
   now: number;
   right?: ReactNode;
   onOpenLog: () => void;
   onOpenControls: (() => void) | null;
+  /** The team whose vice-captain ticket is still being scratched. */
+  scratchTeam?: string | null;
 }) {
-  const banner = bannerFor(state, now);
+  const banner = bannerFor(state, now, scratchTeam);
   const [soundOn, setSoundOn] = useSoundSwitch();
   const header = useRef<HTMLElement | null>(null);
   const [width, setWidth] = useState(() => window.innerWidth);
