@@ -211,9 +211,10 @@ const WET = ROAD + 0.9;
 
 /**
  * The wet road: everything above the horizon (sky glow, mountains, palms)
- * mirrored into the road and the palms' shoulders, fading out towards the
- * viewer. The machine at the road's end is mirrored smaller and fainter,
- * squashed like a reflection in water, so it doesn't crowd the road.
+ * mirrored into the road and the palms' shoulders, squeezed towards the
+ * middle so the mountain grids show in it, fading out towards the viewer. The
+ * machine at the road's end is mirrored much smaller and fainter, so it
+ * doesn't crowd the road.
  */
 function drawReflection(
   ctx: CanvasRenderingContext2D,
@@ -222,22 +223,30 @@ function drawReflection(
   ratio: number,
   machine: { canvas: HTMLCanvasElement; box: { left: number; top: number; width: number; height: number }; part: { x: number; y: number; w: number; h: number } } | null,
 ) {
-  const top = Math.max(0, v.hy - v.h * 0.5);
+  const top = Math.max(0, v.hy - v.h * 0.6);
   const height = v.hy - top;
   if (height <= 1) return;
+  // Mirror about the horizon, squeezed towards the middle by (sx, sy): a
+  // straight mirror would only show the sky across the road; squeezed, the
+  // mountain grids from both sides (about their top half) fold into it.
+  const mirror = (sx: number, sy: number) =>
+    ctx.setTransform(ratio * sx, 0, 0, -ratio * sy, ratio * v.cx * (1 - sx), v.hy * ratio * (1 + sy));
   ctx.save();
   roadPath(ctx, v, WET);
   ctx.clip();
-  ctx.globalAlpha = 0.36;
-  // Mirror about the horizon.
-  ctx.setTransform(ratio, 0, 0, -ratio, 0, 2 * v.hy * ratio);
+  ctx.globalAlpha = 0.4;
+  mirror(0.42, 0.7);
   ctx.drawImage(source, 0, top * ratio, source.width, height * ratio, 0, top, v.w, height);
+  // A second, additive pass: brings out the light parts (the mountains' grid lines, the glow).
+  ctx.globalCompositeOperation = "lighter";
+  ctx.globalAlpha = 0.32;
+  ctx.drawImage(source, 0, top * ratio, source.width, height * ratio, 0, top, v.w, height);
+  ctx.globalCompositeOperation = "source-over";
   if (machine) {
     const { canvas, box, part } = machine;
-    // Mirrored about the horizon and squashed to 45% of its height.
-    const squash = 0.45;
-    ctx.setTransform(ratio, 0, 0, -ratio * squash, 0, v.hy * ratio * (1 + squash));
-    ctx.globalAlpha = 0.28;
+    // The machine: much smaller and fainter, so it doesn't crowd the road.
+    mirror(0.5, 0.28);
+    ctx.globalAlpha = 0.2;
     ctx.drawImage(
       canvas,
       part.x * canvas.width,
@@ -419,7 +428,7 @@ function drawPalms(ctx: CanvasRenderingContext2D, v: View, travel: number, sprit
     for (let i = 0; i < PALMS; i++) {
       const start = (i * PALM_SPAN) / PALMS + (side > 0 ? PALM_SPAN / PALMS / 2 : 0);
       const z = 1.2 + ((((start - travel) % PALM_SPAN) + PALM_SPAN) % PALM_SPAN);
-      palms.push({ side, x: side * (ROAD + 0.3 + rand(i * 7 + side) * 0.3), z, tall: 1.8 + rand(i * 13 + side * 3) * 0.6 });
+      palms.push({ side, x: side * (ROAD + 0.08 + rand(i * 7 + side) * 0.14), z, tall: 1.8 + rand(i * 13 + side * 3) * 0.6 });
     }
   }
   palms.sort((a, b) => b.z - a.z);
