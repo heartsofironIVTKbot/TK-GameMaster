@@ -476,6 +476,94 @@
   color: var(--gg-fg-3);
 }
 
+/* Step 2's "now spinning" card, on the stage's left: whose spin it is, then what they got. */
+.gg-spincard {
+  width: clamp(230px, 19vw, 290px);
+  border-color: color-mix(in srgb, var(--team) 70%, transparent);
+  box-shadow: 0 0 26px color-mix(in srgb, var(--team) 35%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition: border-color 0.4s, box-shadow 0.4s;
+}
+.gg-spincard.is-spinning {
+  animation: gg-spincard-beat 0.9s ease-in-out infinite;
+}
+@keyframes gg-spincard-beat {
+  50% { box-shadow: 0 0 44px color-mix(in srgb, var(--team) 60%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.08); }
+}
+.gg-spincard-team {
+  display: block;
+  font: 900 26px/1 var(--gg-display);
+  text-transform: uppercase;
+  color: #fff;
+  text-shadow: 0 0 14px color-mix(in srgb, var(--team) 70%, transparent);
+  overflow-wrap: anywhere;
+}
+.gg-spincard-slot {
+  display: grid;
+  place-items: center;
+  height: 112px;
+  margin-top: 14px;
+  border-radius: 12px;
+  border: 1.5px dashed color-mix(in srgb, var(--team) 55%, transparent);
+  background: rgba(255, 255, 255, 0.03);
+}
+.gg-spincard.is-landed .gg-spincard-slot {
+  border-style: solid;
+  border-color: var(--team);
+  background: color-mix(in srgb, var(--team) 16%, #120a24);
+  box-shadow: inset 0 0 24px color-mix(in srgb, var(--team) 35%, transparent);
+}
+.gg-spincard-q {
+  font: 900 54px/1 var(--gg-display);
+  color: color-mix(in srgb, var(--team) 80%, #fff);
+  text-shadow: 0 0 18px var(--team);
+}
+.gg-spincard.is-spinning .gg-spincard-q {
+  animation: gg-spincard-q 0.5s steps(2) infinite;
+}
+@keyframes gg-spincard-q {
+  50% { opacity: 0.35; }
+}
+.gg-spincard-result {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  font: 900 22px/1 var(--gg-display);
+  text-transform: uppercase;
+  color: #fff;
+  animation: gg-lock-in 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.25) both;
+}
+@keyframes gg-lock-in {
+  0% { transform: scale(1.8); opacity: 0; filter: brightness(3); }
+  60% { transform: scale(0.94); opacity: 1; filter: brightness(1.6); }
+  100% { transform: scale(1); filter: none; }
+}
+.gg-spincard-foot {
+  margin-top: 10px;
+  text-align: center;
+  font: 800 11px/1 var(--gg-digit);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gg-fg-3);
+}
+/* A newly drawn major's flag slides into its team's row. */
+.gg-flag-in {
+  display: inline-flex;
+  animation: gg-flag-in 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.1) both;
+}
+@keyframes gg-flag-in {
+  0% { transform: translateX(-160px) scale(1.6); opacity: 0; filter: drop-shadow(0 0 12px #fff); }
+  70% { opacity: 1; }
+  100% { transform: none; filter: drop-shadow(0 0 6px var(--team)); }
+}
+/* The names still on the reel, under its flags. */
+.gg-onreel {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--gg-fg-2);
+}
+
 /* The result beside a machine. */
 .gg-result {
   display: grid;
@@ -539,6 +627,10 @@
   .gg-neon-glow,
   .gg-light,
   .gg-sun-halo,
+  .gg-spincard,
+  .gg-spincard-q,
+  .gg-spincard-result,
+  .gg-flag-in,
   .gg-act {
     animation: none;
   }

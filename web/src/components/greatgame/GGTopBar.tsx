@@ -4,6 +4,8 @@ import { ScrollText, SlidersHorizontal, Volume2, VolumeX } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { PHASE_LABEL, PHASES, type GGState } from "@/lib/greatGame/model";
 import { clock, Flag, hexA, nationName, secondsLeft, Sun, teamById } from "./ggUi";
+import { DRUM_MS } from "./GGAirLottery";
+import { LAND_END } from "./GGMajorReel";
 import { useSoundSwitch } from "./ggSound";
 
 /**
@@ -73,7 +75,13 @@ function lightPath(width: number, radius = 18): string {
 const LIGHTS = 3;
 const LIGHT_SECONDS = 9;
 export function bannerFor(state: GGState, now: number): Banner {
-  const team = teamById(state, state.turn.team);
+  // While a ball is being drawn or the reel is spinning, the banner keeps to
+  // the moment before the result, so it never gives it away early.
+  const draw = state.last_draw;
+  const since = draw ? now - draw.at : Infinity;
+  const drawing = state.phase === "drum" && draw?.kind === "drum" && since >= 0 && since < DRUM_MS;
+  const reeling = state.phase === "wheel" && draw?.kind === "wheel" && since >= 0 && since < LAND_END;
+  const team = teamById(state, reeling ? draw.team : state.turn.team);
   const left = secondsLeft(state, now);
   const timer = left === null ? null : clock(left);
   const frac = left === null || !state.turn.seconds ? 1 : Math.max(0, left / state.turn.seconds);
@@ -97,8 +105,10 @@ export function bannerFor(state: GGState, now: number): Banner {
     case "teams":
       return neutral("Team setup", `${state.teams.filter((t) => t.approved).length} OF ${state.teams.length} TEAMS APPROVED`);
     case "drum":
+      if (drawing) return neutral("Lottery drum", `DRAWING · BALL ${state.order.length} OF ${state.teams.length}`);
       return neutral("Lottery drum", state.phase_done ? "CAPTAIN ORDER DRAWN" : `BALL ${state.order.length + 1} OF ${state.teams.length}`);
     case "wheel":
+      if (reeling && team) return { ...teamBanner(`SPINNING · MAJOR ${state.teams.filter((t) => t.major).length} OF 7`), flag: null, timer: null, frac: 1, late: false };
       return team ? { ...teamBanner(`SPIN ${state.teams.filter((t) => t.major).length + 1} OF 7 · MAJOR`), flag: null } : neutral("Major reel", "ALL MAJORS DRAWN");
     case "vice":
       return team ? teamBanner("SCRATCHING · VICE-CAPTAIN") : neutral("Vice-captains", "ALL REVEALED");

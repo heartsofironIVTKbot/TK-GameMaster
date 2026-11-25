@@ -359,6 +359,41 @@ function ordinal(n: number) {
 }
 
 /* ---------- Step 2: the major reel ---------- */
+/**
+ * The left of the stage during step 2: whose spin it is (or is next), the
+ * slot their major lands in, then the major itself, locked in with a flash.
+ */
+function SpinCard({ state, team, mode, major, spin }: { state: GGState; team: GGTeam; mode: "next" | "spinning" | "landed"; major: string | null; spin: number }) {
+  const captain = person(state, team.captain);
+  return (
+    <div className={`gg-teambox gg-spincard ${mode === "spinning" ? "is-spinning" : ""} ${mode === "landed" ? "is-landed" : ""}`} style={{ ["--team" as string]: team.color }}>
+      <div className="gg-teambox-label">{mode === "spinning" ? "Now spinning" : mode === "landed" ? "Locked in" : "Spins next"}</div>
+      <div className="flex items-center gap-3 px-1">
+        <Avatar id={team.captain} name={captain?.name ?? team.name} color={team.color} size={54} />
+        <span className="min-w-0">
+          <span className="gg-spincard-team">{team.name}</span>
+          <span className="gg-teambox-sub">Captain {captain?.name ?? "?"}</span>
+        </span>
+      </div>
+      <div className="gg-spincard-slot">
+        {mode === "landed" && major ? (
+          <span key={major} className="gg-spincard-result">
+            <Flag tag={major} w={78} h={50} title={nationName(state, major)} />
+            {nationName(state, major)}
+          </span>
+        ) : (
+          <span className="gg-spincard-q" aria-hidden>
+            ?
+          </span>
+        )}
+      </div>
+      <div className="gg-spincard-foot">
+        Spin {spin} of {state.teams.length}
+      </div>
+    </div>
+  );
+}
+
 function Majors({ state, viewer, act, now, clock }: { state: GGState; viewer: GGViewerInfo; act: Act; now: number; clock: Clock }) {
   const majors = state.config.majors;
   const owner = (tag: string) => state.teams.find((team) => team.major === tag) ?? null;
@@ -367,14 +402,22 @@ function Majors({ state, viewer, act, now, clock }: { state: GGState; viewer: GG
   const landed = Boolean(draw) && (p === null || p >= SHOW_AT.wheel);
   const resultTeam = draw ? teamById(state, draw.team) : null;
   const spinning = teamById(state, state.turn.team);
+  const rolled = state.teams.filter((t) => t.major).length;
   // Still on the reel: untaken majors, and during a spin its own result until it lands.
   const onReel = majors.filter((tag) => !owner(tag) || (p !== null && !landed && draw?.value === tag));
+  // The card on the left: the spin playing out (and its result for a moment after), else who spins next.
+  const card =
+    p !== null && resultTeam && draw
+      ? { team: resultTeam, mode: landed ? ("landed" as const) : ("spinning" as const), major: draw.value, spin: rolled }
+      : spinning
+        ? { team: spinning, mode: "next" as const, major: null, spin: rolled + 1 }
+        : null;
   return (
     <Shell
       wide
       step="Step 2 · Majors"
       title={p !== null && resultTeam && draw ? (landed ? `${resultTeam.name} get ${nationName(state, draw.value)}` : `Spinning for ${resultTeam.name}`) : spinning ? `${spinning.name} spins next` : "Every major is drawn"}
-      progress={`${state.teams.filter((t) => t.major).length - (p !== null && !landed ? 1 : 0)} / ${state.teams.length}`}
+      progress={`${rolled - (p !== null && !landed ? 1 : 0)} / ${state.teams.length}`}
       name="reel"
       action={
         <ActButton
@@ -386,44 +429,64 @@ function Majors({ state, viewer, act, now, clock }: { state: GGState; viewer: GG
         />
       }
     >
-      <div className="mx-auto w-full" style={{ maxWidth: "calc((100vh - var(--gg-stage-room)) * 1000 / 440)" }}>
-        <div className="mx-auto w-[52%] min-w-[300px]">
+      {/* The same frame as the drum: the reel stands at the road's end, where the moon is on step 1. */}
+      <div className="relative mx-auto w-full" style={{ maxWidth: "calc((100vh - var(--gg-stage-room)) * 1000 / 620)", aspectRatio: "1000 / 620" }}>
+        <div className="absolute left-1/2 top-0 h-[70%] -translate-x-1/2" style={{ aspectRatio: "520 / 440" }}>
           <GGMajorReel state={state} clock={clock} />
         </div>
-        <div className="absolute right-7 z-[2] top-1/2 -translate-y-1/2">
-          <TeamBox
-            label="Majors"
-            rows={state.order
-              .map((id) => teamById(state, id))
-              .filter((team): team is GGTeam => Boolean(team))
-              .map((team, i) => {
-                const rolling = p !== null && !landed && draw?.team === team.id;
-                const major = rolling ? null : team.major;
-                return {
-                  team,
-                  place: i + 1,
-                  side: major ? <Flag tag={major} w={30} h={19} title={nationName(state, major)} /> : rolling ? "Spinning…" : spinning?.id === team.id ? "Spins next" : "",
-                  sub: major ? nationName(state, major) : undefined,
-                  lit: landed && draw?.team === team.id && p !== null,
-                  dim: !major && !rolling && spinning?.id !== team.id,
-                  next: spinning?.id === team.id && p === null,
-                };
-              })}
-            state={state}
-            footer={
-              onReel.length > 0 && (
-                <>
-                  <div className="gg-label mb-1.5 mt-3">Still on the reel</div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {onReel.map((tag) => (
-                      <Flag key={tag} tag={tag} w={34} h={22} title={nationName(state, tag)} />
-                    ))}
-                  </div>
-                </>
-              )
-            }
-          />
+      </div>
+      {card && (
+        <div className="absolute left-7 z-[2] top-[46%] -translate-y-1/2">
+          <SpinCard key={`${card.team.id}:${card.mode}`} state={state} team={card.team} mode={card.mode} major={card.major} spin={card.spin} />
         </div>
+      )}
+      <div className="absolute right-7 z-[2] top-[46%] -translate-y-1/2">
+        <TeamBox
+          label="Majors"
+          rows={state.order
+            .map((id) => teamById(state, id))
+            .filter((team): team is GGTeam => Boolean(team))
+            .map((team, i) => {
+              const rolling = p !== null && !landed && draw?.team === team.id;
+              const major = rolling ? null : team.major;
+              const fresh = landed && p !== null && draw?.team === team.id;
+              return {
+                team,
+                place: i + 1,
+                side: major ? (
+                  <span key={fresh ? "fresh" : "flag"} className={fresh ? "gg-flag-in" : undefined}>
+                    <Flag tag={major} w={30} h={19} title={nationName(state, major)} />
+                  </span>
+                ) : rolling ? (
+                  "Spinning…"
+                ) : spinning?.id === team.id ? (
+                  "Spins next"
+                ) : (
+                  ""
+                ),
+                sub: major ? nationName(state, major) : undefined,
+                lit: fresh,
+                dim: !major && !rolling && spinning?.id !== team.id,
+                next: spinning?.id === team.id && p === null,
+              };
+            })}
+          state={state}
+          footer={
+            onReel.length > 0 && (
+              <>
+                <div className="gg-label mb-1.5 mt-3">Still on the reel</div>
+                <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+                  {onReel.map((tag) => (
+                    <span key={tag} className="gg-onreel">
+                      <Flag tag={tag} w={26} h={17} title={nationName(state, tag)} />
+                      <span className="truncate">{nationName(state, tag)}</span>
+                    </span>
+                  ))}
+                </div>
+              </>
+            )
+          }
+        />
       </div>
     </Shell>
   );

@@ -15,8 +15,13 @@ export function person(state: GGState, id: string | null | undefined): GGPerson 
   return id ? (state.config.people.find((entry) => entry.id === id) ?? null) : null;
 }
 
+/** The slot lists write the USA as "U.S.A"; on the stage it reads as plain "USA". */
+export function displayName(name: string): string {
+  return name === "U.S.A" ? "USA" : name;
+}
+
 export function nationName(state: GGState, tag: string | null | undefined): string {
-  return tag ? (state.config.names[tag] ?? tag) : "";
+  return tag ? displayName(state.config.names[tag] ?? tag) : "";
 }
 
 /** Seconds left on the turn clock (negative when over), or null when untimed. */

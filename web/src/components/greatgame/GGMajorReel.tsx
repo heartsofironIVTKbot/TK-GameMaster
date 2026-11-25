@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useContext, useEffect, useRef } from "react";
 import type { GGState } from "@/lib/greatGame/model";
 import * as sound from "./ggSound";
+import { StageAnchorContext } from "./GGStageScene";
+import { displayName } from "./ggUi";
 
 /**
  * Step 2's slot-machine reel of major cards (it replaced the wheel). Between
@@ -14,7 +16,8 @@ import * as sound from "./ggSound";
 
 export const REEL_MS = 4400;
 const ACCEL_END = 450;
-const LAND_END = 3700;
+/** When the reel stops on the result (ms after the spin starts). */
+export const LAND_END = 3700;
 const IDLE_SPEED = 0.3; // rad/s, roughly where a spin starts from
 const TOP_SPEED = 17; // rad/s
 
@@ -86,12 +89,31 @@ function spinPlan(r0: number, faces: string[], target: string) {
   };
 }
 
+/** The cabinet's outline in the drawing (its base stands on the road's end). */
+const CAB = { x: CX - 214, y: 10, w: 428, h: H - 20 };
+
 export default function GGMajorReel({ state, clock }: { state: GGState; clock: () => number }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const anchorRef = useContext(StageAnchorContext);
   const stateRef = useRef(state);
   useEffect(() => {
     stateRef.current = state;
   }, [state]);
+
+  // The stage's road runs to the cabinet's base, and the wet road mirrors it.
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!anchorRef || !canvas) return undefined;
+    anchorRef.current = {
+      el: canvas,
+      fx: CX / W,
+      fy: (CAB.y + CAB.h) / H,
+      mirror: { x: CAB.x / W, y: CAB.y / H, w: CAB.w / W, h: CAB.h / H },
+    };
+    return () => {
+      anchorRef.current = null;
+    };
+  }, [anchorRef]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -155,20 +177,43 @@ export default function GGMajorReel({ state, clock }: { state: GGState; clock: (
       ctx.setTransform(k, 0, 0, k, 0, 0);
       ctx.clearRect(0, 0, W, H);
 
-      // Cabinet.
-      const cab = ctx.createLinearGradient(CX - 220, 0, CX + 220, 0);
-      cab.addColorStop(0, "#f4f1fb");
-      cab.addColorStop(0.35, "#b9b4c9");
-      cab.addColorStop(0.5, "#5d5873");
-      cab.addColorStop(0.68, "#e6e1f2");
-      cab.addColorStop(1, "#8f88aa");
-      ctx.fillStyle = cab;
+      // Cabinet: dark armour with a neon edge (pink to cyan) and chaser bulbs
+      // running round it, quicker while it spins.
+      const body = ctx.createLinearGradient(0, CAB.y, 0, CAB.y + CAB.h);
+      body.addColorStop(0, "#2a1452");
+      body.addColorStop(1, "#140a2c");
+      ctx.fillStyle = body;
       ctx.beginPath();
-      ctx.roundRect(CX - 214, 10, 428, H - 20, 26);
+      ctx.roundRect(CAB.x, CAB.y, CAB.w, CAB.h, 26);
       ctx.fill();
+      const edge = ctx.createLinearGradient(CAB.x, 0, CAB.x + CAB.w, 0);
+      edge.addColorStop(0, "#ff2bd6");
+      edge.addColorStop(0.5, "#8a2be2");
+      edge.addColorStop(1, "#22e5ff");
+      ctx.strokeStyle = edge;
+      ctx.lineWidth = 3;
+      ctx.shadowColor = "#ff2bd6";
+      ctx.shadowBlur = 16;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      const chase = (now / 1000) * (spinning && !landed ? 14 : 2.5);
+      for (let i = 0; i < 2; i++) {
+        const y = i ? CAB.y + CAB.h - 9 : CAB.y + 9;
+        for (let j = 0; j < 17; j++) {
+          const x = CAB.x + 30 + (j * (CAB.w - 60)) / 16;
+          const on = (j + (i ? 1 : 0) + Math.floor(chase)) % 3 === 0;
+          ctx.fillStyle = on ? (landed && team ? team.color : "#ffd36b") : "rgba(255,211,107,.18)";
+          ctx.shadowColor = on ? ctx.fillStyle : "transparent";
+          ctx.shadowBlur = on ? 8 : 0;
+          ctx.beginPath();
+          ctx.arc(x, y, 2.6, 0, TAU);
+          ctx.fill();
+        }
+      }
+      ctx.shadowBlur = 0;
       ctx.fillStyle = "#0d0820";
       ctx.beginPath();
-      ctx.roundRect(CX - 194, 28, 388, H - 56, 16);
+      ctx.roundRect(CAB.x + 20, CAB.y + 20, CAB.w - 40, CAB.h - 40, 16);
       ctx.fill();
 
       // The reel.
@@ -176,7 +221,7 @@ export default function GGMajorReel({ state, clock }: { state: GGState; clock: (
       const cardH = n ? 2 * R * Math.sin(Math.PI / n) * 0.9 : 60;
       ctx.save();
       ctx.beginPath();
-      ctx.roundRect(CX - 194, 28, 388, H - 56, 16);
+      ctx.roundRect(CAB.x + 20, CAB.y + 20, CAB.w - 40, CAB.h - 40, 16);
       ctx.clip();
       const visible = faces
         .map((tag, i) => ({ tag, a: (i * TAU) / n + angle }))
@@ -212,20 +257,20 @@ export default function GGMajorReel({ state, clock }: { state: GGState; clock: (
         ctx.textAlign = "left";
         ctx.textBaseline = "middle";
         ctx.font = `900 ${Math.round(cardH * 0.4)}px "Big Shoulders Display", "Arial Narrow", sans-serif`;
-        const name = (current.config.names[f.tag] ?? f.tag).toUpperCase();
+        const name = displayName(current.config.names[f.tag] ?? f.tag).toUpperCase();
         ctx.fillText(name, -CARD_W / 2 + 40 + fw, 0, CARD_W - fw - 60);
         ctx.restore();
         // Darker towards the top and bottom of the drum, and a blur while it's fast.
-        ctx.fillStyle = `rgba(13,8,32,${Math.min(0.95, (1 - f.c) * 0.9 + blur * 0.3)})`;
+        ctx.fillStyle = `rgba(13,8,32,${Math.min(0.9, (1 - f.c) * 0.62 + blur * 0.3)})`;
         ctx.fillRect(CX - CARD_W / 2, y - (cardH * f.c) / 2, CARD_W, cardH * f.c);
       }
-      const fade = ctx.createLinearGradient(0, 28, 0, H - 28);
-      fade.addColorStop(0, "rgba(13,8,32,.96)");
-      fade.addColorStop(0.3, "rgba(13,8,32,0)");
-      fade.addColorStop(0.7, "rgba(13,8,32,0)");
-      fade.addColorStop(1, "rgba(13,8,32,.96)");
+      const fade = ctx.createLinearGradient(0, CAB.y + 20, 0, CAB.y + CAB.h - 20);
+      fade.addColorStop(0, "rgba(13,8,32,.88)");
+      fade.addColorStop(0.2, "rgba(13,8,32,0)");
+      fade.addColorStop(0.8, "rgba(13,8,32,0)");
+      fade.addColorStop(1, "rgba(13,8,32,.88)");
       ctx.fillStyle = fade;
-      ctx.fillRect(CX - 194, 28, 388, H - 56);
+      ctx.fillRect(CAB.x + 20, CAB.y + 20, CAB.w - 40, CAB.h - 40);
       ctx.restore();
 
       // The window, lit in the team's colour once it lands.
@@ -239,6 +284,30 @@ export default function GGMajorReel({ state, clock }: { state: GGState; clock: (
       ctx.roundRect(CX - CARD_W / 2 - 14, CY - cardH / 2 - 9, CARD_W + 28, cardH + 18, 12);
       ctx.stroke();
       ctx.shadowBlur = 0;
+      if (landed && team) {
+        const t = seg(ms, LAND_END, LAND_END + 700);
+        if (t < 1) {
+          ctx.fillStyle = `rgba(255,255,255,${0.55 * (1 - t) * (1 - t)})`;
+          ctx.beginPath();
+          ctx.roundRect(CX - CARD_W / 2 - 14, CY - cardH / 2 - 9, CARD_W + 28, cardH + 18, 12);
+          ctx.fill();
+          ctx.fillStyle = team.color;
+          ctx.shadowColor = team.color;
+          ctx.shadowBlur = 10;
+          for (let i = 0; i < 26; i++) {
+            const a = (i / 26) * TAU + i * 0.37;
+            const reach = (60 + (i % 5) * 26) * (1 - Math.pow(1 - t, 3));
+            const x = CX + Math.cos(a) * (CARD_W / 2 + reach * 0.9);
+            const y = CY + Math.sin(a) * (cardH / 2 + reach * 0.45);
+            ctx.globalAlpha = 1 - t;
+            ctx.beginPath();
+            ctx.arc(x, y, 3 * (1 - t) + 0.8, 0, TAU);
+            ctx.fill();
+          }
+          ctx.globalAlpha = 1;
+          ctx.shadowBlur = 0;
+        }
+      }
       ctx.fillStyle = "#ffb347";
       for (const side of [-1, 1]) {
         const x = CX + side * (CARD_W / 2 + 18);
@@ -258,5 +327,5 @@ export default function GGMajorReel({ state, clock }: { state: GGState; clock: (
     };
   }, [clock]);
 
-  return <canvas ref={canvasRef} aria-hidden className="block h-auto w-full max-w-[520px]" style={{ aspectRatio: `${W} / ${H}` }} />;
+  return <canvas ref={canvasRef} aria-hidden className="block h-full w-full" style={{ aspectRatio: `${W} / ${H}` }} />;
 }

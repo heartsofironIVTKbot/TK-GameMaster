@@ -676,6 +676,16 @@ export default function GGStageScene({ anchorRef }: { anchorRef: MutableRefObjec
         fctx.setTransform(ratio, 0, 0, ratio, 0, 0);
         drawTank(fctx, view, time, withTank, ratio);
         drawPalms(fctx, view, travel, sprites, false, "before-tank");
+        // The nearest palms fade out under the stage's header, so their crowns never run through the title.
+        fctx.save();
+        fctx.globalCompositeOperation = "destination-out";
+        const veil = fctx.createLinearGradient(0, 0, 0, 140);
+        veil.addColorStop(0, "rgba(0,0,0,.92)");
+        veil.addColorStop(0.5, "rgba(0,0,0,.8)");
+        veil.addColorStop(1, "rgba(0,0,0,0)");
+        fctx.fillStyle = veil;
+        fctx.fillRect(0, 0, view.w, 140);
+        fctx.restore();
       }
       // A shooting star about every 10 s, somewhere in the sky, in any direction.
       if (!still && time >= nextMeteor) {
