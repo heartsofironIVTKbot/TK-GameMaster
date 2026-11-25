@@ -1,6 +1,6 @@
 "use client";
 
-import { Undo2, X } from "lucide-react";
+import { Film, Undo2, X } from "lucide-react";
 import { useState } from "react";
 import { PHASE_LABEL, type GGAction, type GGPerson, type GGPhase, type GGState } from "@/lib/greatGame/model";
 import { nationName, person, teamById } from "./ggUi";
@@ -77,7 +77,20 @@ export function describe(state: GGState, action: GGAction): string {
   }
 }
 
-export default function GGLog({ state, organizer, act, onClose }: { state: GGState; organizer: boolean; act: Act; onClose: () => void }) {
+export default function GGLog({
+  state,
+  organizer,
+  act,
+  onClose,
+  replayLink = true,
+}: {
+  state: GGState;
+  organizer: boolean;
+  act: Act;
+  onClose: () => void;
+  /** Show the way to the replay (off inside the replay). */
+  replayLink?: boolean;
+}) {
   const [error, setError] = useState<string | null>(null);
   const undone = new Set(state.log.filter((a) => a.kind === "undo").map((a) => Number(a.payload.seq)));
   const byName = (id: string) => (id === "system" ? "Clock" : (person(state, id)?.name ?? "Organizer"));
@@ -85,9 +98,16 @@ export default function GGLog({ state, organizer, act, onClose }: { state: GGSta
     <aside className="gg-panel absolute bottom-0 right-0 top-[86px] z-[1200] flex w-[min(420px,100%)] flex-col" aria-label="Event log">
       <div className="flex items-center justify-between px-4 pt-3">
         <span className="gg-disp text-2xl font-black">Log</span>
-        <button type="button" className="gg-btn h-8 min-h-0 px-2" onClick={onClose} aria-label="Close the log">
-          <X size={16} />
-        </button>
+        <div className="flex items-center gap-2">
+          {replayLink && (
+            <a className="gg-btn h-8 min-h-0 px-2.5 text-xs" href={`/greatgame/${state.slug}/replay`} title="Watch the night again, move by move, with every draw checked">
+              <Film size={14} aria-hidden /> Replay
+            </a>
+          )}
+          <button type="button" className="gg-btn h-8 min-h-0 px-2" onClick={onClose} aria-label="Close the log">
+            <X size={16} />
+          </button>
+        </div>
       </div>
       <p className="px-4 pt-1 text-[12px]" style={{ color: "var(--gg-fg-3)" }}>
         Everything that happened, newest first. Fixes by organizers are marked with their reason.

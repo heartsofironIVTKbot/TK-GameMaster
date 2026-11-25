@@ -140,6 +140,17 @@ export async function getState(slug: string): Promise<GGState | null> {
   return event ? stateOf(event) : null;
 }
 
+/**
+ * What the replay page needs to rebuild the night itself: the event's setup as
+ * it was created (later changes are in the log), the whole log, and the
+ * fairness fingerprint (with the seed once it's revealed).
+ */
+export async function getReplay(slug: string): Promise<{ config: GGConfig; log: GGAction[]; fairness: { commit: string; seed: string | null } } | null> {
+  const event = await loadEvent(slug);
+  if (!event) return null;
+  return { config: event.config, log: [...event.log], fairness: { commit: event.commit, seed: event.revealed ? event.seed : null } };
+}
+
 /** Called after every change (the live hub pushes it to the open pages). */
 export function onEventChange(listener: (slug: string) => void): () => void {
   const h = holder();

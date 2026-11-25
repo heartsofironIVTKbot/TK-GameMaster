@@ -1,7 +1,8 @@
 /* The Great Game 2026 draft room: the poster's synthwave look (neon pink to
    cyan, brushed steel, chrome lettering). Everything is scoped under .gg. */
 
-.gg {
+.gg,
+.gg-replay-ui {
   --gg-ink: #0b0618;
   --gg-ink-2: #120a24;
   --gg-plate: #1a1030;
@@ -20,6 +21,12 @@
   --gg-body: var(--font-public-sans), "Segoe UI", system-ui, sans-serif;
   --gg-brush: var(--font-gg-brush), "Brush Script MT", cursive;
   --gg-digit: var(--font-gg-digit), "Segoe UI", sans-serif;
+  color: var(--gg-fg);
+  font-family: var(--gg-body);
+  color-scheme: dark;
+}
+
+.gg {
   position: fixed;
   inset: 0;
   overflow: hidden;
@@ -29,7 +36,8 @@
   color-scheme: dark;
 }
 
-.gg *:focus-visible {
+.gg *:focus-visible,
+.gg-replay-ui *:focus-visible {
   outline: 2px solid var(--gg-cyan);
   outline-offset: 2px;
 }
@@ -1244,6 +1252,515 @@
   background: rgba(34, 229, 255, 0.18);
 }
 
+/* ---------- Replay ---------- */
+.gg-crt-live.is-replay {
+  color: var(--gg-cyan);
+}
+
+/* The transport bar: a VCR deck under the room. */
+.gg-transport {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1400;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 0 16px;
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.025) 0 2px, transparent 2px 5px),
+    linear-gradient(180deg, #2f2a48, #1c1832 55%, #141026);
+  border-top: 2px solid #ff2bd6;
+  box-shadow: 0 -2px 18px rgba(255, 43, 214, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  font-family: var(--gg-body, inherit);
+  color: var(--gg-fg, #efe9ff);
+}
+.gg-transport-left,
+.gg-transport-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.gg-transport-mid {
+  flex: 1;
+  min-width: 0;
+}
+.gg-transport-play {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 2px solid #ffd0f6;
+  background: radial-gradient(circle at 35% 30%, #ff7be8, #d41fb6 60%, #7c0f68);
+  color: #fff;
+  box-shadow: 0 0 20px rgba(255, 43, 214, 0.65), inset 0 2px 0 rgba(255, 255, 255, 0.35);
+  cursor: pointer;
+  transition: transform 0.12s;
+}
+.gg-transport-play:active {
+  transform: scale(0.94);
+}
+.gg-transport-step {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--gg-line-2, #4a3a7a);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--gg-fg-2, #b9aee0);
+  cursor: pointer;
+}
+.gg-transport-step:hover,
+.gg-transport-step:focus-visible {
+  border-color: var(--gg-cyan);
+  color: #fff;
+  outline: none;
+}
+.gg-transport-time {
+  display: grid;
+  gap: 3px;
+  margin-left: 6px;
+  min-width: 150px;
+}
+.gg-transport-time b {
+  font-size: 20px;
+  font-weight: 900;
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 0 10px rgba(34, 229, 255, 0.6);
+}
+.gg-transport-time b span {
+  font-size: 13px;
+  color: var(--gg-fg-3);
+  text-shadow: none;
+}
+.gg-transport-time small {
+  font-size: 11.5px;
+  color: var(--gg-fg-3);
+  white-space: nowrap;
+}
+.gg-transport-chapter {
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--tint);
+}
+.gg-transport-right .gg-btn.is-on {
+  border-color: var(--gg-cyan);
+  background: rgba(34, 229, 255, 0.12);
+  color: #fff;
+}
+
+/* The track: chapters in their step's colour, a mark per move, the playhead. */
+.gg-track {
+  position: relative;
+  height: 44px;
+  cursor: pointer;
+  touch-action: none;
+  outline: none;
+}
+.gg-track:focus-visible .gg-track-head {
+  box-shadow: 0 0 0 3px rgba(34, 229, 255, 0.5), 0 0 14px #22e5ff;
+}
+.gg-track-chapters {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 22px;
+  height: 10px;
+  border-radius: 5px;
+  background: rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+.gg-track-chapter {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: color-mix(in srgb, var(--tint) 28%, transparent);
+  border-left: 2px solid var(--tint);
+}
+.gg-track-chapter em {
+  position: absolute;
+  left: 4px;
+  top: -16px;
+  font: 700 9px/1 var(--gg-digit);
+  font-style: normal;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--tint);
+  opacity: 0;
+}
+.gg-track-fill {
+  position: absolute;
+  left: 0;
+  top: 22px;
+  height: 10px;
+  border-radius: 5px 0 0 5px;
+  background: linear-gradient(90deg, rgba(255, 43, 214, 0.55), rgba(34, 229, 255, 0.75));
+  box-shadow: 0 0 10px rgba(34, 229, 255, 0.45);
+  pointer-events: none;
+}
+.gg-track-mark {
+  position: absolute;
+  top: 18px;
+  width: 2px;
+  height: 18px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: rgba(255, 255, 255, 0.25);
+  pointer-events: none;
+}
+.gg-track-mark.is-draw {
+  top: 12px;
+  height: 24px;
+  background: #22e5ff;
+  box-shadow: 0 0 5px #22e5ff;
+}
+.gg-track-mark.is-ban {
+  background: #ff3b5c;
+}
+.gg-track-mark.is-pick {
+  background: #ffd23f;
+}
+.gg-track-mark.is-step {
+  top: 8px;
+  height: 30px;
+  background: #fff;
+}
+.gg-track-head {
+  position: absolute;
+  top: 12px;
+  width: 16px;
+  height: 30px;
+  margin-left: -8px;
+  border-radius: 5px;
+  background: linear-gradient(180deg, #fff, #c9f8ff);
+  box-shadow: 0 0 14px #22e5ff, 0 0 2px #fff;
+  pointer-events: none;
+}
+.gg-track-tip {
+  position: absolute;
+  bottom: 46px;
+  transform: translateX(-50%);
+  max-width: 340px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--gg-line-2);
+  background: #120a26;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #fff;
+  pointer-events: none;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+}
+
+/* Fast-forward: VHS tracking lines over the room, and the badge. */
+.gg-ff-veil {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  z-index: 1300;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s;
+  background:
+    linear-gradient(180deg, transparent 0 46%, rgba(255, 255, 255, 0.07) 47% 48%, transparent 49% 100%) 0 0 / 100% 340px,
+    repeating-linear-gradient(180deg, rgba(0, 0, 0, 0.18) 0 2px, transparent 2px 4px);
+  mix-blend-mode: screen;
+}
+.gg-ff-veil.is-on {
+  opacity: 1;
+  animation: gg-ff-roll 0.9s linear infinite;
+}
+@keyframes gg-ff-roll {
+  from { background-position: 0 0, 0 0; }
+  to { background-position: 0 340px, 0 0; }
+}
+.gg-ff-badge {
+  position: fixed;
+  left: 16px;
+  z-index: 1350;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(10, 4, 24, 0.75);
+  border: 1px solid rgba(34, 229, 255, 0.5);
+  font: 900 20px/1 var(--gg-digit);
+  color: #fff;
+  text-shadow: -2px 0 rgba(255, 0, 80, 0.8), 2px 0 rgba(0, 220, 255, 0.8);
+  animation: gg-hud-blink 1s steps(1) infinite;
+}
+
+/* The title card before playing. */
+.gg-replay-intro {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  z-index: 1380;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  border: 0;
+  background: radial-gradient(ellipse at 50% 45%, rgba(20, 8, 44, 0.72), rgba(6, 2, 16, 0.92));
+  color: #fff;
+  cursor: pointer;
+}
+.gg-replay-intro::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 3px);
+  pointer-events: none;
+}
+.gg-replay-intro-card {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  text-align: center;
+}
+.gg-replay-intro-title {
+  font: 900 clamp(64px, 12vw, 128px)/0.9 var(--gg-display);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #fff;
+  text-shadow: -4px 0 rgba(255, 0, 80, 0.85), 4px 0 rgba(0, 220, 255, 0.85), 0 0 30px rgba(255, 43, 214, 0.6);
+  animation: gg-crt-jitter 3.2s steps(1) infinite;
+}
+.gg-replay-intro-meta {
+  font: 700 13px/1.3 var(--gg-digit);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gg-fg-2);
+}
+.gg-replay-intro-proof {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(31, 212, 154, 0.6);
+  background: rgba(31, 212, 154, 0.12);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--gg-ok, #1fd49a);
+}
+.gg-replay-intro-proof.is-sealed {
+  border-color: rgba(255, 210, 63, 0.5);
+  background: rgba(255, 210, 63, 0.1);
+  color: var(--gg-pending);
+}
+.gg-replay-intro-proof.is-bad {
+  border-color: rgba(255, 90, 110, 0.6);
+  background: rgba(255, 90, 110, 0.12);
+  color: #ff9b9b;
+}
+.gg-replay-intro-play {
+  display: grid;
+  place-items: center;
+  width: 92px;
+  height: 92px;
+  margin-top: 14px;
+  padding-left: 6px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ff7be8, #d41fb6 60%, #7c0f68);
+  box-shadow: 0 0 40px rgba(255, 43, 214, 0.75), inset 0 3px 0 rgba(255, 255, 255, 0.35);
+  animation: gg-halo 2.4s ease-in-out infinite;
+}
+.gg-replay-intro-hint {
+  font-size: 12px;
+  color: var(--gg-fg-3);
+}
+
+/* Receipts: a side panel like the Log, above the transport bar. */
+.gg-receipts {
+  position: fixed;
+  top: 86px;
+  right: 0;
+  z-index: 1390;
+  display: flex;
+  flex-direction: column;
+  width: min(480px, 100%);
+}
+.gg-receipt-seal {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1.5px solid rgba(31, 212, 154, 0.6);
+  background: linear-gradient(135deg, rgba(31, 212, 154, 0.14), rgba(18, 10, 38, 0.9));
+}
+.gg-receipt-seal.is-sealed {
+  border-color: rgba(255, 210, 63, 0.55);
+  background: linear-gradient(135deg, rgba(255, 210, 63, 0.12), rgba(18, 10, 38, 0.9));
+}
+.gg-receipt-seal.is-bad {
+  border-color: rgba(255, 90, 110, 0.7);
+  background: linear-gradient(135deg, rgba(255, 90, 110, 0.16), rgba(18, 10, 38, 0.9));
+}
+.gg-receipt-verdict {
+  font: 900 22px/1.05 var(--gg-display);
+  text-transform: uppercase;
+}
+.gg-receipt-seal p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--gg-fg-2);
+}
+.gg-receipt-code {
+  display: grid;
+  gap: 2px;
+  font: 600 11px/1.35 var(--gg-digit);
+  word-break: break-all;
+  color: var(--gg-fg);
+}
+.gg-receipt-code small {
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gg-fg-3);
+}
+.gg-receipt {
+  border-radius: 12px;
+  border: 1px solid var(--gg-line);
+  background: rgba(22, 13, 46, 0.7);
+}
+.gg-receipt.is-undone {
+  opacity: 0.6;
+}
+.gg-receipt-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 12px;
+  text-align: left;
+  color: inherit;
+}
+.gg-receipt-seq {
+  flex-shrink: 0;
+  width: 34px;
+  font-size: 11px;
+  color: var(--gg-fg-3);
+}
+.gg-receipt-kind {
+  display: block;
+  font: 800 11px/1.2 var(--gg-digit);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gg-cyan);
+}
+.gg-receipt-what {
+  display: block;
+  font-size: 13px;
+  line-height: 1.3;
+}
+.gg-receipt-status {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font: 800 10.5px/1.4 var(--gg-digit);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.gg-receipt.is-ok .gg-receipt-status {
+  background: rgba(31, 212, 154, 0.16);
+  color: var(--gg-ok, #1fd49a);
+}
+.gg-receipt.is-sealed .gg-receipt-status {
+  background: rgba(255, 210, 63, 0.14);
+  color: var(--gg-pending);
+}
+.gg-receipt.is-mismatch {
+  border-color: rgba(255, 90, 110, 0.7);
+}
+.gg-receipt.is-mismatch .gg-receipt-status {
+  background: rgba(255, 90, 110, 0.18);
+  color: #ff9b9b;
+}
+.gg-receipt-body {
+  display: grid;
+  gap: 8px;
+  padding: 0 12px 12px 56px;
+}
+.gg-receipt-body small {
+  font-size: 11px;
+  color: var(--gg-fg-3);
+}
+.gg-receipt-pool {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 4px 8px;
+}
+.gg-receipt-pool b {
+  font-size: 10.5px;
+  color: var(--gg-fg-3);
+  text-align: right;
+}
+.gg-receipt-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-self: start;
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  font-size: 12.5px;
+  color: var(--team, var(--gg-fg-2));
+}
+.gg-receipt-item.is-picked {
+  border-color: var(--gg-cyan);
+  background: rgba(34, 229, 255, 0.12);
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 0 10px rgba(34, 229, 255, 0.3);
+}
+.gg-receipt-trace {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.45;
+  word-break: break-word;
+  color: var(--gg-fg-3);
+}
+
+@media (max-width: 900px) {
+  .gg-transport {
+    gap: 10px;
+    padding: 0 10px;
+  }
+  .gg-transport-time {
+    min-width: 0;
+  }
+  .gg-transport-time small,
+  .gg-transport-label {
+    display: none;
+  }
+}
+@media (max-width: 560px) {
+  .gg-transport-step,
+  .gg-transport-right .gg-btn.px-2\.5 {
+    display: none;
+  }
+  .gg-transport-play {
+    width: 46px;
+    height: 46px;
+  }
+}
+
 /* ---------- Organizer controls ---------- */
 .gg-ctl {
   position: absolute;
@@ -2356,6 +2873,10 @@
   .gg-neon-glow,
   .gg-brush-live,
   .gg-sun-halo,
+  .gg-ff-veil.is-on,
+  .gg-ff-badge,
+  .gg-replay-intro-title,
+  .gg-replay-intro-play,
   .gg-hud-scan,
   .gg-hud-label i,
   .gg-hud-cells b.is-now,

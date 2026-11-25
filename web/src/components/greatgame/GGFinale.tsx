@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy, Map as MapIcon, ShieldCheck } from "lucide-react";
+import { Check, Copy, Film, Map as MapIcon, ShieldCheck } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { GGState, GGTeam } from "@/lib/greatGame/model";
 import * as sound from "./ggSound";
@@ -26,12 +26,15 @@ export default function GGFinale({
   now,
   reveal,
   copyText,
+  replayLink = true,
 }: {
   state: GGState;
   viewer: GGViewerInfo;
   now: number;
   reveal: () => Promise<string | null>;
   copyText: string;
+  /** Show the way to the replay (off inside the replay). */
+  replayLink?: boolean;
 }) {
   const undone = new Set(state.log.filter((entry) => entry.kind === "undo").map((entry) => Number(entry.payload.seq)));
   const lockedAt = [...state.log].reverse().find((entry) => entry.kind === "phase.set" && entry.payload.phase === "locked" && !undone.has(entry.seq))?.at ?? 0;
@@ -147,6 +150,11 @@ export default function GGFinale({
             >
               {copied ? <Check size={16} aria-hidden /> : <Copy size={16} aria-hidden />} {copied ? "Copied" : "Copy for Discord"}
             </button>
+            {replayLink && (
+              <a className="gg-btn" href={`/greatgame/${state.slug}/replay`} title="Watch the night again, move by move">
+                <Film size={16} aria-hidden /> Replay
+              </a>
+            )}
             <button type="button" className="gg-btn" onClick={() => setPoster(false)}>
               <MapIcon size={16} aria-hidden /> Show the map
             </button>
@@ -156,7 +164,7 @@ export default function GGFinale({
           {state.teams.map((team, i) => (
             <TeamCard key={team.id} state={state} team={team} index={i} />
           ))}
-          <Fairness state={state} viewer={viewer} reveal={reveal} />
+          <Fairness state={state} viewer={viewer} reveal={reveal} receiptsLink={replayLink} />
         </div>
       </div>
     </div>
@@ -201,7 +209,7 @@ function TeamCard({ state, team, index }: { state: GGState; team: GGTeam; index:
 }
 
 /** The sealed envelope: the code posted before the draft, the seed once revealed, and a check anyone can run. */
-function Fairness({ state, viewer, reveal }: { state: GGState; viewer: GGViewerInfo; reveal: () => Promise<string | null> }) {
+function Fairness({ state, viewer, reveal, receiptsLink }: { state: GGState; viewer: GGViewerInfo; reveal: () => Promise<string | null>; receiptsLink: boolean }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [check, setCheck] = useState<"match" | "mismatch" | null>(null);
@@ -239,6 +247,11 @@ function Fairness({ state, viewer, reveal }: { state: GGState; viewer: GGViewerI
             <p className="gg-finale-fair-text" style={{ color: check === "match" ? "var(--gg-ok)" : "#ff9b9b", fontWeight: 700 }}>
               {check === "match" ? "✓ The seed matches the code posted before the draft." : "✗ The seed doesn't match the code."}
             </p>
+          )}
+          {receiptsLink && (
+            <a className="gg-finale-fair-text underline decoration-dotted underline-offset-4" href={`/greatgame/${state.slug}/replay?receipts=1`} style={{ color: "var(--gg-cyan)" }}>
+              Check every draw of the night →
+            </a>
           )}
         </>
       ) : viewer.organizer ? (

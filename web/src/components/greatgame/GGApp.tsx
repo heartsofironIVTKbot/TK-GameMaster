@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useState, type ReactNode } from "react";
 import { turnDeadline } from "@/lib/greatGame/engine";
 import GGControlPanel from "./GGControlPanel";
 import GGLog from "./GGLog";
@@ -29,6 +29,18 @@ const GGMap = dynamic(() => import("./GGMap"), { ssr: false });
  */
 export default function GGApp({ slug }: { slug: string }) {
   const game = useGreatGame(slug);
+  return <GGRoom slug={slug} game={game} />;
+}
+
+/** Everything the room reads: the live draft (useGreatGame), or a replay rebuilding it move by move. */
+export type GGSource = ReturnType<typeof useGreatGame>;
+
+/**
+ * The room itself. `replay` turns it into the replay's screen: the bottom
+ * leaves room for the transport bar, the monitor says REPLAY, and the top
+ * bar's right corner holds `replay.corner` (the way back).
+ */
+export function GGRoom({ slug, game, replay }: { slug: string; game: GGSource; replay?: { corner: ReactNode; bottom: number } }) {
   const { state, viewer, error, considering, act, consider, reveal, serverNow, demo, avatars } = game;
   const [selected, setSelected] = useState<string | null>(null);
   const [panel, setPanel] = useState<"log" | "rules" | "mods" | "controls" | null>(null);
@@ -88,7 +100,7 @@ export default function GGApp({ slug }: { slug: string }) {
 
   return (
     <AvatarsContext.Provider value={avatars}>
-    <main className="gg" data-animating={animating || undefined}>
+    <main className="gg" data-animating={animating || undefined} data-replay={replay ? "" : undefined} style={replay ? { bottom: replay.bottom } : undefined}>
       <div className="absolute inset-0">
         <GGMap state={state} considering={considering} selected={selected} onSelect={select} />
       </div>
@@ -103,8 +115,11 @@ export default function GGApp({ slug }: { slug: string }) {
         onOpenRules={() => setPanel(panel === "rules" ? null : "rules")}
         onOpenMods={() => setPanel(panel === "mods" ? null : "mods")}
         onOpenControls={viewer.organizer ? () => setPanel(panel === "controls" ? null : "controls") : null}
+        mode={replay ? "replay" : "live"}
         right={
-          demo ? (
+          replay ? (
+            replay.corner
+          ) : demo ? (
             <select
               aria-label="Act as (preview only)"
               className="gg-input h-9 w-[150px] text-xs"
@@ -150,14 +165,14 @@ export default function GGApp({ slug }: { slug: string }) {
       {(state.phase === "bans" || state.phase === "draft") && !selected && !panel && <GGPoolPanel state={state} onSelect={select} />}
       <GGBanSlam state={state} now={now} />
       {state.phase === "assign" && !selected && !panel && <GGLineupBoard state={state} viewer={viewer} act={act} />}
-      {state.phase === "locked" && !panel && <GGFinale state={state} viewer={viewer} now={now} reveal={reveal} copyText={finalText(state)} />}
+      {state.phase === "locked" && !panel && <GGFinale state={state} viewer={viewer} now={now} reveal={reveal} copyText={finalText(state)} replayLink={!replay} />}
       {selected && !panel && <GGNationPanel key={selected} state={state} viewer={viewer} tag={selected} act={act} onClose={() => select(null)} />}
-      {panel === "log" && <GGLog state={state} organizer={viewer.organizer} act={act} onClose={() => setPanel(null)} />}
+      {panel === "log" && <GGLog state={state} organizer={viewer.organizer} act={act} onClose={() => setPanel(null)} replayLink={!replay} />}
       {panel === "rules" && <GGRules state={state} onClose={() => setPanel(null)} />}
       {panel === "mods" && <GGMods onClose={() => setPanel(null)} />}
       {panel === "controls" && viewer.organizer && <GGControlPanel state={state} act={act} reveal={reveal} onClose={() => setPanel(null)} now={now} viewers={game.viewers} live={game.live} />}
 
-      {!game.live && (
+      {!game.live && !replay && (
         <div className="gg-panel absolute bottom-4 left-1/2 z-[1300] -translate-x-1/2 rounded-full px-4 py-2 text-xs" role="status">
           Reconnecting to the live draft…
         </div>

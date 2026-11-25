@@ -1,4 +1,4 @@
-import { drawFrom } from "./fairness";
+import { drawFrom } from "./draw";
 import { NEUTRAL_TEAM_COLOR, membersOf, nameOf, nationsOf, openMinors, strengthOrder, turnDeadline } from "./engine";
 import { PHASES, VALID_COLOR, type GGAction, type GGActionKind, type GGPerson, type GGPhase, type GGState, type GGTeam } from "./model";
 
@@ -96,7 +96,7 @@ function cleanReason(raw: unknown): string | null {
 }
 
 /** Players not yet placed in any team, of a role. */
-function unplaced(state: GGState, role: GGPerson["role"]): string[] {
+export function unplaced(state: GGState, role: GGPerson["role"]): string[] {
   const placed = new Set(state.teams.flatMap((team) => membersOf(team)));
   return state.config.people.filter((person) => person.role === role && !placed.has(person.id)).map((person) => person.id);
 }

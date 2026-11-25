@@ -224,6 +224,7 @@ export default function GGTopBar({
   onOpenMods,
   onOpenControls,
   scratchTeam = null,
+  mode = "live",
 }: {
   state: GGState;
   now: number;
@@ -234,6 +235,8 @@ export default function GGTopBar({
   onOpenControls: (() => void) | null;
   /** The team whose vice-captain ticket is still being scratched. */
   scratchTeam?: string | null;
+  /** "replay": the monitor says REPLAY instead of LIVE. */
+  mode?: "live" | "replay";
 }) {
   const banner = bannerFor(state, now, scratchTeam);
   const readouts = readoutsFor(state, now, scratchTeam);
@@ -355,7 +358,7 @@ export default function GGTopBar({
         style={{ boxShadow: `0 0 22px ${hexA(accent, 0.45)}, inset 0 0 30px ${hexA(accent, 0.22)}`, borderColor: hexA(accent, 0.55) }}
         aria-live="polite"
       >
-        <span className={`gg-crt-live ${state.paused ? "is-paused" : ""}`}>{state.paused ? "PAUSED" : "LIVE"}</span>
+        <span className={`gg-crt-live ${state.paused ? "is-paused" : ""} ${mode === "replay" ? "is-replay" : ""}`}>{state.paused ? "PAUSED" : mode === "replay" ? "REPLAY" : "LIVE"}</span>
         {slim ? (
           <>
             <div className="flex items-center justify-center gap-2 px-3">
