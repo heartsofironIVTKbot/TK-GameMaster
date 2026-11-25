@@ -5,9 +5,10 @@ import { createContext, useEffect, useRef, type MutableRefObject } from "react";
 /**
  * The randomizer stage's backdrop: an outrun night like the event poster,
  * always on the move. A starry violet sky, wireframe mountains rolling past on
- * both sides, neon palms (cyan on the left, pink on the right) lining a road
- * with glowing edges, and a cyan grid floor, all flying towards the viewer at
- * one speed.
+ * both sides, neon palms (cyan on the left, pink on the right) lining a wet
+ * road that mirrors the light at its end, and a cyan grid floor, all flying
+ * towards the viewer at one speed, out of a haze on the horizon. A shooting
+ * star crosses the sky about every ten seconds.
  *
  * A machine can stand at the end of the road: it registers an anchor (the
  * point where the road meets it), and the scene puts its horizon and
@@ -193,6 +194,31 @@ function drawFloor(ctx: CanvasRenderingContext2D, v: View, travel: number) {
       ctx.stroke();
     }
   }
+  // Reflection: the glow at the road's end mirrored down the wet asphalt.
+  const [rl, ry] = project(v, -ROAD * 0.55, 0, near);
+  const [rr] = project(v, ROAD * 0.55, 0, near);
+  const shine = ctx.createLinearGradient(0, fy, 0, ry);
+  shine.addColorStop(0, "rgba(255,150,240,.55)");
+  shine.addColorStop(0.25, "rgba(255,79,224,.22)");
+  shine.addColorStop(1, "rgba(255,79,224,0)");
+  ctx.fillStyle = shine;
+  ctx.beginPath();
+  ctx.moveTo(v.cx, fy);
+  ctx.lineTo(rr, ry);
+  ctx.lineTo(rl, ry);
+  ctx.closePath();
+  ctx.fill();
+  // The edge lights mirrored faintly just inside the road.
+  ctx.strokeStyle = "rgba(255,79,224,.16)";
+  ctx.lineWidth = 3;
+  for (const side of [-1, 1]) {
+    const [ax, ay] = project(v, side * ROAD * 0.86, 0, near);
+    const [bx, by] = project(v, side * ROAD * 0.86, 0, far);
+    ctx.beginPath();
+    ctx.moveTo(ax, ay);
+    ctx.lineTo(bx, by);
+    ctx.stroke();
+  }
   const dash = travel % 4;
   ctx.fillStyle = "rgba(255,214,247,.85)";
   for (let z = 4 - dash; z < far; z += 4) {
@@ -231,6 +257,8 @@ function drawMountains(ctx: CanvasRenderingContext2D, v: View, travel: number, t
     const z1 = zs[k + 1];
     const fog = Math.min(1, 6 / z1);
     const edge = `rgba(${Math.round(120 + 60 * fog)},${Math.round(120 + 100 * fog)},255,${0.12 + 0.45 * fog})`;
+    // New rows appear far away: fade them in over the last stretch.
+    ctx.globalAlpha = Math.min(1, (Z_FAR - z0) / 14);
     for (const side of [-1, 1]) {
       for (let i = 0; i < xs.length - 1; i++) {
         const x0 = side * xs[i];
@@ -251,6 +279,60 @@ function drawMountains(ctx: CanvasRenderingContext2D, v: View, travel: number, t
         ctx.stroke();
       }
     }
+  }
+  ctx.globalAlpha = 1;
+}
+
+/**
+ * Haze along the horizon, over the far end of the floor, the road and the
+ * mountains, so everything rises out of the distance instead of appearing.
+ */
+function drawHaze(ctx: CanvasRenderingContext2D, v: View) {
+  const band = v.h * 0.06;
+  const haze = ctx.createLinearGradient(0, v.hy - band, 0, v.hy + band * 0.6);
+  haze.addColorStop(0, "rgba(122,26,125,0)");
+  haze.addColorStop(0.62, "rgba(122,26,125,.5)");
+  haze.addColorStop(0.76, "rgba(90,20,110,.38)");
+  haze.addColorStop(1, "rgba(42,11,72,0)");
+  ctx.fillStyle = haze;
+  ctx.fillRect(0, v.hy - band, v.w, band * 1.6);
+}
+
+/** A shooting star now and then: a bright head and a fading tail, in a random direction. */
+interface Meteor {
+  x: number;
+  y: number;
+  dx: number;
+  dy: number;
+  born: number;
+  life: number;
+}
+
+function drawMeteors(ctx: CanvasRenderingContext2D, meteors: Meteor[], time: number) {
+  for (const m of meteors) {
+    const age = (time - m.born) / m.life;
+    if (age < 0 || age > 1) continue;
+    const speed = 900;
+    const travelled = age * m.life * speed;
+    const hx = m.x + m.dx * travelled;
+    const hy = m.y + m.dy * travelled;
+    const tail = 140 * Math.min(1, age * 4);
+    const fade = Math.sin(Math.PI * age);
+    const g = ctx.createLinearGradient(hx, hy, hx - m.dx * tail, hy - m.dy * tail);
+    g.addColorStop(0, `rgba(255,255,255,${0.95 * fade})`);
+    g.addColorStop(0.3, `rgba(180,240,255,${0.5 * fade})`);
+    g.addColorStop(1, "rgba(255,79,224,0)");
+    ctx.strokeStyle = g;
+    ctx.lineWidth = 2;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(hx, hy);
+    ctx.lineTo(hx - m.dx * tail, hy - m.dy * tail);
+    ctx.stroke();
+    ctx.fillStyle = `rgba(255,255,255,${fade})`;
+    ctx.beginPath();
+    ctx.arc(hx, hy, 1.8, 0, TAU);
+    ctx.fill();
   }
 }
 
@@ -303,7 +385,7 @@ function drawPalms(ctx: CanvasRenderingContext2D, v: View, travel: number, sprit
     for (let i = 0; i < PALMS; i++) {
       const start = (i * PALM_SPAN) / PALMS + (side > 0 ? PALM_SPAN / PALMS / 2 : 0);
       const z = 2.5 + ((((start - travel) % PALM_SPAN) + PALM_SPAN) % PALM_SPAN);
-      palms.push({ side, x: side * (ROAD + 0.75 + rand(i * 7 + side) * 0.6), z, tall: 1.8 + rand(i * 13 + side * 3) * 0.6 });
+      palms.push({ side, x: side * (ROAD + 0.3 + rand(i * 7 + side) * 0.3), z, tall: 1.8 + rand(i * 13 + side * 3) * 0.6 });
     }
   }
   palms.sort((a, b) => b.z - a.z);
@@ -389,6 +471,8 @@ export default function GGStageScene({ anchorRef }: { anchorRef: MutableRefObjec
     let frame = 0;
     let lastDraw = -Infinity;
     let lastPlace = 0;
+    const meteors: Meteor[] = [];
+    let nextMeteor = 3 + Math.random() * 4;
     const start = performance.now();
     const loop = (now: number) => {
       frame = requestAnimationFrame(loop);
@@ -413,7 +497,23 @@ export default function GGStageScene({ anchorRef }: { anchorRef: MutableRefObjec
       if (!anchorRef.current) drawPlanet(ctx, view, time);
       drawFloor(ctx, view, travel);
       drawMountains(ctx, view, travel, time);
+      drawHaze(ctx, view);
       drawPalms(ctx, view, travel, sprites);
+      // A shooting star about every 10 s, somewhere in the sky, in any direction.
+      if (!still && time >= nextMeteor) {
+        const angle = Math.random() * TAU;
+        meteors.push({
+          x: view.w * (0.1 + Math.random() * 0.8),
+          y: view.hy * (0.08 + Math.random() * 0.5),
+          dx: Math.cos(angle),
+          dy: Math.sin(angle) * 0.6 + 0.25,
+          born: time,
+          life: 0.7 + Math.random() * 0.4,
+        });
+        nextMeteor = time + 8 + Math.random() * 4;
+      }
+      while (meteors.length && time - meteors[0].born > 2) meteors.shift();
+      drawMeteors(ctx, meteors, time);
       if (still) cancelAnimationFrame(frame);
     };
     frame = requestAnimationFrame(loop);

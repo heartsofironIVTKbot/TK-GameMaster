@@ -425,13 +425,25 @@ export default function GGAirLottery({
       ctx.stroke();
 
       // Slot numbers under the tube; a filled slot glows in its team's colour.
-      ctx.font = '800 11px "Orbitron", "Segoe UI", sans-serif';
+      ctx.font = '800 16px "Orbitron", "Segoe UI", sans-serif';
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
+      ctx.lineJoin = "round";
       for (let i = 0; i < current.teams.length; i++) {
         const team = queue[i];
-        ctx.fillStyle = team ? team.color : "rgba(185,174,224,.55)";
-        ctx.fillText(String(i + 1), SLOT_X0 + i * SLOT_GAP, TUBE_Y + BALL_R + 18);
+        const x = SLOT_X0 + i * SLOT_GAP;
+        const y = TUBE_Y + BALL_R + 20;
+        // A dark outline so the number reads on any part of the scene.
+        ctx.strokeStyle = "rgba(8,3,20,.9)";
+        ctx.lineWidth = 4;
+        ctx.strokeText(String(i + 1), x, y);
+        ctx.fillStyle = team ? team.color : "rgba(255,255,255,.85)";
+        if (team) {
+          ctx.shadowColor = team.color;
+          ctx.shadowBlur = 8;
+        }
+        ctx.fillText(String(i + 1), x, y);
+        ctx.shadowBlur = 0;
       }
 
       // Balls already drawn, resting in the tube.
