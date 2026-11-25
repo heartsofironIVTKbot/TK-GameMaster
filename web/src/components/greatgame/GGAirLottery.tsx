@@ -7,10 +7,9 @@ import * as sound from "./ggSound";
 import { StageAnchorContext } from "./GGStageScene";
 
 /**
- * Step 1's lottery machine: a big glowing neon moon half-set behind the
- * horizon at the end of the stage's road, where air keeps the team balls
- * flying in the dome above the horizon the whole time, each ball wearing its
- * captain's Discord picture.
+ * Step 1's lottery machine: a glowing neon moon at the end of the stage's road
+ * (a glass sphere), where air keeps the team balls flying the whole time,
+ * each ball wearing its captain's Discord picture.
  *
  * When Tommy draws, the server has already picked the team and stamped the
  * time. Every page then plays the draw from that time: the air surges and the
@@ -30,7 +29,7 @@ export const DRUM_MS = 8000;
 /**
  * The suspense: the air builds for about 2.5 s with every ball flying, then
  * the drawn ball starts catching more of the jet. A simulation of 300 draws
- * caught it by itself between 3.7 and 5.4 s (4.1 s on average), never later.
+ * caught it by itself between 3.6 and 5.3 s (4 s on average), never later.
  */
 const SURGE_BUILD = 2500; // the air rises to full over this long
 const LIFT_FROM = 3000; // the drawn ball starts catching more of the jet
@@ -51,17 +50,12 @@ const DONE_MS = LANDED_MS + SETTLE_MS;
 const W = 1000;
 const H = 540;
 const CX = W / 2;
-const CY = 312;
-const R = 240;
-/**
- * The horizon: the moon is half-set behind it, far away at the end of the
- * road. The balls fly in the dome above it (it's their floor), the blower
- * sits on it, and the road ends there.
- */
-const FLOOR_Y = CY + R * 0.38;
-const ROAD_END_Y = FLOOR_Y;
+const CY = 250;
+const R = 170;
+/** Where the road ends: right behind the blower at the moon's foot, which covers it. */
+const ROAD_END_Y = CY + R - 12;
 const BALL_R = 22;
-const TUBE_Y = 36;
+const TUBE_Y = 44;
 const TUBE_BEND = 30;
 const SLOT_X0 = 40;
 const SLOT_GAP = 47;
@@ -245,7 +239,7 @@ export default function GGAirLottery({
     const spawn = (id: string, index: number): Ball => ({
       id,
       x: CX + ((index % 4) - 1.5) * BALL_R * 2.2,
-      y: FLOOR_Y - BALL_R - 4 - Math.floor(index / 4) * BALL_R * 2.2,
+      y: CY + R * 0.55 - Math.floor(index / 4) * BALL_R * 2.2,
       vx: (Math.random() - 0.5) * 80,
       vy: 0,
       spin: Math.random() * TAU,
@@ -324,7 +318,7 @@ export default function GGAirLottery({
       for (let s = 0; s < steps; s++) {
         for (const b of live) {
           b.vy += 900 * h;
-          const depth = (b.y - (FLOOR_Y - R * 0.85)) / R;
+          const depth = (b.y - (CY + R * 0.1)) / R;
           if (depth > 0) {
             const centred = 1 - Math.min(1, Math.abs(b.x - CX) / (R * 0.9));
             b.vy -= power * 2900 * h * depth * (0.55 + 0.45 * centred) * (0.6 + Math.random() * 0.8);
@@ -332,8 +326,8 @@ export default function GGAirLottery({
           b.vx += (Math.sin(b.y * 0.021 + time * 1.7) * 900 + Math.sin(b.x * 0.013 - time * 1.1) * 520) * power * h;
           b.vy += Math.cos(b.x * 0.017 + time * 1.3) * 380 * power * h;
           if (drawn && b.id === drawn.id) {
-            b.vy -= (3300 * lift + 3600 * gather) * h;
-            b.vx += (CX - b.x) * (10 * lift + 22 * gather) * h;
+            b.vy -= (2600 * lift + 3200 * gather) * h;
+            b.vx += (CX - b.x) * (8 * lift + 20 * gather) * h;
             b.vx *= 1 - 2.5 * gather * h;
           }
           const damp = 1 - 0.12 * h;
@@ -372,14 +366,6 @@ export default function GGAirLottery({
           }
         }
         for (const b of live) {
-          // The dome's floor (the horizon).
-          if (b.y > FLOOR_Y - BALL_R - 2) {
-            b.y = FLOOR_Y - BALL_R - 2;
-            if (b.vy > 0) {
-              if (b.vy > 160) impacts.push({ kind: "tink", strength: b.vy / 900, x: b.x });
-              b.vy *= -0.55;
-            }
-          }
           const dx = b.x - CX;
           const dy = b.y - CY;
           const d = Math.hypot(dx, dy);
@@ -405,7 +391,7 @@ export default function GGAirLottery({
         if (Math.random() < want - k) {
           particles.push({
             x: CX + (Math.random() - 0.5) * 30,
-            y: FLOOR_Y - 12,
+            y: CY + R - 18,
             vx: (Math.random() - 0.5) * 340 * (1 + boost),
             vy: -(220 + Math.random() * 240) * (1 + 1.6 * boost),
             life: 0.6 + Math.random() * 0.4,
@@ -418,7 +404,7 @@ export default function GGAirLottery({
         p.vx *= 1 - 0.8 * dt;
         p.y += p.vy * dt;
         p.life -= dt * 1.3;
-        if (p.life <= 0 || Math.hypot(p.x - CX, p.y - CY) > R - 4 || p.y > FLOOR_Y) particles.splice(i, 1);
+        if (p.life <= 0 || Math.hypot(p.x - CX, p.y - CY) > R - 4) particles.splice(i, 1);
       }
     };
 
@@ -472,38 +458,35 @@ export default function GGAirLottery({
         drawBall(SLOT_X0 + i * SLOT_GAP, TUBE_Y, team, initial(team), avatar(team), -i * 1.3);
       });
 
-      // The moon, half-set behind the horizon: a breathing halo, a solid glowing body with drifting bands.
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(0, 0, W, FLOOR_Y);
-      ctx.clip();
-      const halo = ctx.createRadialGradient(CX, CY, R * 0.9, CX, CY, R * 1.45);
-      halo.addColorStop(0, `rgba(255,79,224,${0.38 + 0.1 * Math.sin(time * 1.3)})`);
+      // The moon: a breathing halo, then a translucent glowing body with drifting bands; the balls fly inside it.
+      const halo = ctx.createRadialGradient(CX, CY, R * 0.85, CX, CY, R * 1.5);
+      halo.addColorStop(0, `rgba(255,79,224,${0.36 + 0.1 * Math.sin(time * 1.3)})`);
       halo.addColorStop(1, "rgba(255,79,224,0)");
       ctx.fillStyle = halo;
       ctx.fillRect(CX - R * 1.5, CY - R * 1.5, R * 3, R * 3);
-      const moon = ctx.createLinearGradient(0, CY - R, 0, FLOOR_Y);
-      moon.addColorStop(0, "#ffd3f5");
-      moon.addColorStop(0.35, "#ee95ee");
-      moon.addColorStop(0.75, "#b85ce0");
-      moon.addColorStop(1, "#8a36c4");
+      const moon = ctx.createLinearGradient(0, CY - R, 0, CY + R);
+      moon.addColorStop(0, "rgba(255,208,244,.62)");
+      moon.addColorStop(0.4, "rgba(228,139,240,.46)");
+      moon.addColorStop(0.75, "rgba(154,74,216,.42)");
+      moon.addColorStop(1, "rgba(90,33,150,.6)");
+      ctx.save();
       ctx.beginPath();
       ctx.arc(CX, CY, R, 0, TAU);
       ctx.fillStyle = moon;
       ctx.fill();
       ctx.clip();
-      ctx.strokeStyle = "rgba(255,255,255,.1)";
-      ctx.lineWidth = R * 0.045;
-      const drift = (time * 6) % (R * 0.24);
+      ctx.strokeStyle = "rgba(255,255,255,.09)";
+      ctx.lineWidth = R * 0.05;
+      const drift = (time * 6) % (R * 0.26);
       for (let i = -5; i <= 5; i++) {
         ctx.beginPath();
-        ctx.ellipse(CX, CY + i * R * 0.24 + drift, R * 1.1, R * 0.06, -0.08, 0, TAU);
+        ctx.ellipse(CX, CY + i * R * 0.26 + drift, R * 1.1, R * 0.07, -0.08, 0, TAU);
         ctx.stroke();
       }
       const shade = ctx.createRadialGradient(CX - R * 0.35, CY - R * 0.45, R * 0.2, CX, CY, R * 1.1);
-      shade.addColorStop(0, "rgba(255,255,255,.2)");
+      shade.addColorStop(0, "rgba(255,255,255,.16)");
       shade.addColorStop(0.6, "rgba(0,0,0,0)");
-      shade.addColorStop(1, "rgba(60,0,90,.35)");
+      shade.addColorStop(1, "rgba(40,0,70,.4)");
       ctx.fillStyle = shade;
       ctx.fillRect(CX - R, CY - R, R * 2, R * 2);
       ctx.restore();
@@ -512,9 +495,6 @@ export default function GGAirLottery({
       ctx.save();
       ctx.beginPath();
       ctx.arc(CX, CY, R - 2, 0, TAU);
-      ctx.clip();
-      ctx.beginPath();
-      ctx.rect(0, 0, W, FLOOR_Y);
       ctx.clip();
       for (const p of particles) {
         ctx.strokeStyle = `rgba(200,245,255,${(0.16 + 0.16 * clamp((air - 1) / 0.5, 0, 1)) * p.life})`;
@@ -527,7 +507,7 @@ export default function GGAirLottery({
       ctx.restore();
       // The blower: a turbine under a chrome cowl, its blades a blur when the air surges.
       const fx = CX;
-      const fy = FLOOR_Y - 6;
+      const fy = CY + R - 14;
       const boostNow = clamp((air - 1) / 0.5, 0, 1);
       ctx.fillStyle = chrome(ctx, fx - 30, 0, fx + 30, 0);
       ctx.beginPath();
@@ -581,15 +561,26 @@ export default function GGAirLottery({
         }
       }
 
-      // The moon's rim (above the horizon only) and the glow where it meets the horizon.
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(0, 0, W, FLOOR_Y);
-      ctx.clip();
-      ctx.strokeStyle = "rgba(255,214,247,.55)";
-      ctx.lineWidth = 2;
+      // Front glass.
+      ctx.strokeStyle = "rgba(255,214,247,.6)";
+      ctx.lineWidth = 2.5;
       ctx.beginPath();
       ctx.arc(CX, CY, R, 0, TAU);
+      ctx.stroke();
+      ctx.strokeStyle = "rgba(255,255,255,.3)";
+      ctx.lineWidth = 7;
+      ctx.beginPath();
+      ctx.arc(CX, CY, R - 15, Math.PI * 1.08, Math.PI * 1.4);
+      ctx.stroke();
+      ctx.strokeStyle = "rgba(255,255,255,.2)";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(CX, CY, R - 13, Math.PI * 1.5, Math.PI * 1.6);
+      ctx.stroke();
+      ctx.strokeStyle = "rgba(255,79,224,.28)";
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.arc(CX, CY, R - 12, Math.PI * 0.1, Math.PI * 0.4);
       ctx.stroke();
       ctx.strokeStyle = "rgba(255,43,214,.75)";
       ctx.lineWidth = 1.5;
@@ -599,19 +590,6 @@ export default function GGAirLottery({
       ctx.arc(CX, CY, R + 4, 0, TAU);
       ctx.stroke();
       ctx.shadowBlur = 0;
-      ctx.restore();
-      const chord = Math.sqrt(Math.max(0, R * R - (FLOOR_Y - CY) * (FLOOR_Y - CY)));
-      const glow = ctx.createRadialGradient(CX, FLOOR_Y, 0, CX, FLOOR_Y, chord * 1.25);
-      glow.addColorStop(0, "rgba(255,190,245,.55)");
-      glow.addColorStop(0.5, "rgba(255,79,224,.2)");
-      glow.addColorStop(1, "rgba(255,79,224,0)");
-      ctx.save();
-      ctx.translate(CX, FLOOR_Y);
-      ctx.scale(1, 0.12);
-      ctx.translate(-CX, -FLOOR_Y);
-      ctx.fillStyle = glow;
-      ctx.fillRect(CX - chord * 1.3, FLOOR_Y - chord * 1.3, chord * 2.6, chord * 2.6);
-      ctx.restore();
 
       // Tube: front glass and the catcher collar.
       ctx.strokeStyle = "rgba(220,235,255,.5)";
@@ -680,7 +658,7 @@ export default function GGAirLottery({
       // The catch: the drawn ball reaches the collar moving up (or the latest moment arrives).
       if (drawnTeam && caught && caught.at === null) {
         const b = balls.get(drawnTeam.id);
-        if (b && ms >= CATCH_FROM && ((Math.abs(b.x - CX) < 38 && b.y < MOUTH_Y + 52 && b.vy < 120) || ms >= CATCH_BY)) {
+        if (b && ms >= CATCH_FROM && ((Math.abs(b.x - CX) < 36 && b.y < MOUTH_Y + 50 && b.vy < 120) || ms >= CATCH_BY)) {
           caught.at = ms;
           caught.x = b.x;
           caught.y = b.y;
