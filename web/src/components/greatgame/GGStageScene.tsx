@@ -9,7 +9,8 @@ import { createContext, useEffect, useRef, type MutableRefObject } from "react";
  * road that mirrors everything above the horizon (the machine at its end
  * too), and a cyan grid floor, all flying
  * towards the viewer at one speed, fading in from the distance. A shooting
- * star crosses the sky about every ten seconds.
+ * star crosses the sky about every ten seconds, and a neon tank drives down
+ * the left lane.
  *
  * A machine can stand at the end of the road: it registers an anchor (the
  * point where the road meets it), and the scene puts its horizon and
@@ -426,6 +427,259 @@ function palmSprite(color: string): HTMLCanvasElement {
 
 /** Palms stand in one straight row on each side, a little off the road's edge line. */
 const PALM_X = ROAD + 0.3;
+
+/*
+ * The neon tank driving down the left lane, seen from behind. Its body is
+ * drawn once into a glowing sprite; each frame adds the rolling treads, a
+ * little bob and sway, the tail lights, the antenna blink, exhaust puffs,
+ * headlight beams up the road, and its reflection in the wet road.
+ *
+ * Tank units: x across (the tank is 200 wide), y up from the road (negative
+ * is up). The sprite holds them at 2 px per unit with the origin at (240, 380).
+ */
+const TANK_LANE = -0.62; // world x: the middle of the left lane
+const TANK_Z = 4.6; // world distance ahead of the camera
+const TANK_WIDTH = 1.2; // world units across
+const TANK_SPRITE = { w: 480, h: 420, ox: 240, oy: 380, scale: 2 };
+
+function tankSprite(): HTMLCanvasElement {
+  const sprite = document.createElement("canvas");
+  sprite.width = TANK_SPRITE.w;
+  sprite.height = TANK_SPRITE.h;
+  const ctx = sprite.getContext("2d");
+  if (!ctx) return sprite;
+  ctx.translate(TANK_SPRITE.ox, TANK_SPRITE.oy);
+  ctx.scale(TANK_SPRITE.scale, TANK_SPRITE.scale);
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  const neon = (color: string, width: number, blur: number) => {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = blur;
+  };
+  const shape = (points: [number, number][]) => {
+    ctx.beginPath();
+    points.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+    ctx.closePath();
+  };
+  // Tracks, with a drive sprocket showing at the back of each.
+  for (const side of [-1, 1]) {
+    const left = side < 0 ? -104 : 64;
+    ctx.beginPath();
+    ctx.roundRect(left, -50, 40, 50, 14);
+    ctx.fillStyle = "#0b0418";
+    ctx.shadowBlur = 0;
+    ctx.fill();
+    neon("#22e5ff", 2.2, 10);
+    ctx.stroke();
+    const cx = left + 20;
+    neon("rgba(34,229,255,.85)", 1.6, 6);
+    ctx.beginPath();
+    ctx.arc(cx, -24, 11, 0, TAU);
+    ctx.stroke();
+    for (let i = 0; i < 6; i++) {
+      const a = (i * TAU) / 6;
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(a) * 4, -24 + Math.sin(a) * 4);
+      ctx.lineTo(cx + Math.cos(a) * 11, -24 + Math.sin(a) * 11);
+      ctx.stroke();
+    }
+  }
+  // Fenders over the tracks.
+  neon("#ff4fe0", 2.2, 10);
+  for (const side of [-1, 1]) {
+    ctx.beginPath();
+    ctx.moveTo(side * 106, -50);
+    ctx.lineTo(side * 106, -56);
+    ctx.lineTo(side * 62, -56);
+    ctx.stroke();
+  }
+  // Hull: the rear plate and the deck.
+  shape([
+    [-74, -36],
+    [74, -36],
+    [66, -78],
+    [-66, -78],
+  ]);
+  ctx.fillStyle = "#170b33";
+  ctx.shadowBlur = 0;
+  ctx.fill();
+  neon("#ff4fe0", 2.4, 12);
+  ctx.stroke();
+  neon("rgba(255,79,224,.6)", 1.2, 6);
+  ctx.beginPath();
+  ctx.moveTo(-62, -56);
+  ctx.lineTo(62, -56);
+  ctx.stroke();
+  // Exhaust pipes.
+  for (const x of [-30, 30]) {
+    ctx.beginPath();
+    ctx.roundRect(x - 6, -84, 12, 9, 3);
+    ctx.fillStyle = "#0b0418";
+    ctx.shadowBlur = 0;
+    ctx.fill();
+    neon("#b46bff", 1.4, 6);
+    ctx.stroke();
+  }
+  // Turret: wide and angled, with a stowage box on its back.
+  shape([
+    [-54, -78],
+    [54, -78],
+    [48, -100],
+    [30, -112],
+    [-30, -112],
+    [-48, -100],
+  ]);
+  ctx.fillStyle = "#1d0f3d";
+  ctx.shadowBlur = 0;
+  ctx.fill();
+  neon("#22e5ff", 2.4, 12);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.roundRect(-26, -96, 52, 12, 3);
+  ctx.fillStyle = "#140a2c";
+  ctx.shadowBlur = 0;
+  ctx.fill();
+  neon("rgba(34,229,255,.65)", 1.3, 5);
+  ctx.stroke();
+  // The gun, pointing ahead (foreshortened): a thick tapered barrel with a muzzle brake.
+  shape([
+    [-6, -108],
+    [6, -108],
+    [4, -134],
+    [-4, -134],
+  ]);
+  ctx.fillStyle = "#1d0f3d";
+  ctx.shadowBlur = 0;
+  ctx.fill();
+  neon("#22e5ff", 2, 10);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.roundRect(-8, -142, 16, 8, 2);
+  ctx.fillStyle = "#1d0f3d";
+  ctx.shadowBlur = 0;
+  ctx.fill();
+  neon("#e9fcff", 1.8, 10);
+  ctx.stroke();
+  // Antenna mast.
+  neon("rgba(255,79,224,.8)", 1.2, 4);
+  ctx.beginPath();
+  ctx.moveTo(40, -104);
+  ctx.lineTo(50, -150);
+  ctx.stroke();
+  // Emblem: a neon chevron on the hull's back.
+  neon("#ffd23f", 2, 8);
+  ctx.beginPath();
+  ctx.moveTo(-10, -64);
+  ctx.lineTo(0, -72);
+  ctx.lineTo(10, -64);
+  ctx.stroke();
+  return sprite;
+}
+
+/** Where the tank is now, on screen: its base point and pixels per tank unit. */
+function tankPlace(v: View, time: number) {
+  const x = TANK_LANE + Math.sin(time * 0.55) * 0.06;
+  const [sx, sy] = project(v, x, 0, TANK_Z);
+  const k = (TANK_WIDTH * v.f) / TANK_Z / 200;
+  return { sx, sy: sy - Math.abs(Math.sin(time * 9)) * 1.2 * k, k };
+}
+
+function drawTank(ctx: CanvasRenderingContext2D, v: View, time: number, travel: number, sprite: HTMLCanvasElement, reflected = false) {
+  const { sx, sy, k } = tankPlace(v, time);
+  if (reflected) {
+    ctx.save();
+    roadPath(ctx, v, WET);
+    ctx.clip();
+    ctx.globalAlpha = 0.3;
+    ctx.translate(sx, project(v, 0, 0, TANK_Z)[1]);
+    ctx.scale(k, -k * 0.6);
+    ctx.drawImage(sprite, -TANK_SPRITE.ox / TANK_SPRITE.scale, -TANK_SPRITE.oy / TANK_SPRITE.scale, TANK_SPRITE.w / TANK_SPRITE.scale, TANK_SPRITE.h / TANK_SPRITE.scale);
+    ctx.restore();
+    return;
+  }
+  // Headlight beams up the road ahead, towards the vanishing point.
+  const [fx, fy] = project(v, TANK_LANE, 0, TANK_Z + 9);
+  for (const side of [-1, 1]) {
+    const bx = sx + side * 40 * k;
+    const by = sy - 60 * k;
+    const beam = ctx.createLinearGradient(bx, by, fx, fy);
+    beam.addColorStop(0, "rgba(180,245,255,.28)");
+    beam.addColorStop(1, "rgba(34,229,255,0)");
+    ctx.fillStyle = beam;
+    ctx.beginPath();
+    ctx.moveTo(bx - 6 * k, by);
+    ctx.lineTo(bx + 6 * k, by);
+    ctx.lineTo(fx + side * 18 * k, fy);
+    ctx.lineTo(fx + side * 4 * k, fy);
+    ctx.closePath();
+    ctx.fill();
+  }
+  // A soft shadow and glow on the road under it.
+  const glow = ctx.createRadialGradient(sx, sy, 0, sx, sy, 120 * k);
+  glow.addColorStop(0, "rgba(0,0,0,.55)");
+  glow.addColorStop(0.6, "rgba(255,43,214,.12)");
+  glow.addColorStop(1, "rgba(255,43,214,0)");
+  ctx.save();
+  ctx.translate(sx, sy);
+  ctx.scale(1, 0.22);
+  ctx.translate(-sx, -sy);
+  ctx.fillStyle = glow;
+  ctx.fillRect(sx - 130 * k, sy - 130 * k, 260 * k, 260 * k);
+  ctx.restore();
+  // Exhaust puffs: rise, drift back and fade.
+  for (let i = 0; i < 6; i++) {
+    const age = (time * 0.9 + i / 6) % 1;
+    for (const pipe of [-30, 30]) {
+      ctx.fillStyle = `rgba(200,170,255,${0.22 * (1 - age)})`;
+      ctx.beginPath();
+      ctx.arc(sx + (pipe + Math.sin(i * 3 + pipe) * 6 * age) * k, sy + (-86 - age * 34) * k, (4 + age * 14) * k, 0, TAU);
+      ctx.fill();
+    }
+  }
+  // The body.
+  ctx.drawImage(sprite, sx - (TANK_SPRITE.ox / TANK_SPRITE.scale) * k, sy - (TANK_SPRITE.oy / TANK_SPRITE.scale) * k, (TANK_SPRITE.w / TANK_SPRITE.scale) * k, (TANK_SPRITE.h / TANK_SPRITE.scale) * k);
+  // Treads rolling on both tracks.
+  ctx.save();
+  ctx.translate(sx, sy);
+  ctx.scale(k, k);
+  ctx.strokeStyle = "rgba(34,229,255,.55)";
+  ctx.lineWidth = 1.6;
+  const roll = (travel * 26) % 8;
+  for (const left of [-100, 68]) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(left, -46, 32, 42, 11);
+    ctx.clip();
+    for (let y = -50 + roll; y < 0; y += 8) {
+      ctx.beginPath();
+      ctx.moveTo(left, y);
+      ctx.lineTo(left + 30, y);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  // Tail lights, pulsing gently, and the antenna's blinking tip.
+  const pulse = 0.75 + 0.25 * Math.sin(time * 3);
+  for (const side of [-1, 1]) {
+    ctx.shadowColor = "#ff2b5e";
+    ctx.shadowBlur = 14 * pulse;
+    ctx.fillStyle = `rgba(255,70,110,${0.85 * pulse + 0.15})`;
+    ctx.beginPath();
+    ctx.roundRect(side * 50 - 9, -48, 18, 7, 2);
+    ctx.fill();
+  }
+  const blink = Math.sin(time * 4) > 0.6 ? 1 : 0.2;
+  ctx.shadowColor = "#ff4fe0";
+  ctx.shadowBlur = 10 * blink;
+  ctx.fillStyle = `rgba(255,140,240,${blink})`;
+  ctx.beginPath();
+  ctx.arc(50, -151, 2.6, 0, TAU);
+  ctx.fill();
+  ctx.restore();
+}
+
 const PALM_SPAN = 54; // palms repeat every this many units along the road
 const PALMS = 7; // per side
 
@@ -476,6 +730,7 @@ export default function GGStageScene({ anchorRef }: { anchorRef: MutableRefObjec
     if (!canvas || !ctx) return undefined;
     const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const sprites = { left: palmSprite("#22e5ff"), right: palmSprite("#ff4fe0") };
+    const tank = tankSprite();
     let view: View = { w: 1, h: 1, hy: 1, cx: 1, f: 1 };
     let sky: HTMLCanvasElement | null = null;
     let twinkle: { x: number; y: number; r: number; speed: number }[] = [];
@@ -567,7 +822,9 @@ export default function GGStageScene({ anchorRef }: { anchorRef: MutableRefObjec
         anchor?.mirror && machineBox && anchor.el instanceof HTMLCanvasElement ? { canvas: anchor.el, box: machineBox, part: anchor.mirror } : null,
       );
       drawPalms(ctx, view, travel, sprites, true);
+      drawTank(ctx, view, time, travel, tank, true);
       drawDashes(ctx, view, travel);
+      drawTank(ctx, view, time, travel, tank);
       drawPalms(ctx, view, travel, sprites);
       // A shooting star about every 10 s, somewhere in the sky, in any direction.
       if (!still && time >= nextMeteor) {
