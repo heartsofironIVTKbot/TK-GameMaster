@@ -185,7 +185,13 @@ export default function GGAirLottery({
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!anchorRef || !canvas) return undefined;
-    anchorRef.current = { el: canvas, fx: CX / W, fy: ROAD_END_Y / H };
+    const top = CY - R * 1.2;
+    anchorRef.current = {
+      el: canvas,
+      fx: CX / W,
+      fy: ROAD_END_Y / H,
+      mirror: { x: (CX - R * 1.2) / W, y: top / H, w: (R * 2.4) / W, h: (ROAD_END_Y - top) / H },
+    };
     return () => {
       anchorRef.current = null;
     };

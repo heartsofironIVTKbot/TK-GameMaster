@@ -5,8 +5,9 @@ import { createContext, useEffect, useRef, type MutableRefObject } from "react";
 /**
  * The randomizer stage's backdrop: an outrun night like the event poster,
  * always on the move. A starry violet sky, wireframe mountains rolling past on
- * both sides, neon palms (cyan on the left, pink on the right) lining a road
- * with glowing edges, and a cyan grid floor, all flying
+ * both sides, neon palms (cyan on the left, pink on the right) lining a wet
+ * road that mirrors everything above the horizon (the machine at its end
+ * too), and a cyan grid floor, all flying
  * towards the viewer at one speed, out of a haze on the horizon. A shooting
  * star crosses the sky about every ten seconds.
  *
@@ -24,6 +25,8 @@ export interface StageAnchor {
   /** The anchor point as a share of the element's width and height. */
   fx: number;
   fy: number;
+  /** The part of the machine (a canvas) the wet road mirrors, as shares of its size. */
+  mirror?: { x: number; y: number; w: number; h: number };
 }
 
 /** Lets a machine on the stage tell the scene where the road should end. */
@@ -134,8 +137,7 @@ function drawPlanet(ctx: CanvasRenderingContext2D, v: View, time: number) {
 function drawFloor(ctx: CanvasRenderingContext2D, v: View, travel: number) {
   const { w, h, hy } = v;
   const floor = ctx.createLinearGradient(0, hy, 0, h);
-  floor.addColorStop(0, "#6a1776");
-  floor.addColorStop(0.06, "#3a0f5c");
+  floor.addColorStop(0, "#1c0a3a");
   floor.addColorStop(0.3, "#120725");
   floor.addColorStop(1, "#070312");
   ctx.fillStyle = floor;
@@ -167,18 +169,9 @@ function drawFloor(ctx: CanvasRenderingContext2D, v: View, travel: number) {
     ctx.lineTo(w, y);
     ctx.stroke();
   }
-  // The road: dark asphalt, glowing pink edges, centre dashes.
-  const [nl, ny] = project(v, -ROAD, 0, near);
-  const [nr] = project(v, ROAD, 0, near);
-  const [fl, fy] = project(v, -ROAD, 0, far);
-  const [fr] = project(v, ROAD, 0, far);
+  // The road: dark asphalt and glowing pink edges (the dashes go on after the reflection).
   ctx.fillStyle = "rgba(10,4,22,.92)";
-  ctx.beginPath();
-  ctx.moveTo(nl, ny);
-  ctx.lineTo(nr, ny);
-  ctx.lineTo(fr, fy);
-  ctx.lineTo(fl, fy);
-  ctx.closePath();
+  roadPath(ctx, v);
   ctx.fill();
   for (const [width, color] of [
     [6, "rgba(255,43,214,.25)"],
@@ -195,6 +188,77 @@ function drawFloor(ctx: CanvasRenderingContext2D, v: View, travel: number) {
       ctx.stroke();
     }
   }
+}
+
+const NEAR = 0.55;
+const FAR = 60;
+
+function roadPath(ctx: CanvasRenderingContext2D, v: View) {
+  const [nl, ny] = project(v, -ROAD, 0, NEAR);
+  const [nr] = project(v, ROAD, 0, NEAR);
+  const [fl, fy] = project(v, -ROAD, 0, FAR);
+  const [fr] = project(v, ROAD, 0, FAR);
+  ctx.beginPath();
+  ctx.moveTo(nl, ny);
+  ctx.lineTo(nr, ny);
+  ctx.lineTo(fr, fy);
+  ctx.lineTo(fl, fy);
+  ctx.closePath();
+}
+
+/**
+ * The wet road: everything above the horizon (sky glow, mountains, palms, and
+ * the machine at the road's end) mirrored into the asphalt, fading out
+ * towards the viewer.
+ */
+function drawReflection(
+  ctx: CanvasRenderingContext2D,
+  source: HTMLCanvasElement,
+  v: View,
+  ratio: number,
+  machine: { canvas: HTMLCanvasElement; box: { left: number; top: number; width: number; height: number }; part: { x: number; y: number; w: number; h: number } } | null,
+) {
+  const top = Math.max(0, v.hy - v.h * 0.5);
+  const height = v.hy - top;
+  if (height <= 1) return;
+  ctx.save();
+  roadPath(ctx, v);
+  ctx.clip();
+  ctx.globalAlpha = 0.36;
+  // Mirror about the horizon.
+  ctx.setTransform(ratio, 0, 0, -ratio, 0, 2 * v.hy * ratio);
+  ctx.drawImage(source, 0, top * ratio, source.width, height * ratio, 0, top, v.w, height);
+  if (machine) {
+    const { canvas, box, part } = machine;
+    ctx.globalAlpha = 0.42;
+    ctx.drawImage(
+      canvas,
+      part.x * canvas.width,
+      part.y * canvas.height,
+      part.w * canvas.width,
+      part.h * canvas.height,
+      box.left + part.x * box.width,
+      box.top + part.y * box.height,
+      part.w * box.width,
+      part.h * box.height,
+    );
+  }
+  ctx.restore();
+  ctx.save();
+  roadPath(ctx, v);
+  ctx.clip();
+  const fade = ctx.createLinearGradient(0, v.hy, 0, v.h);
+  fade.addColorStop(0, "rgba(10,4,22,0)");
+  fade.addColorStop(0.5, "rgba(10,4,22,.5)");
+  fade.addColorStop(1, "rgba(10,4,22,.88)");
+  ctx.fillStyle = fade;
+  ctx.fillRect(0, v.hy, v.w, v.h - v.hy);
+  ctx.restore();
+}
+
+function drawDashes(ctx: CanvasRenderingContext2D, v: View, travel: number) {
+  const near = NEAR;
+  const far = FAR;
   const dash = travel % 4;
   for (let z = -dash; z < far; z += 4) {
     if (z + 1.6 <= near) continue;
@@ -363,13 +427,13 @@ function drawPalms(ctx: CanvasRenderingContext2D, v: View, travel: number, sprit
   for (const side of [-1, 1]) {
     for (let i = 0; i < PALMS; i++) {
       const start = (i * PALM_SPAN) / PALMS + (side > 0 ? PALM_SPAN / PALMS / 2 : 0);
-      const z = 2.5 + ((((start - travel) % PALM_SPAN) + PALM_SPAN) % PALM_SPAN);
+      const z = 1.2 + ((((start - travel) % PALM_SPAN) + PALM_SPAN) % PALM_SPAN);
       palms.push({ side, x: side * (ROAD + 0.3 + rand(i * 7 + side) * 0.3), z, tall: 1.8 + rand(i * 13 + side * 3) * 0.6 });
     }
   }
   palms.sort((a, b) => b.z - a.z);
   for (const palm of palms) {
-    const fade = Math.min(1, (palm.z - 2.5) / 2.5, (PALM_SPAN + 2.5 - palm.z) / 8);
+    const fade = Math.min(1, (palm.z - 1.2) / 0.5, (PALM_SPAN + 1.2 - palm.z) / 8);
     if (fade <= 0) continue;
     const [sx, sy] = project(v, palm.x, 0, palm.z);
     const k = (palm.tall * v.f) / palm.z / 280;
@@ -401,6 +465,7 @@ export default function GGStageScene({ anchorRef }: { anchorRef: MutableRefObjec
     let sky: HTMLCanvasElement | null = null;
     let twinkle: { x: number; y: number; r: number; speed: number }[] = [];
     let ratio = 1;
+    let machineBox: { left: number; top: number; width: number; height: number } | null = null;
 
     // Where the road ends: at the anchored machine, or the default horizon.
     const place = (): boolean => {
@@ -409,11 +474,13 @@ export default function GGStageScene({ anchorRef }: { anchorRef: MutableRefObjec
       let hy = h * DEFAULT_HORIZON;
       let cx = w / 2;
       const anchor = anchorRef.current;
+      machineBox = null;
       if (anchor?.el.isConnected) {
         const box = canvas.getBoundingClientRect();
         const target = anchor.el.getBoundingClientRect();
         hy = target.top - box.top + anchor.fy * target.height;
         cx = target.left - box.left + anchor.fx * target.width;
+        machineBox = { left: target.left - box.left, top: target.top - box.top, width: target.width, height: target.height };
       }
       const changed = Math.abs(view.w - w) > 0.5 || Math.abs(view.h - h) > 0.5 || Math.abs(view.hy - hy) > 0.5 || Math.abs(view.cx - cx) > 0.5;
       view = { w, h, hy, cx, f: h * 0.85 };
@@ -478,6 +545,15 @@ export default function GGStageScene({ anchorRef }: { anchorRef: MutableRefObjec
       drawMountains(ctx, view, travel, time);
       drawHaze(ctx, view);
       drawPalms(ctx, view, travel, sprites);
+      const anchor = anchorRef.current;
+      drawReflection(
+        ctx,
+        canvas,
+        view,
+        ratio,
+        anchor?.mirror && machineBox && anchor.el instanceof HTMLCanvasElement ? { canvas: anchor.el, box: machineBox, part: anchor.mirror } : null,
+      );
+      drawDashes(ctx, view, travel);
       // A shooting star about every 10 s, somewhere in the sky, in any direction.
       if (!still && time >= nextMeteor) {
         const angle = Math.random() * TAU;
