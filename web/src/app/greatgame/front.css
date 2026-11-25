@@ -156,7 +156,7 @@
   display: block;
   font-family: var(--ggf-stencil);
   font-weight: 900;
-  font-size: clamp(28px, min(4.8vw, 7.4vh), 112px);
+  font-size: clamp(22px, min(4.3vw, 6.8vh), 104px);
   line-height: 0.9;
   letter-spacing: 0.02em;
   text-transform: uppercase;
@@ -193,7 +193,7 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  width: min(100%, max(760px, 52vw));
+  width: min(100%, max(900px, 60vw));
   margin: 0 0 clamp(-14px, -1vh, -4px);
 }
 .ggf-bars b {
@@ -742,7 +742,11 @@
     transform: translate(-50%, 0);
   }
   .ggf-chrome {
-    font-size: clamp(26px, 7vw, 56px);
+    font-size: clamp(22px, 6.6vw, 52px);
+    -webkit-text-stroke-width: 1px;
+  }
+  .ggf-chrome::after {
+    opacity: 0.25;
   }
   .ggf-brush {
     font-size: clamp(44px, 13.5vw, 130px);

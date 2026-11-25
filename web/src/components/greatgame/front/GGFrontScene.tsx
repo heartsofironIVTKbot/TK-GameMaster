@@ -440,18 +440,27 @@ export default function GGFrontScene({ majors }: { majors: SceneMajor[] }) {
     };
 
     /** The headland's skyline: a plateau, then cliffs stepping down into the sea, and a few rocks. */
-    const headland = (horizon: number) => {
+    const headland = (horizon: number, unit: number) => {
       const L = W * 0.27;
       const top = H * 0.085;
       const path = new Path2D();
       const rim = new Path2D();
       path.moveTo(0, horizon);
       const plateau = 0.62;
+      // Where the tank stands the ground is flat, so its tracks sit on it with no gap.
+      const tankX = L * plateau * 0.12;
+      const tankW = Math.min(unit * 0.13, L * plateau * 0.8);
       for (let k = 0; k <= 60; k++) {
         const f = k / 60;
         const x = f * L;
         let h: number;
-        if (f < plateau) h = top * (0.92 + 0.05 * Math.sin(f * 17) + 0.03 * Math.sin(f * 41));
+        if (f < plateau) {
+          const bumpy = top * (0.92 + 0.05 * Math.sin(f * 17) + 0.03 * Math.sin(f * 41));
+          const pad = tankW * 0.12;
+          const d = x < tankX - pad ? tankX - pad - x : x > tankX + tankW + pad ? x - (tankX + tankW + pad) : 0;
+          const blend = Math.min(1, d / (tankW * 0.15));
+          h = top * 0.92 + (bumpy - top * 0.92) * blend;
+        }
         else {
           const g = (f - plateau) / (1 - plateau);
           // Cliffs in steps, falling to the water.
@@ -467,13 +476,12 @@ export default function GGFrontScene({ majors }: { majors: SceneMajor[] }) {
       path.quadraticCurveTo(L * 1.05, horizon - top * 0.18, L * 1.08, horizon);
       path.moveTo(L * 1.11, horizon);
       path.quadraticCurveTo(L * 1.12, horizon - top * 0.09, L * 1.14, horizon);
-      return { path, rim, plateauEnd: L * plateau, ground: horizon - top * 0.92 };
+      return { path, rim, tankX, tankW, ground: horizon - top * 0.92 };
     };
 
     const drawHeadland = (t: number, horizon: number, unit: number) => {
-      const land = headland(horizon);
-      const tankW = Math.min(unit * 0.13, land.plateauEnd * 0.8);
-      const tankX = land.plateauEnd * 0.12;
+      const land = headland(horizon, unit);
+      const { tankX, tankW } = land;
       const paint = () => {
         const rock = ctx.createLinearGradient(0, horizon - H * 0.085, 0, horizon);
         rock.addColorStop(0, "#1c0a32");
@@ -499,7 +507,7 @@ export default function GGFrontScene({ majors }: { majors: SceneMajor[] }) {
         }
         ctx.stroke();
         ctx.restore();
-        silhouette(TANK, tankX, land.ground + 1, tankW, "#ff4fd8");
+        silhouette(TANK, tankX, land.ground + 2, tankW, "#ff4fd8");
       };
       paint();
       // Mirrored in the sea, squashed and faint, rippling a little.

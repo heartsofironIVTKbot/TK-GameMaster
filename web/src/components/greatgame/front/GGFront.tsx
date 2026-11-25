@@ -106,11 +106,11 @@ export default function GGFront() {
             <i aria-hidden />
             {status.text}
           </div>
-          <h1 className="ggf-h1" aria-label="The Great Game 2026 · Road to 56">
+          <h1 className="ggf-h1" aria-label="The Great Game 2026 · Hearts of Iron IV">
             <span className="ggf-bars" aria-hidden>
               <b />
-              <span className="ggf-chrome" data-text="Road to 56">
-                Road to 56
+              <span className="ggf-chrome" data-text="Hearts of Iron IV">
+                Hearts of Iron IV
               </span>
               <b />
             </span>
