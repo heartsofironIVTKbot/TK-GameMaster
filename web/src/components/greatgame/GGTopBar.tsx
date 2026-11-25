@@ -7,6 +7,7 @@ import { clock, Flag, hexA, nationName, secondsLeft, Sun, teamById } from "./ggU
 import { DRUM_MS } from "./GGAirLottery";
 import { LAND_END } from "./GGMajorReel";
 import { FLIGHT } from "./GGRecruitTable";
+import * as sound from "./ggSound";
 import { useSoundSwitch } from "./ggSound";
 
 /**
@@ -24,6 +25,8 @@ interface Banner {
   timer: string | null;
   frac: number;
   late: boolean;
+  /** Seconds left on the turn clock (null: untimed). */
+  left?: number | null;
 }
 
 const BAND_H = 83.25;
@@ -102,7 +105,7 @@ export function bannerFor(state: GGState, now: number, scratchTeam: string | nul
   });
   const teamBanner = (sub: string): Banner =>
     team
-      ? { color: team.color, title: team.name, sub: pausedSub(sub), flag: team.major, timer, frac, late }
+      ? { color: team.color, title: team.name, sub: pausedSub(sub), flag: team.major, timer, frac, late, left }
       : neutral(PHASE_LABEL[state.phase], state.phase_done ? "STEP COMPLETE" : "WAITING");
   switch (state.phase) {
     case "teams":
@@ -163,6 +166,14 @@ export default function GGTopBar({
   const step = PHASES.indexOf(state.phase);
   const colored = Boolean(banner.color);
   const ink = colored ? "#120a24" : "#fff";
+  // On the map steps the pennant is a slim strip, so the map under it stays in view.
+  const slim = state.phase === "bans" || state.phase === "draft";
+  // The last ten seconds: the clock goes red and pulses, with a tick each second.
+  const urgent = banner.left !== null && banner.left !== undefined && banner.left > 0 && banner.left <= 10 && !state.paused;
+  const second = urgent ? Math.ceil(banner.left!) : null;
+  useEffect(() => {
+    if (second !== null) sound.tick(second <= 3 ? 1 : 0.6);
+  }, [second]);
   return (
     <header ref={header} className="pointer-events-none absolute inset-x-0 top-0 z-[1100]" style={{ height: 230 }}>
       {/* The band: brushed steel, a row of neon LEDs along the top with a light chasing across them. */}
@@ -224,13 +235,31 @@ export default function GGTopBar({
         className="absolute left-1/2 top-[84px] -translate-x-1/2"
         style={{
           width: 240,
-          height: 86 + (banner.flag ? 30 : 0) + (banner.timer ? 29 : 0),
+          height: slim ? 62 : 86 + (banner.flag ? 30 : 0) + (banner.timer ? 29 : 0),
           background: colored ? `linear-gradient(180deg,${banner.color},${hexA(banner.color!, 0.86)})` : "linear-gradient(180deg,#ff2bd6,#8a2be2)",
           clipPath: "polygon(0 0,100% 0,100% 100%,50% 82%,0 100%)",
           filter: `drop-shadow(0 0 14px ${hexA(banner.color ?? "#ff2bd6", 0.7)})`,
         }}
       />
       <div className="absolute left-1/2 top-[82px] h-[6px] w-[248px] -translate-x-1/2 rounded-sm" style={{ background: "linear-gradient(90deg,#8f88aa,#efeaf8,#8f88aa)" }} />
+      {slim ? (
+        <div className="absolute left-1/2 top-[90px] w-[240px] -translate-x-1/2 text-center" style={{ color: ink }} aria-live="polite">
+          <div className="flex items-center justify-center gap-2 px-3">
+            {banner.flag && <Flag tag={banner.flag} w={26} h={17} title={nationName(state, banner.flag)} />}
+            <span className="gg-disp truncate" style={{ fontWeight: 900, fontSize: 21, lineHeight: 1.05 }}>
+              {banner.title}
+            </span>
+          </div>
+          <div className="mt-0.5 flex items-center justify-center gap-1.5" style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: ".12em" }}>
+            {banner.timer && (
+              <span className={`gg-digit ${urgent ? "gg-clock-urgent" : ""}`} style={{ fontWeight: 900, fontSize: 15, letterSpacing: 0, color: banner.late ? (colored ? "#7a0010" : "#ffd23f") : ink }}>
+                {banner.late ? "0:00" : banner.timer}
+              </span>
+            )}
+            <span className="truncate">{banner.sub}</span>
+          </div>
+        </div>
+      ) : (
       <div className="absolute left-1/2 top-[96px] w-[240px] -translate-x-1/2 text-center" style={{ color: ink }} aria-live="polite">
         {banner.flag && (
           <div className="flex justify-center">
@@ -247,6 +276,7 @@ export default function GGTopBar({
         )}
         <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".14em" }}>{banner.sub}</div>
       </div>
+      )}
 
       {/* Right: the step rail and buttons. */}
       {/* Right: only the space right of the notch. The step (dots over its name) shows when there's room. */}

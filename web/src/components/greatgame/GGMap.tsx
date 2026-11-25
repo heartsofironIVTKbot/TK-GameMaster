@@ -30,13 +30,34 @@ import type { Considering } from "./useGreatGame";
  *  - a banned nation turns AI grey with a BANNED stamp;
  *  - from the assignment window on, every unclaimed nation is AI grey, and
  *    once the teams lock each team's nations go solid in its colour.
+ *
+ * During the bans the map is painted for reading at a glance: the minors
+ * still in the pool keep their bright colours, banned ones go dark red with
+ * a red cross-hatch and a BANNED stamp, the majors sit calm in their team's
+ * colour, and everything outside the pool is grey.
  */
 
 const AI = "#3b3650";
+const OUT = "#262138";
+const BANNED_FILL = "#3d0c19";
+
+/** `color` mixed into the night: majors stay recognisable without shouting. */
+function calm(color: string, amount = 0.42): string {
+  const hex = color.replace("#", "");
+  const full = hex.length === 3 ? hex.split("").map((c) => c + c).join("") : hex;
+  const n = parseInt(full, 16);
+  const mix = (v: number, base: number) => Math.round(base + (v - base) * amount);
+  const r = mix((n >> 16) & 255, 22);
+  const g = mix((n >> 8) & 255, 12);
+  const b = mix(n & 255, 44);
+  return `#${((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1)}`;
+}
 const SEA = "#0d0820";
 const BORDER = "#0b0716";
 /** Opens on Europe, a little zoomed in. */
 const EUROPE: ViewIntent = { cxFrac: 0.54, cyFrac: 0.8, zoomOffset: 1.3 };
+/** On the map steps (bans, draft): closer in, so Europe can sit below the top bar. */
+const EUROPE_CLOSE: ViewIntent = { cxFrac: 0.545, cyFrac: 0.79, zoomOffset: 1.85 };
 
 export interface MapPaint {
   fill: string;
@@ -55,12 +76,33 @@ export function paintFor(state: GGState): (tag: string, base: string) => MapPain
   const color = new Map(state.teams.map((team) => [team.id, team.color]));
   const late = state.phase === "assign" || state.phase === "locked";
   const locked = state.phase === "locked";
+  if (state.phase === "bans") {
+    const pool = new Set(state.config.pool);
+    return (tag, base) => {
+      const team = owner.get(tag);
+      if (team) return { fill: calm(color.get(team) ?? base), hatch: null, stamp: false };
+      if (banned.has(tag)) return { fill: BANNED_FILL, hatch: "banned", stamp: true };
+      return { fill: pool.has(tag) ? base : OUT, hatch: null, stamp: false };
+    };
+  }
   return (tag, base) => {
     const team = owner.get(tag);
     if (team) return locked ? { fill: color.get(team) ?? base, hatch: null, stamp: false } : { fill: base, hatch: team, stamp: false };
     if (banned.has(tag)) return { fill: AI, hatch: null, stamp: !late };
     return { fill: late ? AI : base, hatch: null, stamp: false };
   };
+}
+
+/** Stamp icons, made once per nation (a new icon would remount the marker and replay its slam). */
+const STAMPS = new Map<string, L.DivIcon>();
+function stampIcon(tag: string, fresh: boolean): L.DivIcon {
+  const key = `${tag}:${fresh ? "new" : "old"}`;
+  let icon = STAMPS.get(key) ?? STAMPS.get(`${tag}:new`);
+  if (!icon) {
+    icon = L.divIcon({ className: "", html: `<div class="gg-stamp${fresh ? " is-new" : ""}">BANNED</div>`, iconSize: [96, 28], iconAnchor: [48, 14] });
+    STAMPS.set(key, icon);
+  }
+  return icon;
 }
 
 /** Largest ring's centre per tag (for the stamps). */
@@ -103,12 +145,15 @@ function Patterns({ teams }: { teams: { id: string; color: string }[] }) {
         defs.setAttribute("id", "gg-defs");
         svg.insertBefore(defs, svg.firstChild);
       }
-      defs.innerHTML = teams
-        .map(
-          (team) =>
-            `<pattern id="gg-h-${team.id}" patternUnits="userSpaceOnUse" width="9" height="9" patternTransform="rotate(45)"><rect width="4" height="9" fill="${team.color}"/></pattern>`,
-        )
-        .join("");
+      defs.innerHTML =
+        teams
+          .map(
+            (team) =>
+              `<pattern id="gg-h-${team.id}" patternUnits="userSpaceOnUse" width="9" height="9" patternTransform="rotate(45)"><rect width="4" height="9" fill="${team.color}"/></pattern>`,
+          )
+          .join("") +
+        // A banned nation: a red cross-hatch.
+        `<pattern id="gg-h-banned" patternUnits="userSpaceOnUse" width="10" height="10" patternTransform="rotate(45)"><rect width="10" height="10" fill="#3d0c19"/><rect width="3" height="10" fill="#ff3b3b" opacity=".55"/><rect width="10" height="3" fill="#ff3b3b" opacity=".35"/></pattern>`;
       return true;
     };
     if (install()) return undefined;
@@ -210,6 +255,47 @@ const PanOnlySVG = L.SVG.extend({
 }) as unknown as new (options?: L.RendererOptions) => L.SVG;
 
 /**
+ * The map's first view leaves room for the team drawer on the left and the
+ * top bar: Europe opens in the middle of what's actually visible.
+ */
+function FrameVisible({ world, intent, left, top, right }: { world: PixelWorld; intent: ViewIntent; left: number; top: number; right: number }) {
+  const map = useMap();
+  useEffect(() => {
+    // Applied once the map has settled after loading. Loading can leave a zoom-out to the whole world
+    // queued (Leaflet animates it on the next frame); if that lands after us, frame again.
+    let zoomSet: number | null = null;
+    const frame = () => {
+      const width = world.maxX - world.minX;
+      const height = world.maxY - world.minY;
+      const size = map.getSize();
+      if (!size.x || !size.y) return;
+      const fill = Math.max(0, Math.log2(Math.max(size.x / width, size.y / height)));
+      const zoom = Math.min(map.getMaxZoom(), fill + intent.zoomOffset);
+      // Let the map scroll a little past the world's top, so the north of Europe can sit below the top bar.
+      map.setMaxBounds(L.latLngBounds([world.minY, -Infinity], [world.maxY + top / Math.pow(2, zoom), Infinity]));
+      map.setView(L.latLng(world.minY + intent.cyFrac * height, world.minX + intent.cxFrac * width), zoom, { animate: false });
+      map.panBy([(right - left) / 2, -top / 2], { animate: false });
+      zoomSet = zoom;
+    };
+    const late = () => {
+      if (zoomSet !== null && Math.abs(map.getZoom() - zoomSet) > 0.01) frame();
+    };
+    const id = window.setTimeout(() => {
+      frame();
+      map.on("zoomend", late);
+      window.setTimeout(() => map.off("zoomend", late), 2000);
+    }, 350);
+    return () => {
+      window.clearTimeout(id);
+      map.off("zoomend", late);
+    };
+    // Only the first view (per map).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map]);
+  return null;
+}
+
+/**
  * Tells the page while the map is being dragged or zoomed (no hover name then).
  */
 function MotionWatch({ onMoving }: { onMoving: (moving: boolean) => void }) {
@@ -246,7 +332,8 @@ function GGMap({
   const [world, setWorld] = useState<PixelWorld | null>(null);
   const [error, setError] = useState<string | null>(null);
   const mapKey = useMapRemountKey();
-  const viewRef = useRef<ViewIntent | null>(EUROPE);
+  const mapStep = state.phase === "bans" || state.phase === "draft";
+  const viewRef = useRef<ViewIntent | null>(mapStep ? EUROPE_CLOSE : EUROPE);
   const baseRef = useRef<L.GeoJSON | null>(null);
   const renderer = useMemo(() => new PanOnlySVG({ padding: 1 }), []);
   // onEachFeature runs once per nation: it reaches the latest handler through a ref.
@@ -326,18 +413,38 @@ function GGMap({
   );
 
   const glowTags = useMemo(() => new Set(Object.values(considering).flatMap((entry) => (entry ? [entry.tag] : []))), [considering]);
+  // Who is eyeing what: a label over the nation, in the team's colour.
+  const eyes = useMemo(() => {
+    const out: { key: string; at: [number, number]; icon: L.DivIcon }[] = [];
+    for (const [teamId, entry] of Object.entries(considering)) {
+      const team = state.teams.find((t) => t.id === teamId);
+      if (!entry || !team || !anchorMap.has(entry.tag)) continue;
+      const name = team.name.replace(/[<>&"]/g, "");
+      out.push({
+        key: `${teamId}:${entry.tag}`,
+        at: anchorMap.get(entry.tag)!,
+        icon: L.divIcon({ className: "", html: `<div class="gg-eye" style="--team:${team.color}"><b>${name}</b> eyeing…</div>`, iconSize: [0, 0], iconAnchor: [0, 34] }),
+      });
+    }
+    return out;
+  }, [considering, state.teams, anchorMap]);
   const glow = useMemo(() => {
     if (!data || !glowTags.size) return null;
     return { type: "FeatureCollection" as const, features: data.features.filter((feature) => glowTags.has(feature.properties.tag)) };
   }, [data, glowTags]);
 
+  // A stamp slams down when its ban is fresh; bans already in when the page opened just sit there.
   const stamps = useMemo(() => {
-    const out: { tag: string; at: [number, number] }[] = [];
+    const out: { tag: string; at: [number, number]; icon: L.DivIcon }[] = [];
+    const undone = new Set(state.log.filter((entry) => entry.kind === "undo").map((entry) => Number(entry.payload.seq)));
     for (const team of state.teams) {
-      if (team.ban && anchorMap.has(team.ban) && paint(team.ban, "").stamp) out.push({ tag: team.ban, at: anchorMap.get(team.ban)! });
+      if (!team.ban || !anchorMap.has(team.ban) || !paint(team.ban, "").stamp) continue;
+      const action = [...state.log].reverse().find((entry) => entry.kind === "ban.set" && entry.payload.tag === team.ban && !undone.has(entry.seq));
+      const fresh = action ? state.now - action.at < 4000 : false;
+      out.push({ tag: team.ban, at: anchorMap.get(team.ban)!, icon: stampIcon(team.ban, fresh) });
     }
     return out;
-  }, [state.teams, anchorMap, paint]);
+  }, [state.teams, state.log, state.now, anchorMap, paint]);
 
   if (error) {
     return (
@@ -371,6 +478,7 @@ function GGMap({
       <MapSetup world={world} initialViewRef={viewRef} />
       <RedrawAhead renderer={renderer} />
       <MotionWatch onMoving={onMoving} />
+      <FrameVisible world={world} intent={mapStep ? EUROPE_CLOSE : EUROPE} left={340} top={140} right={state.phase === "bans" ? 300 : 0} />
       <Patterns teams={state.teams} />
       <GeoJSON
         ref={baseRef}
@@ -432,7 +540,7 @@ function GGMap({
           onEachFeature={(_feature: NationFeature, layer) => {
             (layer as L.Polygon).options.noClip = true;
           }}
-          style={{ fillColor: "#ffd23f", fillOpacity: 0.28, color: "#ffd23f", weight: 3, className: "gg-glow" }}
+          style={{ fillColor: "#ffd23f", fillOpacity: 0.12, color: "#ffd23f", weight: 4, className: "gg-glow" }}
           {...{ renderer }}
         />
       )}
@@ -441,13 +549,16 @@ function GGMap({
           key={stamp.tag}
           position={stamp.at}
           interactive={false}
-          icon={L.divIcon({ className: "", html: '<div class="gg-stamp">BANNED</div>', iconSize: [70, 20], iconAnchor: [35, 10] })}
+          icon={stamp.icon}
         />
+      ))}
+      {eyes.map((eye) => (
+        <Marker key={eye.key} position={eye.at} interactive={false} icon={eye.icon} />
       ))}
     </MapContainer>
     {hover && (
       <div
-        className="pointer-events-none absolute left-1/2 top-[252px] z-[950] -translate-x-1/2 rounded-full px-4 py-1.5 text-xs font-bold shadow-xl backdrop-blur-md"
+        className="pointer-events-none absolute left-1/2 top-[164px] z-[950] -translate-x-1/2 rounded-full px-4 py-1.5 text-xs font-bold shadow-xl backdrop-blur-md"
         style={{ background: "rgba(14,8,30,.82)", border: "1px solid rgba(255,255,255,.15)", color: "var(--gg-fg)" }}
       >
         {hover}

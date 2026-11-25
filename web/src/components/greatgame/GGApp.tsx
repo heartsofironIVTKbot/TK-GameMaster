@@ -10,6 +10,8 @@ import GGNationPanel from "./GGNationPanel";
 import GGRandomizers, { ANIM_MS } from "./GGRandomizers";
 import GGTeamStack from "./GGTeamStack";
 import { scratchHeld } from "./ggScratch";
+import GGBanSlam from "./GGBanSlam";
+import GGPoolPanel from "./GGPoolPanel";
 import GGTopBar from "./GGTopBar";
 import { AvatarsContext } from "./ggUi";
 import { useGreatGame, useTick } from "./useGreatGame";
@@ -124,7 +126,7 @@ export default function GGApp({ slug }: { slug: string }) {
       {drawerOpen ? (
         <aside
           className="gg-scroll absolute bottom-0 left-0 top-[86px] z-[1060] w-[min(340px,100%)] pb-6"
-          style={{ background: "rgba(14,8,30,.94)", borderRight: "1px solid var(--gg-line-2)", boxShadow: "4px 0 24px rgba(0,0,0,.45)" }}
+          style={{ background: "#0e081e", borderRight: "1px solid var(--gg-line-2)", boxShadow: "4px 0 24px rgba(0,0,0,.45)" }}
           aria-label="Teams"
         >
           <button type="button" className="gg-btn absolute right-2 top-3 h-8 min-h-0 px-2" onClick={() => setDrawerOpen(false)} aria-label="Hide the teams">
@@ -138,6 +140,9 @@ export default function GGApp({ slug }: { slug: string }) {
         </button>
       )}
 
+      {/* During the bans: the minors still in the pool, on the right (a nation opens its card instead). */}
+      {state.phase === "bans" && !selected && !panel && <GGPoolPanel state={state} onSelect={select} />}
+      <GGBanSlam state={state} now={now} />
       {selected && !panel && <GGNationPanel key={selected} state={state} viewer={viewer} tag={selected} act={act} onClose={() => select(null)} />}
       {panel === "log" && <GGLog state={state} organizer={viewer.organizer} act={act} onClose={() => setPanel(null)} />}
       {panel === "controls" && viewer.organizer && <GGControlPanel state={state} act={act} reveal={reveal} onClose={() => setPanel(null)} />}

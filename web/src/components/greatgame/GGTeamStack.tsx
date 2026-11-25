@@ -58,7 +58,7 @@ function RowEnd({ state, team }: { state: GGState; team: GGTeam }) {
     case "bans":
       if (team.ban) {
         return (
-          <span className="relative inline-block" title={`Banned ${nationName(state, team.ban)}`}>
+          <span key={team.ban} className="gg-ban-in relative inline-block" title={`Banned ${nationName(state, team.ban)}`}>
             <Flag tag={team.ban} w={40} h={26} />
             <span className="gg-disp absolute -bottom-1.5 -left-2 rotate-[-10deg] px-1 text-[10px] font-black text-white" style={{ background: "var(--gg-stamp)" }}>
               Banned

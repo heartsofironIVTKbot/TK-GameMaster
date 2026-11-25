@@ -425,3 +425,34 @@ export function scratching() {
     scratchStop = null;
   }, 220);
 }
+
+/** A ban: a heavy rubber stamp coming down (a low thump and a slap). */
+export function stamp() {
+  const a = audio();
+  if (!a) return;
+  const { ctx, out } = a;
+  const t = ctx.currentTime;
+  const boom = ctx.createOscillator();
+  boom.type = "sine";
+  boom.frequency.setValueAtTime(120, t);
+  boom.frequency.exponentialRampToValueAtTime(42, t + 0.25);
+  const boomGain = ctx.createGain();
+  boomGain.gain.setValueAtTime(0.0001, t);
+  boomGain.gain.exponentialRampToValueAtTime(0.9, t + 0.008);
+  boomGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
+  boom.connect(boomGain).connect(out);
+  boom.start(t);
+  boom.stop(t + 0.42);
+  const slap = noiseSource(ctx);
+  const band = ctx.createBiquadFilter();
+  band.type = "bandpass";
+  band.frequency.value = 1400;
+  band.Q.value = 0.8;
+  const slapGain = ctx.createGain();
+  slapGain.gain.setValueAtTime(0.0001, t);
+  slapGain.gain.exponentialRampToValueAtTime(0.5, t + 0.004);
+  slapGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+  slap.connect(band).connect(slapGain).connect(out);
+  slap.start(t);
+  slap.stop(t + 0.14);
+}

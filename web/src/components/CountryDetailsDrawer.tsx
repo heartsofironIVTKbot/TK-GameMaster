@@ -34,6 +34,8 @@ interface CountryDetailsDrawerProps {
   onToggleMinimized: () => void;
   /** Close the panel (clears the selection). */
   onClose: () => void;
+  /** Replaces the status chip in the header (null: no chip). Used by pages with their own status, e.g. the Great Game. */
+  statusTag?: { label: string; className: string } | null;
 }
 
 /** How the selected nation stands for the viewer: the tag in the panel's header. */
@@ -379,6 +381,7 @@ export default function CountryDetailsDrawer({
   scenarioId = DEFAULT_SCENARIO,
   onToggleMinimized,
   onClose,
+  statusTag,
 }: CountryDetailsDrawerProps) {
   // The scenario's nations load on demand; until then the panel shows the
   // name and a short loading line instead of placeholder numbers.
@@ -420,9 +423,11 @@ export default function CountryDetailsDrawer({
   }));
 
   const status =
-    nationLocked && selectionKind === "pending"
-      ? { label: "Locked", className: "bg-ink-800 text-ink-300" }
-      : SELECTION_TAGS[selectionKind];
+    statusTag !== undefined
+      ? statusTag
+      : nationLocked && selectionKind === "pending"
+        ? { label: "Locked", className: "bg-ink-800 text-ink-300" }
+        : SELECTION_TAGS[selectionKind];
   const flag = (
     <img
       src={scenario.flagUrl || `/assets/flags/${scenario.tag}.png`}
@@ -475,7 +480,7 @@ export default function CountryDetailsDrawer({
           <h2 className="gm-title truncate text-[26px]">{scenario.name}</h2>
           <p className="mt-1.5 flex flex-wrap items-center gap-1.5">
             <span className="gm-tag bg-ink-800 text-ink-300">{isMajor ? "Major power" : "Minor nation"}</span>
-            <span className={`gm-tag gm-tag-dot ${status.className}`}>{status.label}</span>
+            {status && <span className={`gm-tag gm-tag-dot ${status.className}`}>{status.label}</span>}
           </p>
         </div>
         <div className="flex shrink-0 self-start">
