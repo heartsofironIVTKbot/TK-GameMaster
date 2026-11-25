@@ -6,6 +6,7 @@ import { useCallback, useState } from "react";
 import { turnDeadline } from "@/lib/greatGame/engine";
 import GGControlPanel from "./GGControlPanel";
 import GGLog from "./GGLog";
+import { GGMods, GGRules } from "./GGInfoPanel";
 import GGNationPanel from "./GGNationPanel";
 import GGRandomizers, { ANIM_MS } from "./GGRandomizers";
 import GGTeamStack, { finalText } from "./GGTeamStack";
@@ -30,7 +31,7 @@ export default function GGApp({ slug }: { slug: string }) {
   const game = useGreatGame(slug);
   const { state, viewer, error, considering, act, consider, reveal, serverNow, demo, avatars } = game;
   const [selected, setSelected] = useState<string | null>(null);
-  const [panel, setPanel] = useState<"log" | "controls" | null>(null);
+  const [panel, setPanel] = useState<"log" | "rules" | "mods" | "controls" | null>(null);
   // The team drawer: shown by default, except during the drum and the reel,
   // whose stage has its own team box (it can still be opened).
   const [drawerChoice, setDrawerChoice] = useState<{ map: boolean | null; stage: boolean | null }>({ map: null, stage: null });
@@ -99,6 +100,8 @@ export default function GGApp({ slug }: { slug: string }) {
         now={now}
         scratchTeam={scratchHeld(state, game.scratch, now)?.team ?? null}
         onOpenLog={() => setPanel(panel === "log" ? null : "log")}
+        onOpenRules={() => setPanel(panel === "rules" ? null : "rules")}
+        onOpenMods={() => setPanel(panel === "mods" ? null : "mods")}
         onOpenControls={viewer.organizer ? () => setPanel(panel === "controls" ? null : "controls") : null}
         right={
           demo ? (
@@ -150,6 +153,8 @@ export default function GGApp({ slug }: { slug: string }) {
       {state.phase === "locked" && !panel && <GGFinale state={state} viewer={viewer} now={now} reveal={reveal} copyText={finalText(state)} />}
       {selected && !panel && <GGNationPanel key={selected} state={state} viewer={viewer} tag={selected} act={act} onClose={() => select(null)} />}
       {panel === "log" && <GGLog state={state} organizer={viewer.organizer} act={act} onClose={() => setPanel(null)} />}
+      {panel === "rules" && <GGRules state={state} onClose={() => setPanel(null)} />}
+      {panel === "mods" && <GGMods onClose={() => setPanel(null)} />}
       {panel === "controls" && viewer.organizer && <GGControlPanel state={state} act={act} reveal={reveal} onClose={() => setPanel(null)} now={now} viewers={game.viewers} live={game.live} />}
 
       {!game.live && (
