@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useContext, useEffect, useRef } from "react";
 import type { GGState, GGTeam } from "@/lib/greatGame/model";
 import { person } from "./ggUi";
 import * as sound from "./ggSound";
+import { StageAnchorContext } from "./GGStageScene";
 
 /**
- * Step 1's lottery machine: a glass sphere where air keeps the team balls
- * flying the whole time, each ball wearing its captain's Discord picture.
+ * Step 1's lottery machine: a glowing neon moon at the end of the stage's road
+ * (a glass sphere), where air keeps the team balls flying the whole time,
+ * each ball wearing its captain's Discord picture.
  *
  * When Tommy draws, the server has already picked the team and stamped the
  * time. Every page then plays the draw from that time: the air surges and the
@@ -43,11 +45,13 @@ const SETTLE_MS = 320; // a little bounce against the ball before it
 const LANDED_MS = ENTER_MS + RISE_MS + TURN_MS + ROLL_MS;
 const DONE_MS = LANDED_MS + SETTLE_MS;
 
+// The sphere is the scene's moon: it sits on the horizon at the end of the
+// road, and the canvas runs on below it (transparent) so the road shows.
 const W = 600;
-const H = 460;
+const H = 540;
 const CX = 405;
-const CY = 268;
-const R = 150;
+const CY = 262;
+const R = 168;
 const BALL_R = 22;
 const TUBE_Y = 52;
 const TUBE_BEND = 30;
@@ -166,6 +170,7 @@ export default function GGAirLottery({
   onLanded?: (seq: number) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const anchorRef = useContext(StageAnchorContext);
   const stateRef = useRef(state);
   const avatarsRef = useRef(avatars);
   const landedRef = useRef(onLanded);
@@ -174,6 +179,15 @@ export default function GGAirLottery({
     avatarsRef.current = avatars;
     landedRef.current = onLanded;
   }, [state, avatars, onLanded]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!anchorRef || !canvas) return undefined;
+    anchorRef.current = { el: canvas, fx: CX / W, fy: (CY + R) / H };
+    return () => {
+      anchorRef.current = null;
+    };
+  }, [anchorRef]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -386,7 +400,7 @@ export default function GGAirLottery({
       }
     };
 
-    const render = (drawn: { team: GGTeam; ms: number } | null, queue: GGTeam[], current: GGState) => {
+    const render = (time: number, drawn: { team: GGTeam; ms: number } | null, queue: GGTeam[], current: GGState) => {
       const k = canvas.width / W;
       ctx.setTransform(k, 0, 0, k, 0, 0);
       ctx.clearRect(0, 0, W, H);
@@ -394,37 +408,6 @@ export default function GGAirLottery({
       const pics = avatarsRef.current;
       const initial = (team: GGTeam) => (person(current, team.captain)?.name ?? team.name).trim().charAt(0).toUpperCase() || "?";
       const avatar = (team: GGTeam) => (team.captain ? pics[team.captain] : undefined);
-
-      // Spotlight and floor.
-      const spot = ctx.createRadialGradient(CX, CY + 20, 20, CX, CY + 20, 190);
-      spot.addColorStop(0, "rgba(255,43,214,.16)");
-      spot.addColorStop(1, "rgba(255,43,214,0)");
-      ctx.fillStyle = spot;
-      ctx.fillRect(0, 0, W, H);
-      ctx.fillStyle = "rgba(0,0,0,.45)";
-      ctx.beginPath();
-      ctx.ellipse(CX, H - 18, 150, 13, 0, 0, TAU);
-      ctx.fill();
-
-      // Pedestal.
-      ctx.fillStyle = chrome(ctx, CX - 110, 0, CX + 110, 0);
-      ctx.beginPath();
-      ctx.moveTo(CX - 62, CY + R - 12);
-      ctx.lineTo(CX + 62, CY + R - 12);
-      ctx.lineTo(CX + 104, H - 20);
-      ctx.lineTo(CX - 104, H - 20);
-      ctx.closePath();
-      ctx.fill();
-      ctx.fillStyle = "#ff2bd6";
-      ctx.shadowColor = "#ff2bd6";
-      ctx.shadowBlur = 14;
-      ctx.fillRect(CX - 88, H - 46, 176, 4);
-      ctx.shadowBlur = 0;
-      ctx.fillStyle = "#120a24";
-      ctx.font = '800 12px "Orbitron", "Segoe UI", sans-serif';
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText("THE GREAT GAME", CX, H - 30);
 
       // Tube: back wall.
       const tubeLeft = 14;
@@ -441,6 +424,8 @@ export default function GGAirLottery({
 
       // Slot numbers under the tube; a filled slot glows in its team's colour.
       ctx.font = '800 11px "Orbitron", "Segoe UI", sans-serif';
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
       for (let i = 0; i < current.teams.length; i++) {
         const team = queue[i];
         ctx.fillStyle = team ? team.color : "rgba(185,174,224,.55)";
@@ -453,22 +438,38 @@ export default function GGAirLottery({
         drawBall(SLOT_X0 + i * SLOT_GAP, TUBE_Y, team, initial(team), avatar(team), -i * 1.3);
       });
 
-      // Sphere: back glass.
-      const back = ctx.createRadialGradient(CX - 50, CY - 60, 20, CX, CY, R);
-      back.addColorStop(0, "rgba(140,110,230,.16)");
-      back.addColorStop(0.8, "rgba(40,20,80,.42)");
-      back.addColorStop(1, "rgba(20,10,45,.6)");
-      ctx.fillStyle = back;
+      // The moon: a breathing halo, then a translucent glowing body with drifting bands; the balls fly inside it.
+      const halo = ctx.createRadialGradient(CX, CY, R * 0.85, CX, CY, R * 1.5);
+      halo.addColorStop(0, `rgba(255,79,224,${0.36 + 0.1 * Math.sin(time * 1.3)})`);
+      halo.addColorStop(1, "rgba(255,79,224,0)");
+      ctx.fillStyle = halo;
+      ctx.fillRect(CX - R * 1.5, CY - R * 1.5, R * 3, R * 3);
+      const moon = ctx.createLinearGradient(0, CY - R, 0, CY + R);
+      moon.addColorStop(0, "rgba(255,208,244,.62)");
+      moon.addColorStop(0.4, "rgba(228,139,240,.46)");
+      moon.addColorStop(0.75, "rgba(154,74,216,.42)");
+      moon.addColorStop(1, "rgba(90,33,150,.6)");
+      ctx.save();
       ctx.beginPath();
       ctx.arc(CX, CY, R, 0, TAU);
+      ctx.fillStyle = moon;
       ctx.fill();
-      ctx.strokeStyle = "rgba(255,255,255,.06)";
-      ctx.lineWidth = 1;
-      for (const ry of [0.35, 0.7]) {
+      ctx.clip();
+      ctx.strokeStyle = "rgba(255,255,255,.09)";
+      ctx.lineWidth = R * 0.05;
+      const drift = (time * 6) % (R * 0.26);
+      for (let i = -5; i <= 5; i++) {
         ctx.beginPath();
-        ctx.ellipse(CX, CY, R, R * ry, 0, 0, TAU);
+        ctx.ellipse(CX, CY + i * R * 0.26 + drift, R * 1.1, R * 0.07, -0.08, 0, TAU);
         ctx.stroke();
       }
+      const shade = ctx.createRadialGradient(CX - R * 0.35, CY - R * 0.45, R * 0.2, CX, CY, R * 1.1);
+      shade.addColorStop(0, "rgba(255,255,255,.16)");
+      shade.addColorStop(0.6, "rgba(0,0,0,0)");
+      shade.addColorStop(1, "rgba(40,0,70,.4)");
+      ctx.fillStyle = shade;
+      ctx.fillRect(CX - R, CY - R, R * 2, R * 2);
+      ctx.restore();
 
       // The air and the nozzle.
       ctx.save();
@@ -541,12 +542,12 @@ export default function GGAirLottery({
       }
 
       // Front glass.
-      ctx.strokeStyle = "rgba(230,240,255,.55)";
-      ctx.lineWidth = 3;
+      ctx.strokeStyle = "rgba(255,214,247,.6)";
+      ctx.lineWidth = 2.5;
       ctx.beginPath();
       ctx.arc(CX, CY, R, 0, TAU);
       ctx.stroke();
-      ctx.strokeStyle = "rgba(255,255,255,.42)";
+      ctx.strokeStyle = "rgba(255,255,255,.3)";
       ctx.lineWidth = 7;
       ctx.beginPath();
       ctx.arc(CX, CY, R - 15, Math.PI * 1.08, Math.PI * 1.4);
@@ -682,7 +683,7 @@ export default function GGAirLottery({
         once("roll", ENTER_MS + RISE_MS + TURN_MS, () => sound.roll(ROLL_MS / 1000));
         once("settle", LANDED_MS, () => sound.clack(0.7, -0.6));
       }
-      render(drawnTeam ? { team: drawnTeam, ms } : null, queue, current);
+      render(time, drawnTeam ? { team: drawnTeam, ms } : null, queue, current);
       frame = requestAnimationFrame(loop);
     };
     frame = requestAnimationFrame(loop);

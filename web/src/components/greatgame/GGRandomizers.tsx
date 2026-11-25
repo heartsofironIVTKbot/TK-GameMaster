@@ -1,13 +1,13 @@
 "use client";
 
 import { Volume1, Volume2, VolumeX } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { strengthOrder } from "@/lib/greatGame/engine";
 import type { GGState, GGTeam } from "@/lib/greatGame/model";
 import GGAirLottery, { DRUM_MS } from "./GGAirLottery";
 import { useSoundSwitch, useSoundVolume } from "./ggSound";
 import GGMajorReel, { REEL_MS } from "./GGMajorReel";
-import GGStageScene from "./GGStageScene";
+import GGStageScene, { StageAnchorContext, type StageAnchor } from "./GGStageScene";
 import { Avatar, Flag, nationName, person, teamById } from "./ggUi";
 import type { GGViewerInfo } from "./useGreatGame";
 
@@ -55,6 +55,7 @@ function Shell({
   footer: React.ReactNode;
 }) {
   const [hidden, setHidden] = useState(false);
+  const anchorRef = useRef<StageAnchor | null>(null);
   if (hidden) {
     return (
       <button type="button" className="gg-btn gg-btn-primary absolute bottom-6 left-1/2 z-[1050] -translate-x-1/2" onClick={() => setHidden(false)}>
@@ -67,7 +68,7 @@ function Shell({
       <div className="gg-overlay-dim" />
       <section className="gg-stage absolute left-1/2 top-[150px] w-[min(960px,calc(100%-32px))] -translate-x-1/2 lg:left-[calc(50%+170px)] lg:w-[min(960px,calc(100%-380px))]">
         <div className="gg-stage-inner">
-          <GGStageScene />
+          <GGStageScene anchorRef={anchorRef} />
           <div className="relative flex items-end justify-between gap-4 px-7 pt-5">
             <div className="min-w-0">
               <div className="gg-eyebrow">{step}</div>
@@ -79,7 +80,9 @@ function Shell({
               </div>
             )}
           </div>
-          <div className="relative px-7 pb-3 pt-2">{children}</div>
+          <StageAnchorContext.Provider value={anchorRef}>
+            <div className="relative px-7 pb-3 pt-2">{children}</div>
+          </StageAnchorContext.Provider>
           <div className="gg-stage-foot relative flex flex-wrap items-center justify-between gap-3 px-7 py-3.5">
             {footer}
             <span className="flex flex-wrap items-center gap-3">
@@ -215,7 +218,7 @@ function Drum({ state, viewer, act, now, clock, avatars }: { state: GGState; vie
       }
     >
       <div className="flex flex-wrap items-center justify-center gap-5">
-        <div className="min-w-0 max-w-[640px] flex-[1_1_500px]">
+        <div className="min-w-0 flex-[1_1_500px]" style={{ maxWidth: "min(640px, calc((100vh - 330px) * 600 / 540))" }}>
           <GGAirLottery state={state} clock={clock} avatars={avatars} onLanded={onLanded} />
         </div>
         <div className="w-[230px]">
