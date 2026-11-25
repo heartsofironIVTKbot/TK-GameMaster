@@ -1,6 +1,6 @@
 "use client";
 
-import { Volume1, Volume2, VolumeX } from "lucide-react";
+import { Maximize2, Minimize2, Volume1, Volume2, VolumeX } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 import { strengthOrder } from "@/lib/greatGame/engine";
 import type { GGState, GGTeam } from "@/lib/greatGame/model";
@@ -35,8 +35,11 @@ function progressOf(state: GGState, kind: string, now: number): number | null {
 }
 
 /**
- * The stage each randomizer stands on: a neon-framed panel over the map with
- * the step, one line saying what's being decided, and a progress counter.
+ * The stage each randomizer stands on: centred on the screen under the sun, a
+ * neon-framed outrun scene with the step, one line saying what's being
+ * decided, the progress, sound and a minimise button at the top, and the one
+ * action (Draw, Spin…) centred at the bottom. Sized from the screen, so it
+ * fits 1080p, 1440p and 4K.
  */
 function Shell({
   step,
@@ -44,54 +47,52 @@ function Shell({
   progress,
   name,
   children,
-  footer,
+  action,
 }: {
   step: string;
   title: string;
   progress?: string;
-  /** What "Show the …" brings back after hiding. */
+  /** What "Show the …" brings back after minimising. */
   name: string;
   children: React.ReactNode;
-  footer: React.ReactNode;
+  action: React.ReactNode;
 }) {
   const [hidden, setHidden] = useState(false);
   const anchorRef = useRef<StageAnchor | null>(null);
   if (hidden) {
     return (
-      <button type="button" className="gg-btn gg-btn-primary absolute bottom-6 left-1/2 z-[1050] -translate-x-1/2" onClick={() => setHidden(false)}>
-        Show the {name}
+      <button type="button" className="gg-btn gg-btn-primary absolute bottom-6 left-1/2 z-[1050] -translate-x-1/2 gap-2" onClick={() => setHidden(false)}>
+        <Maximize2 size={16} aria-hidden /> Show the {name}
       </button>
     );
   }
   return (
     <div className="absolute inset-0 z-[1050]" style={{ top: 84 }}>
       <div className="gg-overlay-dim" />
-      <section className="gg-stage absolute left-1/2 top-[150px] w-[min(960px,calc(100%-32px))] -translate-x-1/2 lg:left-[calc(50%+170px)] lg:w-[min(960px,calc(100%-380px))]">
+      <section className="gg-stage absolute left-1/2 top-[136px] -translate-x-1/2" style={{ width: "clamp(min(720px, calc(100vw - 32px)), calc(100vw - 720px), 2200px)" }}>
         <div className="gg-stage-inner">
           <GGStageScene anchorRef={anchorRef} />
-          <div className="relative flex items-end justify-between gap-4 px-7 pt-5">
+          <div className="relative flex items-start justify-between gap-4 px-7 pt-5">
             <div className="min-w-0">
               <div className="gg-eyebrow">{step}</div>
               <h2 className="gg-stage-title">{title}</h2>
             </div>
-            {progress && (
-              <div className="gg-progress" aria-label={`Progress ${progress}`}>
-                {progress}
-              </div>
-            )}
+            <div className="flex shrink-0 items-center gap-2.5">
+              <SoundControl />
+              {progress && (
+                <div className="gg-progress" aria-label={`Progress ${progress}`}>
+                  {progress}
+                </div>
+              )}
+              <button type="button" className="gg-btn h-9 min-h-0 px-2.5" onClick={() => setHidden(true)} aria-label="Minimise to see the map" title="Minimise to see the map">
+                <Minimize2 size={16} aria-hidden />
+              </button>
+            </div>
           </div>
           <StageAnchorContext.Provider value={anchorRef}>
-            <div className="relative px-7 pb-3 pt-2">{children}</div>
+            <div className="relative px-7 pb-2 pt-1">{children}</div>
           </StageAnchorContext.Provider>
-          <div className="gg-stage-foot relative flex flex-wrap items-center justify-between gap-3 px-7 py-3.5">
-            {footer}
-            <span className="flex flex-wrap items-center gap-3">
-              <SoundControl />
-              <button type="button" className="gg-btn" onClick={() => setHidden(true)}>
-                Hide to see the map
-              </button>
-            </span>
-          </div>
+          <div className="relative flex justify-center px-7 pb-5 pt-1">{action}</div>
         </div>
       </section>
     </div>
@@ -144,9 +145,9 @@ function SoundControl() {
         disabled={!on}
         onChange={(event) => setVolume(Number(event.target.value) / 100)}
         aria-label="Sound effects volume"
-        className="w-24 accent-[#ff2bd6] disabled:opacity-40"
+        className="w-20 accent-[#ff2bd6] disabled:opacity-40"
       />
-      <span className="gg-digit w-9 text-right text-xs" style={{ color: "var(--gg-fg-2)" }}>
+      <span className="gg-digit ml-1 w-11 shrink-0 text-right text-xs" style={{ color: "var(--gg-fg-2)" }}>
         {on ? `${Math.round(volume * 100)}%` : "off"}
       </span>
     </span>
@@ -158,16 +159,16 @@ function ActButton({ label, can, act, body, waiting }: { label: string; can: boo
   const [error, setError] = useState<string | null>(null);
   if (!can) {
     return (
-      <span className="text-[13px]" style={{ color: "var(--gg-fg-2)" }}>
+      <span className="gg-waiting" role="status">
         {waiting}
       </span>
     );
   }
   return (
-    <span className="flex items-center gap-3">
+    <span className="flex flex-col items-center gap-2">
       <button
         type="button"
-        className="gg-btn gg-btn-primary gg-btn-big px-6"
+        className="gg-act"
         disabled={busy}
         onClick={async () => {
           setBusy(true);
@@ -178,7 +179,7 @@ function ActButton({ label, can, act, body, waiting }: { label: string; can: boo
         {label}
       </button>
       {error && (
-        <span role="alert" className="text-xs" style={{ color: "#ff9b9b" }}>
+        <span role="alert" className="gg-waiting" style={{ color: "#ff9b9b" }}>
           {error}
         </span>
       )}
@@ -207,7 +208,7 @@ function Drum({ state, viewer, act, now, clock, avatars }: { state: GGState; vie
       title={state.phase_done && ballOut ? "The order is set" : "Who rolls their major first?"}
       progress={`${shown} / ${state.teams.length}`}
       name="drum"
-      footer={
+      action={
         <ActButton
           label={state.order.length === 0 ? "Draw the first ball" : "Draw the next ball"}
           can={viewer.organizer && !state.phase_done && !playing}
@@ -217,11 +218,9 @@ function Drum({ state, viewer, act, now, clock, avatars }: { state: GGState; vie
         />
       }
     >
-      <div className="flex flex-wrap items-center justify-center gap-5">
-        <div className="min-w-0 flex-[1_1_500px]" style={{ maxWidth: "min(640px, calc((100vh - 330px) * 600 / 540))" }}>
-          <GGAirLottery state={state} clock={clock} avatars={avatars} onLanded={onLanded} />
-        </div>
-        <div className="w-[230px]">
+      <div className="relative mx-auto" style={{ maxWidth: "calc((100vh - 430px) * 1000 / 540)" }}>
+        <GGAirLottery state={state} clock={clock} avatars={avatars} onLanded={onLanded} />
+        <div className="absolute right-0 top-[46%] w-[clamp(190px,22%,300px)] -translate-y-1/2">
           {newest && ballOut ? (
             <ResultCard
               key={state.order.length}
@@ -277,7 +276,7 @@ function Majors({ state, viewer, act, now, clock }: { state: GGState; viewer: GG
       title={p !== null && resultTeam && draw ? (landed ? `${resultTeam.name} get ${nationName(state, draw.value)}` : `Spinning for ${resultTeam.name}`) : spinning ? `${spinning.name} spins next` : "Every major is drawn"}
       progress={`${state.teams.filter((t) => t.major).length - (p !== null && !landed ? 1 : 0)} / ${state.teams.length}`}
       name="reel"
-      footer={
+      action={
         <ActButton
           label={`Spin for ${spinning?.name ?? ""}`}
           can={viewer.organizer && Boolean(spinning) && p === null}
@@ -287,11 +286,11 @@ function Majors({ state, viewer, act, now, clock }: { state: GGState; viewer: GG
         />
       }
     >
-      <div className="flex flex-wrap items-center justify-center gap-8">
-        <div className="min-w-0 flex-[1_1_380px]">
+      <div className="relative mx-auto" style={{ maxWidth: "calc((100vh - 430px) * 1000 / 440)" }}>
+        <div className="mx-auto w-[52%] min-w-[300px]">
           <GGMajorReel state={state} clock={clock} />
         </div>
-        <div className="w-[250px]">
+        <div className="absolute right-0 top-1/2 w-[clamp(190px,22%,300px)] -translate-y-1/2">
           {landed && resultTeam && draw ? (
             <ResultCard
               key={draw.seq}
@@ -346,7 +345,7 @@ function Cards({ state, viewer, act, now, kind }: { state: GGState; viewer: GGVi
       title={kind === "vice" ? "One content creator per team" : "Two recruits per team, one per round"}
       progress={`${draws.length} / ${total}`}
       name={title.toLowerCase()}
-      footer={
+      action={
         <ActButton
           label={kind === "vice" ? `Scratch for ${turn?.name ?? ""}` : `Flip for ${turn?.name ?? ""}`}
           can={can}

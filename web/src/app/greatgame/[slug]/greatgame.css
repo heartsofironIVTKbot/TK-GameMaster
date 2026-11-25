@@ -345,6 +345,42 @@
   background: rgba(8, 4, 18, 0.55);
 }
 
+/* The stage's one action (Draw, Spin…), centred under the machine and lit up. */
+.gg-act {
+  min-height: 54px;
+  padding: 0 34px;
+  border: 0;
+  border-radius: 999px;
+  font: 900 22px/1 var(--gg-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #fff;
+  background: linear-gradient(90deg, #ff2bd6, #b46bff 60%, #22e5ff);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.25) inset, 0 0 22px rgba(255, 43, 214, 0.7), 0 0 60px rgba(255, 43, 214, 0.35);
+  cursor: pointer;
+  animation: gg-act-glow 2.2s ease-in-out infinite;
+}
+.gg-act:hover:not(:disabled) {
+  filter: brightness(1.12);
+}
+.gg-act:disabled {
+  opacity: 0.6;
+  cursor: wait;
+  animation: none;
+}
+@keyframes gg-act-glow {
+  50% { box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35) inset, 0 0 30px rgba(255, 43, 214, 0.95), 0 0 90px rgba(255, 43, 214, 0.5); }
+}
+.gg-waiting {
+  padding: 9px 18px;
+  border-radius: 999px;
+  background: rgba(10, 4, 22, 0.78);
+  border: 1px solid rgba(255, 43, 214, 0.35);
+  color: var(--gg-fg-2);
+  font-size: 14px;
+  text-align: center;
+}
+
 /* The result beside a machine. */
 .gg-result {
   display: grid;
@@ -407,7 +443,8 @@
   .gg-road,
   .gg-neon-glow,
   .gg-light,
-  .gg-sun-halo {
+  .gg-sun-halo,
+  .gg-act {
     animation: none;
   }
   .gg-leds-win,

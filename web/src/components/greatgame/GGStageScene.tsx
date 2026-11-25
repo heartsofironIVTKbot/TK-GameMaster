@@ -54,13 +54,17 @@ function rand(seed: number): number {
   return x - Math.floor(x);
 }
 
-/** Terrain height at world (x, z): flat by the road, rising into ridges away from it. */
-function terrain(x: number, z: number): number {
+/**
+ * Terrain height at world (x, z) and time: flat by the road, rising into
+ * ridges away from it, and swelling up and down in slow waves.
+ */
+function terrain(x: number, z: number, time: number): number {
   const out = Math.abs(x) - ROAD - 0.9;
   if (out <= 0) return 0;
   const ridge = 0.6 + 0.4 * Math.sin(z * 0.32 + x * 0.6) * Math.cos(z * 0.17 - x * 0.29);
   const bumps = 0.35 * Math.sin(z * 0.9 + x * 1.7) + 0.22 * Math.cos(z * 1.6 - x * 1.2);
-  return Math.max(0, Math.pow(out, 1.15) * 0.55 * (ridge + bumps * 0.5));
+  const swell = 0.72 + 0.42 * Math.sin(time * 1.5 + z * 0.4 + x * 0.55) + 0.12 * Math.sin(time * 2.7 - x * 0.9);
+  return Math.max(0, Math.pow(out, 1.15) * 0.55 * (ridge + bumps * 0.5) * swell);
 }
 
 function drawSky(ctx: CanvasRenderingContext2D, v: View, stars: { x: number; y: number; r: number; a: number }[]) {
@@ -208,7 +212,7 @@ function drawFloor(ctx: CanvasRenderingContext2D, v: View, travel: number) {
 }
 
 /** Wireframe mountains rolling past on both sides: rows scroll towards the viewer, far to near. */
-function drawMountains(ctx: CanvasRenderingContext2D, v: View, travel: number) {
+function drawMountains(ctx: CanvasRenderingContext2D, v: View, travel: number, time: number) {
   const DZ = 1.5;
   const Z_NEAR = 2.4;
   const Z_FAR = 54;
@@ -231,10 +235,10 @@ function drawMountains(ctx: CanvasRenderingContext2D, v: View, travel: number) {
       for (let i = 0; i < xs.length - 1; i++) {
         const x0 = side * xs[i];
         const x1 = side * xs[i + 1];
-        const a = project(v, x0, terrain(x0, z0 + travel), z0);
-        const b = project(v, x1, terrain(x1, z0 + travel), z0);
-        const c = project(v, x1, terrain(x1, z1 + travel), z1);
-        const d = project(v, x0, terrain(x0, z1 + travel), z1);
+        const a = project(v, x0, terrain(x0, z0 + travel, time), z0);
+        const b = project(v, x1, terrain(x1, z0 + travel, time), z0);
+        const c = project(v, x1, terrain(x1, z1 + travel, time), z1);
+        const d = project(v, x0, terrain(x0, z1 + travel, time), z1);
         ctx.beginPath();
         ctx.moveTo(a[0], a[1]);
         ctx.lineTo(b[0], b[1]);
@@ -408,14 +412,8 @@ export default function GGStageScene({ anchorRef }: { anchorRef: MutableRefObjec
       }
       if (!anchorRef.current) drawPlanet(ctx, view, time);
       drawFloor(ctx, view, travel);
-      drawMountains(ctx, view, travel);
+      drawMountains(ctx, view, travel, time);
       drawPalms(ctx, view, travel, sprites);
-      const line = ctx.createLinearGradient(0, 0, view.w, 0);
-      line.addColorStop(0, "rgba(255,79,224,0)");
-      line.addColorStop(Math.max(0.01, Math.min(0.99, view.cx / view.w)), "rgba(255,214,247,.95)");
-      line.addColorStop(1, "rgba(255,79,224,0)");
-      ctx.fillStyle = line;
-      ctx.fillRect(0, view.hy - 1, view.w, 2);
       if (still) cancelAnimationFrame(frame);
     };
     frame = requestAnimationFrame(loop);

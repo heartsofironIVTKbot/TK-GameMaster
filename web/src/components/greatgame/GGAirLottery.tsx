@@ -47,15 +47,17 @@ const DONE_MS = LANDED_MS + SETTLE_MS;
 
 // The sphere is the scene's moon: it sits on the horizon at the end of the
 // road, and the canvas runs on below it (transparent) so the road shows.
-const W = 600;
+const W = 1000;
 const H = 540;
-const CX = 405;
-const CY = 262;
-const R = 168;
+const CX = W / 2;
+const CY = 250;
+const R = 170;
+/** Where the road meets the moon: a little above its bottom, so the road runs in behind it. */
+const ROAD_END_Y = CY + R * 0.78;
 const BALL_R = 22;
-const TUBE_Y = 52;
+const TUBE_Y = 44;
 const TUBE_BEND = 30;
-const SLOT_X0 = 38;
+const SLOT_X0 = 40;
 const SLOT_GAP = 47;
 const MOUTH_Y = CY - R + BALL_R + 4;
 const TAU = Math.PI * 2;
@@ -183,7 +185,7 @@ export default function GGAirLottery({
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!anchorRef || !canvas) return undefined;
-    anchorRef.current = { el: canvas, fx: CX / W, fy: (CY + R) / H };
+    anchorRef.current = { el: canvas, fx: CX / W, fy: ROAD_END_Y / H };
     return () => {
       anchorRef.current = null;
     };
