@@ -252,6 +252,19 @@ export async function createEvent(slug: string, config: GGConfig): Promise<{ com
   return { commit };
 }
 
+/**
+ * The event the public front page shows: GREAT_GAME_EVENT if set, else the
+ * newest event created; the sample event in preview mode. Null when none.
+ */
+export async function featuredSlug(): Promise<string | null> {
+  if (isSchedulerDemo()) return "demo";
+  const pinned = process.env.GREAT_GAME_EVENT?.trim();
+  if (pinned && SLUG_RE.test(pinned)) return pinned;
+  await ensureTables();
+  const [rows] = await getPool().query<RowDataPacket[]>("SELECT slug FROM gg_events ORDER BY created_at DESC LIMIT 1");
+  return rows[0] ? String(rows[0].slug) : null;
+}
+
 /** Events loaded in this process (the hub checks their clocks). */
 export function loadedSlugs(): string[] {
   return [...holder().events.keys()];

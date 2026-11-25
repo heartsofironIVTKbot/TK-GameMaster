@@ -2,7 +2,9 @@ import { getSession } from "@/lib/session";
 import { isSystemAdmin } from "@/lib/systemAdmin";
 import type { GGConfig, GGPerson } from "@/lib/greatGame/model";
 import { R56_MAJORS, R56_NAMES, R56_POOL } from "@/lib/greatGame/road56";
-import { createEvent, SLUG_RE } from "@/lib/greatGame/store";
+import { DatabaseConfigError } from "@/lib/db";
+import { publicView } from "@/lib/greatGame/public";
+import { createEvent, featuredSlug, getState, SLUG_RE } from "@/lib/greatGame/store";
 
 /**
  * POST /api/greatgame: create a Great Game event (GameMaster's owners only).
@@ -19,6 +21,23 @@ import { createEvent, SLUG_RE } from "@/lib/greatGame/store";
  * assignment window that places everyone left at random. Answers with the
  * fairness code to post in the announcement.
  */
+/**
+ * GET /api/greatgame: the public front page's view of the featured event
+ * (lib/greatGame/public.ts: no players or teams until the teams lock), or
+ * {event: null} when there's none yet. Open to everyone.
+ */
+export async function GET() {
+  const headers = { "Cache-Control": "public, max-age=15, stale-while-revalidate=30" };
+  try {
+    const slug = await featuredSlug();
+    const state = slug ? await getState(slug) : null;
+    return Response.json({ event: state ? publicView(state) : null }, { headers });
+  } catch (error) {
+    if (!(error instanceof DatabaseConfigError)) console.error("[greatgame] front page failed:", error);
+    return Response.json({ event: null }, { headers: { "Cache-Control": "no-store" } });
+  }
+}
+
 export async function POST(request: Request) {
   const session = await getSession().catch(() => null);
   if (!session || !(await isSystemAdmin(session.discord_id))) return Response.json({ error: "Only GameMaster's owners can create an event." }, { status: 403 });

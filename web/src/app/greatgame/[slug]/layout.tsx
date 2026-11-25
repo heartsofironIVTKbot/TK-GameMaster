@@ -1,12 +1,7 @@
 import type { Metadata } from "next";
-import { Kaushan_Script, Orbitron } from "next/font/google";
 import type { ReactNode } from "react";
+import { brush, digit } from "../fonts";
 import "./greatgame.css";
-
-// The event's poster look: brush script for the wordmark, a digital face for
-// clocks. Big Shoulders and Public Sans come from the site's root layout.
-const brush = Kaushan_Script({ variable: "--font-gg-brush", subsets: ["latin"], weight: "400" });
-const digit = Orbitron({ variable: "--font-gg-digit", subsets: ["latin"], weight: ["600", "800"] });
 
 export const metadata: Metadata = {
   title: "The Great Game 2026 · GameMaster",
