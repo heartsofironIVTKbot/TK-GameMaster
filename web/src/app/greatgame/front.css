@@ -329,10 +329,50 @@
 /* ---------- Sections ---------- */
 .ggf-main {
   position: relative;
+  isolation: isolate;
+  overflow: clip;
+  background: linear-gradient(180deg, #060110, #0c0420 30%, #07020f);
+}
+/* The grid: drifts slowly down and across, and breathes. */
+.ggf-main::before {
+  content: "";
+  position: absolute;
+  top: -48px;
+  left: -48px;
+  right: 0;
+  bottom: 0;
+  z-index: -1;
+  pointer-events: none;
   background:
-    linear-gradient(rgba(255, 43, 214, 0.05) 1px, transparent 1px) 0 0 / 100% 48px,
-    linear-gradient(90deg, rgba(34, 229, 255, 0.05) 1px, transparent 1px) 0 0 / 48px 100%,
-    linear-gradient(180deg, #060110, #0c0420 30%, #07020f);
+    linear-gradient(rgba(255, 43, 214, 0.07) 1px, transparent 1px) 0 0 / 100% 48px,
+    linear-gradient(90deg, rgba(34, 229, 255, 0.07) 1px, transparent 1px) 0 0 / 48px 100%;
+  animation: ggf-grid-drift 5s linear infinite, ggf-grid-breathe 7s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+/* And a soft glow sweeping down the page over it. */
+.ggf-main::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 40vh;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent, rgba(255, 43, 214, 0.07) 45%, rgba(34, 229, 255, 0.06) 55%, transparent);
+  animation: ggf-grid-sweep 14s linear infinite;
+  will-change: transform;
+}
+@keyframes ggf-grid-drift {
+  to { transform: translate(48px, 48px); }
+}
+@keyframes ggf-grid-breathe {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+@keyframes ggf-grid-sweep {
+  from { transform: translateY(-40vh); }
+  to { transform: translateY(600vh); }
 }
 .ggf-section {
   width: min(100% - 32px, 1140px);
@@ -351,6 +391,19 @@
   text-transform: uppercase;
   color: var(--ggf-cyan);
   text-shadow: 0 0 10px rgba(34, 229, 255, 0.6);
+}
+.ggf-link {
+  color: #fff !important;
+  font-weight: 700;
+  text-decoration: underline !important;
+  text-decoration-color: var(--ggf-pink) !important;
+  text-decoration-thickness: 2px !important;
+  text-underline-offset: 4px;
+  transition: color 0.15s, text-decoration-color 0.15s;
+}
+.ggf-link:hover {
+  color: var(--ggf-cyan) !important;
+  text-decoration-color: var(--ggf-cyan) !important;
 }
 .ggf-head h2,
 .ggf-seal h2 {
@@ -722,8 +775,15 @@
 /* Teams (once locked). */
 .ggf-teams {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 16px;
+}
+/* Seven teams: three across the top, four below. */
+.ggf-team {
+  grid-column: span 3;
+}
+.ggf-team:nth-child(-n + 3) {
+  grid-column: span 4;
 }
 .ggf-team {
   padding: 16px;
@@ -755,8 +815,13 @@
   gap: 8px;
   font-size: 13.5px;
 }
+.ggf-team li + li {
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
 .ggf-team li > span:first-child {
   display: grid;
+  min-width: 0;
 }
 .ggf-team small {
   font-size: 11px;
@@ -765,6 +830,8 @@
 .ggf-team-nation {
   display: inline-flex;
   align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
   gap: 6px;
   font-size: 12.5px;
   color: var(--ggf-fg-2);
@@ -846,6 +913,10 @@
 }
 
 @media (max-width: 980px) {
+  .ggf-team,
+  .ggf-team:nth-child(-n + 3) {
+    grid-column: span 6;
+  }
   .ggfs {
     grid-template-columns: 1fr;
   }
@@ -863,6 +934,10 @@
 @media (max-width: 640px) {
   .ggf-nav-links {
     display: none;
+  }
+  .ggf-team,
+  .ggf-team:nth-child(-n + 3) {
+    grid-column: 1 / -1;
   }
   .ggfs-list {
     grid-template-columns: repeat(4, 1fr);
@@ -936,6 +1011,8 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
+  .ggf-main::before,
+  .ggf-main::after,
   .ggfs-live,
   .ggfs-caption > span:first-child,
   .ggf-chrome,

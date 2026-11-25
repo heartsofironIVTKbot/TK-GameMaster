@@ -11,8 +11,11 @@ import { clock } from "./ggUi";
  * timeout rules shown are always the ones in force.
  */
 
-/** The mods for the event. The full list (with Workshop links) is still to come from the organizers. */
-export const GG_MODS: { name: string; note: string; link?: string }[] = [{ name: "Road to 56", note: "The main mod the event is played on." }];
+/** The mods for the event, with their Steam Workshop pages. */
+export const GG_MODS: { name: string; note: string; link?: string }[] = [
+  { name: "Road to 56", note: "The main mod the event is played on.", link: "https://steamcommunity.com/sharedfiles/filedetails/?id=820260968" },
+  { name: "TK RP sub-mod", note: "Our own sub-mod, made for TK's games. Load it together with Road to 56.", link: "https://steamcommunity.com/sharedfiles/filedetails/?id=3342783457" },
+];
 
 function Shell({ title, icon, intro, onClose, children }: { title: string; icon: ReactNode; intro: string; onClose: () => void; children: ReactNode }) {
   return (
@@ -121,7 +124,7 @@ export function GGMods({ onClose }: { onClose: () => void }) {
         ))}
       </ul>
       <p className="mt-4 text-[12.5px] leading-snug" style={{ color: "var(--gg-fg-3)" }}>
-        The full mod list, with Workshop links and version notes, will be posted here by the organizers before the event.
+        Subscribe to both on the Steam Workshop and let them update before the game. Anything else the organizers add will show up here.
       </p>
     </Shell>
   );

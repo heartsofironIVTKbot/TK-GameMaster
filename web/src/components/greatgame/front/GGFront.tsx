@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { PHASE_LABEL, PHASES } from "@/lib/greatGame/model";
 import type { GGPublic } from "@/lib/greatGame/public";
+import { GG_MODS } from "../GGInfoPanel";
 import { displayName, Flag } from "../ggUi";
 import GGFrontScene, { type SceneMajor } from "./GGFrontScene";
 import GGFrontSteps from "./GGFrontSteps";
@@ -237,8 +238,15 @@ function Format({ event }: { event: GGPublic | null }) {
   return (
     <section id="format" className="ggf-section">
       <SectionHead kicker="The format" title={`${counts.teams} teams of four`}>
-        Every team is a captain, a vice-captain and two recruits, playing one major and three minors on the Road to 56 map: {event?.majors.length ?? 7} majors and{" "}
-        {counts.minors} minors to fight over.
+        Every team is a captain, a vice-captain and two recruits, playing one major and three minors on the{" "}
+        <a className="ggf-link" href={GG_MODS[0].link} target="_blank" rel="noreferrer">
+          Road to 56
+        </a>{" "}
+        mod together with our own{" "}
+        <a className="ggf-link" href={GG_MODS[1].link} target="_blank" rel="noreferrer">
+          TK RP sub-mod
+        </a>
+        : {event?.majors.length ?? 7} majors and {counts.minors} minors to fight over.
       </SectionHead>
       <div className="ggf-format">
         {cards.map((card) => (
@@ -257,7 +265,8 @@ function Steps({ event }: { event: GGPublic | null }) {
   return (
     <section id="draft" className="ggf-section">
       <SectionHead kicker="The draft" title="How it works, step by step">
-        Eight steps, all live on stream. Every random result comes from a seed sealed before the night, so nobody, organizers included, can steer a draw.
+        Eight steps, all live on stream. Every random result comes from a secret seed that is locked in before the draft starts, so nobody, not even the organizers, can
+        rig a draw or arrange a result in advance. When the teams lock, the seed is revealed and anyone can check it.
       </SectionHead>
       <GGFrontSteps event={event} />
     </section>
