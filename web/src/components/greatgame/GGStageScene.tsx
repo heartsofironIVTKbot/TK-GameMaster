@@ -223,19 +223,24 @@ function drawReflection(
   ratio: number,
   machine: { canvas: HTMLCanvasElement; box: { left: number; top: number; width: number; height: number }; part: { x: number; y: number; w: number; h: number } } | null,
 ) {
-  const top = Math.max(0, v.hy - v.h * 0.6);
-  const height = v.hy - top;
-  if (height <= 1) return;
+  const top = 0;
+  const height = v.hy;
+  if (height <= 1 || v.h <= v.hy) return;
   // Mirror about the horizon, squeezed towards the middle by (sx, sy): a
   // straight mirror would only show the sky across the road; squeezed, the
-  // mountain grids from both sides (about their top half) fold into it.
+  // mountain grids from both sides fold into it. The squeeze is worked out so
+  // the mirrored picture still reaches the strip's bottom and outer edges.
+  const below = v.h - v.hy;
+  const sy = Math.min(0.9, Math.max(0.3, below / height));
+  const stripHalf = WET * below; // the wet strip's half-width at the bottom edge (x / z * f with 1 / z * f = below)
+  const sx = Math.min(1, Math.max(0.45, (stripHalf * 1.05) / Math.max(1, Math.min(v.cx, v.w - v.cx))));
   const mirror = (sx: number, sy: number) =>
     ctx.setTransform(ratio * sx, 0, 0, -ratio * sy, ratio * v.cx * (1 - sx), v.hy * ratio * (1 + sy));
   ctx.save();
   roadPath(ctx, v, WET);
   ctx.clip();
   ctx.globalAlpha = 0.4;
-  mirror(0.42, 0.7);
+  mirror(sx, sy);
   ctx.drawImage(source, 0, top * ratio, source.width, height * ratio, 0, top, v.w, height);
   // A second, additive pass: brings out the light parts (the mountains' grid lines, the glow).
   ctx.globalCompositeOperation = "lighter";
@@ -422,34 +427,42 @@ function palmSprite(color: string): HTMLCanvasElement {
 const PALM_SPAN = 54; // palms repeat every this many units along the road
 const PALMS = 7; // per side
 
-function drawPalms(ctx: CanvasRenderingContext2D, v: View, travel: number, sprites: { left: HTMLCanvasElement; right: HTMLCanvasElement }) {
-  const palms: { side: number; x: number; z: number; tall: number }[] = [];
+function palmsAt(travel: number): { side: number; x: number; z: number; tall: number; fade: number }[] {
+  const palms: { side: number; x: number; z: number; tall: number; fade: number }[] = [];
   for (const side of [-1, 1]) {
     for (let i = 0; i < PALMS; i++) {
       const start = (i * PALM_SPAN) / PALMS + (side > 0 ? PALM_SPAN / PALMS / 2 : 0);
       const z = 1.2 + ((((start - travel) % PALM_SPAN) + PALM_SPAN) % PALM_SPAN);
-      palms.push({ side, x: side * (ROAD + 0.08 + rand(i * 7 + side) * 0.14), z, tall: 1.8 + rand(i * 13 + side * 3) * 0.6 });
+      const fade = Math.min(1, (z - 1.2) / 0.5, (PALM_SPAN + 1.2 - z) / 8);
+      if (fade > 0) palms.push({ side, x: side * (ROAD + 0.08 + rand(i * 7 + side) * 0.14), z, tall: 1.8 + rand(i * 13 + side * 3) * 0.6, fade });
     }
   }
-  palms.sort((a, b) => b.z - a.z);
-  for (const palm of palms) {
-    const fade = Math.min(1, (palm.z - 1.2) / 0.5, (PALM_SPAN + 1.2 - palm.z) / 8);
-    if (fade <= 0) continue;
+  return palms.sort((a, b) => b.z - a.z);
+}
+
+/**
+ * The palms, far to near. With `reflected`, each palm's reflection instead:
+ * flipped at its own base, shorter and faint, inside the wet strip.
+ */
+function drawPalms(ctx: CanvasRenderingContext2D, v: View, travel: number, sprites: { left: HTMLCanvasElement; right: HTMLCanvasElement }, reflected = false) {
+  if (reflected) {
+    ctx.save();
+    roadPath(ctx, v, WET);
+    ctx.clip();
+  }
+  for (const palm of palmsAt(travel)) {
     const [sx, sy] = project(v, palm.x, 0, palm.z);
     const k = (palm.tall * v.f) / palm.z / 280;
-    ctx.globalAlpha = fade;
-    if (palm.side < 0) {
-      // Left palms lean outwards: the sprite mirrored.
-      ctx.save();
-      ctx.translate(sx, sy);
-      ctx.scale(-k, k);
-      ctx.drawImage(sprites.left, -130, -370);
-      ctx.restore();
-    } else {
-      ctx.drawImage(sprites.right, sx - 130 * k, sy - 370 * k, 260 * k, 380 * k);
-    }
+    ctx.globalAlpha = palm.fade * (reflected ? 0.3 : 1);
+    ctx.save();
+    ctx.translate(sx, sy);
+    // Left palms lean outwards (the sprite mirrored); a reflection hangs down from the base.
+    ctx.scale(palm.side < 0 ? -k : k, reflected ? -k * 0.6 : k);
+    ctx.drawImage(palm.side < 0 ? sprites.left : sprites.right, -130, -370);
+    ctx.restore();
   }
   ctx.globalAlpha = 1;
+  if (reflected) ctx.restore();
 }
 
 export default function GGStageScene({ anchorRef }: { anchorRef: MutableRefObject<StageAnchor | null> }) {
@@ -543,7 +556,6 @@ export default function GGStageScene({ anchorRef }: { anchorRef: MutableRefObjec
       if (!anchorRef.current) drawPlanet(ctx, view, time);
       drawFloor(ctx, view, travel);
       drawMountains(ctx, view, travel, time);
-      drawPalms(ctx, view, travel, sprites);
       const anchor = anchorRef.current;
       drawReflection(
         ctx,
@@ -552,7 +564,9 @@ export default function GGStageScene({ anchorRef }: { anchorRef: MutableRefObjec
         ratio,
         anchor?.mirror && machineBox && anchor.el instanceof HTMLCanvasElement ? { canvas: anchor.el, box: machineBox, part: anchor.mirror } : null,
       );
+      drawPalms(ctx, view, travel, sprites, true);
       drawDashes(ctx, view, travel);
+      drawPalms(ctx, view, travel, sprites);
       // A shooting star about every 10 s, somewhere in the sky, in any direction.
       if (!still && time >= nextMeteor) {
         const angle = Math.random() * TAU;
