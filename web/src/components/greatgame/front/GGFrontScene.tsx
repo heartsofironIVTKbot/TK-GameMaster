@@ -132,6 +132,26 @@ const SHIP_ART: Art = {
   ].join(" "),
 };
 
+/** A surfaced WW2 submarine, bow to the right (bottom = the water line). */
+const SUB_ART: Art = {
+  w: 306,
+  h: 52,
+  body: [
+    "M0 49 Q14 37 60 34.5 L250 33.5 Q286 35 302 45 L298 52 L3 52 Z",
+    "M118 41.5 L123 23 Q124.5 19.5 130 19.5 L170 19.5 Q175 19.5 177 24 L184 41 Z",
+    "M127 19.5 L129.5 14 L167 14 L169.5 19.5 Z",
+    "M146 14 L147 -6 L149.4 -6 L150.4 14 Z M157 14 L158 1 L159.8 1 L160.6 14 Z M138 14 L138.6 6 L140 6 L140.6 14 Z",
+    "M210 40.5 L213 34.5 L223 34.5 L226 40.5 Z M219 35.5 L247 31 L247.8 33 L220.5 37.5 Z",
+    "M96 41.5 L99 36 L111 36 L114 41.5 Z M107 37 L94 30 L93 31.6 L106 38.6 Z",
+    "M297 47 L306 38 L307.4 39.2 L300 49 Z",
+    "M22 41 L22 33 L23.2 33 L23.2 41 Z M22 33.6 L118 25 L118 26.2 L22.6 34.8 Z",
+  ].join(" "),
+  detail: [
+    "M8 43 L296 42 M130 28 L172 28 M135 22 L165 22",
+    Array.from({ length: 16 }, (_, i) => `M${40 + i * 14} 46.5 L${46 + i * 14} 46.5`).join(" "),
+  ].join(" "),
+};
+
 /** A four-engined bomber, facing right. */
 const PLANE_ART: Art = {
   w: 64,
@@ -172,6 +192,7 @@ export default function GGFrontScene({ majors }: { majors: SceneMajor[] }) {
     const TANK = art(TANK_ART);
     const SHIP = art(SHIP_ART);
     const PLANE = art(PLANE_ART);
+    const SUB = art(SUB_ART);
     type Built = ReturnType<typeof art>;
 
     let globe: Lines | null = null;
@@ -399,6 +420,12 @@ export default function GGFrontScene({ majors }: { majors: SceneMajor[] }) {
         foam(shipX, waterline, shipW, t);
         silhouette(SHIP, shipX, waterline, shipW, "#22e5ff", false, 0.28);
         smoke(shipX + (241 / 420) * shipW, waterline - 72 * (shipW / 420), shipW / 420, t);
+        // A submarine, surfaced, nearer to you on the left, heading in.
+        const subW = Math.min(unit * 0.3, W * 0.3);
+        const subX = W * 0.02;
+        const subLine = horizon + floorH * 0.5 + (still ? 0 : Math.sin(t / 1100 + 1.7) * 1.4);
+        silhouette(SUB, subX, subLine, subW, "#ff6fd8", false, 0.3);
+        foam(subX, subLine, subW, t, true);
       }
 
       // Bombers crossing high up, fighters lower and faster the other way.
@@ -560,7 +587,7 @@ export default function GGFrontScene({ majors }: { majors: SceneMajor[] }) {
     };
 
     /** White water along the battleship's waterline and a bow wave. */
-    const foam = (x: number, y: number, width: number, t: number) => {
+    const foam = (x: number, y: number, width: number, t: number, bowRight = false) => {
       ctx.save();
       ctx.strokeStyle = "rgba(190, 250, 255, 0.75)";
       ctx.shadowColor = "#22e5ff";
@@ -574,14 +601,27 @@ export default function GGFrontScene({ majors }: { majors: SceneMajor[] }) {
         else ctx.lineTo(px, py);
       }
       ctx.stroke();
-      // Bow wave: short strokes spreading from the bow (left).
+      // Bow wave: short strokes spreading from the bow; a wake trailing from the stern.
+      const bow = bowRight ? x + width : x;
+      const out = bowRight ? 1 : -1;
       for (let k = 0; k < 4; k++) {
         const phase = still ? k / 4 : ((t / 1600 + k / 4) % 1);
         ctx.globalAlpha = 0.7 * (1 - phase);
         ctx.beginPath();
-        ctx.moveTo(x + width * 0.03, y + 1);
-        ctx.quadraticCurveTo(x - width * 0.02 * (1 + phase * 3), y + 2 + phase * 6, x - width * 0.05 * (1 + phase * 4), y + 3 + phase * 10);
+        ctx.moveTo(bow - out * width * 0.03, y + 1);
+        ctx.quadraticCurveTo(bow + out * width * 0.02 * (1 + phase * 3), y + 2 + phase * 6, bow + out * width * 0.05 * (1 + phase * 4), y + 3 + phase * 10);
         ctx.stroke();
+      }
+      if (bowRight) {
+        const stern = x;
+        for (let k = 0; k < 3; k++) {
+          const phase = still ? k / 3 : ((t / 2400 + k / 3) % 1);
+          ctx.globalAlpha = 0.45 * (1 - phase);
+          ctx.beginPath();
+          ctx.moveTo(stern + width * 0.02, y + 2);
+          ctx.lineTo(stern - width * (0.05 + phase * 0.25), y + 2 + phase * 5);
+          ctx.stroke();
+        }
       }
       ctx.restore();
     };
