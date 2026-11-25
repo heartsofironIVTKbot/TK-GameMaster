@@ -734,6 +734,11 @@
   55% { transform: translate(calc(var(--dx) * 0.6), calc(var(--dy) * 0.45)) rotate(calc(var(--rot) * 0.6)) scale(0.85); opacity: 0.95; }
   100% { transform: translate(var(--dx), calc(var(--dy) + var(--fall))) rotate(var(--rot)) scale(0.5); opacity: 0; }
 }
+.gg-pool-row.is-small {
+  gap: 6px;
+  padding: 4px 6px;
+  font-size: 13px;
+}
 /* The creators still in the pool (left of the tickets). */
 .gg-pool-row {
   display: flex;
@@ -861,7 +866,26 @@
   top: 0;
   padding: 0;
   transform-origin: 50% 90cqh;
-  transition: transform 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.2), box-shadow 0.22s, opacity 0.2s;
+  transition: transform 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.1), box-shadow 0.22s, opacity 0.2s;
+}
+.gg-rfan-count {
+  position: absolute;
+  left: 0;
+  top: 26.5cqh;
+  width: 30cqh;
+  margin-left: -15cqh;
+  text-align: center;
+  font: 800 1.6cqh/1 var(--gg-digit);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gg-fg-2);
+}
+.gg-rfan-count b {
+  display: inline-block;
+  font: 900 2.6cqh/1 var(--gg-display);
+  color: #ffd36b;
+  text-shadow: 0 0 1.2cqh rgba(255, 211, 107, 0.6);
+  animation: gg-pop 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
 }
 .gg-rfan .gg-rcard:disabled {
   cursor: default;

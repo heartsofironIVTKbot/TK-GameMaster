@@ -11,7 +11,7 @@ import GGMajorReel, { REEL_MS } from "./GGMajorReel";
 import GGStageScene, { StageAnchorContext, type StageAnchor } from "./GGStageScene";
 import { Avatar, Flag, nationName, person, teamById } from "./ggUi";
 import GGPatternScene from "./GGPatternScene";
-import GGRecruitTable, { FLIGHT, LAST_FLIGHT, RECRUIT_MS } from "./GGRecruitTable";
+import GGRecruitTable, { FLIGHT, flightMs, LAST_FLIGHT, RECRUIT_MS } from "./GGRecruitTable";
 import GGTableScene from "./GGTableScene";
 import GGScratchTicket, { type TicketState } from "./GGScratchTicket";
 import { scratchHeld } from "./ggScratch";
@@ -702,7 +702,7 @@ function Recruits({
   const order = strengthOrder(state.teams, state.config.majors);
   const draw = state.last_draw?.kind === "recruit" ? state.last_draw : null;
   const elapsed = draw ? now - draw.at : Infinity;
-  const flying = draw !== null && elapsed < RECRUIT_MS;
+  const flying = draw !== null && elapsed < flightMs(draw);
   // Who is still a secret (not turned over yet) and who hasn't landed in a slot yet.
   const secret = new Set<string>();
   const hidden = new Set<string>();
@@ -772,12 +772,12 @@ function Recruits({
         />
         {/* Left: who is still in the deck. */}
         <div className="absolute left-0 z-[2] top-[40%] -translate-y-1/2">
-          <div className="gg-teambox" style={{ width: "clamp(210px, 15vw, 260px)" }}>
+          <div className="gg-teambox" style={{ width: "clamp(250px, 19vw, 330px)" }}>
             <div className="gg-teambox-label">Still in the deck · {pool.length}</div>
-            <div className="grid gap-1">
+            <div className="grid grid-cols-2 gap-1">
               {pool.map((entry) => (
-                <div key={entry.id} className="gg-pool-row">
-                  <Avatar id={entry.id} name={entry.name} color="#22e5ff" size={24} />
+                <div key={entry.id} className="gg-pool-row is-small">
+                  <Avatar id={entry.id} name={entry.name} color="#22e5ff" size={20} />
                   <span className="truncate">{entry.name}</span>
                 </div>
               ))}

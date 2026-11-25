@@ -24,6 +24,9 @@ export const FLIGHT = { center: 700, flip: 1600, shown: 2500, settle: 3400, land
 export const LAST_FLIGHT = { start: 4200, shown: 5300, landed: 6400 } as const;
 export const RECRUIT_MS = LAST_FLIGHT.landed;
 
+/** How long a draw's flight lasts: one card, or two when it hands over the last recruit. */
+export const flightMs = (draw: { then?: unknown } | null) => (draw?.then ? LAST_FLIGHT.landed : FLIGHT.landed);
+
 // Geometry, in cqh of the table.
 const CARD_W = 13.5;
 const CARD_H = 19.5;
@@ -112,9 +115,31 @@ export default function GGRecruitTable({
   const [mine, setMine] = useState<number | null>(null);
   // Your own pointer, else the captain's (live).
   const shownHover = mine ?? hover;
-  const flying = draw !== null && elapsed < RECRUIT_MS;
+  const flying = draw !== null && elapsed < flightMs(draw);
   const drawTeam = draw ? state.teams.find((team) => team.id === draw.team) ?? null : null;
   const lastTeam = draw?.then ? state.teams.find((team) => team.id === draw.then?.team) ?? null : null;
+
+  // Each face-down card keeps an identity, so a pick takes that very card out
+  // of the deck and the rest close up smoothly round the gap.
+  const [deck, setDeck] = useState<number[]>(() => Array.from({ length: fanCount }, (_, i) => i));
+  if (deck.length !== fanCount) {
+    let next = deck;
+    if (fanCount < deck.length) {
+      const gone = new Set<number>();
+      if (draw) {
+        const n = deck.length;
+        const picked = Math.min(Math.max(0, draw.card ?? Math.floor(n / 2)), n - 1);
+        gone.add(picked);
+        if (draw.then && fanCount <= n - 2) gone.add(lastCardOf(n, picked));
+      }
+      next = deck.filter((_, i) => !gone.has(i)).slice(0, fanCount);
+      if (next.length > fanCount) next = next.slice(0, fanCount);
+    } else {
+      const top = deck.length ? Math.max(...deck) + 1 : 0;
+      next = [...deck, ...Array.from({ length: fanCount - deck.length }, (_, i) => top + i)];
+    }
+    setDeck(next);
+  }
 
   // A tick as the pointed card changes.
   const lastHover = useRef<number | null>(null);
@@ -249,13 +274,13 @@ export default function GGRecruitTable({
 
       {/* The deck: face-down cards in a fan. */}
       <div className="gg-rfan">
-        {Array.from({ length: fanCount }, (_, i) => {
-          const spot = fanSpot(i, fanCount);
+        {deck.map((id, i) => {
+          const spot = fanSpot(i, deck.length);
           const inFlight = flying && (i === pickedCard || (Boolean(draw?.then) && elapsed >= LAST_FLIGHT.start && pickedCard !== null && i === lastCardOf(fanCount, pickedCard)));
           const lifted = !flying && shownHover === i;
           return (
             <button
-              key={i}
+              key={id}
               type="button"
               disabled={!canPick || flying}
               aria-label={canPick ? `Pick card ${i + 1}` : undefined}
@@ -283,6 +308,10 @@ export default function GGRecruitTable({
             />
           );
         })}
+        {/* How many cards are left (counting down as each lands in a slot). */}
+        <div className="gg-rfan-count">
+          <b key={deck.length}>{Math.max(0, deck.length - (flying ? (draw?.then && elapsed >= LAST_FLIGHT.start ? 2 : 1) : 0))}</b> {deck.length === 1 ? "card" : "cards"} left
+        </div>
       </div>
 
       {/* The picked card in flight (and the last one, handed over). */}
