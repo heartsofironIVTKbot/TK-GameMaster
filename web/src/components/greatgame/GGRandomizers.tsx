@@ -144,7 +144,8 @@ function Shell({
       <section ref={stageRef} className={`gg-stage absolute ${full ? "gg-stage-full" : `gg-stage-normal ${wide ? "gg-stage-wide" : ""}`}`}>
         <div className="gg-stage-inner flex flex-col">
           <GGStageScene anchorRef={anchorRef} />
-          <div className="relative flex items-start justify-between gap-4 px-7 pt-5">
+          {/* Above the scene's front layer (z-[1]). */}
+          <div className="relative z-[2] flex items-start justify-between gap-4 px-7 pt-5">
             <div className="min-w-0">
               <div className="gg-eyebrow">{step}</div>
               <h2 className="gg-stage-title">{title}</h2>
@@ -174,7 +175,7 @@ function Shell({
           <StageAnchorContext.Provider value={anchorRef}>
             <div className="relative flex flex-1 flex-col justify-center px-7 pb-2 pt-1">{children}</div>
           </StageAnchorContext.Provider>
-          <div className="relative flex justify-center px-7 pb-5 pt-1">{action}</div>
+          <div className="relative z-[2] flex justify-center px-7 pb-5 pt-1">{action}</div>
         </div>
       </section>
     </div>
@@ -330,7 +331,7 @@ function Drum({ state, viewer, act, now, clock, avatars }: { state: GGState; vie
       <div className="mx-auto w-full" style={{ maxWidth: "calc((100vh - var(--gg-stage-room)) * 1000 / 540)" }}>
         <GGAirLottery state={state} clock={clock} avatars={avatars} onLanded={onLanded} />
         {/* Pinned to the stage's right edge (the content area), clear of the machine. */}
-        <div className="absolute right-7 top-[46%] -translate-y-1/2">
+        <div className="absolute right-7 z-[2] top-[46%] -translate-y-1/2">
           <TeamBox
             label={playing && !ballOut ? "Drawing…" : state.phase_done ? "The order" : "Roll order"}
             rows={[
@@ -388,7 +389,7 @@ function Majors({ state, viewer, act, now, clock }: { state: GGState; viewer: GG
         <div className="mx-auto w-[52%] min-w-[300px]">
           <GGMajorReel state={state} clock={clock} />
         </div>
-        <div className="absolute right-7 top-1/2 -translate-y-1/2">
+        <div className="absolute right-7 z-[2] top-1/2 -translate-y-1/2">
           <TeamBox
             label="Majors"
             rows={state.order
