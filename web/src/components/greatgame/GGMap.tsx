@@ -2,7 +2,7 @@
 
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { GeoJSON, MapContainer, Marker, useMap } from "react-leaflet";
 import {
   computePixelWorld,
@@ -18,7 +18,9 @@ import {
 import { versionedMapUrl } from "@/lib/mapVersion";
 import type { GGState } from "@/lib/greatGame/model";
 import type { NationFeature, NationFeatureCollection } from "@/lib/types";
+import { AvatarsContext } from "./ggUi";
 import type { Considering } from "./useGreatGame";
+import mapCapitals from "@/data/mapCapitals.json";
 
 /**
  * The Great Game map: the live map's Road to 56 world (same geometry, same
@@ -77,6 +79,13 @@ export function paintFor(state: GGState): (tag: string, base: string) => MapPain
   const color = new Map(state.teams.map((team) => [team.id, team.color]));
   const late = state.phase === "assign" || state.phase === "locked";
   const locked = state.phase === "locked";
+  if (state.phase === "assign") {
+    // Each team's four nations solid in its colour; the rest of the world grey.
+    return (tag, base) => {
+      const team = owner.get(tag);
+      return team ? { fill: color.get(team) ?? base, hatch: null, stamp: false } : { fill: OUT, hatch: null, stamp: false };
+    };
+  }
   if (state.phase === "bans" || state.phase === "draft") {
     const pool = new Set(state.config.pool);
     const majors = new Set(state.teams.map((team) => team.major).filter(Boolean));
@@ -104,6 +113,25 @@ function stampIcon(tag: string, fresh: boolean): L.DivIcon {
   if (!icon) {
     icon = L.divIcon({ className: "", html: `<div class="gg-stamp${fresh ? " is-new" : ""}">BANNED</div>`, iconSize: [96, 28], iconAnchor: [48, 14] });
     STAMPS.set(key, icon);
+  }
+  return icon;
+}
+
+/** A placed player's pin: their Discord picture (or initial) ringed in the team's colour. Made once per player and nation. */
+const PINS = new Map<string, L.DivIcon>();
+function pinIcon(id: string, name: string, src: string | undefined, color: string, fresh: boolean): L.DivIcon {
+  const base = `${id}:${src ?? ""}:${color}`;
+  let icon = PINS.get(`${base}:${fresh ? "new" : "old"}`) ?? PINS.get(`${base}:new`);
+  if (!icon) {
+    const safe = name.replace(/[<>&"]/g, "");
+    const face = src ? `<img src="${src.replace(/"/g, "")}" alt="" />` : `<span>${safe.slice(0, 1).toUpperCase()}</span>`;
+    icon = L.divIcon({
+      className: "",
+      html: `<div class="gg-pin${fresh ? " is-new" : ""}" style="--team:${color}">${face}<b>${safe}</b></div>`,
+      iconSize: [0, 0],
+      iconAnchor: [0, 0],
+    });
+    PINS.set(`${base}:${fresh ? "new" : "old"}`, icon);
   }
   return icon;
 }
@@ -261,7 +289,7 @@ const PanOnlySVG = L.SVG.extend({
  * The map's first view leaves room for the team drawer on the left and the
  * top bar: Europe opens in the middle of what's actually visible.
  */
-function FrameVisible({ world, intent, left, top, right }: { world: PixelWorld; intent: ViewIntent; left: number; top: number; right: number }) {
+function FrameVisible({ world, intent, left, top, right, bottom = 0 }: { world: PixelWorld; intent: ViewIntent; left: number; top: number; right: number; bottom?: number }) {
   const map = useMap();
   useEffect(() => {
     // Applied once the map has settled after loading. Loading can leave a zoom-out to the whole world
@@ -277,7 +305,7 @@ function FrameVisible({ world, intent, left, top, right }: { world: PixelWorld; 
       // Let the map scroll a little past the world's top, so the north of Europe can sit below the top bar.
       map.setMaxBounds(L.latLngBounds([world.minY, -Infinity], [world.maxY + top / Math.pow(2, zoom), Infinity]));
       map.setView(L.latLng(world.minY + intent.cyFrac * height, world.minX + intent.cxFrac * width), zoom, { animate: false });
-      map.panBy([(right - left) / 2, -top / 2], { animate: false });
+      map.panBy([(right - left) / 2, (bottom - top) / 2], { animate: false });
       zoomSet = zoom;
     };
     const late = () => {
@@ -335,7 +363,7 @@ function GGMap({
   const [world, setWorld] = useState<PixelWorld | null>(null);
   const [error, setError] = useState<string | null>(null);
   const mapKey = useMapRemountKey();
-  const mapStep = state.phase === "bans" || state.phase === "draft";
+  const mapStep = state.phase === "bans" || state.phase === "draft" || state.phase === "assign";
   const viewRef = useRef<ViewIntent | null>(mapStep ? EUROPE_CLOSE : EUROPE);
   const baseRef = useRef<L.GeoJSON | null>(null);
   const renderer = useMemo(() => new PanOnlySVG({ padding: 1 }), []);
@@ -436,6 +464,27 @@ function GGMap({
     return { type: "FeatureCollection" as const, features: data.features.filter((feature) => glowTags.has(feature.properties.tag)) };
   }, [data, glowTags]);
 
+  // Placed players' avatars on their nations' capitals (from the line-ups on), like the live map.
+  const avatars = useContext(AvatarsContext);
+  const pins = useMemo(() => {
+    if (state.phase !== "assign" && state.phase !== "locked") return [];
+    const capitals = (mapCapitals as Record<string, Record<string, number[]>>).road_to_56 ?? {};
+    const undone = new Set(state.log.filter((entry) => entry.kind === "undo").map((entry) => Number(entry.payload.seq)));
+    const out: { key: string; at: [number, number]; icon: L.DivIcon }[] = [];
+    for (const team of state.teams) {
+      for (const [personId, tag] of Object.entries(team.assign)) {
+        const point = capitals[tag] ?? null;
+        const at: [number, number] | null = point ? [point[1], point[0]] : (anchorMap.get(tag) ?? null);
+        if (!at) continue;
+        const who = state.config.people.find((entry) => entry.id === personId);
+        const action = [...state.log].reverse().find((entry) => entry.kind === "assign.set" && entry.payload.person === personId && !undone.has(entry.seq));
+        const fresh = action ? state.now - action.at < 4000 : false;
+        out.push({ key: `${personId}:${tag}`, at, icon: pinIcon(personId, who?.name ?? "?", avatars[personId], team.color, fresh) });
+      }
+    }
+    return out;
+  }, [state.phase, state.teams, state.config.people, state.log, state.now, anchorMap, avatars]);
+
   // A nation drafted just now flashes white in its team's colour outline.
   const flash = useMemo(() => {
     if (!data) return null;
@@ -492,7 +541,7 @@ function GGMap({
       <MapSetup world={world} initialViewRef={viewRef} />
       <RedrawAhead renderer={renderer} />
       <MotionWatch onMoving={onMoving} />
-      <FrameVisible world={world} intent={mapStep ? EUROPE_CLOSE : EUROPE} left={340} top={140} right={mapStep ? 300 : 0} />
+      <FrameVisible world={world} intent={mapStep ? EUROPE_CLOSE : EUROPE} left={340} top={140} right={state.phase === "bans" || state.phase === "draft" ? 300 : 0} bottom={state.phase === "assign" ? 230 : 0} />
       <Patterns teams={state.teams} />
       <GeoJSON
         ref={baseRef}
@@ -577,6 +626,9 @@ function GGMap({
           interactive={false}
           icon={stamp.icon}
         />
+      ))}
+      {pins.map((pin) => (
+        <Marker key={pin.key} position={pin.at} interactive={false} icon={pin.icon} />
       ))}
       {eyes.map((eye) => (
         <Marker key={eye.key} position={eye.at} interactive={false} icon={eye.icon} />

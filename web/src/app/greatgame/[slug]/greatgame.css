@@ -509,6 +509,229 @@
   text-shadow: 0 0 18px color-mix(in srgb, var(--team) 80%, transparent);
   box-shadow: 0 0 30px color-mix(in srgb, var(--team) 60%, transparent), inset 0 0 18px color-mix(in srgb, var(--team) 40%, transparent);
 }
+/* ---------- Step 7: the line-up board (bottom centre) ---------- */
+.gg-lineup {
+  position: absolute;
+  bottom: 14px;
+  left: calc(50% + 170px);
+  z-index: 1010;
+  width: min(760px, calc(100vw - 380px));
+  transform: translateX(-50%);
+  padding: 12px 14px 14px;
+  border-radius: 18px;
+  border: 2px solid color-mix(in srgb, var(--team) 70%, transparent);
+  background: rgba(14, 8, 30, 0.95);
+  box-shadow: 0 0 30px color-mix(in srgb, var(--team) 30%, transparent), 0 20px 50px rgba(0, 0, 0, 0.6);
+}
+.gg-lineup.is-closed {
+  padding-bottom: 12px;
+}
+.gg-lineup-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.gg-lineup-title {
+  flex: 1;
+  min-width: 0;
+  font: 900 22px/1 var(--gg-display);
+  text-transform: uppercase;
+  color: var(--team);
+  text-shadow: 0 0 12px color-mix(in srgb, var(--team) 50%, transparent);
+}
+.gg-lineup-count {
+  font: 800 12px/1 var(--gg-digit);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gg-fg-2);
+}
+.gg-lineup-hint {
+  margin: 4px 0 7px;
+  font-size: 12.5px;
+  color: var(--gg-fg-3);
+}
+.gg-lineup-nations {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+.gg-lineup-nation {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 7px 6px 7px;
+  border-radius: 14px;
+  border: 2px dashed color-mix(in srgb, var(--team) 45%, transparent);
+  background: rgba(255, 255, 255, 0.03);
+  transition: border-color 0.15s, background 0.15s, transform 0.15s;
+}
+.gg-lineup-nation.is-filled {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--team) 70%, transparent);
+  background: color-mix(in srgb, var(--team) 10%, rgba(14, 8, 30, 0.9));
+}
+.gg-lineup-nation.is-target {
+  cursor: pointer;
+  border-color: #ffd23f;
+}
+.gg-lineup-nation.is-over,
+.gg-lineup-nation.is-target:hover {
+  transform: translateY(-3px);
+  border-color: #ffd23f;
+  background: rgba(255, 210, 63, 0.12);
+}
+.gg-lineup-kind {
+  font: 800 10px/1 var(--gg-digit);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gg-fg-3);
+}
+.gg-lineup-nation-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 900 16px/1 var(--gg-display);
+  text-transform: uppercase;
+}
+.gg-lineup-empty {
+  padding: 6px 0;
+  font-size: 11.5px;
+  color: var(--gg-fg-3);
+}
+.gg-lineup-bench {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 9px;
+}
+.gg-lineup-player {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 100%;
+  padding: 5px 10px 5px 5px;
+  border-radius: 999px;
+  border: 1.5px solid color-mix(in srgb, var(--team) 60%, transparent);
+  background: color-mix(in srgb, var(--team) 14%, #140a2a);
+  font: 800 13px/1 var(--gg-body);
+  color: #fff;
+  cursor: grab;
+}
+.gg-lineup-player small {
+  font: 700 10px/1 var(--gg-digit);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gg-fg-3);
+}
+.gg-lineup-player.is-held {
+  border-color: #ffd23f;
+  box-shadow: 0 0 14px rgba(255, 210, 63, 0.6);
+}
+.gg-lineup-player.is-placed {
+  cursor: grab;
+}
+.gg-lineup-off {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 0;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  cursor: pointer;
+}
+/* Drawer rows in step 7: each nation with its player's picture. */
+.gg-row-nation {
+  position: relative;
+  display: inline-block;
+  margin-right: 3px;
+}
+.gg-row-face {
+  position: absolute;
+  right: -5px;
+  bottom: -5px;
+  display: inline-flex;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1.5px #0e081e;
+}
+.gg-row-face.is-empty {
+  width: 10px;
+  height: 10px;
+  border: 1.5px dashed var(--gg-fg-3);
+  background: #0e081e;
+}
+.gg-row-done {
+  margin-left: 4px;
+  font-weight: 900;
+  color: var(--gg-ok);
+}
+/* The line-up moment. */
+.gg-lineup-final {
+  display: grid;
+  gap: 6px;
+  min-width: 340px;
+}
+.gg-lineup-final-row {
+  display: grid;
+  grid-template-columns: 26px 1fr 30px 1fr;
+  align-items: center;
+  gap: 8px;
+  font: 800 15px/1 var(--gg-body);
+  color: #fff;
+}
+.gg-banslam-stamp.is-lineup {
+  top: 100%;
+  font-size: 40px;
+}
+.gg-banslam-card:has(.is-lineup) {
+  padding-bottom: 46px;
+}
+
+/* A placed player on their nation's capital (steps 7 and 8). */
+.gg-pin {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  pointer-events: none;
+}
+.gg-pin img,
+.gg-pin span {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2.5px solid var(--team);
+  box-shadow: 0 0 0 2px #0b0618, 0 0 12px color-mix(in srgb, var(--team) 70%, transparent);
+  object-fit: cover;
+  background: #1a1030;
+}
+.gg-pin span {
+  display: grid;
+  place-items: center;
+  font: 900 14px/1 var(--gg-display);
+  color: #fff;
+}
+.gg-pin b {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(11, 6, 24, 0.85);
+  font: 800 10.5px/1.3 var(--gg-body);
+  color: #fff;
+  white-space: nowrap;
+}
+.gg-pin.is-new {
+  animation: gg-pin-in 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.4) both;
+}
+@keyframes gg-pin-in {
+  0% { transform: translate(-50%, -160%) scale(0.2); opacity: 0; }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
 /* A freshly drafted nation flashes on the map. */
 .gg-pick-flash {
   animation: gg-pick-flash 1.6s ease-out both;
@@ -1426,6 +1649,7 @@
   .gg-eye,
   .gg-clock-urgent,
   .gg-dock-halo,
+  .gg-pin.is-new,
   .gg-snake-now,
   .gg-snake-pointer,
   .gg-ticket,

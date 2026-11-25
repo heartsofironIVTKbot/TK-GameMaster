@@ -83,8 +83,33 @@ function RowEnd({ state, team }: { state: GGState; team: GGTeam }) {
         </span>
       );
     case "assign": {
-      const placed = teamMembers(team).filter((id) => id && team.assign[id]).length;
-      return small(`${placed} of 4 placed`, placed === 4 ? "var(--gg-ok)" : "var(--gg-pending)");
+      const placedBy = new Map(Object.entries(team.assign).map(([id, tag]) => [tag, id]));
+      const all = teamMembers(team).every((id) => id && team.assign[id]);
+      return (
+        <span className="flex items-center gap-1">
+          {nationsOf(team).map((tag) => {
+            const id = placedBy.get(tag);
+            const who = id ? person(state, id) : null;
+            return (
+              <span key={tag} className="gg-row-nation" title={`${nationName(state, tag)}${who ? ` · ${who.name}` : " · not placed yet"}`}>
+                <Flag tag={tag} w={22} h={14} />
+                {who ? (
+                  <span key={who.id} className="gg-row-face gg-ban-in">
+                    <Avatar id={who.id} name={who.name} color={team.color} size={14} />
+                  </span>
+                ) : (
+                  <span className="gg-row-face is-empty" />
+                )}
+              </span>
+            );
+          })}
+          {all && (
+            <span className="gg-row-done" aria-label="Line-up set">
+              ✓
+            </span>
+          )}
+        </span>
+      );
     }
     default:
       return null;
@@ -140,9 +165,8 @@ function TeamSetupForm({ team, act }: { team: GGTeam; act: Act }) {
   );
 }
 
-function AssignList({ state, team, act, canEdit }: { state: GGState; team: GGTeam; act: Act; canEdit: boolean }) {
-  const [error, setError] = useState<string | null>(null);
-  const nations = nationsOf(team);
+/** Who plays what in a team (step 7): the board at the bottom does the placing. */
+function AssignList({ state, team }: { state: GGState; team: GGTeam }) {
   return (
     <div className="mt-2 grid gap-1.5">
       {teamMembers(team).map((id, index) => {
@@ -156,22 +180,7 @@ function AssignList({ state, team, act, canEdit }: { state: GGState; team: GGTea
             <span className="w-[74px] shrink-0 text-[11px]" style={{ color: "var(--gg-fg-3)" }}>
               {SLOT_ROLE[index]}
             </span>
-            {canEdit ? (
-              <select
-                aria-label={`Nation for ${who?.name ?? "player"}`}
-                className="gg-input h-8 w-[128px] text-xs"
-                style={{ borderColor: current ? "var(--gg-line-2)" : "var(--gg-pending)" }}
-                value={current}
-                onChange={async (event) => setError(await act({ kind: "assign.set", team: team.id, person: id, tag: event.target.value }))}
-              >
-                <option value="">Choose a nation…</option>
-                {nations.map((tag) => (
-                  <option key={tag} value={tag}>
-                    {nationName(state, tag)}
-                  </option>
-                ))}
-              </select>
-            ) : current ? (
+            {current ? (
               <span className="flex w-[128px] items-center gap-1.5 text-xs">
                 <Flag tag={current} w={20} h={13} /> {nationName(state, current)}
               </span>
@@ -183,11 +192,6 @@ function AssignList({ state, team, act, canEdit }: { state: GGState; team: GGTea
           </div>
         );
       })}
-      {error && (
-        <p role="alert" className="text-xs" style={{ color: "#ff9b9b" }}>
-          {error}
-        </p>
-      )}
     </div>
   );
 }
@@ -451,7 +455,7 @@ export default function GGTeamStack({ state, viewer, act }: { state: GGState; vi
               {header}
             </button>
             {state.phase === "assign" ? (
-              <AssignList state={state} team={team} act={act} canEdit={(mine || viewer.organizer) && state.phase === "assign"} />
+              <AssignList state={state} team={team} />
             ) : (
               <div className="mt-2 grid gap-0.5">
                 {teamMembers(team).map((id, slot) => {

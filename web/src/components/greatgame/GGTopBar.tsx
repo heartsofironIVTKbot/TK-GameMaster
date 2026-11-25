@@ -128,7 +128,7 @@ export function bannerFor(state: GGState, now: number, scratchTeam: string | nul
       return team ? teamBanner(`PICK ${state.turn.pick} OF 21 · ROUND ${state.turn.round}`) : neutral("Minor draft", "ALL 21 PICKED");
     case "assign": {
       const done = state.teams.filter((t) => [t.captain, t.vice, ...t.recruits].every((id) => id && t.assign[id])).length;
-      return neutral("Assign players", `${done} OF 7 TEAMS DONE`, { timer, frac, late });
+      return neutral("Assign players", `${done} OF 7 TEAMS DONE`, { timer, frac, late, left });
     }
     case "locked":
       return neutral("Teams locked", state.fairness.seed ? "FAIRNESS CODE REVEALED" : "FINAL LOBBY");
@@ -167,7 +167,7 @@ export default function GGTopBar({
   const colored = Boolean(banner.color);
   const ink = colored ? "#120a24" : "#fff";
   // On the map steps the pennant is a slim strip, so the map under it stays in view.
-  const slim = state.phase === "bans" || state.phase === "draft";
+  const slim = state.phase === "bans" || state.phase === "draft" || state.phase === "assign";
   // The last ten seconds: the clock goes red and pulses, with a tick each second.
   const urgent = banner.left !== null && banner.left !== undefined && banner.left > 0 && banner.left <= 10 && !state.paused;
   const second = urgent ? Math.ceil(banner.left!) : null;

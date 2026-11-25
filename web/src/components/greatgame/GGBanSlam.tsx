@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { GGState } from "@/lib/greatGame/model";
 import * as sound from "./ggSound";
-import { Flag, nationName, teamById } from "./ggUi";
+import { Avatar, Flag, nationName, person, teamById } from "./ggUi";
 
 /**
  * The moment of a ban or a draft pick: the nation's flag and name in the
@@ -16,14 +16,18 @@ const SHOW_MS = 2200;
 
 export default function GGBanSlam({ state, now }: { state: GGState; now: number }) {
   const undone = new Set(state.log.filter((entry) => entry.kind === "undo").map((entry) => Number(entry.payload.seq)));
-  const latest = [...state.log].reverse().find((entry) => (entry.kind === "ban.set" || entry.kind === "pick.set") && !undone.has(entry.seq) && entry.payload.tag);
+  const latest = [...state.log]
+    .reverse()
+    .find((entry) => (entry.kind === "ban.set" || entry.kind === "pick.set" || entry.kind === "assign.set") && !undone.has(entry.seq) && entry.payload.tag);
   const seen = useRef<number | null>(latest ? latest.seq : null);
-  const [shown, setShown] = useState<{ seq: number; tag: string; team: string; pick: boolean; round: number } | null>(null);
+  const [shown, setShown] = useState<{ seq: number; tag: string; team: string; pick: boolean; round: number; lineup?: boolean } | null>(null);
+  const stateRef = useRef(state);
   const latestRef = useRef(latest);
   const nowRef = useRef(now);
   useEffect(() => {
     latestRef.current = latest;
     nowRef.current = now;
+    stateRef.current = state;
   });
   const latestSeq = latest?.seq ?? null;
 
@@ -33,6 +37,16 @@ export default function GGBanSlam({ state, now }: { state: GGState; now: number 
     seen.current = latestSeq;
     // Only fresh bans (a page that reconnects doesn't replay an old one).
     if (nowRef.current - entry.at > 4000) return;
+    // A placement only counts when it completes the team's line-up.
+    if (entry.kind === "assign.set") {
+      const team = stateRef.current.teams.find((t) => t.id === entry.payload.team);
+      const complete = team && [team.captain, team.vice, ...team.recruits].every((id) => id && team.assign[id]);
+      if (!complete) return;
+      setShown({ seq: entry.seq, tag: String(entry.payload.tag), team: String(entry.payload.team), pick: true, round: 0, lineup: true });
+      sound.thunk();
+      sound.bell();
+      return;
+    }
     const pick = entry.kind === "pick.set";
     setShown({ seq: entry.seq, tag: String(entry.payload.tag), team: String(entry.payload.team), pick, round: Number(entry.payload.round) || 1 });
     if (pick) {
@@ -58,6 +72,31 @@ export default function GGBanSlam({ state, now }: { state: GGState; now: number 
 
   if (!shown) return null;
   const team = teamById(state, shown.team);
+  if (shown.lineup && team) {
+    const rows = [team.captain, team.vice, ...team.recruits].filter((id): id is string => Boolean(id));
+    return (
+      <div className="gg-banslam" role="status" aria-live="assertive">
+        <div className="gg-banslam-card" style={{ ["--team" as string]: team.color }}>
+          <div className="gg-banslam-name" style={{ color: team.color }}>
+            {team.name}
+          </div>
+          <div className="gg-lineup-final">
+            {rows.map((id) => (
+              <span key={id} className="gg-lineup-final-row">
+                <Avatar id={id} name={person(state, id)?.name ?? "?"} color={team.color} size={26} />
+                <span className="truncate">{person(state, id)?.name ?? "?"}</span>
+                <Flag tag={team.assign[id]} w={30} h={19} />
+                <span className="truncate" style={{ color: "var(--gg-fg-2)" }}>
+                  {nationName(state, team.assign[id])}
+                </span>
+              </span>
+            ))}
+          </div>
+          <div className="gg-banslam-stamp is-pick is-lineup">LINE-UP SET</div>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="gg-banslam" role="status" aria-live="assertive">
       <div className="gg-banslam-card" style={{ ["--team" as string]: team?.color ?? "#ff3b3b" }}>

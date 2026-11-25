@@ -11,6 +11,7 @@ import GGRandomizers, { ANIM_MS } from "./GGRandomizers";
 import GGTeamStack from "./GGTeamStack";
 import { scratchHeld } from "./ggScratch";
 import GGBanSlam from "./GGBanSlam";
+import GGLineupBoard from "./GGLineupBoard";
 import GGPoolPanel from "./GGPoolPanel";
 import GGTopBar from "./GGTopBar";
 import { AvatarsContext } from "./ggUi";
@@ -144,6 +145,7 @@ export default function GGApp({ slug }: { slug: string }) {
       {/* During the bans and the draft: the minors still free, on the right (a selected nation shows its drawer instead). */}
       {(state.phase === "bans" || state.phase === "draft") && !selected && !panel && <GGPoolPanel state={state} onSelect={select} />}
       <GGBanSlam state={state} now={now} />
+      {state.phase === "assign" && !selected && !panel && <GGLineupBoard state={state} viewer={viewer} act={act} />}
       {selected && !panel && <GGNationPanel key={selected} state={state} viewer={viewer} tag={selected} act={act} onClose={() => select(null)} />}
       {panel === "log" && <GGLog state={state} organizer={viewer.organizer} act={act} onClose={() => setPanel(null)} />}
       {panel === "controls" && viewer.organizer && <GGControlPanel state={state} act={act} reveal={reveal} onClose={() => setPanel(null)} />}
