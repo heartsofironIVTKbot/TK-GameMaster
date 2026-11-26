@@ -307,16 +307,17 @@ const PanOnlySVG = L.SVG.extend({
  * The map's first view leaves room for the team drawer on the left and the
  * top bar: Europe opens in the middle of what's actually visible.
  */
-function FrameVisible({ world, intent, left, top, right, bottom = 0 }: { world: PixelWorld; intent: ViewIntent; left: number; top: number; right: number; bottom?: number }) {
+function FrameVisible({ world, intent, left, top, ceiling, right, bottom = 0 }: { world: PixelWorld; intent: ViewIntent; left: number; top: number; ceiling: number; right: number; bottom?: number }) {
   const map = useMap();
   useEffect(() => {
     // Applied once the map has settled after loading. Loading can leave a zoom-out to the whole world
     // queued (Leaflet animates it on the next frame); if that lands after us, frame again.
     let zoomSet: number | null = null;
-    // Room above the world's top for the top bar, fading to none at the zoom floor (no drag up and down there).
+    // Room above the world's top for the top bar's band (`ceiling` px, so the world's edge stops right under it,
+    // never leaving a strip of empty sea), fading to none at the zoom floor (no drag up and down there).
     const bound = (zoom: number) => {
       const slack = Math.max(0, Math.min(1, (zoom - map.getMinZoom()) / 0.6));
-      map.setMaxBounds(L.latLngBounds([world.minY, -Infinity], [world.maxY + (top * slack) / Math.pow(2, zoom), Infinity]));
+      map.setMaxBounds(L.latLngBounds([world.minY, -Infinity], [world.maxY + (ceiling * slack) / Math.pow(2, zoom), Infinity]));
     };
     const onZoom = () => bound(map.getZoom());
     map.on("zoomend", onZoom);
@@ -584,7 +585,7 @@ function GGMap({
       <RedrawAhead renderer={renderer} />
       <HighlightsBridge geoJsonRef={baseRef} layerKey={0} state={highlights} onMotionChange={onMoving} />
       <MotionWatch onMoving={onMoving} />
-      <FrameVisible world={world} intent={mapStep ? EUROPE_CLOSE : EUROPE} left={340} top={140} right={state.phase === "bans" || state.phase === "draft" ? 300 : 0} bottom={state.phase === "assign" ? 230 : 0} />
+      <FrameVisible world={world} intent={mapStep ? EUROPE_CLOSE : EUROPE} left={340} top={140} ceiling={84} right={state.phase === "bans" || state.phase === "draft" ? 300 : 0} bottom={state.phase === "assign" ? 230 : 0} />
       <Patterns teams={state.teams} />
       <GeoJSON
         ref={baseRef}
@@ -682,7 +683,7 @@ function GGMap({
     </MapContainer>
     {hover && (
       <div
-        className="pointer-events-none absolute left-1/2 top-[164px] z-[950] -translate-x-1/2 rounded-full px-4 py-1.5 text-xs font-bold shadow-xl backdrop-blur-md"
+        className="pointer-events-none absolute left-1/2 top-[236px] z-[950] -translate-x-1/2 rounded-full px-4 py-1.5 text-xs font-bold shadow-xl backdrop-blur-md"
         style={{ background: "rgba(14,8,30,.82)", border: "1px solid rgba(255,255,255,.15)", color: "var(--gg-fg)" }}
       >
         {hover}

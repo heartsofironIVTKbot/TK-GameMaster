@@ -2,7 +2,7 @@
 
 import { Music2, Volume2, VolumeX } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { nowPlaying, PLAYLIST, useMusic, useMusicVolume } from "./ggPlaylist";
+import { nowPlaying, PLAYLIST, rotationAt, startOf, useMusic, useMusicVolume } from "./ggPlaylist";
 import { setSound, useSoundSwitch } from "./ggSound";
 
 /**
@@ -12,6 +12,9 @@ import { setSound, useSoundSwitch } from "./ggSound";
  * edges, the music dips under the big moments (a draw, a ban or pick stamp)
  * so the effects punch through, and it resyncs if it drifts. Browsers only
  * allow sound after a click, so a blocked start waits for the first one.
+ * A viewer can pick a track from the list: it plays from the start for them
+ * alone and the rotation carries on from there, until they go back to the
+ * room's music.
  */
 
 const clamp = (v: number) => Math.max(0, Math.min(1, v));
@@ -27,12 +30,17 @@ export default function GGMusic({ clock, duck }: { clock: () => number; duck: bo
   const [needsClick, setNeedsClick] = useState(false);
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement | null>(null);
+  // This viewer's own place in the rotation (ms ahead of the room), 0 = with the room.
+  const [shift, setShift] = useState(0);
 
   // Live values for the frame loop.
-  const live = useRef({ volume, duck });
+  const live = useRef({ volume, duck, shift, jumped: false });
   useEffect(() => {
-    live.current = { volume, duck };
+    live.current = { ...live.current, volume, duck };
   }, [volume, duck]);
+  useEffect(() => {
+    live.current = { ...live.current, shift, jumped: true };
+  }, [shift]);
 
   useEffect(() => {
     const el = audio.current;
@@ -64,8 +72,8 @@ export default function GGMusic({ clock, duck }: { clock: () => number; duck: bo
       if (blocked) tryPlay();
     };
     const onLoaded = () => {
-      const at = nowPlaying(clock());
-      if (at.index === current) el.currentTime = at.offset;
+      const place = nowPlaying(clock() + live.current.shift);
+      if (place.index === current) el.currentTime = place.offset;
     };
     el.addEventListener("loadedmetadata", onLoaded);
     window.addEventListener("pointerdown", unblock);
@@ -73,7 +81,12 @@ export default function GGMusic({ clock, duck }: { clock: () => number; duck: bo
     const loop = () => {
       frame = requestAnimationFrame(loop);
       const now = performance.now();
-      const at = nowPlaying(clock());
+      const at = nowPlaying(clock() + live.current.shift);
+      if (live.current.jumped) {
+        // A track was picked (or the room's music taken back): load it fresh.
+        live.current.jumped = false;
+        current = -1;
+      }
       if (at.index !== current) {
         current = at.index;
         el.src = PLAYLIST[at.index].src;
@@ -112,6 +125,17 @@ export default function GGMusic({ clock, duck }: { clock: () => number; duck: bo
     return () => window.removeEventListener("pointerdown", away);
   }, [open]);
 
+  const pick = (i: number) => {
+    const now = clock();
+    setShift((startOf(i) - rotationAt(now)) * 1000);
+    setIndex(i);
+    if (!musicOn) setMusicOn(true);
+  };
+  const backToRoom = () => {
+    setShift(0);
+    setIndex(nowPlaying(clock()).index);
+  };
+
   const track = PLAYLIST[index];
   const sounding = wants && playing;
   return (
@@ -148,9 +172,12 @@ export default function GGMusic({ clock, duck }: { clock: () => number; duck: bo
           <div className="gg-music-now">
             <small>{sounding ? "Now playing" : "Up now"}</small>
             <b>{track.title}</b>
-            <span>
-              Track {index + 1} of {PLAYLIST.length} · the same for everyone in the room
-            </span>
+            <span>{shift === 0 ? "The same for everyone in the room" : "Your pick · the rotation carries on from here"}</span>
+            {shift !== 0 && (
+              <button type="button" className="gg-music-back" onClick={backToRoom}>
+                Back to the room&apos;s music
+              </button>
+            )}
           </div>
           <label className="gg-music-volume">
             {volume === 0 ? <VolumeX size={15} aria-hidden /> : <Volume2 size={15} aria-hidden />}
@@ -165,8 +192,10 @@ export default function GGMusic({ clock, duck }: { clock: () => number; duck: bo
           {needsClick && wants && <p className="gg-music-hint">Your browser waits for a click before playing sound: click anywhere to start the music.</p>}
           <ol className="gg-music-list">
             {PLAYLIST.map((entry, i) => (
-              <li key={entry.src} className={i === index ? "is-now" : ""}>
-                <span className="gg-digit">{String(i + 1).padStart(2, "0")}</span> {entry.title}
+              <li key={entry.src}>
+                <button type="button" className={i === index ? "is-now" : ""} onClick={() => pick(i)} aria-current={i === index ? "true" : undefined} title={`Play ${entry.title}`}>
+                  <span className="gg-digit">{String(i + 1).padStart(2, "0")}</span> {entry.title}
+                </button>
               </li>
             ))}
           </ol>
