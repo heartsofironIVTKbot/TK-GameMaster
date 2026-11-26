@@ -7,6 +7,7 @@ import { GeoJSON, MapContainer, Marker, useMap } from "react-leaflet";
 import {
   computePixelWorld,
   createWorldCrs,
+  HighlightsBridge,
   INERTIA_MAX_SPEED,
   MapSetup,
   MAX_ZOOM,
@@ -18,6 +19,7 @@ import {
 import { versionedMapUrl } from "@/lib/mapVersion";
 import type { GGState } from "@/lib/greatGame/model";
 import type { NationFeature, NationFeatureCollection } from "@/lib/types";
+import type { HighlightState, HoverTarget } from "@/components/nationHighlights";
 import { AvatarsContext } from "./ggUi";
 import type { Considering } from "./useGreatGame";
 import mapCapitals from "@/data/mapCapitals.json";
@@ -311,6 +313,13 @@ function FrameVisible({ world, intent, left, top, right, bottom = 0 }: { world: 
     // Applied once the map has settled after loading. Loading can leave a zoom-out to the whole world
     // queued (Leaflet animates it on the next frame); if that lands after us, frame again.
     let zoomSet: number | null = null;
+    // Room above the world's top for the top bar, fading to none at the zoom floor (no drag up and down there).
+    const bound = (zoom: number) => {
+      const slack = Math.max(0, Math.min(1, (zoom - map.getMinZoom()) / 0.6));
+      map.setMaxBounds(L.latLngBounds([world.minY, -Infinity], [world.maxY + (top * slack) / Math.pow(2, zoom), Infinity]));
+    };
+    const onZoom = () => bound(map.getZoom());
+    map.on("zoomend", onZoom);
     const frame = () => {
       const width = world.maxX - world.minX;
       const height = world.maxY - world.minY;
@@ -319,7 +328,7 @@ function FrameVisible({ world, intent, left, top, right, bottom = 0 }: { world: 
       const fill = Math.max(0, Math.log2(Math.max(size.x / width, size.y / height)));
       const zoom = Math.min(map.getMaxZoom(), fill + intent.zoomOffset);
       // Let the map scroll a little past the world's top, so the north of Europe can sit below the top bar.
-      map.setMaxBounds(L.latLngBounds([world.minY, -Infinity], [world.maxY + top / Math.pow(2, zoom), Infinity]));
+      bound(zoom);
       map.setView(L.latLng(world.minY + intent.cyFrac * height, world.minX + intent.cxFrac * width), zoom, { animate: false });
       map.panBy([(right - left) / 2, (bottom - top) / 2], { animate: false });
       zoomSet = zoom;
@@ -335,6 +344,7 @@ function FrameVisible({ world, intent, left, top, right, bottom = 0 }: { world: 
     return () => {
       window.clearTimeout(id);
       map.off("zoomend", late);
+      map.off("zoomend", onZoom);
     };
     // Only the first view (per map).
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -389,6 +399,8 @@ function GGMap({
     onSelectRef.current = onSelect;
   }, [onSelect]);
   const [hover, setHover] = useState<string | null>(null);
+  // The hovered nation for the live map's glow (drawn above every neighbour).
+  const [hoverTarget, setHoverTarget] = useState<HoverTarget | null>(null);
   const hoverTimer = useRef<number | null>(null);
   const moving = useRef(false);
   const onMoving = useCallback((value: boolean) => {
@@ -432,15 +444,29 @@ function GGMap({
     if (!feature) return {};
     const tag = feature.properties.tag;
     const look = paintRef.current(tag, feature.properties.color ?? "#555");
-    const isSelected = selectedRef.current === tag;
     return {
       fillColor: look.fill,
       fillOpacity: 1,
-      color: isSelected ? "#ffffff" : BORDER,
-      weight: isSelected ? 2.5 : 0.8,
+      color: BORDER,
+      weight: 0.8,
       fillRule: "evenodd",
     };
   }, []);
+
+  const lockedTags = useMemo(() => {
+    if (!raw) return [] as string[];
+    const inDraft = new Set([...state.config.pool, ...state.config.majors]);
+    const out = new Set<string>();
+    for (const feature of raw.features) {
+      const tag = feature.properties.tag;
+      if (feature.properties.slot_key !== null && tag && !inDraft.has(tag)) out.add(tag);
+    }
+    return [...out];
+  }, [raw, state.config.pool, state.config.majors]);
+  const highlights = useMemo<HighlightState>(
+    () => ({ hover: hoverTarget, pendingTag: selected, coopTag: null, selfTags: [], lockedTags: [], takenTags: lockedTags }),
+    [hoverTarget, selected, lockedTags],
+  );
 
   // Repaint in place when the event or the selection changes.
   useEffect(() => {
@@ -556,6 +582,7 @@ function GGMap({
     >
       <MapSetup world={world} initialViewRef={viewRef} />
       <RedrawAhead renderer={renderer} />
+      <HighlightsBridge geoJsonRef={baseRef} layerKey={0} state={highlights} onMotionChange={onMoving} />
       <MotionWatch onMoving={onMoving} />
       <FrameVisible world={world} intent={mapStep ? EUROPE_CLOSE : EUROPE} left={340} top={140} right={state.phase === "bans" || state.phase === "draft" ? 300 : 0} bottom={state.phase === "assign" ? 230 : 0} />
       <Patterns teams={state.teams} />
@@ -569,6 +596,8 @@ function GGMap({
           // Draw whole nations, always (no chopped edges, no blank land after a pan or a wrap).
           drawWhole(path);
           const label = known[tag] ?? feature.properties.name;
+          // Decorative ownerless land: no hover, no click (as on the live map).
+          if (feature.properties.slot_key === null) return;
           path.on({
             mouseover: () => {
               if (moving.current) return;
@@ -577,17 +606,18 @@ function GGMap({
                 hoverTimer.current = null;
                 if (moving.current) return;
                 setHover(label);
-                if (known[tag] && selectedRef.current !== tag) path.setStyle({ color: "#efe9ff", weight: 1.8 });
+                setHoverTarget({ tag, layer: path });
               }, HOVER_DEBOUNCE_MS);
             },
             mouseout: () => {
               if (hoverTimer.current !== null) window.clearTimeout(hoverTimer.current);
               hoverTimer.current = null;
               setHover(null);
-              path.setStyle(baseStyle(feature));
+              setHoverTarget((current) => (current?.layer === path ? null : current));
             },
             click: () => {
-              if (known[tag]) onSelectRef.current(tag);
+              // Locked nations open too: the panel says they're locked.
+              onSelectRef.current(tag);
             },
           });
         }}

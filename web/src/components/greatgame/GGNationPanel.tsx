@@ -46,7 +46,8 @@ export default function GGNationPanel({
   let status: { text: string; color: string; chip: string };
   if (owner) status = { text: `${owner.name}${owner.major === tag ? "'s major" : ""}`, color: owner.color, chip: "bg-sky-950/80 text-sky-200" };
   else if (bannedBy) status = { text: `Banned by ${bannedBy.name}`, color: "#ff3b3b", chip: "bg-rose-950/80 text-rose-300" };
-  else if (!inPool) status = { text: "Not in the Great Game pool", color: "var(--gg-fg-3)", chip: "bg-ink-800 text-ink-300" };
+  else if (state.config.majors.includes(tag)) status = { text: "Major · handed out on the reel", color: "var(--gg-cyan)", chip: "bg-sky-950/80 text-sky-200" };
+  else if (!inPool) status = { text: "Locked · not part of the draft", color: "var(--gg-fg-3)", chip: "bg-ink-800 text-ink-300" };
   else
     status = {
       text: mode === "ban" ? "In the pool · bannable" : mode === "pick" ? "In the pool · free to pick" : "In the pool",
