@@ -28,10 +28,12 @@ in their DM and in the host log). Hosts can't moderate themselves.
 
 **Player DMs for a warning, game ban or Dishonor** (from the Database page or
 the automatic no-show warning) carry two buttons: green **Acknowledge** and red
-**Appeal**. Appeal opens a short form; the appeal goes to the host channel and
-shows up on the player's record ("Appeal submitted"). Each DM can be
-acknowledged or appealed once. Valor Trusted requests and appeals go to the
-host log channel (`HOST_TEAM_CHANNEL_ID` in `bot.py.py`).
+**Appeal**. Appeal opens a short form; the appeal opens an **Appeal ticket** in
+the server (what is appealed and the player's reasons; hosts and Host
+Management see it, like an appeal from the ticket panel) and shows up on the
+player's record ("Appeal submitted"). A player who has left the server can't
+get a ticket: theirs goes to Staff notices. Each DM can be acknowledged or
+appealed once. Valor Trusted requests go to Staff notices.
 
 ## What hosts see
 

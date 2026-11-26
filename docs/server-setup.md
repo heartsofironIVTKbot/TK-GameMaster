@@ -138,7 +138,7 @@ make the role or channel with a sensible name.
   (`audit_trail`). Servers that had the channel set before the switch keep
   their copy; new servers start without one (2026-11-05, Stage 3 of
   `docs/audit-and-tickets-on-web-plan.md`).
-- **Staff notices**: VIP notices, Trusted requests, appeals, streak alerts,
+- **Staff notices**: VIP notices, Trusted requests, appeals from players who left the server (the rest open an Appeal ticket), streak alerts,
   cross-server ban alerts and anything GameMaster needs staff to fix (an
   IronLegion outage, a channel refusing the live game posts). Without it
   these go to the audit log channel, copy switch or not.

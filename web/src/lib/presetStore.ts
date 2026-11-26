@@ -16,7 +16,7 @@ import {
   type PresetInput,
   type PresetUpdateCheck,
 } from "@/lib/presetTypes";
-import { parsePresetData } from "@/lib/presetValidation";
+import { parsePresetData, withoutRetiredMods } from "@/lib/presetValidation";
 import type { HostProfile } from "@/lib/scheduleTypes";
 import { DEMO_HOST, SchedulerSetupError, isSchedulerDemo } from "@/lib/scheduleStore";
 
@@ -347,7 +347,8 @@ function fromRow(row: PresetRow): StoredPreset {
     shared: Boolean(row.shared),
     copied_from: row.copied_from,
     uses: num(row.uses),
-    data: parsePresetData(row.data),
+    // Retired mods drop out of saved presets (games already scheduled keep theirs).
+    data: withoutRetiredMods(parsePresetData(row.data)),
     created_at: num(row.created_at),
     updated_at: num(row.updated_at),
     official: Boolean(row.official),
@@ -579,7 +580,6 @@ function demoSeed(): StoredPreset[] {
         nation_locks: [{ label: "Majors until 12h before", nations: ["Germany", "Soviet Union"], release_hours_before: 12 }],
         mods: [
           { name: "Road to 56 Mod", link: "https://steamcommunity.com/sharedfiles/filedetails/?id=820260968" },
-          { name: "The Road to 56 RP Submod", link: "https://steamcommunity.com/sharedfiles/filedetails/?id=2790635823" },
           { name: "Better Europe Map", link: "https://steamcommunity.com/sharedfiles/filedetails/?id=1000000001" },
         ],
       },

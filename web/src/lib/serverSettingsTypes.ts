@@ -90,7 +90,7 @@ export const CHANNEL_FIELDS = [
     label: "Staff notices",
     kind: "text",
     required: false,
-    hint: "VIP notices with Remove / Approve buttons, Trusted requests, appeals, hosting streak alerts, ban alerts from other servers and anything GameMaster needs staff to fix. Without it, these go to the audit log channel.",
+    hint: "VIP notices with Remove / Approve buttons, Trusted requests, appeals from players who left the server (others open an Appeal ticket), hosting streak alerts, ban alerts from other servers and anything GameMaster needs staff to fix. Without it, these go to the audit log channel.",
   },
   {
     key: "schedule_panel",
@@ -305,7 +305,6 @@ const DEFAULT_LINKS: Record<string, { mods: LinkEntry[]; rules: LinkEntry[] }> =
   Roleplay: {
     mods: [
       { name: "Road to 56 Mod", link: "https://steamcommunity.com/sharedfiles/filedetails/?id=820260968" },
-      { name: "The Road to 56 RP Submod", link: "https://steamcommunity.com/sharedfiles/filedetails/?id=2790635823" },
     ],
     rules: [],
   },

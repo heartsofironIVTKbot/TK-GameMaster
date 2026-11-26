@@ -252,20 +252,25 @@ export async function queryAudit(guildId: string, query: AuditQuery, maxLimit = 
 }
 
 /** Events per category over the last 7 days (the filter chips' counts). */
-export async function auditCategoryCounts(guildId: string): Promise<Record<string, number>> {
-  const since = Math.floor(Date.now() / 1000) - 7 * 86400;
+export async function auditCategoryCounts(guildId: string, player?: string): Promise<Record<string, number>> {
+  // The whole server: the last 7 days. One player (their History): everything by or about them.
+  const since = player ? 0 : Math.floor(Date.now() / 1000) - 7 * 86400;
   if (isSchedulerDemo()) {
     const counts: Record<string, number> = {};
     for (const event of demoAuditEvents()) {
+      if (player && event.actor_id !== player && event.target_id !== player) continue;
       if (event.created_at >= since) counts[event.category] = (counts[event.category] ?? 0) + 1;
     }
     return counts;
   }
   try {
     const [rows] = await getPool().query<RowDataPacket[]>(
-      `SELECT category, COUNT(*) AS n FROM audit_trail
-        WHERE guild_id = ? AND created_at >= ? GROUP BY category`,
-      [guildId, since],
+      player
+        ? `SELECT category, COUNT(*) AS n FROM audit_trail
+            WHERE guild_id = ? AND (actor_id = ? OR target_id = ?) GROUP BY category`
+        : `SELECT category, COUNT(*) AS n FROM audit_trail
+            WHERE guild_id = ? AND created_at >= ? GROUP BY category`,
+      player ? [guildId, player, player] : [guildId, since],
     );
     return Object.fromEntries(rows.map((row) => [String(row.category), Number(row.n) || 0]));
   } catch (error) {

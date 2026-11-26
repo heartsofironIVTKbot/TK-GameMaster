@@ -160,6 +160,21 @@ export function validatePresetInput(raw: unknown, modeNations: string[] | null):
 }
 
 /** A stored preset document (lenient: anything malformed falls back to standard). */
+/** Mods GameMaster no longer offers, by Steam Workshop id (2026-11-26): The Road to 56 RP Submod. */
+export const RETIRED_MOD_IDS = new Set(["2790635823"]);
+
+export function isRetiredMod(entry: { link: string }): boolean {
+  const id = /[?&]id=(\d+)/.exec(entry.link)?.[1];
+  return id !== undefined && RETIRED_MOD_IDS.has(id);
+}
+
+/** A saved preset without retired mods (a list left empty falls back to the mode's standard mods). */
+export function withoutRetiredMods(data: PresetData): PresetData {
+  if (!data.mods || !data.mods.some(isRetiredMod)) return data;
+  const mods = data.mods.filter((entry) => !isRetiredMod(entry));
+  return { ...data, mods: mods.length ? mods : null };
+}
+
 export function parsePresetData(raw: unknown): PresetData {
   let value: unknown = raw;
   if (typeof raw === "string") {

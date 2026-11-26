@@ -7,7 +7,7 @@ import { Download, List, RefreshCw, Search, X } from "lucide-react";
 import { Spinner } from "@/components/schedule/ui";
 import { AUDIT_CATEGORIES, AUDIT_CATEGORY_LABELS } from "@/lib/auditTypes";
 import type { HostProfile } from "@/lib/scheduleTypes";
-import AuditList, { categoryIcon, useAuditFeed } from "./AuditList";
+import AuditList, { auditChip, categoryIcon, useAuditFeed } from "./AuditList";
 
 /**
  * /audit — every recorded action on this server (reservations, roster moves,
@@ -197,7 +197,5 @@ export default function AuditApp({ host }: { host: HostProfile }) {
 }
 
 function chip(active: boolean): string {
-  return `gm-cut inline-flex h-[30px] items-center gap-1.5 px-3 text-[12.5px] font-semibold transition-colors [--cut:7px] ${
-    active ? "bg-brand-400 text-brand-950" : "bg-ink-950 text-ink-300 hover:bg-ink-800 hover:text-ink-100"
-  }`;
+  return auditChip(active);
 }

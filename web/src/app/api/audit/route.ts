@@ -8,6 +8,7 @@ import { getHostStatus, hostStatusError } from "@/lib/hostAuth";
  * Host Management and server admins only. Filters: category, action, actor,
  * target, game, q (text in the summary), from / to (unix seconds); paging
  * with before=<id> (the last page's next_before) and limit (≤ 200).
+ * player_counts=1 (with player): the chip counts are that player's, all time.
  */
 export async function GET(request: Request) {
   const status = await getHostStatus();
@@ -22,9 +23,11 @@ export async function GET(request: Request) {
   }
   try {
     const guildId = await currentGuildId();
-    const query = parseAuditQuery(new URL(request.url).searchParams);
+    const params = new URL(request.url).searchParams;
+    const query = parseAuditQuery(params);
     const page = await queryAudit(guildId, query);
-    if (!query.before) page.counts = await auditCategoryCounts(guildId);
+    const countsFor = params.get("player_counts") === "1" && query.player ? query.player : undefined;
+    if (!query.before) page.counts = await auditCategoryCounts(guildId, countsFor);
     return Response.json(page, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
     if (error instanceof DatabaseConfigError) return Response.json({ error: error.message }, { status: 503 });

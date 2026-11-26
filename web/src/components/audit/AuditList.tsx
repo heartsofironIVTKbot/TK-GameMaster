@@ -45,6 +45,13 @@ export const CATEGORY_ICON: Record<AuditCategory, { icon: LucideIcon; tone: stri
 export const FALLBACK_ICON = { icon: Dot, tone: "text-ink-500" };
 
 /** A category's icon, or a plain dot for one this page doesn't know (never a crash). */
+/** A filter chip (the Audit log's and a player's History). */
+export function auditChip(active: boolean): string {
+  return `gm-cut inline-flex h-[30px] shrink-0 items-center gap-1.5 px-3 text-[12.5px] font-semibold transition-colors [--cut:7px] ${
+    active ? "bg-brand-400 text-brand-950" : "bg-ink-950 text-ink-300 hover:bg-ink-800 hover:text-ink-100"
+  }`;
+}
+
 export function categoryIcon(category: string): { icon: LucideIcon; tone: string } {
   return (CATEGORY_ICON as Record<string, { icon: LucideIcon; tone: string }>)[category] ?? FALLBACK_ICON;
 }
