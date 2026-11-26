@@ -59,10 +59,8 @@ function calm(color: string, amount = 0.42): string {
 }
 const SEA = "#0d0820";
 const BORDER = "#0b0716";
-/** Opens on Europe, a little zoomed in. */
-const EUROPE: ViewIntent = { cxFrac: 0.54, cyFrac: 0.8, zoomOffset: 1.3 };
-/** On the map steps (bans, draft): closer in, so Europe can sit below the top bar. */
-const EUROPE_CLOSE: ViewIntent = { cxFrac: 0.545, cyFrac: 0.79, zoomOffset: 1.85 };
+/** Opens fully zoomed out on the whole world, like the live reservation maps. */
+const WORLD: ViewIntent = { cxFrac: 0.5, cyFrac: 0.5, zoomOffset: 0 };
 
 export interface MapPaint {
   fill: string;
@@ -304,8 +302,8 @@ const PanOnlySVG = L.SVG.extend({
 }) as unknown as new (options?: L.RendererOptions) => L.SVG;
 
 /**
- * The map's first view leaves room for the team drawer on the left and the
- * top bar: Europe opens in the middle of what's actually visible.
+ * The map's first view (the whole world, fully zoomed out) is centred in what's
+ * actually visible beside the team drawer and side panels.
  */
 function FrameVisible({ world, intent, left, top, ceiling, right, bottom = 0 }: { world: PixelWorld; intent: ViewIntent; left: number; top: number; ceiling: number; right: number; bottom?: number }) {
   const map = useMap();
@@ -390,8 +388,7 @@ function GGMap({
   const [world, setWorld] = useState<PixelWorld | null>(null);
   const [error, setError] = useState<string | null>(null);
   const mapKey = useMapRemountKey();
-  const mapStep = state.phase === "bans" || state.phase === "draft" || state.phase === "assign" || state.phase === "locked";
-  const viewRef = useRef<ViewIntent | null>(mapStep ? EUROPE_CLOSE : EUROPE);
+  const viewRef = useRef<ViewIntent | null>(WORLD);
   const baseRef = useRef<L.GeoJSON | null>(null);
   const renderer = useMemo(() => new PanOnlySVG({ padding: 1 }), []);
   // onEachFeature runs once per nation: it reaches the latest handler through a ref.
@@ -585,7 +582,7 @@ function GGMap({
       <RedrawAhead renderer={renderer} />
       <HighlightsBridge geoJsonRef={baseRef} layerKey={0} state={highlights} onMotionChange={onMoving} />
       <MotionWatch onMoving={onMoving} />
-      <FrameVisible world={world} intent={mapStep ? EUROPE_CLOSE : EUROPE} left={340} top={140} ceiling={84} right={state.phase === "bans" || state.phase === "draft" ? 300 : 0} bottom={state.phase === "assign" ? 230 : 0} />
+      <FrameVisible world={world} intent={WORLD} left={340} top={140} ceiling={84} right={state.phase === "bans" || state.phase === "draft" ? 300 : 0} bottom={state.phase === "assign" ? 230 : 0} />
       <Patterns teams={state.teams} />
       <GeoJSON
         ref={baseRef}
