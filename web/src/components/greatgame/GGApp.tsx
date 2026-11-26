@@ -6,6 +6,7 @@ import { useCallback, useState, type ReactNode } from "react";
 import { turnDeadline } from "@/lib/greatGame/engine";
 import GGControlPanel from "./GGControlPanel";
 import GGLog from "./GGLog";
+import GGMusic from "./GGMusic";
 import { GGMods, GGRules } from "./GGInfoPanel";
 import GGNationPanel from "./GGNationPanel";
 import GGRandomizers, { ANIM_MS } from "./GGRandomizers";
@@ -97,6 +98,9 @@ export function GGRoom({ slug, game, replay }: { slug: string; game: GGSource; r
   }
 
   const animating = state.last_draw ? now - state.last_draw.at < (ANIM_MS[state.last_draw.kind] ?? 0) : false;
+  // A ban or pick stamp just landed: the music dips under it.
+  const lastStamp = [...state.log].reverse().find((entry) => entry.kind === "ban.set" || entry.kind === "pick.set");
+  const recentStamp = Boolean(lastStamp && now - lastStamp.at < 2600);
 
   return (
     <AvatarsContext.Provider value={avatars}>
@@ -116,6 +120,7 @@ export function GGRoom({ slug, game, replay }: { slug: string; game: GGSource; r
         onOpenMods={() => setPanel(panel === "mods" ? null : "mods")}
         onOpenControls={viewer.organizer ? () => setPanel(panel === "controls" ? null : "controls") : null}
         mode={replay ? "replay" : "live"}
+        music={replay ? undefined : <GGMusic clock={serverNow} duck={animating || recentStamp} />}
         right={
           replay ? (
             replay.corner

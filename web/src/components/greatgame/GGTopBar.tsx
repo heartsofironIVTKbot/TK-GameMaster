@@ -225,6 +225,7 @@ export default function GGTopBar({
   onOpenControls,
   scratchTeam = null,
   mode = "live",
+  music,
 }: {
   state: GGState;
   now: number;
@@ -237,6 +238,8 @@ export default function GGTopBar({
   scratchTeam?: string | null;
   /** "replay": the monitor says REPLAY instead of LIVE. */
   mode?: "live" | "replay";
+  /** The music button (live room only). */
+  music?: ReactNode;
 }) {
   const banner = bannerFor(state, now, scratchTeam);
   const readouts = readoutsFor(state, now, scratchTeam);
@@ -409,6 +412,7 @@ export default function GGTopBar({
           >
             {soundOn ? <Volume2 size={16} aria-hidden /> : <VolumeX size={16} aria-hidden />}
           </button>
+          {music}
           <button type="button" className="gg-btn" onClick={onOpenRules} title="How the draft works" aria-label="Rules">
             <BookOpen size={16} aria-hidden /> <span className="hidden @min-[560px]:inline">Rules</span>
           </button>
