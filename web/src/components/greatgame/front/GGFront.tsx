@@ -2,11 +2,12 @@
 
 import { ArrowRight, ChevronDown, Film, ShieldCheck } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { PHASE_LABEL, PHASES } from "@/lib/greatGame/model";
 import type { GGPublic } from "@/lib/greatGame/public";
 import { GG_MODS } from "../GGInfoPanel";
 import { displayName, Flag } from "../ggUi";
+import { AnthemButton, AnthemLyrics, AnthemMini, useAnthem } from "./GGAnthem";
 import GGFrontScene, { type SceneMajor } from "./GGFrontScene";
 import GGFrontSteps from "./GGFrontSteps";
 
@@ -75,10 +76,22 @@ export default function GGFront() {
     return tags.map((tag, i) => ({ tag, color: event?.teams?.find((team) => team.major === tag)?.color ?? MAJOR_GLOW[i % MAJOR_GLOW.length] }));
   }, [event]);
   const room = event ? `/greatgame/${event.slug}` : null;
+  const anthem = useAnthem();
+  // Whether the hero is on screen (the lyrics live there; the mini player shows the line once you scroll away).
+  const hero = useRef<HTMLElement | null>(null);
+  const [heroVisible, setHeroVisible] = useState(true);
+  useEffect(() => {
+    const element = hero.current;
+    if (!element) return undefined;
+    const seen = new IntersectionObserver(([entry]) => setHeroVisible(entry.intersectionRatio > 0.35), { threshold: [0, 0.35, 1] });
+    seen.observe(element);
+    return () => seen.disconnect();
+  }, []);
 
   return (
     <div className="ggf">
-      <section className="ggf-hero">
+      {anthem.element}
+      <section ref={hero} className={`ggf-hero ${anthem.started ? "is-anthem" : ""}`}>
         <GGFrontScene majors={sceneMajors} />
         <nav className="ggf-nav" aria-label="Great Game">
           <Link href="/" className="ggf-nav-home">
@@ -133,6 +146,7 @@ export default function GGFront() {
             </span>
           </h1>
           <div className="ggf-cta">
+            <AnthemButton anthem={anthem} />
             {room ? (
               <a className="ggf-btn is-primary" href={room}>
                 Enter the draft room <ArrowRight size={18} aria-hidden />
@@ -150,6 +164,7 @@ export default function GGFront() {
           </div>
           {room && <p className="ggf-cta-note">The draft room is for players, casters and organizers. Everyone else: catch it live on stream.</p>}
         </div>
+        <AnthemLyrics anthem={anthem} />
         <a className="ggf-scroll" href="#dates" aria-label="Scroll down">
           <ChevronDown size={26} />
         </a>
@@ -162,6 +177,7 @@ export default function GGFront() {
         <Majors event={event} />
         {event?.teams && <Teams event={event} />}
         <Fairness event={event} />
+        <AnthemMini anthem={anthem} showLine={!heroVisible} />
         <footer className="ggf-footer">
           <span className="ggf-footer-brush">The Great Game</span>
           <span>2026 · Road to 56 · run on GameMaster</span>

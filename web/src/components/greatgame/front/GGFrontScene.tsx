@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { anthemBeat } from "./GGAnthem";
 
 /**
  * The front page's poster scene, on one canvas: a synthwave sky with a striped
@@ -322,8 +323,9 @@ export default function GGFrontScene({ majors }: { majors: SceneMajor[] }) {
       const sR = R * 1.45;
       const sx = gx;
       const sy = gy + R * 0.3;
-      const halo = ctx.createRadialGradient(sx, sy, sR * 0.6, sx, sy, sR * 1.7);
-      halo.addColorStop(0, "rgba(255, 120, 120, 0.42)");
+      const beat = anthemBeat.level;
+      const halo = ctx.createRadialGradient(sx, sy, sR * 0.6, sx, sy, sR * (1.7 + beat * 0.25));
+      halo.addColorStop(0, `rgba(255, 120, 120, ${0.42 + beat * 0.3})`);
       halo.addColorStop(1, "rgba(255, 60, 160, 0)");
       ctx.fillStyle = halo;
       ctx.fillRect(sx - sR * 1.7, sy - sR * 1.7, sR * 3.4, sR * 3.4);
@@ -832,9 +834,9 @@ export default function GGFrontScene({ majors }: { majors: SceneMajor[] }) {
       rim.addColorStop(0.55, "#8f7bff");
       rim.addColorStop(1, "#ff2bd6");
       ctx.strokeStyle = rim;
-      ctx.lineWidth = 2.2;
+      ctx.lineWidth = 2.2 + anthemBeat.level * 2;
       ctx.shadowColor = "#22e5ff";
-      ctx.shadowBlur = 22;
+      ctx.shadowBlur = 22 + anthemBeat.level * 26;
       ctx.beginPath();
       ctx.arc(gx, gy, R, 0, Math.PI * 2);
       ctx.stroke();
