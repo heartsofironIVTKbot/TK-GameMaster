@@ -357,6 +357,61 @@
 }
 
 /* ---------- The anthem ---------- */
+/* Not playing yet: the button breathes a cyan glow, a light sweeps across it now and then, and
+   the note sways, so people notice it. Kept on with reduced motion: it's slow and small. */
+.ggfa-play:not(.is-playing) {
+  position: relative;
+  overflow: hidden;
+  animation: ggfa-breathe 2.8s ease-in-out infinite;
+}
+.ggfa-play:not(.is-playing)::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 30%, rgba(255, 255, 255, 0.16) 46%, rgba(34, 229, 255, 0.22) 50%, transparent 66%);
+  transform: translateX(-120%);
+  animation: ggfa-sweep 5.5s ease-in-out infinite;
+}
+.ggfa-play:not(.is-playing) > svg {
+  color: var(--ggf-cyan);
+  filter: drop-shadow(0 0 6px rgba(34, 229, 255, 0.7));
+  transform-origin: 50% 85%;
+  animation: ggfa-sway 2.8s ease-in-out infinite;
+}
+.ggfa-play:not(.is-playing):hover {
+  animation: none;
+}
+@keyframes ggfa-breathe {
+  0%,
+  100% {
+    border-color: rgba(255, 255, 255, 0.22);
+    box-shadow: 0 0 0 rgba(34, 229, 255, 0);
+  }
+  50% {
+    border-color: rgba(34, 229, 255, 0.65);
+    box-shadow: 0 0 20px rgba(34, 229, 255, 0.38), inset 0 0 14px rgba(34, 229, 255, 0.12);
+  }
+}
+@keyframes ggfa-sweep {
+  0%,
+  55% {
+    transform: translateX(-120%);
+  }
+  85%,
+  100% {
+    transform: translateX(120%);
+  }
+}
+@keyframes ggfa-sway {
+  0%,
+  100% {
+    transform: rotate(-8deg) translateY(0);
+  }
+  50% {
+    transform: rotate(8deg) translateY(-2px);
+  }
+}
 .ggfa-play.is-playing {
   border-color: var(--ggf-cyan);
   box-shadow: 0 0 18px rgba(34, 229, 255, 0.4);
