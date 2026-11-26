@@ -324,11 +324,14 @@ export default function GGFrontScene({ majors }: { majors: SceneMajor[] }) {
       const sx = gx;
       const sy = gy + R * 0.3;
       const beat = anthemBeat.level;
-      const halo = ctx.createRadialGradient(sx, sy, sR * 0.6, sx, sy, sR * (1.7 + beat * 0.25));
+      // The halo swells on the anthem's beat: paint the whole of it (a fixed square cut it off in hard
+      // vertical edges on wide screens).
+      const haloR = sR * (1.7 + beat * 0.25);
+      const halo = ctx.createRadialGradient(sx, sy, sR * 0.6, sx, sy, haloR);
       halo.addColorStop(0, `rgba(255, 120, 120, ${0.42 + beat * 0.3})`);
       halo.addColorStop(1, "rgba(255, 60, 160, 0)");
       ctx.fillStyle = halo;
-      ctx.fillRect(sx - sR * 1.7, sy - sR * 1.7, sR * 3.4, sR * 3.4);
+      ctx.fillRect(sx - haloR, sy - haloR, haloR * 2, haloR * 2);
       const size = Math.ceil(sR * 2 * ratio);
       if (sun.width !== size) {
         sun.width = size;
