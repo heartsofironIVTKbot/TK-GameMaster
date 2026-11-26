@@ -2527,7 +2527,6 @@ MODE_CONFIG = {
         "banned_role_id": ROLE_IDS["HOI4_RP_BANNED"],
         "mod_links": [
             "[Road to 56 Mod](https://steamcommunity.com/sharedfiles/filedetails/?id=820260968)",
-            "[The Road to 56 RP Submod](https://steamcommunity.com/sharedfiles/filedetails/?id=2790635823)",
             "[TommyKay R56RP Submod](https://steamcommunity.com/sharedfiles/filedetails/?id=3342783457)"
         ],
         "rule_links": [
@@ -9050,8 +9049,11 @@ class ValorTrustedDecisionButton(discord.ui.DynamicItem[discord.ui.Button],
 # ACKNOWLEDGE / APPEAL — buttons on warning, game ban and Dishonored DMs
 # --------------------------------------------------------------------------
 # Acknowledge just marks the DM as read. Appeal opens a short form; the
-# appeal goes to the host team channel and into moderation_events (it shows
-# on the player's record on the web Database page). Both work once.
+# appeal opens an Appeal ticket in the server (what it's about + the
+# player's reasons; hosts and Host Management see it) and goes into
+# moderation_events (it shows on the player's record on the web Database
+# page). A player no longer in the server: it goes to Staff notices
+# instead. Both work once.
 # ==========================================================================
 def build_moderation_feedback_view(done_label: str | None = None) -> discord.ui.View:
     view = discord.ui.View(timeout=None)
@@ -9088,37 +9090,57 @@ class ModerationAppealModal(discord.ui.Modal, title="Appeal"):
     def __init__(self, dm_message):
         super().__init__()
         self.dm_message = dm_message
+        # The server the DM's button belongs to (the form's own submit comes from a DM, without it).
+        self.gid = cur_gid()
 
     async def on_submit(self, interaction: discord.Interaction):
+        with guild_scope(self.gid):
+            await self._submit(interaction)
+
+    async def _submit(self, interaction: discord.Interaction):
         summary, mode = _moderation_dm_summary(self.dm_message)
-        embed = discord.Embed(
-            title="📨 Appeal",
-            description=f"<@{interaction.user.id}> appealed:",
-            color=EmbedColor.INFO,
-            timestamp=discord.utils.utcnow(),
-        )
-        embed.add_field(name="About", value=_trim_field(summary), inline=False)
-        embed.add_field(name="Appeal", value=_trim_field(str(self.appeal.value)), inline=False)
-        embed.set_footer(text="Answer the player via a ticket / DM. Change the record on the web Database page.")
-        channel = _staff_notice_channel()
-        try:
-            await channel.send(embed=embed)
-        except Exception as e:
-            print(f"[WARN] Appeal post failed: {e}")
-            return await _interaction_notice(interaction, "⚠️ Couldn't send your appeal right now — please open a ticket instead.")
+        appeal = str(self.appeal.value)
+        guild = bot.get_guild(self.gid)
+        member = await _get_member_safe(guild, interaction.user.id) if guild is not None else None
+        ticket = None
+        if member is not None and _guild_active(guild.id):
+            # An Appeal ticket, as if the player had opened one from the ticket panel.
+            ticket = await _create_ticket(
+                interaction, "Appeal", fields={"Appealing": summary, "Why": appeal}, guild=guild, member=member,
+            )
+            if ticket is None:
+                return  # The player was told why (an Appeal ticket already open, no permission, …).
+        else:
+            # Not in the server any more: the host team gets it in Staff notices.
+            embed = discord.Embed(
+                title="📨 Appeal",
+                description=f"<@{interaction.user.id}> appealed (not in the server, so no ticket):",
+                color=EmbedColor.INFO,
+                timestamp=discord.utils.utcnow(),
+            )
+            embed.add_field(name="About", value=_trim_field(summary), inline=False)
+            embed.add_field(name="Appeal", value=_trim_field(appeal), inline=False)
+            embed.set_footer(text="Answer the player by DM. Change the record on the web Database page.")
+            channel = _staff_notice_channel()
+            try:
+                await channel.send(embed=embed)
+            except Exception as e:
+                print(f"[WARN] Appeal post failed: {e}")
+                return await _interaction_notice(interaction, "⚠️ Couldn't send your appeal right now — please open a ticket instead.")
         record_moderation_event(
             interaction.user.id,
             "appeal",
             mode=mode,
-            reason=str(self.appeal.value),
+            reason=appeal,
             actor_id=interaction.user.id,
-            details={"about": summary[:300]},
+            details={"about": summary[:300], **({"ticket": ticket.name} if ticket is not None else {})},
         )
         try:
             await self.dm_message.edit(view=build_moderation_feedback_view("📨 Appeal sent"))
         except Exception:
             pass
-        await _interaction_notice(interaction, "📨 Your appeal was sent to the host team. They'll get back to you.")
+        if ticket is None:
+            await _interaction_notice(interaction, "📨 Your appeal was sent to the host team. They'll get back to you.")
 
 
 class ModerationFeedbackButton(discord.ui.DynamicItem[discord.ui.Button],
@@ -30458,14 +30480,18 @@ async def _ticket_deny_duplicate(interaction, kind: str) -> bool:
     return True
 
 
-async def _create_ticket(interaction, kind: str, *, fields: dict | None = None, host_id=None, target=None, game_name=None):
-    """Make the ticket channel. Returns it, or None (the user was told why)."""
+async def _create_ticket(interaction, kind: str, *, fields: dict | None = None, host_id=None, target=None, game_name=None,
+                         guild=None, member=None):
+    """Make the ticket channel. Returns it, or None (the user was told why).
+    `guild` / `member`: for a ticket opened from a DM (an appeal from a
+    moderation DM), the server and the player as its member."""
     if not interaction.response.is_done():
         try:
             await interaction.response.defer(ephemeral=True, thinking=True)
         except discord.HTTPException:
             pass
-    guild, user = interaction.guild, interaction.user
+    guild = guild or interaction.guild
+    user = member or interaction.user
     if guild is None:
         await _ticket_reply(interaction, "❌ Tickets can only be opened inside the server.")
         return None
@@ -35854,6 +35880,58 @@ def _home_modes_to_add(stored) -> list[str]:
     return [key for key, _ in BUILTIN_MODES if key not in modes and key in _HOME_MODE_SEED]
 
 
+# Mods GameMaster no longer offers, by Steam Workshop id (Niko, 2026-11-26).
+RETIRED_MOD_IDS = {
+    "2790635823",  # The Road to 56 RP Submod
+}
+
+
+def _is_retired_mod(entry) -> bool:
+    match = re.search(r"[?&]id=(\d+)", str((entry or {}).get("link") or ""))
+    return bool(match and match.group(1) in RETIRED_MOD_IDS)
+
+
+async def _retire_mods() -> None:
+    """Startup: take retired mods out of every server's standard mod lists.
+    Games already announced keep their own copy (managed_mods). Scheduled
+    games still on their mode's standard list get that list, retired mod
+    included, written onto the slot first, so they keep it too. Runs until
+    no saved list has a retired mod left (then it does nothing)."""
+    for gid, rt in list(_RUNTIMES.items()):
+        settings = rt.settings
+        if not settings:
+            continue
+        modes = settings.get("modes") or {}
+        hit = [
+            key for key, mode in modes.items()
+            if isinstance(mode, dict) and any(_is_retired_mod(e) for e in mode.get("mod_links") or [])
+        ]
+        if not hit:
+            continue
+        try:
+            with guild_scope(gid):
+                schedule = list(await read_json(SCHEDULE_FILE))
+                frozen = 0
+                for slot in schedule:
+                    if not isinstance(slot, dict) or slot.get("announced") or slot.get("mode") not in hit:
+                        continue
+                    if isinstance(slot.get("mods"), list):
+                        continue  # Its own list (a preset or the calendar): untouched.
+                    slot["mods"] = [dict(e) for e in modes[slot["mode"]].get("mod_links") or []][:WEB_GAME_MAX_MODS]
+                    frozen += 1
+                if frozen:
+                    await write_json(SCHEDULE_FILE, schedule)
+            merged = json.loads(json.dumps(settings))
+            for key in hit:
+                merged["modes"][key]["mod_links"] = [e for e in merged["modes"][key].get("mod_links") or [] if not _is_retired_mod(e)]
+            if await _save_bot_settings(gid, merged, summary="Removed a retired mod (The Road to 56 RP Submod) from the standard mod lists"):
+                rt.settings = merged
+                _apply_settings(rt, merged)
+                print(f"⚙️ {gid}: retired mod removed from {', '.join(hit)}; {frozen} scheduled game(s) keep their list.")
+        except Exception as e:
+            print(f"⚠️ Retiring mods for {gid} failed: {e}")
+
+
 def _home_modes_left_blank(settings) -> list[str]:
     """Home game modes whose links are still a new server's defaults (public
     mods, no rulesets) while the bot has its own lists for them: the bot
@@ -35927,6 +36005,10 @@ async def _bootstrap_server_settings() -> None:
     # Hist Verified and the website's role ids for the home server; VIPs get Hist Verified once.
     with guild_scope(GUILD_ID):
         await _setup_member_roles()
+
+    # Retired mods out of the standard lists (before the website's lists are published below).
+    if settings_read:
+        await _retire_mods()
 
     if home is not None:
         try:
