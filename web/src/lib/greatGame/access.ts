@@ -24,6 +24,8 @@ export interface GGViewer {
   captainOf: string | null;
   /** The team this person plays on (any slot), if any. */
   teamOf: string | null;
+  /** One of GameMaster's owners (they keep access whatever the roster says). */
+  owner: boolean;
 }
 
 export type ViewerResult = { ok: true; viewer: GGViewer } | { ok: false; status: 401 | 403; error: string };
@@ -56,6 +58,7 @@ export async function viewerFor(state: GGState): Promise<ViewerResult> {
       organizer: person?.role === "organizer" || person?.organizer === true || admin,
       captainOf,
       teamOf,
+      owner: admin,
     },
   };
 }

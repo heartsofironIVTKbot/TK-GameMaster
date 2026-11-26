@@ -19,6 +19,9 @@ export interface GGClient {
   id: number;
   send(frame: string): boolean;
   close(): void;
+  /** Whose page this is, and whether they're one of GameMaster's owners (who keep access regardless of the roster). */
+  viewer?: string;
+  owner?: boolean;
 }
 
 /**
@@ -105,6 +108,14 @@ class GGHub {
     if (!room) return;
     const state = await getState(slug);
     if (!state) return;
+    // Someone taken off the roster (replaced) loses the live view at once, not at their next reload.
+    for (const client of [...room.clients]) {
+      if (!client.viewer || client.owner) continue;
+      if (state.config.people.some((person) => person.id === client.viewer)) continue;
+      client.send(frame("revoked", { error: "You're no longer on this event's roster, so the draft room has closed for you." }));
+      room.clients.delete(client);
+      client.close();
+    }
     // A pick or ban ends that team's glow.
     if (state.turn.team === null || state.phase !== "bans" && state.phase !== "draft") room.considering = {};
     for (const team of state.teams) {

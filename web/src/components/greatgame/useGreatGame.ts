@@ -17,6 +17,7 @@ export interface GGViewerInfo {
   organizer: boolean;
   captainOf: string | null;
   teamOf: string | null;
+  owner?: boolean;
 }
 
 export type Considering = Record<string, { tag: string; by: string; at: number } | null>;
@@ -101,6 +102,15 @@ export function useGreatGame(slug: string) {
           const base = current && current.seq === add.seq ? current : { seq: add.seq, lines: [], done: false };
           return { seq: add.seq, lines: add.line ? [...base.lines, add.line] : base.lines, done: base.done || add.done };
         });
+      });
+      // Taken off the roster: the room closes for this page right away.
+      source.addEventListener("revoked", (event) => {
+        const body = JSON.parse((event as MessageEvent).data) as { error?: string };
+        source?.close();
+        setLive(false);
+        setState(null);
+        setViewer(null);
+        setError({ status: 403, message: body.error ?? "The draft room has closed for you." });
       });
       source.addEventListener("viewers", (event) => setViewers((JSON.parse((event as MessageEvent).data) as { count: number }).count));
     });

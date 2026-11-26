@@ -49,7 +49,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
           // already closed by the browser
         }
       };
-      const client: GGClient = { id: hub.newClientId(), send: write, close };
+      const client: GGClient = { id: hub.newClientId(), send: write, close, viewer: access.viewer.id, owner: access.viewer.owner };
       write("retry: 2000\n: connected\n\n");
       void hub.subscribe(slug, client).then((stop) => {
         if (closed) stop();
