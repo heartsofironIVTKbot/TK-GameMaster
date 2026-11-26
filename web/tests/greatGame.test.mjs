@@ -21,6 +21,7 @@ const { buildState, draftOrder, strengthOrder, membersOf } = await import("../sr
 const { decide, timeoutAction, colorDistance } = await import("../src/lib/greatGame/decide.ts");
 const { commitOf, drawFrom, newSeed } = await import("../src/lib/greatGame/fairness.ts");
 const { demoConfig, DEMO_ORGANIZER } = await import("../src/lib/greatGame/demo.ts");
+const { checkReceipts } = await import("../src/lib/greatGame/receipts.ts");
 
 function makeEvent() {
   const config = demoConfig();
@@ -56,11 +57,15 @@ function playToDraft(e) {
   run(org, { kind: "phase.set", phase: "drum" });
   for (let i = 0; i < 7; i++) run(org, { kind: "drum.draw" });
   run(org, { kind: "phase.set", phase: "wheel" });
-  for (let i = 0; i < 7; i++) run(org, { kind: "wheel.spin" });
+  // Six spins: the last one also hands the last major to the last team.
+  for (let i = 0; i < 6; i++) run(org, { kind: "wheel.spin" });
+  assert.equal(e.state().phase_done, true);
   run(org, { kind: "phase.set", phase: "vice" });
   for (let i = 0; i < 7; i++) run(captain(e.state().turn.team), { kind: "vice.draw" });
   run(org, { kind: "phase.set", phase: "recruits" });
-  for (let i = 0; i < 14; i++) run(captain(e.state().turn.team), { kind: "recruit.draw" });
+  // Thirteen cards: the last one also deals the last recruit to the last slot.
+  for (let i = 0; i < 13; i++) run(captain(e.state().turn.team), { kind: "recruit.draw" });
+  assert.equal(e.state().phase_done, true);
   run(org, { kind: "phase.set", phase: "bans" });
 }
 
@@ -177,9 +182,23 @@ test("every random result can be recomputed from the seed once it's revealed", (
       replay.push(drawFrom(e.seed, action.seq, "wheel.spin", left) === action.payload.tag);
     }
   }
-  assert.equal(replay.length, 7);
+  // Six spins: the seventh major goes with the sixth spin.
+  assert.equal(replay.length, 6);
   assert.ok(replay.every(Boolean), "every wheel spin matches the seed");
   assert.equal(commitOf(e.seed).length, 64);
+
+  // The replay's receipts re-run every draw of the night (drum, reel, tickets, cards) and all match;
+  // a changed result is caught, and a wrong seed fails.
+  const fairness = { commit: commitOf(e.seed), seed: e.seed };
+  const check = checkReceipts("demo", e.config, e.log, fairness);
+  assert.equal(check.receipts.length, 7 + 6 + 7 + 13);
+  assert.equal(check.mismatches, 0);
+  assert.equal(check.commitOk, true);
+  const tampered = structuredClone(e.log);
+  const spin = tampered.find((a) => a.kind === "wheel.spin");
+  spin.payload.tag = e.config.majors.find((m) => m !== spin.payload.tag);
+  assert.ok(checkReceipts("demo", e.config, tampered, fairness).mismatches > 0, "a changed result is caught");
+  assert.equal(checkReceipts("demo", e.config, e.log, { ...fairness, seed: "0".repeat(64) }).commitOk, false);
 });
 
 test("a replacement takes over a player's place everywhere", () => {
