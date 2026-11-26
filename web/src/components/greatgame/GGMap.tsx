@@ -262,6 +262,22 @@ type RendererInternals = L.SVG & {
   _pathsZoom?: number;
 };
 
+/**
+ * Draw an outline whole, always. Leaflet skips (draws empty) any path that lies outside
+ * its drawing area at the moment it last rebuilt the paths, even with noClip. PanOnlySVG
+ * only rebuilds after a zoom, so after a long pan, or when worldCopyJump wraps the view
+ * onto another of the three world copies (which happens as soon as a drag starts over
+ * Europe), the land there had never been drawn and the map went blank until the next
+ * zoom. Every path on this map goes through here, so nothing is ever left undrawn.
+ */
+function drawWhole(layer: L.Layer) {
+  const path = layer as L.Polygon & { _clipPoints: () => void; _parts: unknown; _rings: unknown };
+  path.options.noClip = true;
+  path._clipPoints = function (this: { _parts: unknown; _rings: unknown }) {
+    this._parts = this._rings;
+  };
+}
+
 const PanOnlySVG = L.SVG.extend({
   _update(this: RendererInternals) {
     const map = this._map;
@@ -550,8 +566,8 @@ function GGMap({
         onEachFeature={(feature: NationFeature, layer) => {
           const tag = feature.properties.tag;
           const path = layer as L.Polygon;
-          // Draw whole nations, never clipped to the old view (no chopped edges while panning).
-          path.options.noClip = true;
+          // Draw whole nations, always (no chopped edges, no blank land after a pan or a wrap).
+          drawWhole(path);
           const label = known[tag] ?? feature.properties.name;
           path.on({
             mouseover: () => {
@@ -583,7 +599,7 @@ function GGMap({
           data={hatched}
           interactive={false}
           onEachFeature={(_feature: NationFeature, layer) => {
-            (layer as L.Polygon).options.noClip = true;
+            drawWhole(layer);
           }}
           style={
             ((feature?: NationFeature) => ({
@@ -601,7 +617,7 @@ function GGMap({
           data={glow}
           interactive={false}
           onEachFeature={(_feature: NationFeature, layer) => {
-            (layer as L.Polygon).options.noClip = true;
+            drawWhole(layer);
           }}
           style={{ fillColor: "#ffd23f", fillOpacity: 0.12, color: "#ffd23f", weight: 4, className: "gg-glow" }}
           {...{ renderer }}
@@ -613,7 +629,7 @@ function GGMap({
           data={flash.data}
           interactive={false}
           onEachFeature={(_feature: NationFeature, layer) => {
-            (layer as L.Polygon).options.noClip = true;
+            drawWhole(layer);
           }}
           style={{ fillColor: "#ffffff", fillOpacity: 0, color: flash.color, weight: 4, className: "gg-pick-flash" }}
           {...{ renderer }}
