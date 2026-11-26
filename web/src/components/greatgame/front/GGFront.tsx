@@ -146,21 +146,24 @@ export default function GGFront() {
             </span>
           </h1>
           <div className="ggf-cta">
-            <AnthemButton anthem={anthem} />
+            {/* The way in on top; the anthem and the replay (or how it works) side by side below it. */}
             {room ? (
               <a className="ggf-btn is-primary" href={room}>
                 Enter the draft room <ArrowRight size={18} aria-hidden />
               </a>
             ) : null}
-            {room && event?.started ? (
-              <a className="ggf-btn" href={`${room}/replay`}>
-                <Film size={17} aria-hidden /> Watch the replay
-              </a>
-            ) : (
-              <a className="ggf-btn" href="#draft">
-                How it works
-              </a>
-            )}
+            <div className="ggf-cta-row">
+              <AnthemButton anthem={anthem} />
+              {room && event?.started ? (
+                <a className="ggf-btn" href={`${room}/replay`}>
+                  <Film size={17} aria-hidden /> Watch the replay
+                </a>
+              ) : (
+                <a className="ggf-btn" href="#draft">
+                  How it works
+                </a>
+              )}
+            </div>
           </div>
           {room && <p className="ggf-cta-note">The draft room is for players, casters and organizers. Everyone else: catch it live on stream.</p>}
         </div>
