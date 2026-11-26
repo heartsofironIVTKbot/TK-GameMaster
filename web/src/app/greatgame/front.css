@@ -72,6 +72,12 @@
   background: rgba(10, 4, 24, 0.45);
   backdrop-filter: blur(6px);
 }
+.ggf-nav-home small {
+  margin-right: 6px;
+  font: 600 10px/1 var(--ggf-body);
+  letter-spacing: 0.08em;
+  color: var(--ggf-fg-3);
+}
 .ggf-nav-home:hover {
   color: #fff;
   border-color: var(--ggf-cyan);
@@ -96,6 +102,19 @@
 .ggf-nav-links a:hover {
   color: #fff;
   background: rgba(255, 43, 214, 0.18);
+}
+/* Rules stand out: filled pink, glowing. */
+.ggf-nav-links a.is-rules {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 4px;
+  color: #fff;
+  background: linear-gradient(180deg, #ff5fe4, #c01aa6);
+  box-shadow: 0 0 16px rgba(255, 43, 214, 0.6);
+}
+.ggf-nav-links a.is-rules:hover {
+  box-shadow: 0 0 24px rgba(255, 43, 214, 0.9);
 }
 
 .ggf-title {
@@ -948,6 +967,66 @@
   box-shadow: 0 0 8px var(--ggf-cyan);
 }
 
+/* Rules. */
+.ggf-rules {
+  display: grid;
+  grid-template-columns: 1fr minmax(260px, 340px);
+  gap: 18px;
+  align-items: start;
+}
+.ggf-rules-list {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ggf-rules-list li {
+  display: flex;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid var(--ggf-line);
+  background: var(--ggf-panel);
+}
+.ggf-rules-n {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  font: 800 13px/1 var(--ggf-digit);
+  color: var(--ggf-pink);
+  border: 1px solid rgba(255, 43, 214, 0.45);
+  background: rgba(255, 43, 214, 0.1);
+}
+.ggf-rules h3 {
+  margin: 0;
+  font: 900 20px/1.05 var(--ggf-display);
+  text-transform: uppercase;
+}
+.ggf-rules p {
+  margin: 6px 0 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ggf-fg-2);
+}
+.ggf-rules-side {
+  display: grid;
+  gap: 12px;
+}
+.ggf-rules-box {
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(34, 229, 255, 0.35);
+  background: linear-gradient(135deg, rgba(34, 229, 255, 0.08), transparent 60%), var(--ggf-panel);
+}
+.ggf-rules-box h3 {
+  color: var(--ggf-cyan);
+}
+
 /* Majors. */
 .ggf-majors {
   display: grid;
@@ -1127,6 +1206,9 @@
 }
 
 @media (max-width: 980px) {
+  .ggf-rules {
+    grid-template-columns: 1fr;
+  }
   .ggf-team,
   .ggf-team:nth-child(-n + 3) {
     grid-column: span 6;
@@ -1147,7 +1229,17 @@
 }
 @media (max-width: 640px) {
   .ggf-nav-links {
+    display: flex;
+    padding: 0;
+    border: 0;
+    background: none;
+    backdrop-filter: none;
+  }
+  .ggf-nav-links a:not(.is-rules) {
     display: none;
+  }
+  .ggf-rules-list {
+    grid-template-columns: 1fr;
   }
   .ggf-team,
   .ggf-team:nth-child(-n + 3) {

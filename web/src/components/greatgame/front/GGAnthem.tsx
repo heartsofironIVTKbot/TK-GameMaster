@@ -133,7 +133,13 @@ export function useAnthem() {
       preload="metadata"
       onPlay={() => setPlaying(true)}
       onPause={() => setPlaying(false)}
-      onEnded={() => setPlaying(false)}
+      onEnded={(event) => {
+        // Back to the start: the lyrics and the bar go, the note returns, the button says Play again.
+        event.currentTarget.currentTime = 0;
+        setPlaying(false);
+        setStarted(false);
+        setT(0);
+      }}
       onLoadedMetadata={(event) => setDuration(event.currentTarget.duration)}
       onSeeked={(event) => setT(event.currentTarget.currentTime)}
     >

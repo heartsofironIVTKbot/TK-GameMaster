@@ -30,6 +30,9 @@ export interface GGPublic {
   names: Record<string, string>;
   counts: { teams: number; captains: number; vices: number; recruits: number; casters: number; minors: number };
   fairness: { commit: string; seed: string | null };
+  /** The draft's clocks (seconds) and what happens when one runs out. */
+  timers: GGState["config"]["timers"];
+  onTimeout: GGState["config"]["on_timeout"];
   /** Only once the teams are locked. */
   teams: GGPublicTeam[] | null;
 }
@@ -73,6 +76,8 @@ export function publicView(state: GGState): GGPublic {
       minors: config.pool.length,
     },
     fairness: state.fairness,
+    timers: config.timers,
+    onTimeout: config.on_timeout,
     teams,
   };
 }

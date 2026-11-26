@@ -1,11 +1,11 @@
 "use client";
 
-import { ArrowRight, ChevronDown, Film, ShieldCheck } from "lucide-react";
+import { ArrowRight, BookOpen, ChevronDown, Film, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { PHASE_LABEL, PHASES } from "@/lib/greatGame/model";
 import type { GGPublic } from "@/lib/greatGame/public";
-import { GG_MODS } from "../GGInfoPanel";
+import { draftRules, GG_MODS } from "../GGInfoPanel";
 import { displayName, Flag } from "../ggUi";
 import { AnthemButton, AnthemLyrics, AnthemMini, useAnthem } from "./GGAnthem";
 import GGFrontScene, { type SceneMajor } from "./GGFrontScene";
@@ -94,14 +94,17 @@ export default function GGFront() {
       <section ref={hero} className={`ggf-hero ${anthem.started ? "is-anthem" : ""}`}>
         <GGFrontScene majors={sceneMajors} />
         <nav className="ggf-nav" aria-label="Great Game">
-          <Link href="/" className="ggf-nav-home">
-            GameMaster
+          <Link href="/" className="ggf-nav-home" title="GameMaster: Hearts of Iron IV multiplayer, run on Discord">
+            <small>Powered by</small> GameMaster
           </Link>
           <div className="ggf-nav-links">
             <a href="#format">Format</a>
             <a href="#draft">The draft</a>
             <a href="#majors">Majors</a>
             <a href="#fairness">Fairness</a>
+            <a href="#rules" className="is-rules">
+              <BookOpen size={15} aria-hidden /> Rules
+            </a>
           </div>
         </nav>
 
@@ -177,6 +180,7 @@ export default function GGFront() {
         <Dates />
         <Format event={event} />
         <Steps event={event} />
+        <Rules event={event} />
         <Majors event={event} />
         {event?.teams && <Teams event={event} />}
         <Fairness event={event} />
@@ -288,6 +292,61 @@ function Steps({ event }: { event: GGPublic | null }) {
         rig a draw or arrange a result in advance. When the teams lock, the seed is revealed and anyone can check it.
       </SectionHead>
       <GGFrontSteps event={event} />
+    </section>
+  );
+}
+
+function Rules({ event }: { event: GGPublic | null }) {
+  const steps = draftRules(
+    event?.timers ?? { ban: 90, pick: 90, assign: 600 },
+    event?.onTimeout ?? { ban: "wait", pick: "wait", assign: "random" },
+    event?.counts.teams ?? 7,
+  );
+  return (
+    <section id="rules" className="ggf-section">
+      <SectionHead kicker="Rules" title="The rules of the draft">
+        Everything that decides the teams, in order. The clocks and what happens when one runs out are the ones set for this event.
+      </SectionHead>
+      <div className="ggf-rules">
+        <ol className="ggf-rules-list">
+          {steps.map((step, i) => (
+            <li key={step.title}>
+              <b className="ggf-rules-n">{String(i + 1).padStart(2, "0")}</b>
+              <div>
+                <h3>{step.title}</h3>
+                <p>{step.text}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+        <aside className="ggf-rules-side">
+          <div className="ggf-rules-box">
+            <h3>Fair draws</h3>
+            <p>
+              Every random result comes from a secret seed locked in before the draft. Nobody, not even the organizers, can rig a draw or arrange a result in advance. The seed is
+              revealed when the teams lock, and every draw can be checked.
+            </p>
+          </div>
+          <div className="ggf-rules-box">
+            <h3>Organizers</h3>
+            <p>Organizers can pause, add time, undo and fix mistakes. Every change is public in the draft room&apos;s log, with its reason.</p>
+          </div>
+          <div className="ggf-rules-box">
+            <h3>Mods</h3>
+            <p>
+              Played on{" "}
+              <a className="ggf-link" href={GG_MODS[0].link} target="_blank" rel="noreferrer">
+                Road to 56
+              </a>{" "}
+              with our{" "}
+              <a className="ggf-link" href={GG_MODS[1].link} target="_blank" rel="noreferrer">
+                TK RP sub-mod
+              </a>
+              . Subscribe to both before game day.
+            </p>
+          </div>
+        </aside>
+      </div>
     </section>
   );
 }

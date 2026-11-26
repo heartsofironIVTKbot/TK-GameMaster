@@ -43,11 +43,9 @@ function onTimeout(rule: TimeoutRule, what: "ban" | "pick" | "assign"): string {
   return "the clock waits for the captain (organizers can step in)";
 }
 
-export function GGRules({ state, onClose }: { state: GGState; onClose: () => void }) {
-  const { timers, on_timeout: rules } = state.config;
-  const n = state.teams.length;
-  const current = PHASES.indexOf(state.phase);
-  const steps: { title: string; text: string }[] = [
+/** The draft's rules in plain words, from the event's own clocks and timeout rules (the room's panel and the front page). */
+export function draftRules(timers: GGState["config"]["timers"], rules: GGState["config"]["on_timeout"], n: number): { title: string; text: string }[] {
+  return [
     { title: "Captain order", text: "The lottery drum draws the captains one by one. That order is used for the reel, the scratch tickets and the recruit cards." },
     { title: "Majors", text: "In drum order, the reel gives each captain a major from the ones still left. The last major goes to the last captain without a spin." },
     { title: "Vice-captains", text: "Each team scratches its own ticket to reveal its vice-captain." },
@@ -66,6 +64,11 @@ export function GGRules({ state, onClose }: { state: GGState; onClose: () => voi
     },
     { title: "Teams locked", text: "The final lobby is set and the fairness code is revealed." },
   ];
+}
+
+export function GGRules({ state, onClose }: { state: GGState; onClose: () => void }) {
+  const steps = draftRules(state.config.timers, state.config.on_timeout, state.teams.length);
+  const current = PHASES.indexOf(state.phase);
   return (
     <Shell title="Rules" icon={<BookOpen size={20} aria-hidden />} intro="How the draft runs, step by step. Clocks and timeout rules are the ones set for this event." onClose={onClose}>
       <ol className="grid gap-2">
